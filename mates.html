@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mates váha</title>
+</head>
+<body>
+  <canvas id="graf" width="600" height="400"></canvas>
+<span id="pressedKey"></span>
+
+<script>
+// HTML setup (vlozte do sveho HTML souboru):
+// 
+
+// JavaScript:
+const data = [
+  ['22.12.2024', 2790],
+  ['23.12.2024', 2828],
+  ['24.12.2024', 2855],
+  ['25.12.2024', 2925],
+  ['26.12.2024', 2970],
+  ['27.12.2024', 3055],
+  ['28.12.2024', 3090],
+  ['29.12.2024', 3150],
+  ['30.12.2024', 3230],
+  ['1.1.2025', 3300],
+  ['4.1.2025', 3450],
+  ['7.1.2025', 3590]
+];
+
+// Najdeme canvas a jeho kontext
+const canvas = document.getElementById('graf');
+const ctx = canvas.getContext('2d');
+
+// Nastavení velikosti plátna (celá stránka)
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+// Barvy a mezery
+const pointColor = '#4caf50';
+const lineColor = '#4caf50';
+const axisColor = '#000';
+const pointRadius = 5;
+
+// Výpočet maximální a minimální hodnoty (pro normalizaci výšky bodů)
+const maxValue = Math.max(...data.map(item => item[1]));
+const minValue = Math.min(...data.map(item => item[1]));
+
+// Výpočet rozdílů v datech (pro dynamické vzdálenosti)
+const parseDate = (dateString) => {
+  const [day, month, year] = dateString.split('.').map(Number);
+  return new Date(year, month - 1, day);
+};
+
+const dateDiffs = [];
+for (let i = 1; i < data.length; i++) {
+    const prevDate = parseDate(data[i - 1][0]);
+    const currDate = parseDate(data[i][0]);
+    const diffInDays = (currDate - prevDate) / (1000 * 60 * 60 * 24); // Převod rozdílu na dny
+    dateDiffs.push(diffInDays);
+}
+
+const totalDiff = dateDiffs.reduce((sum, diff) => sum + diff, 0);
+
+// Nastavení rozměrů a souřadnic
+const chartHeight = canvas.height - 100; // Rezerva na popisky
+const chartWidth = canvas.width;
+const bottomPadding = 50;
+const leftPadding = 80;
+const unitWidth = (chartWidth - leftPadding - 40) / totalDiff;
+
+// Funkce pro vykreslení grafu
+const drawChart = () => {
+    // Vymazání plátna
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Vykreslení osy X a Y
+    ctx.strokeStyle = axisColor;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(leftPadding, 20);
+    ctx.lineTo(leftPadding, chartHeight);
+    ctx.lineTo(chartWidth - 40, chartHeight);
+    ctx.stroke();
+
+    // Popisky osy Y
+    ctx.fillStyle = axisColor;
+    ctx.font = '14px Arial';
+    ctx.textAlign = 'right';
+    ctx.fillText(`${minValue}`, leftPadding - 10, chartHeight);
+    ctx.fillText(`${maxValue}`, leftPadding - 10, 20);
+    ctx.fillText('váha (g)', leftPadding - 10, chartHeight / 2);
+
+    // Popisky osy X
+    ctx.textAlign = 'center';
+    ctx.fillText(data[0][0], leftPadding, chartHeight + 30);
+    ctx.fillText(data[data.length - 1][0], chartWidth - 60, chartHeight + 30);
+    ctx.fillText('datum', chartWidth / 2, chartHeight + 50);
+
+    // Uložení souřadnic bodů pro detekci myši
+    const points = [];
+
+    // Vykreslení bodů a čar
+    ctx.strokeStyle = lineColor;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    let cumulativeX = leftPadding;
+    data.forEach((item, index) => {
+        const [label, value] = item;
+
+        // Vypočítáme souřadnice bodu na základě hodnoty
+        const x = cumulativeX;
+        const y = chartHeight - ((value - minValue) / (maxValue - minValue)) * (chartHeight - bottomPadding);
+
+        // Uložíme souřadnice bodu
+        points.push({ x, y, label, value });
+
+        // Spojíme body čarou (okamžitě)
+        if (index === 0) {
+            ctx.moveTo(x, y);
+        } else {
+            ctx.lineTo(x, y);
+        }
+
+        // Vykreslíme bod
+        ctx.fillStyle = pointColor;
+        ctx.beginPath();
+        ctx.arc(x, y, pointRadius, 0, 2 * Math.PI);
+        ctx.fill();
+
+        // Přidáme šířku na základě rozdílu v datech, pokud to není první bod
+        if (index < dateDiffs.length) {
+            cumulativeX += dateDiffs[index] * unitWidth;
+        }
+    });
+
+    // Dokončíme čáru po vykreslení všech bodů
+    ctx.stroke();
+
+    return points;
+};
+
+// Počáteční vykreslení grafu
+const points = drawChart();
+
+// Přidáme detekci myši
+canvas.addEventListener('mousemove', (event) => {
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = event.clientX - rect.left;
+    const mouseY = event.clientY - rect.top;
+
+    // Vymažeme a znovu vykreslíme graf
+    const newPoints = drawChart();
+
+    newPoints.forEach((point) => {
+        // Zvýraznění bodu, pokud je myš v jeho blízkosti
+        const distance = Math.sqrt((point.x - mouseX) ** 2 + (point.y - mouseY) ** 2);
+        if (distance < pointRadius + 5) {
+            ctx.fillStyle = '#ff0000';
+
+            // Zobrazíme hodnotu bodu
+            ctx.fillStyle = '#000';
+            ctx.font = '14px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(`${point.value}`, point.x, point.y - 30); // Posunuto výše
+            ctx.fillText(`${point.label}`, point.x, point.y - 15); // Posunuto výše
+        } else {
+            ctx.fillStyle = pointColor;
+        }
+
+        ctx.beginPath();
+        ctx.arc(point.x, point.y, pointRadius, 0, 2 * Math.PI);
+        ctx.fill();
+    });
+});
+
+</script>
+
+</body>
+</html>
