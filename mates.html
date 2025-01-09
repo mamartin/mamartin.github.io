@@ -5,13 +5,52 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mates váha</title>
 </head>
-<body>
+<body onload="displayAge()">
+    <h1 id="age">Načítám věk...</h1>
   <canvas id="graf" width="600" height="400"></canvas>
 <span id="pressedKey"></span>
 
 <script>
 // HTML setup (vlozte do sveho HTML souboru):
 // 
+
+function getAge(dateOfBirth) {
+    const today = new Date();
+    const birthDate = new Date(dateOfBirth);
+
+    let years = today.getFullYear() - birthDate.getFullYear();
+    let months = today.getMonth() - birthDate.getMonth();
+    let days = today.getDate() - birthDate.getDate();
+
+    if (days < 0) {
+        months--;
+        const prevMonth = new Date(today.getFullYear(), today.getMonth(), 0); // poslední den předchozího měsíce
+        days += prevMonth.getDate();
+    }
+
+    if (months < 0) {
+        years--;
+        months += 12;
+    }
+
+    const result = [];
+    if (years > 0) result.push(`${years} rok${years === 1 ? '' : (years < 5 ? 'y' : 'ů')}`);
+    if (months > 0) result.push(`${months} měsíc${months === 1 ? '' : (months < 5 ? 'e' : 'ů')}`);
+    if (days > 0) {
+        result.push(`${days} ${days === 1 ? 'den' : (days < 5 ? 'dny' : 'dní')}`);
+    }
+
+    return result.join(', ');
+}
+
+function displayAge() {
+    const birthDate = '2024-12-14'; // Datum narození
+    const age = getAge(birthDate);
+    document.getElementById('age').textContent = 'Věk: ' + age;
+}
+
+
+
 
 // JavaScript:
 const data = [
