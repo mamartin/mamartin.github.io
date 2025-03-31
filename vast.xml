@@ -1,0 +1,234 @@
+<VAST version="4.1">
+<Ad sequence="1" id="82974">
+<InLine>
+<AdSystem>SAS</AdSystem>
+<AdTitle>
+<![CDATA[ Nicaro_24-30_30s ]]>
+</AdTitle>
+<Description>
+<![CDATA[ {"akaCode":"","adCategory":"2"} ]]>
+</Description>
+<Error>
+<![CDATA[ https://a.iprima.cz/iprima/count/site=Grape_KRIMI/01/fcid=82974/actname=err[ERRORCODE] ]]>
+</Error>
+<Impression id="saisa_imp">
+<![CDATA[ https://a.iprima.cz/iprima/count/FCID=82974/operator=Grape/site=Grape_KRIMI/section=smart_tv/area=midroll-7/size=spot,midroll/duration=120/format=validvast3/formatmt=application%252Fxml/SUPERTAG=InstreamVideo/keyword=/showname=/random=7848550547/viewid=8169552872/mid=/variant=varianta3/broadcasting=ts47/clipid=/productid=/gdpr=0/ADPOS=01 ]]>
+</Impression>
+<Impression id="3rdParty_imp">
+<![CDATA[ ]]>
+</Impression>
+<Impression id="3rdParty_imp2">
+<![CDATA[ ]]>
+</Impression>
+<Impression id="3rdParty_imp3">
+<![CDATA[ ]]>
+</Impression>
+<ViewableImpression>
+<Viewable>
+<![CDATA[ https://a.iprima.cz/iprima/count/FCID=82974/ACT=4/operator=Grape/site=Grape_KRIMI/section=smart_tv/area=midroll-7/size=spot,midroll/duration=120/format=validvast3/formatmt=application%252Fxml/SUPERTAG=InstreamVideo/keyword=/showname=/random=7848550547/viewid=8169552872/mid=/variant=varianta3/broadcasting=ts47/clipid=/productid=/gdpr=0/ADPOS=01 ]]>
+</Viewable>
+<NotViewable>
+<![CDATA[ https://a.iprima.cz/iprima/count/site=Grape_KRIMI/01/actname=NotViewable/fcid=82974 ]]>
+</NotViewable>
+<ViewUndetermined>
+<![CDATA[ https://a.iprima.cz/iprima/count/site=Grape_KRIMI/01/actname=ViewUndetermined/fcid=82974 ]]>
+</ViewUndetermined>
+</ViewableImpression>
+<Creatives>
+<Creative adId="82974" id="82974">
+<Linear>
+<Duration>00:00:15</Duration>
+<AdParameters>
+<![CDATA[ {"akaCode":"","adCategory":"2"} ]]>
+</AdParameters>
+<TrackingEvents>
+<Tracking event="skip">
+<![CDATA[ ]]>
+</Tracking>
+<Tracking event="creativeView">
+<![CDATA[ https://a.iprima.cz/iprima/count/site=Grape_KRIMI/area=midroll-7/01/actname=AdCreativeView/fcid=82974 ]]>
+</Tracking>
+<Tracking event="start">
+<![CDATA[ https://a.iprima.cz/iprima/count/site=Grape_KRIMI/area=midroll-7/01/actname=AdStart/fcid=82974 ]]>
+</Tracking>
+<Tracking event="midpoint">
+<![CDATA[ https://a.iprima.cz/iprima/count/site=Grape_KRIMI/area=midroll-7/01/actname=AdMidPoint/fcid=82974 ]]>
+</Tracking>
+<Tracking event="midpoint">
+<![CDATA[ ]]>
+</Tracking>
+<Tracking event="firstQuartile">
+<![CDATA[ https://a.iprima.cz/iprima/count/site=Grape_KRIMI/area=midroll-7/01/actname=AdFirstQuartile/fcid=82974 ]]>
+</Tracking>
+<Tracking event="firstQuartile">
+<![CDATA[ ]]>
+</Tracking>
+<Tracking event="thirdQuartile">
+<![CDATA[ https://a.iprima.cz/iprima/count/site=Grape_KRIMI/area=midroll-7/01/actname=AdThirdQuartile/fcid=82974 ]]>
+</Tracking>
+<Tracking event="thirdQuartile">
+<![CDATA[ ]]>
+</Tracking>
+<Tracking event="complete">
+<![CDATA[ https://a.iprima.cz/iprima/count/site=Grape_KRIMI/area=midroll-7/01/actname=AdComplete/fcid=82974 ]]>
+</Tracking>
+<Tracking event="complete">
+<![CDATA[ ]]>
+</Tracking>
+<Tracking event="mute">
+<![CDATA[ https://a.iprima.cz/iprima/count/site=Grape_KRIMI/area=midroll-7/01/actname=Mute/fcid=82974 ]]>
+</Tracking>
+<Tracking event="unmute">
+<![CDATA[ https://a.iprima.cz/iprima/count/site=Grape_KRIMI/area=midroll-7/01/actname=UnMute/fcid=82974 ]]>
+</Tracking>
+<Tracking event="pause">
+<![CDATA[ https://a.iprima.cz/iprima/count/site=Grape_KRIMI/area=midroll-7/01/actname=Pause/fcid=82974 ]]>
+</Tracking>
+<Tracking event="fullscreen">
+<![CDATA[ https://a.iprima.cz/iprima/count/site=Grape_KRIMI/area=midroll-7/01/actname=Fullscreen/fcid=82974 ]]>
+</Tracking>
+<Tracking event="exitFullscreen">
+<![CDATA[ https://a.iprima.cz/iprima/count/site=Grape_KRIMI/area=midroll-7/01/actname=ExitFullscreen/fcid=82974 ]]>
+</Tracking>
+</TrackingEvents>
+<VideoClicks>
+<ClickThrough id="sasia_click_id">
+<![CDATA[ https://a.iprima.cz/iprima/adclick/FCID=82974/operator=Grape/site=Grape_KRIMI/section=smart_tv/area=midroll-7/size=spot,midroll/duration=120/format=validvast3/formatmt=application%252Fxml/SUPERTAG=InstreamVideo/keyword=/showname=/random=7848550547/viewid=8169552872/mid=/variant=varianta3/broadcasting=ts47/clipid=/productid=/gdpr=0/ADPOS=01 ]]>
+</ClickThrough>
+</VideoClicks>
+<MediaFiles>
+<MediaFile delivery="progressive" bitrate="400" width="720" height="576" length="15" type="video/mp4">
+<![CDATA[ https://prima-ott.ssl.cdn.cra.cz/vod/0312/0510/cze-sd1_ln-q5efZjPB.mp4 ]]>
+</MediaFile>
+<MediaFile delivery="progressive" bitrate="1500" width="720" height="576" length="15" type="video/mp4">
+<![CDATA[ https://prima-ott.ssl.cdn.cra.cz/vod/0312/0510/cze-sd4_ln-ZyFYoAhS.mp4 ]]>
+</MediaFile>
+<MediaFile delivery="progressive" bitrate="1500" width="1280" height="720" length="15" type="video/mp4">
+<![CDATA[ https://prima-ott.ssl.cdn.cra.cz/vod/0312/0510/cze-hd1_ln-FUEa5d7H.mp4 ]]>
+</MediaFile>
+<MediaFile delivery="progressive" bitrate="4200" width="1920" height="1080" length="15" type="video/mp4">
+<![CDATA[ https://prima-ott.ssl.cdn.cra.cz/vod/0312/0510/cze-hd2_ln-bBPIEmOT.mp4 ]]>
+</MediaFile>
+</MediaFiles>
+</Linear>
+</Creative>
+</Creatives>
+</InLine>
+</Ad>
+<Ad sequence="2" id="81370">
+<InLine>
+<AdSystem>SAS</AdSystem>
+<AdTitle>
+<![CDATA[ INT_Uni_Hobby_Brand_jaro_02-04_2025_video_15s ]]>
+</AdTitle>
+<Description>
+<![CDATA[ {"akaCode":"","adCategory":"2"} ]]>
+</Description>
+<Error>
+<![CDATA[ https://a.iprima.cz/iprima/count/site=Grape_KRIMI/LAST/fcid=81370/actname=err[ERRORCODE] ]]>
+</Error>
+<Impression id="saisa_imp">
+<![CDATA[ https://a.iprima.cz/iprima/count/FCID=81370/operator=Grape/site=Grape_KRIMI/section=smart_tv/area=midroll-7/size=spot,midroll/duration=120/format=validvast3/formatmt=application%252Fxml/SUPERTAG=InstreamVideo/keyword=/showname=/random=7848550547/viewid=8169552872/mid=/variant=varianta3/broadcasting=ts47/clipid=/productid=/gdpr=0/ADPOS=LAST ]]>
+</Impression>
+<Impression id="3rdParty_imp">
+<![CDATA[ ]]>
+</Impression>
+<Impression id="3rdParty_imp2">
+<![CDATA[ ]]>
+</Impression>
+<Impression id="3rdParty_imp3">
+<![CDATA[ ]]>
+</Impression>
+<ViewableImpression>
+<Viewable>
+<![CDATA[ https://a.iprima.cz/iprima/count/FCID=81370/ACT=4/operator=Grape/site=Grape_KRIMI/section=smart_tv/area=midroll-7/size=spot,midroll/duration=120/format=validvast3/formatmt=application%252Fxml/SUPERTAG=InstreamVideo/keyword=/showname=/random=7848550547/viewid=8169552872/mid=/variant=varianta3/broadcasting=ts47/clipid=/productid=/gdpr=0/ADPOS=LAST ]]>
+</Viewable>
+<NotViewable>
+<![CDATA[ https://a.iprima.cz/iprima/count/site=Grape_KRIMI/LAST/actname=NotViewable/fcid=81370 ]]>
+</NotViewable>
+<ViewUndetermined>
+<![CDATA[ https://a.iprima.cz/iprima/count/site=Grape_KRIMI/LAST/actname=ViewUndetermined/fcid=81370 ]]>
+</ViewUndetermined>
+</ViewableImpression>
+<Creatives>
+<Creative adId="81370" id="81370">
+<Linear>
+<Duration>00:00:15</Duration>
+<AdParameters>
+<![CDATA[ {"akaCode":"","adCategory":"2"} ]]>
+</AdParameters>
+<TrackingEvents>
+<Tracking event="skip">
+<![CDATA[ ]]>
+</Tracking>
+<Tracking event="creativeView">
+<![CDATA[ https://a.iprima.cz/iprima/count/site=Grape_KRIMI/area=midroll-7/LAST/actname=AdCreativeView/fcid=81370 ]]>
+</Tracking>
+<Tracking event="start">
+<![CDATA[ https://a.iprima.cz/iprima/count/site=Grape_KRIMI/area=midroll-7/LAST/actname=AdStart/fcid=81370 ]]>
+</Tracking>
+<Tracking event="midpoint">
+<![CDATA[ https://a.iprima.cz/iprima/count/site=Grape_KRIMI/area=midroll-7/LAST/actname=AdMidPoint/fcid=81370 ]]>
+</Tracking>
+<Tracking event="midpoint">
+<![CDATA[ ]]>
+</Tracking>
+<Tracking event="firstQuartile">
+<![CDATA[ https://a.iprima.cz/iprima/count/site=Grape_KRIMI/area=midroll-7/LAST/actname=AdFirstQuartile/fcid=81370 ]]>
+</Tracking>
+<Tracking event="firstQuartile">
+<![CDATA[ ]]>
+</Tracking>
+<Tracking event="thirdQuartile">
+<![CDATA[ https://a.iprima.cz/iprima/count/site=Grape_KRIMI/area=midroll-7/LAST/actname=AdThirdQuartile/fcid=81370 ]]>
+</Tracking>
+<Tracking event="thirdQuartile">
+<![CDATA[ ]]>
+</Tracking>
+<Tracking event="complete">
+<![CDATA[ https://a.iprima.cz/iprima/count/site=Grape_KRIMI/area=midroll-7/LAST/actname=AdComplete/fcid=81370 ]]>
+</Tracking>
+<Tracking event="complete">
+<![CDATA[ ]]>
+</Tracking>
+<Tracking event="mute">
+<![CDATA[ https://a.iprima.cz/iprima/count/site=Grape_KRIMI/area=midroll-7/LAST/actname=Mute/fcid=81370 ]]>
+</Tracking>
+<Tracking event="unmute">
+<![CDATA[ https://a.iprima.cz/iprima/count/site=Grape_KRIMI/area=midroll-7/LAST/actname=UnMute/fcid=81370 ]]>
+</Tracking>
+<Tracking event="pause">
+<![CDATA[ https://a.iprima.cz/iprima/count/site=Grape_KRIMI/area=midroll-7/LAST/actname=Pause/fcid=81370 ]]>
+</Tracking>
+<Tracking event="fullscreen">
+<![CDATA[ https://a.iprima.cz/iprima/count/site=Grape_KRIMI/area=midroll-7/LAST/actname=Fullscreen/fcid=81370 ]]>
+</Tracking>
+<Tracking event="exitFullscreen">
+<![CDATA[ https://a.iprima.cz/iprima/count/site=Grape_KRIMI/area=midroll-7/LAST/actname=ExitFullscreen/fcid=81370 ]]>
+</Tracking>
+</TrackingEvents>
+<VideoClicks>
+<ClickThrough id="sasia_click_id">
+<![CDATA[ https://a.iprima.cz/iprima/adclick/FCID=81370/operator=Grape/site=Grape_KRIMI/section=smart_tv/area=midroll-7/size=spot,midroll/duration=120/format=validvast3/formatmt=application%252Fxml/SUPERTAG=InstreamVideo/keyword=/showname=/random=7848550547/viewid=8169552872/mid=/variant=varianta3/broadcasting=ts47/clipid=/productid=/gdpr=0/ADPOS=LAST ]]>
+</ClickThrough>
+</VideoClicks>
+<MediaFiles>
+<MediaFile delivery="progressive" bitrate="400" width="720" height="576" length="15" type="video/mp4">
+<![CDATA[ https://prima-ott.ssl.cdn.cra.cz/vod/0310/2910/cze-sd1_ln-djbsYM07.mp4 ]]>
+</MediaFile>
+<MediaFile delivery="progressive" bitrate="1500" width="720" height="576" length="15" type="video/mp4">
+<![CDATA[ https://prima-ott.ssl.cdn.cra.cz/vod/0310/2910/cze-sd4_ln-HGBqxIQ2.mp4 ]]>
+</MediaFile>
+<MediaFile delivery="progressive" bitrate="1500" width="1280" height="720" length="15" type="video/mp4">
+<![CDATA[ https://prima-ott.ssl.cdn.cra.cz/vod/0310/2910/cze-hd1_ln-3I0WRFQR.mp4 ]]>
+</MediaFile>
+<MediaFile delivery="progressive" bitrate="4200" width="1920" height="1080" length="15" type="video/mp4">
+<![CDATA[ https://prima-ott.ssl.cdn.cra.cz/vod/0310/2910/cze-hd2_ln-YSuVn2x4.mp4 ]]>
+</MediaFile>
+</MediaFiles>
+</Linear>
+</Creative>
+</Creatives>
+</InLine>
+</Ad>
+</VAST>
