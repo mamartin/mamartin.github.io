@@ -1,5 +1,6 @@
 {
    "VERTICAL_MENU_BACKGROUND_COLOR": "blue",
    "PRIMARY_1": "yellow",
-   "BACKGROUND": "red"
+   "BACKGROUND": "red",
+   "EPG_HEADER_BACKGROUND": 'orange'
 }
