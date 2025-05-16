@@ -1,7 +1,11 @@
 {
-   "VERTICAL_MENU_BACKGROUND_COLOR": "blue",
+   "VERTICAL_MENU_BACKGROUND": "blue",
    "PRIMARY_1": "darkgreen",
    "BACKGROUND": "red",
    "EPG_HEADER_BACKGROUND": "orange",
-   "EPG_CHANNEL_DESCRIPTOR_BACKGROUND": "brown"
+   "EPG_CHANNEL_DESCRIPTOR_BACKGROUND": "brown",
+   "EPG_BACKGROUND_LIVE": "purple",
+   "EPG_BACKGROUND": "pink",
+   "EPG_BACKGROUND_FOCUSED": "lightblue",
+   "VIDEO_DETAIL_HEADER_BACKGROUND": "gray"
 }
