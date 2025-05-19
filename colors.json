@@ -1,5 +1,7 @@
 {
    "VERTICAL_MENU_BACKGROUND": "blue",
+   "VERTICAL_MENU_TIME_TEXT_COLOR": "brown",
+   "VERTICAL_MENU_DATE_TEXT_COLOR": "lightgray",
    "PRIMARY_1": "darkgreen",
    "BACKGROUND": "red",
    "EPG_HEADER_BACKGROUND": "orange",
