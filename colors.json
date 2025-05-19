@@ -7,5 +7,7 @@
    "EPG_BACKGROUND_LIVE": "purple",
    "EPG_BACKGROUND": "pink",
    "EPG_BACKGROUND_FOCUSED": "lightblue",
-   "VIDEO_DETAIL_HEADER_BACKGROUND": "gray"
+   "VIDEO_DETAIL_HEADER_BACKGROUND": "gray",
+   "TEXT": "cyan",
+   "TEXT_MUTED": "darksalmon"
 }
