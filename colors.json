@@ -2,6 +2,7 @@
    "VERTICAL_MENU_BACKGROUND": "blue",
    "VERTICAL_MENU_TIME_TEXT_COLOR": "brown",
    "VERTICAL_MENU_DATE_TEXT_COLOR": "lightgray",
+   "VERTICAL_MENU_FOCUSED_BACKGROUND_COLOR": "rgba(200, 100, 100, 0.3)",
    "PRIMARY_1": "darkgreen",
    "BACKGROUND": "red",
    "EPG_HEADER_BACKGROUND": "orange",
