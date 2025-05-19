@@ -1,16 +1,18 @@
 {
-   "VERTICAL_MENU_BACKGROUND": "blue",
-   "VERTICAL_MENU_TIME_TEXT_COLOR": "brown",
-   "VERTICAL_MENU_DATE_TEXT_COLOR": "lightgray",
-   "VERTICAL_MENU_FOCUSED_BACKGROUND_COLOR": "rgba(200, 100, 100, 0.3)",
+   "VERTICAL_MENU_BACKGROUND": "lightgray",
+   "VERTICAL_MENU_TIME_TEXT": "brown",
+   "VERTICAL_MENU_DATE_TEXT": "purple",
+   "VERTICAL_MENU_FOCUSED_BACKGROUND_COLOR": "rgba(156, 39, 176, 0.4)",
    "PRIMARY_1": "darkgreen",
-   "BACKGROUND": "red",
+   "BACKGROUND": "lightsteelblue",
    "EPG_HEADER_BACKGROUND": "orange",
    "EPG_CHANNEL_DESCRIPTOR_BACKGROUND": "brown",
    "EPG_BACKGROUND_LIVE": "purple",
    "EPG_BACKGROUND": "pink",
    "EPG_BACKGROUND_FOCUSED": "lightblue",
    "VIDEO_DETAIL_HEADER_BACKGROUND": "gray",
+   "VIDEO_DETAIL_HEADER_TITLE": "gold",
    "TEXT": "cyan",
-   "TEXT_MUTED": "darksalmon"
+   "TEXT_MUTED": "darksalmon",
+   "CAROUSEL_TITLE": "darkorange"
 }
