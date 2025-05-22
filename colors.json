@@ -17,5 +17,12 @@
    "VIDEO_DETAIL_HEADER_TITLE": "gold",
    "TEXT": "cyan",
    "TEXT_MUTED": "darksalmon",
-   "CAROUSEL_TITLE": "darkorange"
+   "CAROUSEL_TITLE": "darkorange",
+   "VERTICAL_MENU_LOGO": "https://jira.nangu.tv/s/-htlimy/820006/1fbdvy4/_/jira-logo-scaled.png",
+   "LOGIN_LOGO": "https://jira.nangu.tv/s/-htlimy/820006/1fbdvy4/_/jira-logo-scaled.png",
+   "VERTICAL_MENU_BACKGROUND_IMAGE": "https://mamartin.github.io/vertical_menu.png",
+   "HOME_BACKGROUND_IMAGE": "https://mamartin.github.io/welcome.jpg",
+   "SEARCH_BACKGROUND_IMAGE": "https://mamartin.github.io/welcome.jpg",
+   "DETAIL_BACKGROUND_IMAGE": "https://mamartin.github.io/welcome.jpg",
+   "VOD_BACKGROUND_IMAGE": "https://mamartin.github.io/welcome.jpg"
 }
