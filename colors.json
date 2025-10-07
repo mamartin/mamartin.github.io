@@ -15,7 +15,7 @@
    "EPG_PROGRAM_TITLE_MUTED": "black",
    "VIDEO_DETAIL_HEADER_BACKGROUND": "gray",
    "VIDEO_DETAIL_HEADER_TITLE": "gold",
-   "TEXT": "cyan",
+   "TEXT": "white",
    "TEXT_MUTED": "darksalmon",
    "CAROUSEL_TITLE": "darkorange",
    "VERTICAL_MENU_LOGO": "https://jira.nangu.tv/s/-htlimy/820006/1fbdvy4/_/jira-logo-scaled.png",
