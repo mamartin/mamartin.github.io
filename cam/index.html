@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="cs">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Gesto vlevo / vpravo</title>
+    <style>
+      body {
+        margin: 0;
+        background: black;
+        color: white;
+        text-align: center;
+      }
+      video,
+      canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+      }
+      #result {
+        position: absolute;
+        bottom: 20px;
+        width: 100%;
+        font-size: 40px;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <video id="video" autoplay playsinline></video>
+    <canvas id="canvas"></canvas>
+    <div id="result">čekám na ruku...</div>
+
+    <script type="module">
+      import { Hands } from "https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js";
+      import { Camera } from "https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js";
+
+      const video = document.getElementById("video");
+      const canvas = document.getElementById("canvas");
+      const ctx = canvas.getContext("2d");
+      const resultEl = document.getElementById("result");
+
+      // inicializace MediaPipe
+      const hands = new Hands({
+        locateFile: (file) =>
+          `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
+      });
+
+      hands.setOptions({
+        maxNumHands: 1,
+        modelComplexity: 1,
+        minDetectionConfidence: 0.7,
+        minTrackingConfidence: 0.7,
+      });
+
+      // hlavní logika
+      hands.onResults((results) => {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        if (results.multiHandLandmarks.length > 0) {
+          const landmarks = results.multiHandLandmarks[0];
+
+          // bod palce (tip)
+          const thumbTip = landmarks[4];
+          // bod ukazováku (pro referenci)
+          const indexBase = landmarks[5];
+
+          // jednoduchá logika:
+          if (thumbTip.x < indexBase.x) {
+            resultEl.innerText = "👉 vlevo";
+          } else {
+            resultEl.innerText = "👉 vpravo";
+          }
+        } else {
+          resultEl.innerText = "nevidím ruku";
+        }
+      });
+
+      // kamera
+      const camera = new Camera(video, {
+        onFrame: async () => {
+          await hands.send({ image: video });
+        },
+        width: 640,
+        height: 480,
+      });
+
+      camera.start();
+    </script>
+  </body>
+</html>
