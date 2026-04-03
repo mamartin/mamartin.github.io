@@ -29,58 +29,219 @@
     <video id="video" autoplay playsinline></video>
     <canvas id="canvas"></canvas>
     <div id="result">čekám na ruku...</div>
+    <div
+      id="arrow"
+      style="position: absolute; bottom: 80px; width: 100%; font-size: 80px"
+    >
+      ⬆️
+    </div>
 
     <script type="module">
-      import { Hands } from "https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js";
-      import { Camera } from "https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js";
+      import "https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js";
+      import "https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js";
+      // import "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js";
 
       const video = document.getElementById("video");
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert(
+          "Vaše prostředí nepodporuje přístup ke kameře. Otevřete stránku v Chrome nebo Firefox na localhost nebo přes HTTPS.",
+        );
+        throw new Error("getUserMedia is not supported");
+      }
       const canvas = document.getElementById("canvas");
       const ctx = canvas.getContext("2d");
       const resultEl = document.getElementById("result");
+      const arrowEl = document.getElementById("arrow");
+
+      // jednoduchá fyzika kuliček
+      const balls = [];
+      const gravity = 0.5;
+
+      function spawnBall() {
+        balls.push({
+          x: Math.random() * canvas.width,
+          y: -20,
+          vx: (Math.random() - 0.5) * 4,
+          vy: 0,
+          r: 10 + Math.random() * 10,
+        });
+      }
+
+      setInterval(spawnBall, 800);
 
       // inicializace MediaPipe
-      const hands = new Hands({
+      const hands = new window.Hands({
         locateFile: (file) =>
           `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
       });
 
       hands.setOptions({
-        maxNumHands: 1,
+        maxNumHands: 2,
         modelComplexity: 1,
         minDetectionConfidence: 0.7,
         minTrackingConfidence: 0.7,
       });
 
+      // const faceMesh = new window.FaceMesh({
+      //   maxNumFaces: 1,
+      //   refineLandmarks: true,
+      //   minDetectionConfidence: 0.7,
+      //   minTrackingConfidence: 0.7,
+      // });
+
       // hlavní logika
+      // let facePoints = [];
       hands.onResults((results) => {
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        // zrcadlení obrazu (mirror)
+        ctx.save();
+        ctx.scale(-1, 1);
+        ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+        ctx.restore();
+
+        // facePoints = [];
+        // faceMesh.send({ image: video }).then((resultsFace) => {
+        //   facePoints = [];
+        //   if (resultsFace.multiFaceLandmarks.length > 0) {
+        //     resultsFace.multiFaceLandmarks.forEach((landmarks) => {
+        //       // vykreslení hlavy
+        //       ctx.strokeStyle = "cyan";
+        //       ctx.lineWidth = 2;
+        //       landmarks.forEach((lm) => {
+        //         const x = lm.x * canvas.width;
+        //         const y = lm.y * canvas.height;
+        //         ctx.beginPath();
+        //         ctx.arc(x, y, 2, 0, 2 * Math.PI);
+        //         ctx.stroke();
+        //         facePoints.push({ x, y });
+        //       });
+        //     });
+        //   }
+        // });
+
+        // vykreslení ruky
+        if (results.multiHandLandmarks.length > 0) {
+          results.multiHandLandmarks.forEach((landmarks) => {
+            ctx.strokeStyle = "lime";
+            ctx.lineWidth = 4;
+            for (let i = 0; i < landmarks.length; i++) {
+              const x = (1 - landmarks[i].x) * canvas.width;
+              const y = landmarks[i].y * canvas.height;
+              ctx.beginPath();
+              ctx.arc(x, y, 5, 0, 2 * Math.PI);
+              ctx.stroke();
+            }
+          });
+        }
+
+        // maska ruky (kolize s více body)
+        let handPoints = [];
+        if (results.multiHandLandmarks.length > 0) {
+          const lm = results.multiHandLandmarks[0];
+          // body palce, ukazováku, prostředníku, prsteníku, malíčku a zápěstí
+          const indices = [
+            0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
+            19, 20,
+          ];
+          handPoints = indices.map((i) => ({
+            x: (1 - lm[i].x) * canvas.width,
+            y: lm[i].y * canvas.height,
+          }));
+        }
+
+        // update kuliček
+        balls.forEach((b) => {
+          b.vy += gravity;
+          b.x += b.vx;
+          b.y += b.vy;
+
+          // kolize s rukou (více bodů)
+          if (handPoints.length > 0) {
+            handPoints.forEach((p) => {
+              const dx = b.x - p.x;
+              const dy = b.y - p.y;
+              const dist = Math.sqrt(dx * dx + dy * dy);
+              if (dist < b.r + 20) {
+                // zmenšená vzdálenost pro realističtější odraz
+                b.vy = -Math.abs(b.vy) * 0.8;
+                b.vx += dx * 0.05;
+              }
+            });
+          }
+
+          // // kolize s hlavou (facePoints)
+          // if (facePoints.length > 0) {
+          //   facePoints.forEach((p) => {
+          //     const dx = b.x - p.x;
+          //     const dy = b.y - p.y;
+          //     const dist = Math.sqrt(dx * dx + dy * dy);
+          //     if (dist < b.r + 10) {
+          //       // menší odrazová vzdálenost
+          //       b.vy = -Math.abs(b.vy) * 0.8;
+          //       b.vx += dx * 0.05;
+          //     }
+          //   });
+          // }
+
+          // spodní okraj
+          if (b.y > canvas.height - b.r) {
+            b.y = canvas.height - b.r;
+            b.vy *= -0.7;
+          }
+
+          // kreslení
+          ctx.beginPath();
+          ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+          ctx.fillStyle = "red";
+          ctx.fill();
+        });
+
+        // while (facePoints.length > 500) facePoints.shift();
 
         if (results.multiHandLandmarks.length > 0) {
           const landmarks = results.multiHandLandmarks[0];
 
           // bod palce (tip)
-          const thumbTip = landmarks[4];
+          const thumbTip = {
+            x: 1 - landmarks[4].x,
+            y: landmarks[4].y,
+          };
           // bod ukazováku (pro referenci)
-          const indexBase = landmarks[5];
+          const indexBase = {
+            x: 1 - landmarks[5].x,
+            y: landmarks[5].y,
+          };
 
-          // jednoduchá logika:
-          if (thumbTip.x < indexBase.x) {
-            resultEl.innerText = "👉 vlevo";
-          } else {
-            resultEl.innerText = "👉 vpravo";
-          }
+          // výpočet směru (úhel)
+          const dx = thumbTip.x - indexBase.x;
+          const dy = thumbTip.y - indexBase.y;
+
+          const angle = Math.atan2(dy, dx); // radiány
+
+          // převod na stupně
+          const deg = (angle * 180) / Math.PI;
+
+          // textová informace
+          resultEl.innerText = `úhel: ${deg.toFixed(1)}°`;
+
+          // rotace šipky (upraveno, aby směřovala správně)
+          arrowEl.style.transform = `rotate(${deg + 90}deg)`;
         } else {
           resultEl.innerText = "nevidím ruku";
+          arrowEl.style.transform = `rotate(0deg)`;
+        }
+
+        // odstranění starých kuliček
+        while (balls.length > 50) {
+          balls.shift();
         }
       });
 
       // kamera
-      const camera = new Camera(video, {
+      const camera = new window.Camera(video, {
         onFrame: async () => {
           await hands.send({ image: video });
         },
