@@ -96,6 +96,25 @@
         align-items: center;
       }
 
+      .people-stickers {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        margin-bottom: 12px;
+      }
+
+      .person-row {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .person-label {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--main-dark);
+      }
+
       .circle {
         width: 26px;
         height: 26px;
@@ -175,6 +194,7 @@
           title: "Let balonem",
           subtitle: "Prohlédněte si svět z ptačí perspektivy.",
           count: 20,
+          people: 2,
           extra: "👥 pro dva",
         },
         {
@@ -212,6 +232,7 @@
           title: "Kávička se zákuskem",
           subtitle: "Oblíbená kavárna.",
           count: 2,
+          people: 4,
         },
         {
           title: "Workshop kaligrafie",
@@ -230,6 +251,7 @@
           title: "Výlet do ZOO",
           subtitle: "Rodinný výlet.",
           count: 2,
+          people: 4,
         },
         {
           title: "Technická podpora",
@@ -280,6 +302,11 @@
       ];
 
       const app = document.getElementById("app");
+      const getLetokruhyLabel = (count) => {
+        if (count === 1) return "letokruh";
+        if (count >= 2 && count <= 4) return "letokruhy";
+        return "letokruhů";
+      };
 
       vouchers.forEach((v, i) => {
         const card = document.createElement("div");
@@ -288,11 +315,21 @@
         card.style.setProperty("--main", main);
         card.style.setProperty("--main-dark", dark);
 
-        let circles = "";
-
-        circles = Array.from({ length: v.count })
+        const circles = Array.from({ length: v.count })
           .map(() => '<div class="circle"></div>')
           .join("");
+        const stickers = v.people
+          ? `<div class="people-stickers">${Array.from({ length: v.people })
+              .map(
+                (_, personIndex) => `
+                  <div class="person-row">
+                    <div class="person-label">${personIndex + 1}. osoba</div>
+                    <div class="stickers">${circles}</div>
+                  </div>
+                `,
+              )
+              .join("")}</div>`
+          : `<div class="stickers">${circles}</div>`;
 
         card.innerHTML = `
     <div class="spine"></div>
@@ -304,9 +341,13 @@
 
       <div class="title">${v.title}</div>
       <div class="subtitle">${v.subtitle}</div>
-      ${v.count > 0 ? `<div class="price">Cena: ${v.count} letokruhů</div>` : ""}
+      ${
+        v.count > 0
+          ? `<div class="price">Cena: ${v.count} ${getLetokruhyLabel(v.count)}${v.people ? " za osobu" : ""}</div>`
+          : ""
+      }
 
-      <div class="stickers">${circles}</div>
+      ${stickers}
 
       <div class="footer">Platnost do příštích narozenin</div>
     </div>
