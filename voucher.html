@@ -8,32 +8,44 @@
     <style>
       body {
         margin: 0;
-        font-family:
-          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        font-family: system-ui, sans-serif;
         background: #eef3f8;
         padding: 40px;
       }
 
       .container {
         max-width: 900px;
-        margin: 0 auto;
+        margin: auto;
         display: flex;
         flex-direction: column;
-        gap: 30px;
+        gap: 24px;
       }
 
       .card {
         display: flex;
-        background: #ffffff;
+        background: #fff;
         border-radius: 16px;
         box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
         overflow: hidden;
+
+        /* default colors (will be overridden per card) */
+        --main: #2f5f8f;
+        --main-dark: #1f4060;
+        position: relative;
       }
 
-      /* levý "hřbet" */
+      .card::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(120deg, transparent 70%, var(--main) 140%);
+        opacity: 0.05;
+        pointer-events: none;
+      }
+
       .spine {
         width: 70px;
-        background: linear-gradient(180deg, #2f5f8f, #1f4060);
+        background: linear-gradient(180deg, var(--main), var(--main-dark));
         position: relative;
       }
 
@@ -51,207 +63,257 @@
       .content {
         flex: 1;
         padding: 28px 32px;
-        position: relative;
       }
 
       .title {
-        font-size: 32px;
+        font-size: 28px;
         font-weight: 700;
-        color: #1f4060;
-        margin-bottom: 8px;
+        color: var(--main-dark);
       }
 
       .subtitle {
-        font-size: 18px;
+        margin: 10px 0 12px;
         color: #5f6f82;
-        margin-bottom: 30px;
+      }
+
+      .price {
+        font-weight: 600;
+        color: var(--main-dark);
+        margin-bottom: 14px;
+      }
+
+      .meta {
+        font-size: 13px;
+        color: #8aa0b5;
+        margin-bottom: 10px;
       }
 
       .stickers {
         display: flex;
-        gap: 12px;
         flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 12px;
+        align-items: center;
       }
 
       .circle {
-        width: 28px;
-        height: 28px;
+        width: 26px;
+        height: 26px;
         border-radius: 50%;
         border: 2px dashed #9bb3c9;
       }
 
       .footer {
-        margin-top: 20px;
-        font-size: 13px;
+        font-size: 12px;
         color: #8a98a8;
       }
 
-      /* varianty barev */
-      .green .title {
-        color: #2e7d5b;
-      }
-      .green .spine {
-        background: linear-gradient(180deg, #3fa37d, #2e7d5b);
-      }
-
-      .gold .title {
-        color: #a67c2e;
-      }
-      .gold .spine {
-        background: linear-gradient(180deg, #d4a94c, #a67c2e);
+      .badge {
+        font-size: 11px;
+        background: #e6edf5;
+        padding: 4px 8px;
+        border-radius: 6px;
+        margin-right: 6px;
       }
     </style>
   </head>
 
   <body>
-    <div class="container">
-      <!-- VZOR -->
-      <div class="card">
-        <div class="spine"></div>
-        <div class="content">
-          <div class="title">Zdravé klouby</div>
-          <div class="subtitle">Zásoba kolagenu na 3 měsíce.</div>
+    <div class="container" id="app"></div>
 
-          <div class="stickers">
-            <!-- 10 koleček -->
-            <div class="circle"></div>
-            <div class="circle"></div>
-            <div class="circle"></div>
-            <div class="circle"></div>
-            <div class="circle"></div>
-            <div class="circle"></div>
-            <div class="circle"></div>
-            <div class="circle"></div>
-            <div class="circle"></div>
-            <div class="circle"></div>
-          </div>
+    <script>
+      const vouchers = [
+        {
+          title: "Německé nože značky Zepter",
+          subtitle:
+            "4 čerstvě nabroušené nože značky Zepter nebo srovnatelné kvality.",
+          count: 4,
+        },
+        {
+          title: "Zdravé klouby",
+          subtitle:
+            "Zásoba kolagenu na 3 měsíce. Doporučují 4 ze 4 členů rodiny.",
+          count: 10,
+          tag: "SENIOR 70+",
+        },
+        {
+          title: "Pokerový turnaj",
+          subtitle:
+            "Zúčastněte se profesionálního pokerového turnaje v casinu.",
+          count: 10,
+        },
+        {
+          title: "Víkendový pobyt na Šumavě",
+          subtitle: "Sbírání hub s místním průvodcem. S polopenzí.",
+          count: 4,
+          extra: "👥 pro dva",
+        },
+        {
+          title: "Kulturní večer pro dva",
+          subtitle: "Divadelní představení dle Vašeho vkusu.",
+          count: 10,
+          extra: "👥 pro dva",
+        },
+        {
+          title: "Kultura z pohodlí domova",
+          subtitle: "Online předplatné — Drambox, Edisononline — 6 měsíců.",
+          count: 12,
+          tag: "ONLINE",
+        },
+        {
+          title: "Koučování",
+          subtitle: "Šachy, biliár nebo poker.",
+          count: 10,
+        },
+        {
+          title: "Úniková hra / Městská hra",
+          subtitle: "Vemte partu na únikovku nebo tematickou hru.",
+          count: 8,
+          extra: "👥 pro partu",
+        },
+        {
+          title: "Let balonem",
+          subtitle: "Prohlédněte si svět z ptačí perspektivy.",
+          count: 20,
+          extra: "👥 pro dva",
+        },
+        {
+          title: "Odvoz na letiště",
+          subtitle: "VIP servis tam i zpět.",
+          count: 6,
+        },
+        {
+          title: "Grilování na zahradě",
+          subtitle: "Bez starostí, jen si užít večer.",
+          count: 4,
+        },
+        {
+          title: "Podpora dobrých skutků",
+          subtitle: "Pomoc s čímkoliv — odvoz, půjčení, výpomoc.",
+          count: 10,
+        },
+        {
+          title: "Bowling",
+          subtitle: "2 hodiny s rodinou.",
+          count: 10,
+          extra: "👨‍👩‍👧",
+        },
+        {
+          title: "Café Imperial — degustace",
+          subtitle: "Degustace v hodnotě 1000 Kč.",
+          count: 7,
+        },
+        {
+          title: "Oběd ve Srdcovce",
+          subtitle: "S manželkou a švagrovou.",
+          count: 12,
+        },
+        {
+          title: "Kávička se zákuskem",
+          subtitle: "Oblíbená kavárna.",
+          count: 2,
+        },
+        {
+          title: "Workshop kaligrafie",
+          subtitle: "Japonské umění písma.",
+          count: 8,
+          tag: "KREATIVNÍ",
+        },
+        {
+          title: "Víkend v lázních",
+          subtitle: "Relax a regenerace.",
+          count: 30,
+          tag: "PRÉMIOVÝ",
+          extra: "👥 pro dva",
+        },
+        {
+          title: "Výlet do ZOO",
+          subtitle: "Rodinný výlet.",
+          count: 2,
+        },
+        {
+          title: "Technická podpora",
+          subtitle: "Telefon, PC, internet.",
+          count: 4,
+        },
+        {
+          title: "Plavba Čertovnou",
+          subtitle: "50 minut s výkladem.",
+          count: 3,
+        },
+        {
+          title: "Rumový dýchánek",
+          subtitle: "Kurz s degustací.",
+          count: 7,
+        },
+        {
+          title: "Ministr zdravotnictví",
+          subtitle: "Voucher nelze uplatnit 🙂",
+          count: 0,
+          tag: "VYPRODÁNO",
+        },
+        {
+          title: "Doživotní portské",
+          subtitle: "Denní dávka domů.",
+          count: 0,
+          tag: "EXKLUZIVNÍ",
+        },
+        {
+          title: "Vlastní ostrov",
+          subtitle: "Možná jednou…",
+          count: 0,
+          tag: "EXKLUZIVNÍ",
+        },
+      ];
 
-          <div class="footer">Platnost do příštích narozenin</div>
-        </div>
+      const colors = [
+        ["#3A5DAE", "#2C4A8A"],
+        ["#3E8F5B", "#2F6F47"],
+        ["#C17C1A", "#9A6114"],
+        ["#C94A4A", "#9E3838"],
+        ["#6F5BD9", "#5746B0"],
+        ["#2F9C85", "#237565"],
+        ["#B05A7A", "#8C465F"],
+        ["#6B7280", "#4B5563"],
+        ["#C9A23A", "#9E7E2C"],
+        ["#0077A3", "#005B7A"],
+      ];
+
+      const app = document.getElementById("app");
+
+      vouchers.forEach((v, i) => {
+        const card = document.createElement("div");
+        card.className = "card";
+        const [main, dark] = colors[i % colors.length];
+        card.style.setProperty("--main", main);
+        card.style.setProperty("--main-dark", dark);
+
+        let circles = "";
+
+        circles = Array.from({ length: v.count })
+          .map(() => '<div class="circle"></div>')
+          .join("");
+
+        card.innerHTML = `
+    <div class="spine"></div>
+    <div class="content">
+      <div class="meta">
+        ${v.tag ? `<span class="badge">${v.tag}</span>` : ""}
+        ${v.extra ? `<span>${v.extra}</span>` : ""}
       </div>
 
-      <!-- Německé nože -->
-      <div class="card gold">
-        <div class="spine"></div>
-        <div class="content">
-          <div class="title">Německé nože značky Zepter</div>
-          <div class="subtitle">
-            4 čerstvě nabroušené nože značky Zepter nebo srovnatelné kvality.
-          </div>
+      <div class="title">${v.title}</div>
+      <div class="subtitle">${v.subtitle}</div>
+      ${v.count > 0 ? `<div class="price">Cena: ${v.count} letokruhů</div>` : ""}
 
-          <div class="stickers">
-            <div class="circle"></div>
-            <div class="circle"></div>
-            <div class="circle"></div>
-            <div class="circle"></div>
-          </div>
+      <div class="stickers">${circles}</div>
 
-          <div class="footer">Platnost do příštích narozenin</div>
-        </div>
-      </div>
-
-      <!-- Poker -->
-      <div class="card">
-        <div class="spine"></div>
-        <div class="content">
-          <div class="title">Pokerový turnaj</div>
-          <div class="subtitle">
-            Zúčastněte se profesionálního pokerového turnaje v casinu.
-          </div>
-
-          <div class="stickers">
-            <!-- 10 -->
-            <div class="circle"></div>
-            <div class="circle"></div>
-            <div class="circle"></div>
-            <div class="circle"></div>
-            <div class="circle"></div>
-            <div class="circle"></div>
-            <div class="circle"></div>
-            <div class="circle"></div>
-            <div class="circle"></div>
-            <div class="circle"></div>
-          </div>
-
-          <div class="footer">Platnost do příštích narozenin</div>
-        </div>
-      </div>
-
-      <!-- Kulturní večer -->
-      <div class="card green">
-        <div class="spine"></div>
-        <div class="content">
-          <div class="title">Kulturní večer pro dva</div>
-          <div class="subtitle">
-            Divadelní představení dle Vašeho vkusu, např. v Divadle Járy
-            Cimrmana.
-          </div>
-
-          <div class="stickers">
-            <!-- 10 -->
-            <div class="circle"></div>
-            <div class="circle"></div>
-            <div class="circle"></div>
-            <div class="circle"></div>
-            <div class="circle"></div>
-            <div class="circle"></div>
-            <div class="circle"></div>
-            <div class="circle"></div>
-            <div class="circle"></div>
-            <div class="circle"></div>
-          </div>
-
-          <div class="footer">Platnost do příštích narozenin</div>
-        </div>
-      </div>
-
-      <!-- Online kultura -->
-      <div class="card">
-        <div class="spine"></div>
-        <div class="content">
-          <div class="title">Kultura z pohodlí domova (online)</div>
-          <div class="subtitle">
-            Online předplatné — Drambox (divadlo), Edisononline (filmy) nebo
-            podobné — 6 měsíců.
-          </div>
-
-          <div class="stickers">
-            <!-- 12 -->
-            <div class="circle"></div>
-            <div class="circle"></div>
-            <div class="circle"></div>
-            <div class="circle"></div>
-            <div class="circle"></div>
-            <div class="circle"></div>
-            <div class="circle"></div>
-            <div class="circle"></div>
-            <div class="circle"></div>
-            <div class="circle"></div>
-            <div class="circle"></div>
-            <div class="circle"></div>
-          </div>
-
-          <div class="footer">Platnost do příštích narozenin</div>
-        </div>
-      </div>
-
-      <!-- DALŠÍ KARTA -->
-      <div class="card green">
-        <div class="spine"></div>
-        <div class="content">
-          <div class="title">Víkend na Šumavě</div>
-          <div class="subtitle">Pro dva, s polopenzí a houbařením.</div>
-
-          <div class="stickers">
-            <div class="circle"></div>
-            <div class="circle"></div>
-            <div class="circle"></div>
-            <div class="circle"></div>
-          </div>
-
-          <div class="footer">Platnost do příštích narozenin</div>
-        </div>
-      </div>
+      <div class="footer">Platnost do příštích narozenin</div>
     </div>
+  `;
+
+        app.appendChild(card);
+      });
+    </script>
   </body>
 </html>
