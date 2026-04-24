@@ -21,6 +21,222 @@
         gap: 24px;
       }
 
+      .book {
+        max-width: 900px;
+        margin: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+      }
+
+      .page-sheet {
+        min-height: 1120px;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        border-radius: 28px;
+        padding: 56px;
+        position: relative;
+        overflow: hidden;
+        background: #fff;
+        box-shadow: 0 20px 45px rgba(31, 64, 96, 0.08);
+      }
+
+      .cover-page {
+        color: #fff;
+        background:
+          radial-gradient(
+            circle at 85% 16%,
+            rgba(255, 255, 255, 0.22),
+            transparent 20%
+          ),
+          radial-gradient(
+            circle at 12% 88%,
+            rgba(255, 224, 163, 0.16),
+            transparent 18%
+          ),
+          linear-gradient(155deg, #1f4464 0%, #2f628f 48%, #79a9d9 100%);
+      }
+
+      .cover-page::before {
+        content: "";
+        position: absolute;
+        inset: 22px;
+        border-radius: 22px;
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        pointer-events: none;
+      }
+
+      .cover-page::after {
+        content: "";
+        position: absolute;
+        width: 320px;
+        height: 320px;
+        right: -60px;
+        bottom: -90px;
+        border-radius: 50%;
+        background: radial-gradient(
+          circle,
+          rgba(255, 255, 255, 0.22),
+          rgba(255, 255, 255, 0)
+        );
+        pointer-events: none;
+      }
+
+      .cover-content {
+        position: relative;
+        z-index: 1;
+        width: 100%;
+        min-height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 24px;
+      }
+
+      .cover-kicker {
+        align-self: flex-start;
+        font-size: 14px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.8);
+        padding: 10px 16px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+      }
+
+      .cover-main {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        max-width: 620px;
+        margin: auto 0;
+      }
+
+      .cover-title {
+        font-size: 68px;
+        line-height: 1.05;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+      }
+
+      .cover-subtitle {
+        font-size: 35px;
+        line-height: 1.15;
+        font-weight: 600;
+        color: #dfefff;
+      }
+
+      .cover-divider {
+        width: 120px;
+        height: 3px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, #fff4c9, rgba(255, 244, 201, 0.18));
+      }
+
+      .cover-occasion {
+        font-size: 24px;
+        font-weight: 700;
+        color: #fff9e7;
+        padding: 18px 24px;
+        border-radius: 22px;
+        background: rgba(9, 31, 50, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+      }
+
+      .info-page {
+        background: linear-gradient(
+          180deg,
+          rgba(248, 251, 255, 0.98),
+          rgba(238, 245, 252, 1)
+        );
+        border: 1px solid #dce8f3;
+      }
+
+      .info-content {
+        max-width: 760px;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+      }
+
+      .info-panel {
+        width: 100%;
+        padding: 38px 40px;
+        border-radius: 28px;
+        background: rgba(255, 255, 255, 0.76);
+        border: 1px solid rgba(214, 227, 239, 0.95);
+        box-shadow:
+          0 18px 36px rgba(53, 87, 120, 0.08),
+          inset 0 1px 0 rgba(255, 255, 255, 0.85);
+      }
+
+      .info-kicker {
+        margin-bottom: 14px;
+        font-size: 14px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: #6b8399;
+      }
+
+      .info-title {
+        margin: 0 0 30px;
+        font-size: 42px;
+        line-height: 1.1;
+        color: #1f4060;
+      }
+
+      .steps {
+        counter-reset: step;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        color: #42586f;
+        font-size: 23px;
+        line-height: 1.45;
+        list-style: none;
+      }
+
+      .steps li {
+        position: relative;
+        padding: 18px 22px 18px 86px;
+        border-radius: 22px;
+        background: linear-gradient(
+          180deg,
+          rgba(255, 255, 255, 0.94),
+          rgba(243, 248, 253, 0.96)
+        );
+        border: 1px solid #d7e4ef;
+        box-shadow: 0 8px 18px rgba(74, 101, 129, 0.06);
+      }
+
+      .steps li::before {
+        counter-increment: step;
+        content: counter(step);
+        position: absolute;
+        left: 22px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        font-weight: 800;
+        color: #fff;
+        background: linear-gradient(180deg, #2f628f, #214a6d);
+        box-shadow: 0 6px 14px rgba(36, 73, 105, 0.22);
+      }
+
       .card {
         display: flex;
         background: #fff;
@@ -162,6 +378,97 @@
           gap: 8mm;
         }
 
+        .book {
+          max-width: none;
+          gap: 0;
+        }
+
+        .page-sheet {
+          height: 277mm;
+          min-height: 277mm;
+          padding: 14mm;
+          border-radius: 0;
+          box-shadow: none;
+          box-sizing: border-box;
+          break-after: page;
+          page-break-after: always;
+        }
+
+        .cover-page::before {
+          inset: 5mm;
+        }
+
+        .cover-page::after {
+          width: 90mm;
+          height: 90mm;
+          right: -18mm;
+          bottom: -28mm;
+        }
+
+        .cover-kicker {
+          font-size: 9pt;
+          padding: 3mm 5mm;
+        }
+
+        .cover-title {
+          font-size: 30pt;
+        }
+
+        .cover-subtitle {
+          font-size: 18pt;
+        }
+
+        .cover-divider {
+          width: 36mm;
+          height: 1.2mm;
+        }
+
+        .cover-occasion {
+          font-size: 14pt;
+          padding: 5mm 6mm;
+          background: rgba(9, 31, 50, 0.16);
+          box-shadow: none;
+        }
+
+        .info-panel {
+          padding: 8mm;
+          border-radius: 8mm;
+          background: #ffffff;
+          border: 0.35mm solid #d9e6f0;
+          box-shadow: none;
+        }
+
+        .info-kicker {
+          margin-bottom: 4mm;
+          font-size: 9pt;
+        }
+
+        .info-title {
+          font-size: 21pt;
+          margin-bottom: 7mm;
+        }
+
+        .steps {
+          font-size: 12pt;
+          gap: 3.5mm;
+        }
+
+        .steps li {
+          padding: 4mm 4mm 4mm 15mm;
+          border-radius: 5mm;
+          background: #f7fbff;
+          border-color: #d8e4ef;
+          box-shadow: none;
+        }
+
+        .steps li::before {
+          left: 4mm;
+          width: 7mm;
+          height: 7mm;
+          font-size: 10pt;
+          box-shadow: none;
+        }
+
         .card {
           box-shadow: none;
           break-inside: avoid;
@@ -242,7 +549,36 @@
   </head>
 
   <body>
-    <div class="container" id="app"></div>
+    <div class="book">
+      <section class="page-sheet cover-page">
+        <div class="cover-content">
+          <div class="cover-main">
+            <div class="cover-title">Věrnostní knížka</div>
+            <div class="cover-divider"></div>
+            <div class="cover-subtitle">zážitků &amp; radostí</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="page-sheet info-page">
+        <div class="info-content">
+          <div class="info-panel">
+            <div class="info-kicker">Jak tahle knížka funguje</div>
+            <h1 class="info-title">Čtyři jednoduché kroky k zážitku</h1>
+            <ol class="steps">
+              <li>Dostaneš tolik letokruhů, kolik slavíš let.</li>
+              <li>Každý voucher v knížce má cenu v letokruzích.</li>
+              <li>
+                Vyber si zážitek, vlep letokruhy do políček a zavolej dárci.
+              </li>
+              <li>Zážitek je na světě. Platnost: 1 rok.</li>
+            </ol>
+          </div>
+        </div>
+      </section>
+
+      <div class="container" id="app"></div>
+    </div>
 
     <script>
       const vouchers = [
