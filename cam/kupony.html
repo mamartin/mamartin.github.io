@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="cs">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Věrnostní knížka</title>
+
+    <style>
+      @page {
+        size: A4;
+        margin: 0;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Inter", system-ui, sans-serif;
+        background: #e9e4dc;
+      }
+
+      /* === PAGE (s bleed) === */
+      .page {
+        width: 210mm;
+        height: 297mm;
+        position: relative;
+        page-break-after: always;
+      }
+
+      .inner {
+        position: absolute;
+        top: 10mm;
+        left: 15mm;
+        right: 15mm;
+        bottom: 10mm;
+      }
+
+      /* === SPREAD === */
+      .spread {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        height: 100%;
+      }
+
+      .left,
+      .right {
+        padding: 20mm 15mm;
+        box-sizing: border-box;
+      }
+
+      .left {
+        border-right: 1px dashed #c8bfb3;
+      }
+
+      /* === TYPO === */
+      h1 {
+        font-size: 42px;
+        letter-spacing: 2px;
+      }
+
+      h2 {
+        font-size: 24px;
+        margin-bottom: 10px;
+      }
+
+      /* === COVER === */
+      .cover {
+        text-align: center;
+        padding-top: 100px;
+      }
+
+      /* === BADGES === */
+      .badge {
+        display: inline-block;
+        font-size: 11px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-weight: 600;
+        margin-right: 6px;
+      }
+
+      .bestseller {
+        background: #ffe082;
+      }
+      .novinka {
+        background: #81d4fa;
+      }
+      .akce {
+        background: #ff8a80;
+        color: white;
+      }
+      .exclusive {
+        background: #b39ddb;
+        color: white;
+      }
+
+      /* === VOUCHER === */
+      .voucher {
+        background: white;
+        border-radius: 16px;
+        padding: 16px;
+        margin-bottom: 20px;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+      }
+
+      .voucher-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .price {
+        font-weight: bold;
+        color: #5d4037;
+      }
+
+      /* === ICONS === */
+      .icon {
+        width: 28px;
+        height: 28px;
+        margin-right: 8px;
+      }
+
+      /* === WOOD RINGS === */
+      .rings {
+        margin-top: 10px;
+      }
+
+      .ring {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        display: inline-block;
+        margin: 2px;
+        background: radial-gradient(
+          circle at center,
+          #d7b899 0%,
+          #c49a6c 40%,
+          #a67c52 70%,
+          #8d6e63 100%
+        );
+        box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.3);
+      }
+
+      /* === BIG RINGS GRID === */
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(10, 1fr);
+        gap: 8px;
+      }
+
+      .ring-big {
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        background: radial-gradient(circle at center, #d7b899, #a67c52);
+      }
+
+      /* === FOOTER === */
+      .footer {
+        position: absolute;
+        bottom: 10mm;
+        width: 100%;
+        text-align: center;
+        font-size: 12px;
+        color: #777;
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- COVER -->
+    <div class="page">
+      <div class="inner cover">
+        <h1>🌳 VĚRNOSTNÍ KNÍŽKA</h1>
+        <p>70 let • 70 letokruhů • 70 zážitků</p>
+      </div>
+    </div>
+
+    <!-- SPREAD 1 -->
+    <div class="page">
+      <div class="spread">
+        <div class="left">
+          <h2>Jak to funguje</h2>
+          <p>Máš 70 letokruhů. Vybírej si vouchery a „plať“ je nalepením.</p>
+        </div>
+
+        <div class="right">
+          <h2>Tvoje letokruhy</h2>
+          <div class="grid">
+            <script>
+              for (let i = 0; i < 70; i++) {
+                document.write('<div class="ring-big"></div>');
+              }
+            </script>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SPREAD 2 -->
+    <div class="page">
+      <div class="spread">
+        <div class="left">
+          <div class="voucher">
+            <div class="voucher-header">
+              <div>
+                <span class="badge bestseller">BESTSELLER</span>
+                <h3>🎈 Let balonem</h3>
+              </div>
+              <div class="price">18</div>
+            </div>
+            <p>Hodinový let + šampaňské</p>
+            <div class="rings">
+              <script>
+                for (let i = 0; i < 18; i++) {
+                  document.write('<span class="ring"></span>');
+                }
+              </script>
+            </div>
+          </div>
+
+          <div class="voucher">
+            <div class="voucher-header">
+              <div>
+                <span class="badge novinka">NOVINKA</span>
+                <h3>🃏 Poker večer</h3>
+              </div>
+              <div class="price">8</div>
+            </div>
+            <p>Turnaj s kamarády</p>
+            <div class="rings">
+              <script>
+                for (let i = 0; i < 8; i++) {
+                  document.write('<span class="ring"></span>');
+                }
+              </script>
+            </div>
+          </div>
+        </div>
+
+        <div class="right">
+          <div class="voucher">
+            <div class="voucher-header">
+              <div>
+                <span class="badge exclusive">EXKLUZIVNĚ</span>
+                <h3>💆 Masáž</h3>
+              </div>
+              <div class="price">6</div>
+            </div>
+            <p>Relaxace 60 min</p>
+            <div class="rings">
+              <script>
+                for (let i = 0; i < 6; i++) {
+                  document.write('<span class="ring"></span>');
+                }
+              </script>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- END -->
+    <div class="page">
+      <div class="inner cover">
+        <h2>Všechno nejlepší!</h2>
+      </div>
+    </div>
+  </body>
+</html>

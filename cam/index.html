@@ -39,7 +39,6 @@
     <script type="module">
       import "https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js";
       import "https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js";
-      // import "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js";
 
       const video = document.getElementById("video");
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -82,74 +81,38 @@
         minTrackingConfidence: 0.7,
       });
 
-      // const faceMesh = new window.FaceMesh({
-      //   maxNumFaces: 1,
-      //   refineLandmarks: true,
-      //   minDetectionConfidence: 0.7,
-      //   minTrackingConfidence: 0.7,
-      // });
-
       // hlavní logika
-      // let facePoints = [];
       hands.onResults((results) => {
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
 
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        // zrcadlení obrazu (mirror)
+        // vykreslení videa se zrcadlením
         ctx.save();
-        ctx.scale(-1, 1);
+        ctx.scale(-1, 1); // horizontální zrcadlení
         ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
         ctx.restore();
 
-        // facePoints = [];
-        // faceMesh.send({ image: video }).then((resultsFace) => {
-        //   facePoints = [];
-        //   if (resultsFace.multiFaceLandmarks.length > 0) {
-        //     resultsFace.multiFaceLandmarks.forEach((landmarks) => {
-        //       // vykreslení hlavy
-        //       ctx.strokeStyle = "cyan";
-        //       ctx.lineWidth = 2;
-        //       landmarks.forEach((lm) => {
-        //         const x = lm.x * canvas.width;
-        //         const y = lm.y * canvas.height;
-        //         ctx.beginPath();
-        //         ctx.arc(x, y, 2, 0, 2 * Math.PI);
-        //         ctx.stroke();
-        //         facePoints.push({ x, y });
-        //       });
-        //     });
-        //   }
-        // });
+        // částečné vyblednutí staré stopy ruky
+        ctx.fillStyle = "rgba(0, 0, 0, 0.1)"; // menší alfa, aby stopa pomalu mizela
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // vykreslení ruky
+        // vykreslení ruky a sběr bodů pro kolize
+        let handPoints = [];
         if (results.multiHandLandmarks.length > 0) {
           results.multiHandLandmarks.forEach((landmarks) => {
-            ctx.strokeStyle = "lime";
-            ctx.lineWidth = 4;
             for (let i = 0; i < landmarks.length; i++) {
               const x = (1 - landmarks[i].x) * canvas.width;
               const y = landmarks[i].y * canvas.height;
+
+              // stopa ruky
               ctx.beginPath();
-              ctx.arc(x, y, 5, 0, 2 * Math.PI);
-              ctx.stroke();
+              ctx.arc(x, y, 8, 0, 2 * Math.PI);
+              ctx.fillStyle = "rgba(0,255,0,0.5)";
+              ctx.fill();
+
+              handPoints.push({ x, y });
             }
           });
-        }
-
-        // maska ruky (kolize s více body)
-        let handPoints = [];
-        if (results.multiHandLandmarks.length > 0) {
-          const lm = results.multiHandLandmarks[0];
-          // body palce, ukazováku, prostředníku, prsteníku, malíčku a zápěstí
-          const indices = [
-            0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
-            19, 20,
-          ];
-          handPoints = indices.map((i) => ({
-            x: (1 - lm[i].x) * canvas.width,
-            y: lm[i].y * canvas.height,
-          }));
         }
 
         // update kuliček
@@ -158,33 +121,16 @@
           b.x += b.vx;
           b.y += b.vy;
 
-          // kolize s rukou (více bodů)
-          if (handPoints.length > 0) {
-            handPoints.forEach((p) => {
-              const dx = b.x - p.x;
-              const dy = b.y - p.y;
-              const dist = Math.sqrt(dx * dx + dy * dy);
-              if (dist < b.r + 20) {
-                // zmenšená vzdálenost pro realističtější odraz
-                b.vy = -Math.abs(b.vy) * 0.8;
-                b.vx += dx * 0.05;
-              }
-            });
-          }
-
-          // // kolize s hlavou (facePoints)
-          // if (facePoints.length > 0) {
-          //   facePoints.forEach((p) => {
-          //     const dx = b.x - p.x;
-          //     const dy = b.y - p.y;
-          //     const dist = Math.sqrt(dx * dx + dy * dy);
-          //     if (dist < b.r + 10) {
-          //       // menší odrazová vzdálenost
-          //       b.vy = -Math.abs(b.vy) * 0.8;
-          //       b.vx += dx * 0.05;
-          //     }
-          //   });
-          // }
+          // kolize s rukou
+          handPoints.forEach((p) => {
+            const dx = b.x - p.x;
+            const dy = b.y - p.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < b.r + 20) {
+              b.vy = -Math.abs(b.vy) * 0.8;
+              b.vx += dx * 0.05;
+            }
+          });
 
           // spodní okraj
           if (b.y > canvas.height - b.r) {
@@ -192,52 +138,31 @@
             b.vy *= -0.7;
           }
 
-          // kreslení
+          // kreslení kuličky
           ctx.beginPath();
           ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
           ctx.fillStyle = "red";
           ctx.fill();
         });
 
-        // while (facePoints.length > 500) facePoints.shift();
-
+        // směr palce pro šipku
         if (results.multiHandLandmarks.length > 0) {
           const landmarks = results.multiHandLandmarks[0];
-
-          // bod palce (tip)
-          const thumbTip = {
-            x: 1 - landmarks[4].x,
-            y: landmarks[4].y,
-          };
-          // bod ukazováku (pro referenci)
-          const indexBase = {
-            x: 1 - landmarks[5].x,
-            y: landmarks[5].y,
-          };
-
-          // výpočet směru (úhel)
+          const thumbTip = { x: 1 - landmarks[4].x, y: landmarks[4].y };
+          const indexBase = { x: 1 - landmarks[5].x, y: landmarks[5].y };
           const dx = thumbTip.x - indexBase.x;
           const dy = thumbTip.y - indexBase.y;
-
-          const angle = Math.atan2(dy, dx); // radiány
-
-          // převod na stupně
+          const angle = Math.atan2(dy, dx);
           const deg = (angle * 180) / Math.PI;
-
-          // textová informace
           resultEl.innerText = `úhel: ${deg.toFixed(1)}°`;
-
-          // rotace šipky (upraveno, aby směřovala správně)
           arrowEl.style.transform = `rotate(${deg + 90}deg)`;
         } else {
           resultEl.innerText = "nevidím ruku";
-          arrowEl.style.transform = `rotate(0deg)`;
+          arrowEl.style.transform = "rotate(0deg)";
         }
 
-        // odstranění starých kuliček
-        while (balls.length > 50) {
-          balls.shift();
-        }
+        // omezení počtu kuliček
+        while (balls.length > 50) balls.shift();
       });
 
       // kamera
