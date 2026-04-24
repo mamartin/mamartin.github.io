@@ -56,7 +56,9 @@
         bottom: 10px;
         right: -6px;
         width: 12px;
-        background: radial-gradient(circle, #dfe6ee 3px, transparent 4px);
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='18' viewBox='0 0 12 18'%3E%3Ccircle cx='6' cy='3' r='3' fill='%23dfe6ee'/%3E%3C/svg%3E");
+        background-repeat: repeat-y;
+        background-position: center top;
         background-size: 12px 18px;
       }
 
@@ -133,6 +135,108 @@
         padding: 4px 8px;
         border-radius: 6px;
         margin-right: 6px;
+      }
+
+      @page {
+        size: A4 portrait;
+        margin: 10mm;
+      }
+
+      @media print {
+        html,
+        body {
+          background: #fff;
+          padding: 0;
+          margin: 0;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+
+        * {
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+
+        .container {
+          max-width: none;
+          gap: 8mm;
+        }
+
+        .card {
+          box-shadow: none;
+          break-inside: avoid;
+          page-break-inside: avoid;
+          margin: 0;
+          min-height: 82mm;
+          border: 0.4mm solid #d9e1ea;
+          border-radius: 5mm;
+          overflow: hidden;
+          background: #fff !important;
+        }
+
+        .spine,
+        .content,
+        .people-stickers,
+        .person-row,
+        .stickers {
+          break-inside: avoid;
+          page-break-inside: avoid;
+        }
+
+        .spine {
+          width: 18mm;
+          background: linear-gradient(
+            180deg,
+            var(--main),
+            var(--main-dark)
+          ) !important;
+        }
+
+        .spine::after {
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='18' viewBox='0 0 12 18'%3E%3Ccircle cx='6' cy='3' r='3' fill='%23d5dee8'/%3E%3C/svg%3E") !important;
+          background-repeat: repeat-y !important;
+          background-position: center top !important;
+          background-size: 12px 18px !important;
+        }
+
+        .content {
+          padding: 7mm 7mm 6mm;
+        }
+
+        .title {
+          font-size: 19pt;
+        }
+
+        .subtitle {
+          margin: 2.5mm 0 3mm;
+          font-size: 10.5pt;
+        }
+
+        .price {
+          margin-bottom: 3mm;
+          font-size: 11pt;
+        }
+
+        .meta,
+        .footer,
+        .person-label {
+          font-size: 9pt;
+        }
+
+        .stickers {
+          gap: 2.2mm;
+          margin-bottom: 3mm;
+        }
+
+        .people-stickers {
+          gap: 3mm;
+          margin-bottom: 3mm;
+        }
+
+        .circle {
+          width: 6mm;
+          height: 6mm;
+        }
       }
     </style>
   </head>
@@ -349,7 +453,11 @@
 
       ${stickers}
 
-      <div class="footer">Platnost do příštích narozenin</div>
+      ${
+        v.count > 0
+          ? `<div class="footer">Platnost do příštích narozenin</div>`
+          : ""
+      }
     </div>
   `;
 
