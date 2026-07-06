@@ -6,7 +6,7 @@
           "4S595D8BR7.sk.orange.orangetv-stage"
         ],
         "paths": [
-          "/login*"
+          "/webLogin*"
         ]
       }
     ]
