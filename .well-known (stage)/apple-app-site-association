@@ -3,7 +3,7 @@
     "details": [
       {
         "appIDs": [
-          "4S595D8BR7.sk.orange.orangetv"
+          "4S595D8BR7.sk.orange.orangetv-stage"
         ],
         "paths": [
           "/webLogin*"
