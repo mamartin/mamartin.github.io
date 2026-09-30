@@ -21,12 +21,13 @@ const particleFS = /* glsl */ `
   varying float vFog;
   uniform vec3 uFogColor;
   uniform float uAdditive;
+  uniform float uBoost;
   void main() {
     vec2 c = gl_PointCoord - 0.5;
     float d = length(c);
     float a = smoothstep(0.5, 0.12, d);
     if (a <= 0.0) discard;
-    vec3 col = uAdditive > 0.5 ? vColor.rgb : mix(vColor.rgb, uFogColor, vFog);
+    vec3 col = uAdditive > 0.5 ? vColor.rgb * uBoost : mix(vColor.rgb, uFogColor, vFog);
     float alpha = vColor.a * a * (uAdditive > 0.5 ? (1.0 - vFog) : 1.0);
     gl_FragColor = vec4(col, alpha);
     #include <colorspace_fragment>
@@ -61,6 +62,7 @@ class ParticlePool {
         uFogNear: { value: 100 },
         uFogFar: { value: 1000 },
         uAdditive: { value: additive ? 1 : 0 },
+        uBoost: { value: 1 },
       },
       vertexShader: particleVS,
       fragmentShader: particleFS,
@@ -141,6 +143,11 @@ export class Effects {
         p.material.uniforms.uFogFar.value = fog.far;
       }
     }
+  }
+
+  // jas svítících částic (s bloomem víc, aby zářily)
+  setBoost(v) {
+    this.glow.material.uniforms.uBoost.value = v;
   }
 
   tireSmoke(x, y, z, vx, vz, amount, color) {

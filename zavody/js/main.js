@@ -17,6 +17,7 @@ import { Store } from './store.js';
 import { GhostRecorder, GhostPlayer } from './ghost.js';
 import { Pickups, ITEM_NAMES } from './pickups.js';
 import { RNG, clamp } from './rng.js';
+import { Post } from './post.js';
 
 const STEP = 1 / 120;
 const CUP_TRACKS = ['sumava', 'kanon', 'mesto'];
@@ -43,6 +44,7 @@ try {
   throw e;
 }
 renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.info.autoReset = false;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -80,8 +82,23 @@ function applyPixelRatio() {
   renderer.setSize(window.innerWidth, window.innerHeight, false);
 }
 
+// bloom jen pro vysokou kvalitu
+function setupPost() {
+  const want = S.quality === 'high';
+  if (want && !G.post) G.post = new Post(renderer, scene, camera);
+  if (!want && G.post) {
+    G.post.dispose();
+    G.post = null;
+  }
+  if (G.world) {
+    if (G.post) G.post.setBloom(G.world.biome.bloom);
+    G.world.effects.setBoost(G.post ? 1.7 : 1);
+  }
+}
+
 window.addEventListener('resize', () => {
   applyPixelRatio();
+  if (G.post) G.post.setSize(window.innerWidth, window.innerHeight);
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   if (G.world) G.world.effects.setView(camera, renderer.domElement.height, scene.fog);
@@ -214,7 +231,7 @@ async function loadWorld(id) {
   envScene.add(ground);
   const envRT = pmrem.fromScene(envScene, 0.02, 0.1, 3000);
   scene.environment = envRT.texture;
-  scene.environmentIntensity = biome.night ? 0.5 : 1;
+  scene.environmentIntensity = biome.night ? 0.9 : 1;
   disposeObject(envSky);
   ground.geometry.dispose();
 
@@ -222,6 +239,7 @@ async function loadWorld(id) {
   effects.setView(camera, renderer.domElement.height, scene.fog);
 
   G.world = { def, biome, track, terrain, group, sky, lights, effects, envRT, showcase: [], crowd: scenery.extra.crowd };
+  setupPost();
   buildShowcase();
   $('loading').hidden = true;
   return G.world;
@@ -985,7 +1003,9 @@ function frame(now) {
   const d = sun.userData.dir;
   sun.position.set(tx + d.x * 260, ty + d.y * 260, tz + d.z * 260);
   w.sky.position.copy(camera.position);
-  renderer.render(scene, camera);
+  renderer.info.reset();
+  if (G.post) G.post.render();
+  else renderer.render(scene, camera);
 }
 
 // --- start ---------------------------------------------------------------------------

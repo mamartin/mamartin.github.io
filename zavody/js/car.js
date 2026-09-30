@@ -158,7 +158,7 @@ function sharedParts() {
     rimMat: new THREE.MeshStandardMaterial({ color: 0xc9ccd1, roughness: 0.3, metalness: 0.85 }),
     darkMat: new THREE.MeshStandardMaterial({ color: 0x15171b, roughness: 0.6, metalness: 0.2 }),
     glassMat: new THREE.MeshStandardMaterial({ color: 0x0c131c, roughness: 0.08, metalness: 0.9 }),
-    headMat: new THREE.MeshBasicMaterial({ color: 0xfff4dd, toneMapped: false }),
+    headMat: new THREE.MeshBasicMaterial({ color: new THREE.Color(0xfff4dd).multiplyScalar(2.4), toneMapped: false }),
     stripeLight: new THREE.MeshStandardMaterial({ color: 0xf2f2ee, roughness: 0.35, metalness: 0.3 }),
     stripeDark: new THREE.MeshStandardMaterial({ color: 0x16181d, roughness: 0.35, metalness: 0.3 }),
     blobMat: new THREE.MeshBasicMaterial({ map: blobTex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -6 }),
@@ -504,7 +504,11 @@ export class Car {
       if (w.front) w.pivot.rotation.y = -steerVis;
     }
     const braking = this.controls.brake > 0.1 && this.vLong > 0.5;
-    m.mats.tail.color.setHex(braking ? 0xff2a1a : 0x6a0a08);
+    if (braking !== this.wasBraking) {
+      this.wasBraking = braking;
+      m.mats.tail.color.setHex(braking ? 0xff2a1a : 0x6a0a08);
+      if (braking) m.mats.tail.color.multiplyScalar(2.6);
+    }
     // blikání po respawnu
     m.root.visible = this.ghostTimer > 0 ? Math.floor(this.ghostTimer * 10) % 2 === 0 : true;
   }

@@ -10,6 +10,7 @@ export const BIOMES = {
     exposure: 1.0,
     night: false,
     clouds: '#ffffff',
+    bloom: { strength: 0.35, radius: 0.45, threshold: 2.6 },
     terrain: { groundA: '#4f7d37', groundB: '#33592a', groundC: '#86a049', rock: '#7d7b72', nearTrack: '#5d7b3b', shore: '#b5a77c' },
     track: {
       asphalt: '#3c3f45', curbA: '#d3302a', curbB: '#f1f0ea',
@@ -31,6 +32,7 @@ export const BIOMES = {
     exposure: 1.02,
     night: false,
     clouds: '#ffc4a0',
+    bloom: { strength: 0.45, radius: 0.55, threshold: 2.4 },
     terrain: { groundA: '#d49b5f', groundB: '#b0552f', groundC: '#e3b980', rock: '#8a3a22', nearTrack: '#caa06c' },
     track: {
       asphalt: '#46413e', curbA: '#c8321f', curbB: '#f3eee4',
@@ -47,10 +49,11 @@ export const BIOMES = {
     sky: { top: '#03060f', horizon: '#1b2848', bottom: '#080b15', glow: 0.25 },
     sunDir: [0.3, 0.55, -0.55],
     sun: { color: '#8fa6ff', intensity: 0.55 },
-    hemi: { sky: '#3a4a78', ground: '#15151c', intensity: 0.55 },
+    hemi: { sky: '#3a4a78', ground: '#15151c', intensity: 0.75 },
     fog: { color: '#0e1528', near: 110, far: 700 },
     exposure: 1.15,
     night: true,
+    bloom: { strength: 0.7, radius: 0.5, threshold: 1.15 },
     terrain: { groundA: '#2a2c31', groundB: '#212328', groundC: '#2a2c31', rock: '#2a2c31', nearTrack: '#34363b', flat: false },
     track: {
       asphalt: '#303237', curbA: '#d7d7d2', curbB: '#b8302a', centerLine: '#d9c04a', lineColor: '#dedbd0',

@@ -550,7 +550,7 @@ function buildCity(track, terrain, rng, quality) {
     const sg = new THREE.BufferGeometry();
     sg.setAttribute('position', new THREE.Float32BufferAttribute(sp, 3));
     sg.setAttribute('uv', new THREE.Float32BufferAttribute(suv, 2));
-    const signMesh = new THREE.Mesh(sg, new THREE.MeshBasicMaterial({ map: atex, toneMapped: false, side: THREE.DoubleSide }));
+    const signMesh = new THREE.Mesh(sg, new THREE.MeshBasicMaterial({ map: atex, color: new THREE.Color(1.8, 1.8, 1.8), toneMapped: false, side: THREE.DoubleSide }));
     group.add(signMesh);
   }
   return group;
@@ -592,7 +592,7 @@ function buildStreetLamps(track, spacing = 34) {
   const poleGeo = new THREE.CylinderGeometry(0.1, 0.16, 8, 6).translate(0, 4, 0);
   group.add(instancedChunks(poleGeo, new THREE.MeshLambertMaterial({ color: 0x3a3f48 }), poles, { castShadow: false }));
   const headGeo = new THREE.BoxGeometry(2.8, 0.18, 0.5);
-  group.add(instancedChunks(headGeo, new THREE.MeshBasicMaterial({ color: 0xffe2a8, toneMapped: false }), heads, { castShadow: false }));
+  group.add(instancedChunks(headGeo, new THREE.MeshBasicMaterial({ color: new THREE.Color(0xffe2a8).multiplyScalar(3), toneMapped: false }), heads, { castShadow: false }));
   const poolMat = new THREE.MeshBasicMaterial({
     map: glowTexture('rgba(255,214,150,0.5)', 'rgba(255,200,120,0)'),
     transparent: true,

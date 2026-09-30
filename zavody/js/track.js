@@ -397,8 +397,9 @@ export class Track {
   setStartLights(n, green = false) {
     if (!this.startLights) return;
     this.startLights.forEach((m, i) => {
-      if (green) m.color.setHex(0x19ff5a);
-      else m.color.setHex(i < n ? 0xff2211 : 0x220806);
+      if (green) m.color.setHex(0x19ff5a).multiplyScalar(3);
+      else if (i < n) m.color.setHex(0xff2211).multiplyScalar(3.5);
+      else m.color.setHex(0x220806);
     });
   }
 }
