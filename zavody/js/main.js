@@ -79,7 +79,7 @@ const gearboxes = [new GearBox(), new GearBox()];
 const pmrem = new THREE.PMREMGenerator(renderer);
 
 const G = {
-  screen: 'loading', // loading | menu | race
+  screen: 'loading', // loading | menu | race | editor
   paused: false,
   world: null,
   race: null,
@@ -263,6 +263,7 @@ async function loadWorld(id) {
   scene.environmentIntensity = biome.night ? 0.9 : 1;
   disposeObject(envSky);
   ground.geometry.dispose();
+  ground.material.dispose();
 
   const effects = new Effects(scene, S.quality);
   effects.setView(camera, renderer.domElement.height, scene.fog);
