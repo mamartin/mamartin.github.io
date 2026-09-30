@@ -60,35 +60,36 @@ export function trackOutline(track, canvas, { pad = 8, color = '#f3f5f8', width 
 
 const hex = (n) => '#' + n.toString(16).padStart(6, '0');
 
+// Jeden pohled HUD (při hře dvou hráčů má každý svůj).
 export class HUD {
-  constructor() {
-    this.root = document.getElementById('hud');
-    this.pos = document.getElementById('hud-pos');
-    this.posOf = document.getElementById('hud-pos-of');
-    this.posLabel = document.querySelector('.pos-label');
-    this.tower = document.getElementById('hud-tower');
-    this.lap = document.getElementById('hud-lap');
-    this.time = document.getElementById('hud-time');
-    this.lapTime = document.getElementById('hud-laptime');
-    this.best = document.getElementById('hud-best');
-    this.msg = document.getElementById('hud-msg');
-    this.subEl = document.getElementById('hud-sub');
-    this.minimap = document.getElementById('minimap');
-    this.speedo = document.getElementById('speedo');
-    this.itemSlot = document.getElementById('item-slot');
-    this.itemIcon = document.getElementById('item-icon');
+  constructor(view) {
+    this.view = view;
+    const q = (sel) => view.querySelector(sel);
+    this.pos = q('.pos-num');
+    this.posOf = q('.pos-of');
+    this.posLabel = q('.pos-label');
+    this.tower = q('.tower');
+    this.lap = q('.h-lap');
+    this.time = q('.h-time');
+    this.lapTime = q('.h-laptime');
+    this.best = q('.h-best');
+    this.msg = q('.center-msg');
+    this.subEl = q('.sub-msg');
+    this.minimap = q('.minimap');
+    this.speedo = q('.speedo');
+    this.itemSlot = q('.item-slot');
+    this.itemIcon = q('.item-icon');
+    this.itemKey = q('.item-slot em');
+    this.tag = q('.player-tag');
     this.msgTimer = 0;
     this.subTimer = 0;
     this.cache = {};
     this.rows = [];
   }
 
-  show(v) {
-    this.root.hidden = !v;
-  }
-
-  setupRace(race) {
+  setupRace(race, car, { tag = '', itemKey = 'F' } = {}) {
     this.race = race;
+    this.car = car;
     // věž s pořadím
     this.tower.innerHTML = '';
     this.rows = race.cars.map(() => {
@@ -101,6 +102,10 @@ export class HUD {
     this.posOf.textContent = race.mode === 'time' ? '' : '/' + race.cars.length;
     this.posLabel.textContent = race.mode === 'time' ? 'na ghost' : 'pozice';
     this.pos.classList.toggle('delta', race.mode === 'time');
+    this.tag.textContent = tag;
+    this.tag.hidden = !tag;
+    this.tag.style.background = hex(car.color);
+    this.itemKey.textContent = itemKey;
     this.cache = {};
     this.clearMessages();
     this.resize();
@@ -161,7 +166,7 @@ export class HUD {
       this.subTimer -= dt;
       if (this.subTimer <= 0) this.subEl.classList.remove('show');
     }
-    const p = race.player;
+    const p = this.car;
     if (race.mode === 'time') {
       const d = race.ghostDelta;
       this.set(this.pos, 'pos', d == null ? '–' : formatDelta(d));
@@ -187,14 +192,14 @@ export class HUD {
         const g = race.gapToLeader(car);
         gap = g != null ? '+' + g.toFixed(1).replace('.', ',') : '';
       }
-      const key = car.name + '|' + gap + '|' + car.isPlayer;
+      const key = car.name + '|' + gap + '|' + (car === p);
       if (r.key !== key) {
         r.key = key;
         r.pos.textContent = i + 1;
         r.chip.style.background = hex(car.color);
         r.name.textContent = car.name;
         r.gap.textContent = gap;
-        r.li.classList.toggle('me', car.isPlayer);
+        r.li.classList.toggle('me', car === p);
       }
     });
 
@@ -214,7 +219,7 @@ export class HUD {
     g.fill();
     g.drawImage(this.mapBase, 0, 0, size, size);
     for (const car of race.cars) {
-      if (car.isPlayer) continue;
+      if (car === this.car) continue;
       const [x, y] = map(car.x, car.z);
       g.fillStyle = hex(car.color);
       g.strokeStyle = 'rgba(0,0,0,0.7)';
@@ -232,7 +237,7 @@ export class HUD {
       g.arc(x, y, 4.5, 0, Math.PI * 2);
       g.stroke();
     }
-    const p = race.player;
+    const p = this.car;
     const [x, y] = map(p.x, p.z);
     const s = Math.sin(p.hd), c = Math.cos(p.hd);
     g.save();

@@ -12,6 +12,7 @@ export const OPPONENTS = [
   { name: 'Mirka Vítr', color: 0xe8e8e8, number: 88 },
 ];
 export const PLAYER_NUMBER = 7;
+export const PLAYER_NUMBERS = [7, 8];
 
 export const PLAYER_COLORS = [
   { name: 'Závodní červená', hex: 0xd7263d },
@@ -25,7 +26,10 @@ export const PLAYER_COLORS = [
 export const COUNTDOWN = 3.6;
 
 export class Race {
-  constructor({ track, biome, mode = 'race', laps = 3, difficulty = 'medium', playerColor = 0xd7263d, night = false, opponents = 5 }) {
+  constructor({
+    track, biome, mode = 'race', laps = 3, difficulty = 'medium', playerColor = 0xd7263d, playerColors = null,
+    humans = 1, night = false, opponents = null,
+  }) {
     this.track = track;
     this.biome = biome;
     this.mode = mode;
@@ -40,13 +44,21 @@ export class Race {
     this.finishedCount = 0;
     this.leaderMarks = [];
 
-    const count = mode === 'race' ? opponents + 1 : 1;
-    const playerSlot = mode === 'race' ? Math.min(3, count - 1) : 0;
-    const pool = OPPONENTS.filter((o) => o.color !== playerColor);
+    if (mode !== 'race') humans = 1;
+    const colors = playerColors || [playerColor];
+    const opp = opponents ?? 6 - humans;
+    const count = mode === 'race' ? opp + humans : 1;
+    // lidé startují uprostřed roštu (4. a 5. místo)
+    const firstHuman = mode === 'race' ? Math.min(3, count - humans) : 0;
+    const pool = OPPONENTS.filter((o) => !colors.includes(o.color));
+    this.players = [];
     let ai = 0;
     for (let slot = 0; slot < count; slot++) {
-      const isPlayer = slot === playerSlot;
-      const info = isPlayer ? { name: 'Ty', color: playerColor, number: PLAYER_NUMBER } : pool[ai++ % pool.length];
+      const h = slot - firstHuman;
+      const isPlayer = h >= 0 && h < humans;
+      const info = isPlayer
+        ? { name: humans > 1 ? `Hráč ${h + 1}` : 'Ty', color: colors[h] ?? colors[0], number: PLAYER_NUMBERS[h] }
+        : pool[ai++ % pool.length];
       const car = new Car(track, { color: info.color, name: info.name, number: info.number, isPlayer, night, biome });
       const g = track.gridSlot(mode === 'race' ? slot : 2);
       car.reset(g.s, g.lat);
@@ -54,10 +66,17 @@ export class Race {
       this.initRaceData(car, g.s);
       car.slot = slot;
       this.cars.push(car);
-      if (isPlayer) this.player = car;
-      else this.ais.set(car, new AIDriver(car, track, difficulty, 1000 + slot * 77));
+      if (isPlayer) {
+        car.humanIndex = h;
+        this.players[h] = car;
+      } else this.ais.set(car, new AIDriver(car, track, difficulty, 1000 + slot * 77));
     }
-    this.autopilot = null;
+    this.player = this.players[0];
+    this.autopilots = new Map();
+  }
+
+  get autopilot() {
+    return this.autopilots.get(this.player) || null;
   }
 
   initRaceData(car, s) {
@@ -85,12 +104,14 @@ export class Race {
     return Math.max(0, Math.ceil(COUNTDOWN - t));
   }
 
-  setAutopilot(on) {
-    if (on && !this.autopilot) this.autopilot = new AIDriver(this.player, this.track, 'hard', 4242);
-    if (!on) this.autopilot = null;
+  setAutopilot(on, car = this.player) {
+    if (on && !this.autopilots.has(car)) this.autopilots.set(car, new AIDriver(car, this.track, 'hard', 4242 + (car.humanIndex || 0)));
+    if (!on) this.autopilots.delete(car);
   }
 
-  step(dt, playerControls) {
+  // controls: ovládání pro jednoho hráče, nebo pole pro víc hráčů (podle players)
+  step(dt, controls) {
+    const list = Array.isArray(controls) ? controls : [controls];
     this.clock += dt;
     const racing = this.state === 'running' || this.state === 'finished';
     if (this.state === 'countdown') {
@@ -111,12 +132,13 @@ export class Race {
     // ovládání
     for (const car of this.cars) {
       const ai = this.ais.get(car);
+      const mine = car.isPlayer ? list[car.humanIndex] || list[0] : null;
       if (!racing) {
         // na roštu: jen „túrování“ motoru, auta stojí
         const c = car.controls;
-        c.throttle = car.isPlayer ? playerControls.throttle : 0;
+        c.throttle = mine ? mine.throttle : 0;
         c.brake = 1;
-        c.steer = car.isPlayer ? playerControls.steer : 0;
+        c.steer = mine ? mine.steer : 0;
         c.handbrake = true;
         c.nitro = false;
         continue;
@@ -129,18 +151,19 @@ export class Race {
           this.respawn(car);
         }
       } else if (car.isPlayer) {
-        if (this.autopilot || car.finished) {
-          if (!this.autopilot) this.setAutopilot(true);
-          this.autopilot.update(dt, this.cars);
-          if (this.autopilot.wantsRespawn) {
-            this.autopilot.wantsRespawn = false;
+        if (this.autopilots.has(car) || car.finished) {
+          if (!this.autopilots.has(car)) this.setAutopilot(true, car);
+          const pilot = this.autopilots.get(car);
+          pilot.update(dt, this.cars);
+          if (pilot.wantsRespawn) {
+            pilot.wantsRespawn = false;
             this.respawn(car);
           }
           if (car.finished) {
             car.controls.throttle *= 0.55;
             car.controls.nitro = false;
           }
-        } else Object.assign(car.controls, playerControls);
+        } else Object.assign(car.controls, mine);
       }
     }
 
@@ -161,8 +184,10 @@ export class Race {
   }
 
   rubberFor(car) {
-    if (this.mode !== 'race' || !this.player || this.player.finished) return 1;
-    const gap = car.progress - this.player.progress; // + = AI vepředu
+    const racing = this.players.filter((p) => !p.finished);
+    if (this.mode !== 'race' || !racing.length) return 1;
+    const human = Math.max(...racing.map((p) => p.progress));
+    const gap = car.progress - human; // + = AI vepředu
     if (gap > 0) return 1 - clamp((gap - 60) / 400, 0, 0.07);
     return 1 + clamp((-gap - 90) / 500, 0, 0.06);
   }
@@ -190,7 +215,7 @@ export class Race {
         car.finishTime = this.time;
         car.finishOrder = ++this.finishedCount;
         this.emit('finish', { car });
-        if (car.isPlayer) this.state = 'finished';
+        if (car.isPlayer && this.players.every((p) => p.finished)) this.state = 'finished';
       }
     }
 

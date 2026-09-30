@@ -78,16 +78,35 @@
         </div>
       </section>
 
-      <section class="menu-block options">
-        <div class="opt">
-          <h2 class="label">Barva auta</h2>
-          <div class="swatches" id="swatches" role="radiogroup" aria-label="Barva auta"></div>
+      <section class="menu-block options" id="players-row">
+        <div class="opt" id="players-opt">
+          <h2 class="label">Hráči</h2>
+          <div class="seg small" id="players-seg" role="radiogroup" aria-label="Počet hráčů">
+            <button type="button" role="radio" data-players="1">1 hráč</button>
+            <button type="button" role="radio" data-players="2">2 hráči</button>
+          </div>
         </div>
         <div class="opt" id="weapons-opt">
           <h2 class="label">Power-upy</h2>
           <button type="button" class="toggle" id="weapons-toggle" aria-pressed="false" aria-label="Power-upy"><span></span><em>Vypnuto</em></button>
         </div>
       </section>
+
+      <section class="menu-block options colors-row">
+        <div class="opt">
+          <h2 class="label" id="color1-label">Barva auta</h2>
+          <div class="swatches" id="swatches" role="radiogroup" aria-label="Barva auta"></div>
+        </div>
+        <div class="opt" id="color2-opt" hidden>
+          <h2 class="label">Barva hráče 2</h2>
+          <div class="swatches" id="swatches2" role="radiogroup" aria-label="Barva hráče 2"></div>
+        </div>
+      </section>
+      <p class="hint keys-2p" id="keys-2p" hidden>
+        <strong>Hráč 1</strong> WASD, drift mezerník, nitro levý Shift, power-up E.
+        <strong>Hráč 2</strong> šipky, drift klávesa vpravo od tečky, nitro pravý Shift, power-up tečka, návrat na trať Enter.
+        Druhý gamepad ovládá hráče 2.
+      </p>
 
       <button type="button" class="start-btn" id="start-btn">Na start <span aria-hidden="true">▸</span></button>
 
@@ -126,26 +145,29 @@
 
   <!-- HUD -->
   <div id="hud" class="hud" hidden>
-    <div class="hud-left">
-      <div class="pos-box">
-        <span class="pos-num" id="hud-pos">1</span><span class="pos-of" id="hud-pos-of">/6</span>
-        <span class="pos-label">pozice</span>
+    <div class="hud-view" data-view="0">
+      <div class="hud-left">
+        <div class="pos-box">
+          <span class="pos-num">1</span><span class="pos-of">/6</span>
+          <span class="pos-label">pozice</span>
+        </div>
+        <ol class="tower"></ol>
       </div>
-      <ol class="tower" id="hud-tower"></ol>
-    </div>
-    <div class="hud-right">
-      <div class="timing">
-        <div class="t-row big"><span class="t-label">Kolo</span><span id="hud-lap">1/3</span></div>
-        <div class="t-row total"><span class="t-label">Čas</span><span id="hud-time">0:00.00</span></div>
-        <div class="t-row"><span class="t-label">Toto kolo</span><span id="hud-laptime">0:00.00</span></div>
-        <div class="t-row"><span class="t-label">Nejlepší</span><span id="hud-best">–</span></div>
+      <div class="hud-right">
+        <div class="timing">
+          <div class="t-row big"><span class="t-label">Kolo</span><span class="h-lap">1/3</span></div>
+          <div class="t-row total"><span class="t-label">Čas</span><span class="h-time">0:00,00</span></div>
+          <div class="t-row"><span class="t-label">Toto kolo</span><span class="h-laptime">0:00,00</span></div>
+          <div class="t-row best"><span class="t-label">Nejlepší</span><span class="h-best">–</span></div>
+        </div>
+        <div class="item-slot" hidden><span class="item-icon"></span><em>F</em></div>
       </div>
-      <div class="item-slot" id="item-slot" hidden><span id="item-icon"></span><em>F</em></div>
+      <canvas class="minimap" width="200" height="200" aria-label="Mapa trati"></canvas>
+      <canvas class="speedo" width="240" height="240" aria-label="Tachometr"></canvas>
+      <div class="center-msg" aria-live="polite"></div>
+      <div class="sub-msg"></div>
+      <div class="player-tag" hidden></div>
     </div>
-    <canvas class="minimap" id="minimap" width="200" height="200" aria-label="Mapa trati"></canvas>
-    <canvas class="speedo" id="speedo" width="240" height="240" aria-label="Tachometr"></canvas>
-    <div class="center-msg" id="hud-msg" aria-live="polite"></div>
-    <div class="sub-msg" id="hud-sub"></div>
     <div class="rotate-hint" id="rotate-hint">Na šířku se hraje líp</div>
     <button type="button" class="pause-btn" id="pause-btn" aria-label="Pauza">II</button>
     <div class="touch" id="touch">

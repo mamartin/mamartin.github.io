@@ -124,6 +124,11 @@ export class AudioEngine {
     return { src, f, g };
   }
 
+  // dva hráči: druhý motor hraje stejně nahlas jako první
+  setDuo(on) {
+    if (this.rival) this.rival.level = on ? 0.3 : 0.16;
+  }
+
   setMuted(m) {
     this.muted = m;
     if (this.master) this.master.gain.setTargetAtTime(m ? 0 : this.volume, this.ctx.currentTime, 0.05);

@@ -138,11 +138,12 @@ export class Pickups {
     return p;
   }
 
-  update(dt, playerWantsUse) {
+  // useFlags[i] = hráč i chce použít svůj power-up
+  update(dt, useFlags = []) {
     this.time += dt;
     const cars = this.race.cars;
     const racing = this.race.state !== 'countdown';
-    this.update2(dt, playerWantsUse, cars, racing);
+    this.update2(dt, useFlags, cars, racing);
     for (const car of cars) {
       const p = this.prev.get(car) || {};
       p.x = car.x;
@@ -151,7 +152,7 @@ export class Pickups {
     }
   }
 
-  update2(dt, playerWantsUse, cars, racing) {
+  update2(dt, useFlags, cars, racing) {
 
     // krabice
     for (const b of this.boxes) {
@@ -194,8 +195,8 @@ export class Pickups {
         continue;
       }
       if (!car.item || !racing) continue;
-      if (car.isPlayer && !this.race.autopilot && !car.finished) {
-        if (playerWantsUse) this.use(car);
+      if (car.isPlayer && !this.race.autopilots.has(car) && !car.finished) {
+        if (useFlags[car.humanIndex || 0]) this.use(car);
       } else this.aiUse(dt, car);
     }
 
