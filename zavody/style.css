@@ -380,7 +380,7 @@ kbd {
   text-align: center;
   color: var(--paper);
 }
-.settings { display: grid; grid-template-columns: 1fr auto; gap: 16px; margin-top: 12px; align-items: start; }
+.settings { display: grid; grid-template-columns: 1fr auto auto; gap: 16px; margin-top: 12px; align-items: start; }
 
 /* --- HUD --- */
 .hud { position: fixed; inset: 0; z-index: 5; pointer-events: none; }

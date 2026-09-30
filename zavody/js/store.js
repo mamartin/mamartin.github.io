@@ -10,6 +10,7 @@ const DEFAULTS = {
   color: 0,
   quality: null,
   sound: true,
+  music: true,
   weapons: true,
   randomSeed: 20260930,
   camera: 'chase',

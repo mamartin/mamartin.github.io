@@ -11,7 +11,7 @@ import { Race, PLAYER_COLORS, OPPONENTS, PLAYER_NUMBERS } from './race.js';
 import { CameraRig } from './camera.js';
 import { Effects } from './effects.js';
 import { Input } from './input.js';
-import { AudioEngine, GearBox } from './audio.js';
+import { AudioEngine, GearBox, Music } from './audio.js';
 import { HUD, formatTime, formatDelta, trackOutline } from './hud.js';
 import { Store } from './store.js';
 import { GhostRecorder, GhostPlayer } from './ghost.js';
@@ -61,6 +61,15 @@ const input = new Input();
 input.bindTouch($('touch'));
 const audio = new AudioEngine();
 audio.muted = !S.sound;
+const music = new Music(audio);
+music.enabled = S.music !== false;
+// zvuk smí začít až po prvním kliknutí nebo klávese
+function unlockAudio() {
+  audio.init();
+  music.start();
+}
+window.addEventListener('pointerdown', unlockAudio, { once: true });
+window.addEventListener('keydown', unlockAudio, { once: true });
 // HUD: jeden pohled na hráče (druhý vzniká klonováním šablony)
 const hudRoot = $('hud');
 const hudTemplate = hudRoot.querySelector('.hud-view');
@@ -439,6 +448,9 @@ function refreshMenu() {
   const st = $('sound-toggle');
   st.setAttribute('aria-pressed', String(S.sound));
   st.querySelector('em').textContent = S.sound ? 'Zapnuto' : 'Vypnuto';
+  const mt = $('music-toggle');
+  mt.setAttribute('aria-pressed', String(S.music !== false));
+  mt.querySelector('em').textContent = S.music !== false ? 'Zapnuto' : 'Vypnuto';
   for (const [id, key] of [['swatches', 'color'], ['swatches2', 'color2']]) {
     const sw = $(id);
     if (!sw.children.length) {
@@ -524,6 +536,13 @@ function bindMenu() {
     store.save();
     refreshMenu();
   });
+  $('music-toggle').addEventListener('click', () => {
+    S.music = S.music === false;
+    audio.init();
+    music.setEnabled(S.music);
+    store.save();
+    refreshMenu();
+  });
   $('start-btn').addEventListener('click', () => startFromMenu());
   $('new-track').addEventListener('click', () => openEditor(null));
   $('pause-btn').addEventListener('click', () => setPaused(!G.paused));
@@ -583,6 +602,8 @@ async function startRace() {
 
 async function startRaceInner() {
   audio.init();
+  music.start();
+  music.setIntensity(1);
   audio.setMuted(!S.sound);
   $('results').hidden = true;
   $('pause').hidden = true;
@@ -697,6 +718,7 @@ function toMenu() {
   $('pause').hidden = true;
   hudRoot.hidden = true;
   audio.silence();
+  music.setIntensity(0);
   G.paused = false;
   G.screen = 'menu';
   $('menu').hidden = false;
@@ -712,6 +734,7 @@ function setPaused(p) {
   if (G.screen !== 'race' || !G.race || !$('results').hidden) return;
   G.paused = p;
   $('pause').hidden = !p;
+  music.setIntensity(p ? 0 : 1);
   if (p) {
     audio.silence();
     $('resume-btn').focus();
@@ -723,6 +746,9 @@ function setPaused(p) {
 
 document.addEventListener('visibilitychange', () => {
   if (document.hidden && G.screen === 'race' && G.race && G.race.state !== 'finished') setPaused(true);
+  // plánovač hudby v pozadí nestíhá, proto ji zastavíme
+  if (document.hidden) music.stop();
+  else if (audio.ctx) music.start();
 });
 
 function handleKeys(pressed) {
@@ -1271,7 +1297,7 @@ async function boot() {
 
 // debug / testy
 Object.assign(G, {
-  scene, camera, renderer, store, audio, editor,
+  scene, camera, renderer, store, audio, editor, music,
   setTimeScale: (v) => (G.timeScale = v),
   autopilot: (on = true) => G.race && G.race.setAutopilot(on),
   start: (opts = {}) => {

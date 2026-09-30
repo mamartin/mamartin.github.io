@@ -219,3 +219,189 @@ export class AudioEngine {
     this.tone(48, 0.6, 'sine', 0.6);
   }
 }
+
+// --- hudba -------------------------------------------------------------------
+// Procedurální synthwave smyčka Am–F–C–G. V menu klidná, v závodě s bicími.
+
+const CHORDS = [
+  [57, 60, 64],
+  [53, 57, 60],
+  [48, 52, 55],
+  [55, 59, 62],
+];
+const midi = (n) => 440 * Math.pow(2, (n - 69) / 12);
+const BPM = 112;
+
+export class Music {
+  constructor(audio) {
+    this.a = audio;
+    this.enabled = true;
+    this.intensity = 0;
+    this.step = 0;
+    this.timer = null;
+    this.sixteenth = 60 / BPM / 4;
+  }
+
+  setup() {
+    const ctx = this.a.ctx;
+    if (!ctx || this.bus) return !!this.bus;
+    this.bus = ctx.createGain();
+    this.bus.gain.value = 0;
+    this.bus.connect(this.a.master);
+    // ozvěna pro arpeggio
+    this.delay = ctx.createDelay(1);
+    this.delay.delayTime.value = this.sixteenth * 3;
+    const fb = ctx.createGain();
+    fb.gain.value = 0.32;
+    const wet = ctx.createGain();
+    wet.gain.value = 0.35;
+    this.delay.connect(fb).connect(this.delay);
+    this.delay.connect(wet).connect(this.bus);
+    return true;
+  }
+
+  start() {
+    if (!this.enabled || this.timer || !this.setup()) return;
+    const ctx = this.a.ctx;
+    this.nextTime = ctx.currentTime + 0.08;
+    this.timer = setInterval(() => this.schedule(), 25);
+    this.fade();
+  }
+
+  stop() {
+    if (!this.timer) return;
+    clearInterval(this.timer);
+    this.timer = null;
+    if (this.bus) this.bus.gain.setTargetAtTime(0, this.a.ctx.currentTime, 0.2);
+  }
+
+  setEnabled(on) {
+    this.enabled = on;
+    if (on) this.start();
+    else this.stop();
+  }
+
+  // 0 = menu, 1 = závod
+  setIntensity(v) {
+    if (this.intensity === v) return;
+    this.intensity = v;
+    this.fade();
+  }
+
+  fade() {
+    if (!this.bus) return;
+    this.bus.gain.setTargetAtTime(this.intensity > 0.5 ? 0.6 : 1.0, this.a.ctx.currentTime, 0.4);
+  }
+
+  schedule() {
+    const ctx = this.a.ctx;
+    while (this.nextTime < ctx.currentTime + 0.12) {
+      this.playStep(this.step, this.nextTime);
+      this.nextTime += this.sixteenth;
+      this.step = (this.step + 1) % 64;
+    }
+  }
+
+  playStep(step, t) {
+    const chord = CHORDS[Math.floor(step / 16) % 4];
+    const s = step % 16;
+    const full = this.intensity > 0.5;
+    if (s % 2 === 0) this.bass(midi(chord[0] - 12), t, full ? 0.2 : 0.11);
+    const arp = [chord[0] + 12, chord[1] + 12, chord[2] + 12, chord[1] + 12];
+    if (full || s % 2 === 0) this.arp(midi(arp[s % 4] + (s >= 8 && full ? 12 : 0)), t, full ? 0.045 : 0.04);
+    if (s === 0) this.pad(chord.map(midi), t, this.sixteenth * 16, full ? 0.03 : 0.05);
+    if (full) {
+      if (s % 4 === 0) this.kick(t);
+      if (s === 4 || s === 12) this.snare(t);
+      if (s % 2 === 1) this.hat(t, s === 15 ? 0.05 : 0.03);
+    }
+  }
+
+  env(g, t, a, peak, d) {
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(peak, t + a);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + a + d);
+  }
+
+  voice(type, freq, t, dur, peak, filterFreq, dest = this.bus) {
+    const ctx = this.a.ctx;
+    const o = ctx.createOscillator();
+    o.type = type;
+    o.frequency.value = freq;
+    const f = ctx.createBiquadFilter();
+    f.type = 'lowpass';
+    f.frequency.value = filterFreq;
+    const g = ctx.createGain();
+    o.connect(f).connect(g).connect(dest);
+    this.env(g, t, 0.006, peak, dur);
+    o.start(t);
+    o.stop(t + dur + 0.05);
+    return g;
+  }
+
+  bass(freq, t, peak) {
+    this.voice('sawtooth', freq, t, this.sixteenth * 1.8, peak, 420);
+  }
+
+  arp(freq, t, peak) {
+    const g = this.voice('square', freq, t, 0.12, peak, 2600);
+    g.connect(this.delay);
+  }
+
+  pad(freqs, t, dur, peak) {
+    const ctx = this.a.ctx;
+    for (const f0 of freqs) {
+      for (const det of [-7, 7]) {
+        const o = ctx.createOscillator();
+        o.type = 'sawtooth';
+        o.frequency.value = f0;
+        o.detune.value = det;
+        const f = ctx.createBiquadFilter();
+        f.type = 'lowpass';
+        f.frequency.value = 900;
+        const g = ctx.createGain();
+        o.connect(f).connect(g).connect(this.bus);
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(peak, t + dur * 0.35);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + dur * 1.05);
+        o.start(t);
+        o.stop(t + dur * 1.1);
+      }
+    }
+  }
+
+  kick(t) {
+    const ctx = this.a.ctx;
+    const o = ctx.createOscillator();
+    o.frequency.setValueAtTime(150, t);
+    o.frequency.exponentialRampToValueAtTime(42, t + 0.14);
+    const g = ctx.createGain();
+    o.connect(g).connect(this.bus);
+    this.env(g, t, 0.003, 0.5, 0.22);
+    o.start(t);
+    o.stop(t + 0.3);
+  }
+
+  noise(t, type, freq, dur, peak) {
+    const ctx = this.a.ctx;
+    const src = ctx.createBufferSource();
+    src.buffer = this.a.noiseBuf;
+    const f = ctx.createBiquadFilter();
+    f.type = type;
+    f.frequency.value = freq;
+    const g = ctx.createGain();
+    src.connect(f).connect(g).connect(this.bus);
+    this.env(g, t, 0.002, peak, dur);
+    src.start(t, Math.random());
+    src.stop(t + dur + 0.05);
+  }
+
+  snare(t) {
+    this.noise(t, 'bandpass', 1900, 0.16, 0.22);
+    this.voice('triangle', 190, t, 0.08, 0.12, 2000);
+  }
+
+  hat(t, peak) {
+    this.noise(t, 'highpass', 7500, 0.04, peak);
+  }
+}
