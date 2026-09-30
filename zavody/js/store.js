@@ -38,10 +38,34 @@ export class Store {
     const data = read(KEY) || {};
     this.settings = { ...DEFAULTS, ...(data.settings || {}) };
     this.records = data.records || {};
+    this.custom = Array.isArray(data.custom) ? data.custom : [];
   }
 
   save() {
-    write(KEY, { settings: this.settings, records: this.records });
+    return write(KEY, { settings: this.settings, records: this.records, custom: this.custom });
+  }
+
+  // vlastní tratě z editoru
+  getCustom(id) {
+    return this.custom.find((t) => t.id === id) || null;
+  }
+
+  saveCustom(track) {
+    const i = this.custom.findIndex((t) => t.id === track.id);
+    if (i >= 0) this.custom[i] = track;
+    else this.custom.push(track);
+    return this.save();
+  }
+
+  deleteCustom(id) {
+    this.custom = this.custom.filter((t) => t.id !== id);
+    delete this.records[id];
+    try {
+      localStorage.removeItem(GHOST_KEY + id);
+    } catch {
+      /* nic */
+    }
+    this.save();
   }
 
   record(trackId) {

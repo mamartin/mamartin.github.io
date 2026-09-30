@@ -18,6 +18,7 @@ import { GhostRecorder, GhostPlayer } from './ghost.js';
 import { Pickups, ITEM_NAMES } from './pickups.js';
 import { RNG, clamp } from './rng.js';
 import { Post } from './post.js';
+import { TrackEditor, customToDef } from './editor.js';
 
 const STEP = 1 / 120;
 const CUP_TRACKS = ['sumava', 'kanon', 'mesto'];
@@ -175,6 +176,10 @@ const currentTrackId = () => (S.mode === 'cup' ? CUP_TRACKS[G.cup ? G.cup.round 
 
 function trackDef(id) {
   if (id === 'random') return randomDef(S.randomSeed);
+  if (id && id.startsWith('custom-')) {
+    const t = store.getCustom(id);
+    if (t) return customToDef(t);
+  }
   return TRACKS.find((t) => t.id === id) || TRACKS[0];
 }
 
@@ -289,6 +294,33 @@ function buildShowcase() {
 
 const menuTracks = [];
 
+const editor = new TrackEditor({
+  store,
+  onDrive: (track) => {
+    if (G.world && G.world.def.id === track.id) G.forceReload = true;
+    S.track = track.id;
+    if (S.mode === 'cup') S.mode = 'race';
+    store.save();
+    G.screen = 'menu';
+    buildTrackList();
+    startFromMenu();
+  },
+  onExit: async (track, deletedId) => {
+    G.screen = 'menu';
+    $('menu').hidden = false;
+    if (deletedId && S.track === deletedId) S.track = 'sumava';
+    buildTrackList();
+    const reload = (track && G.world && G.world.def.id === track.id) || (deletedId && G.world && G.world.def.id === deletedId);
+    if (reload) await selectTrack(currentTrackId(), true);
+  },
+});
+
+function openEditor(track) {
+  G.screen = 'editor';
+  $('menu').hidden = true;
+  editor.open(track || null);
+}
+
 function trackMeta(def, track) {
   const rec = store.record(def.id);
   const km = (track.L / 1000).toFixed(2).replace('.', ',');
@@ -299,11 +331,15 @@ function buildTrackList() {
   const list = $('track-list');
   list.innerHTML = '';
   menuTracks.length = 0;
-  const defs = [...TRACKS.map((t) => ({ def: t, id: t.id })), { def: randomDef(S.randomSeed), id: 'random' }];
-  for (const { def, id } of defs) {
+  const defs = [
+    ...TRACKS.map((t) => ({ def: t, id: t.id })),
+    { def: randomDef(S.randomSeed), id: 'random' },
+    ...store.custom.map((t) => ({ def: customToDef(t), id: t.id, custom: t })),
+  ];
+  for (const { def, id, custom } of defs) {
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = 'track-card';
+    btn.className = 'track-card' + (custom && !custom.valid ? ' draft' : '');
     btn.setAttribute('role', 'radio');
     btn.dataset.id = id;
     const canvas = document.createElement('canvas');
@@ -330,15 +366,28 @@ function buildTrackList() {
       });
       btn.appendChild(re);
     }
-    btn.addEventListener('click', () => selectTrack(id));
+    if (custom) {
+      const ed = document.createElement('span');
+      ed.className = 'tc-edit';
+      ed.setAttribute('role', 'button');
+      ed.textContent = 'Upravit';
+      ed.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openEditor(custom);
+      });
+      btn.appendChild(ed);
+    }
+    btn.addEventListener('click', () => (custom && !custom.valid ? openEditor(custom) : selectTrack(id)));
     list.appendChild(btn);
-    menuTracks.push({ id, def, btn, canvas, meta });
+    menuTracks.push({ id, def, btn, canvas, meta, custom });
   }
   requestAnimationFrame(() => {
     for (const m of menuTracks) {
       const tr = new Track(m.def);
       trackOutline(tr, m.canvas, { pad: 6, color: '#f3f5f8', width: 2.4 });
-      m.meta.textContent = m.id === 'random' ? `${(tr.L / 1000).toFixed(2).replace('.', ',')} km · ${m.def.subtitle}` : trackMeta(m.def, tr);
+      if (m.id === 'random') m.meta.textContent = `${(tr.L / 1000).toFixed(2).replace('.', ',')} km · ${m.def.subtitle}`;
+      else if (m.custom && !m.custom.valid) m.meta.textContent = 'rozpracovaná, dokonči v editoru';
+      else m.meta.textContent = trackMeta(m.def, tr);
       m.btn.setAttribute('aria-label', `${m.def.name}, ${m.meta.textContent}`);
     }
   });
@@ -476,6 +525,7 @@ function bindMenu() {
     refreshMenu();
   });
   $('start-btn').addEventListener('click', () => startFromMenu());
+  $('new-track').addEventListener('click', () => openEditor(null));
   $('pause-btn').addEventListener('click', () => setPaused(!G.paused));
   $('resume-btn').addEventListener('click', () => setPaused(false));
   $('restart-btn').addEventListener('click', () => startRace());
@@ -541,7 +591,16 @@ async function startRaceInner() {
   if (S.mode === 'cup' && !G.cup) G.cup = newCup();
   if (S.mode !== 'cup') G.cup = null;
   const trackId = currentTrackId();
-  if (!G.world || G.world.def.id !== trackDef(trackId).id) await loadWorld(trackId);
+  const custom = trackId.startsWith('custom-') ? store.getCustom(trackId) : null;
+  if (custom && !custom.valid) {
+    // rozpracovaná trať: nejdřív ji dokončit v editoru
+    openEditor(custom);
+    return;
+  }
+  if (!G.world || G.forceReload || G.world.def.id !== trackDef(trackId).id) {
+    G.forceReload = false;
+    await loadWorld(trackId);
+  }
   const w = G.world;
   for (const c of w.showcase) disposeCarMesh(c.mesh);
   w.showcase = [];
@@ -999,7 +1058,7 @@ function frame(now) {
   const dt = rawDt * G.timeScale;
   handleKeys(input.takePressed());
   const w = G.world;
-  if (!w) return;
+  if (!w || G.screen === 'editor') return;
   input.enabled = G.screen === 'race';
 
   if (G.screen === 'race' && G.race) {
@@ -1209,7 +1268,7 @@ async function boot() {
 
 // debug / testy
 Object.assign(G, {
-  scene, camera, renderer, store, audio,
+  scene, camera, renderer, store, audio, editor,
   setTimeScale: (v) => (G.timeScale = v),
   autopilot: (on = true) => G.race && G.race.setAutopilot(on),
   start: (opts = {}) => {

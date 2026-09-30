@@ -51,6 +51,7 @@
       <section class="menu-block" id="track-block">
         <h2 class="label">Trať</h2>
         <div class="tracks" id="track-list" role="radiogroup" aria-label="Trať"></div>
+        <button type="button" class="new-track" id="new-track">+ Postavit vlastní trať</button>
       </section>
 
       <section class="menu-block" id="cup-block" hidden>
@@ -182,6 +183,49 @@
         <button type="button" data-touch="brake" class="t-brake">BRZDA</button>
         <button type="button" data-touch="gas" class="t-gas">PLYN</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Editor tratí -->
+  <div id="editor" class="screen editor" hidden>
+    <header class="ed-bar">
+      <button type="button" class="btn" id="ed-back">‹ Menu</button>
+      <label class="ed-name-wrap"><span class="label">Název</span><input id="ed-name" type="text" maxlength="28" autocomplete="off" spellcheck="false"></label>
+      <div class="seg small" id="ed-biome" role="radiogroup" aria-label="Prostředí">
+        <button type="button" role="radio" data-biome="forest">Les</button>
+        <button type="button" role="radio" data-biome="canyon">Kaňon</button>
+        <button type="button" role="radio" data-biome="city">Město</button>
+      </div>
+      <button type="button" class="btn primary" id="ed-drive">Uložit a jet ▸</button>
+    </header>
+    <div class="ed-main">
+      <div class="ed-canvas-wrap">
+        <canvas id="ed-canvas" aria-label="Mapa trati v editoru"></canvas>
+        <div class="ed-zoom">
+          <button type="button" class="btn" id="ed-zoom-in" aria-label="Přiblížit">+</button>
+          <button type="button" class="btn" id="ed-zoom-out" aria-label="Oddálit">−</button>
+          <button type="button" class="btn" id="ed-fit">Celá trať</button>
+        </div>
+      </div>
+      <aside class="ed-panel">
+        <p class="ed-status" id="ed-status" aria-live="polite"></p>
+        <div class="ed-point" id="ed-point" hidden>
+          <h2 class="label">Bod <span id="ed-pt-index"></span></h2>
+          <label class="ed-range">Poloměr zatáčky <output id="ed-r-val"></output>
+            <input type="range" id="ed-r" min="15" max="150" step="1">
+          </label>
+          <label class="ed-range">Výška <output id="ed-h-val"></output>
+            <input type="range" id="ed-h" min="-10" max="40" step="1">
+          </label>
+          <button type="button" class="btn" id="ed-pt-del">Smazat bod</button>
+        </div>
+        <p class="hint">Klikni u trati a přidáš bod. Body přetahuj myší nebo prstem, prázdným místem posouváš mapu, kolečkem přibližuješ. Vybraný bod smaže klávesa Delete.</p>
+        <div class="ed-tools">
+          <button type="button" class="btn" id="ed-random">Náhodný tvar</button>
+          <button type="button" class="btn" id="ed-reverse">Otočit směr</button>
+          <button type="button" class="btn danger" id="ed-delete">Smazat trať</button>
+        </div>
+      </aside>
     </div>
   </div>
 
