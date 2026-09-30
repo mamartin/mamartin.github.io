@@ -42,14 +42,21 @@
       <section class="menu-block">
         <div class="seg" role="radiogroup" aria-label="Režim" id="mode-seg">
           <button type="button" data-mode="race" role="radio">Závod</button>
+          <button type="button" data-mode="cup" role="radio">Šampionát</button>
           <button type="button" data-mode="time" role="radio">Časovka</button>
         </div>
         <p class="hint" id="mode-hint"></p>
       </section>
 
-      <section class="menu-block">
+      <section class="menu-block" id="track-block">
         <h2 class="label">Trať</h2>
         <div class="tracks" id="track-list" role="radiogroup" aria-label="Trať"></div>
+      </section>
+
+      <section class="menu-block" id="cup-block" hidden>
+        <h2 class="label">Pořadí závodů</h2>
+        <ol class="cup-list" id="cup-list"></ol>
+        <p class="hint" id="cup-best"></p>
       </section>
 
       <section class="menu-block options">
@@ -171,15 +178,25 @@
 
   <!-- Výsledky -->
   <div id="results" class="screen dim" hidden>
-    <div class="dialog wide">
+    <div class="dialog wide" id="res-dialog">
       <p class="eyebrow" id="res-track"></p>
       <h2 class="dialog-title" id="res-title">Cíl</h2>
       <p class="res-badges" id="res-badges"></p>
-      <div class="table-wrap">
-        <table class="results-table">
-          <thead><tr><th>#</th><th>Jezdec</th><th class="num">Čas</th><th class="num">Nejlepší kolo</th></tr></thead>
-          <tbody id="res-body"></tbody>
-        </table>
+      <div class="res-tables">
+        <div class="table-wrap">
+          <h3 class="label cup-caption" id="race-caption" hidden>Tento závod</h3>
+          <table class="results-table">
+            <thead><tr><th>#</th><th>Jezdec</th><th class="num">Čas</th><th class="num">Nejlepší kolo</th></tr></thead>
+            <tbody id="res-body"></tbody>
+          </table>
+        </div>
+        <div class="table-wrap" id="cup-wrap" hidden>
+          <h3 class="label cup-caption" id="cup-caption">Šampionát</h3>
+          <table class="results-table">
+            <thead><tr><th>#</th><th>Jezdec</th><th class="num">Body</th><th class="num">Celkem</th></tr></thead>
+            <tbody id="cup-body"></tbody>
+          </table>
+        </div>
       </div>
       <div class="dialog-actions row">
         <button type="button" class="btn primary" id="again-btn">Jet znovu</button>

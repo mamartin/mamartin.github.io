@@ -19,6 +19,8 @@ import { Pickups, ITEM_NAMES } from './pickups.js';
 import { RNG, clamp } from './rng.js';
 
 const STEP = 1 / 120;
+const CUP_TRACKS = ['sumava', 'kanon', 'mesto'];
+const CUP_POINTS = [10, 6, 4, 3, 2, 1];
 const $ = (id) => document.getElementById(id);
 
 // --- základ -------------------------------------------------------------------
@@ -134,6 +136,11 @@ function randomDef(seed) {
   return def;
 }
 
+// závodní režim bez šampionátu ('race' | 'time')
+const raceMode = () => (S.mode === 'time' ? 'time' : 'race');
+// trať, která se má právě jet (v šampionátu podle kola)
+const currentTrackId = () => (S.mode === 'cup' ? CUP_TRACKS[G.cup ? G.cup.round : 0] : S.track);
+
 function trackDef(id) {
   if (id === 'random') return randomDef(S.randomSeed);
   return TRACKS.find((t) => t.id === id) || TRACKS[0];
@@ -227,12 +234,13 @@ function buildShowcase() {
   w.showcase = [];
   const playerColor = PLAYER_COLORS[S.color]?.hex ?? PLAYER_COLORS[0].hex;
   const pool = OPPONENTS.filter((o) => o.color !== playerColor);
-  const count = S.mode === 'race' ? 6 : 1;
+  const race = raceMode() === 'race';
+  const count = race ? 6 : 1;
   for (let slot = 0; slot < count; slot++) {
-    const isPlayer = S.mode === 'race' ? slot === 3 : true;
+    const isPlayer = race ? slot === 3 : true;
     const info = isPlayer ? { color: playerColor, number: PLAYER_NUMBER } : pool[(slot > 3 ? slot - 1 : slot) % pool.length];
     const car = new Car(w.track, { color: info.color, number: info.number, night: w.biome.night, biome: w.biome, isPlayer });
-    const g = w.track.gridSlot(S.mode === 'race' ? slot : 2);
+    const g = w.track.gridSlot(race ? slot : 2);
     car.reset(g.s, g.lat);
     car.step(0);
     car.render(1);
@@ -316,11 +324,24 @@ function refreshMenu() {
   for (const b of $('diff-seg').children) b.setAttribute('aria-checked', String(b.dataset.diff === S.difficulty));
   for (const b of $('quality-seg').children) b.setAttribute('aria-checked', String(b.dataset.q === S.quality));
   $('laps-value').textContent = S.laps;
-  $('diff-opt').hidden = S.mode !== 'race';
-  $('weapons-opt').hidden = S.mode !== 'race';
-  $('mode-hint').textContent = S.mode === 'race'
-    ? 'Ty proti pěti soupeřům. Drift plní nitro, krabice s otazníkem dávají power-upy.'
-    : 'Sám na trati proti průhlednému ghostu svého nejlepšího kola.';
+  $('diff-opt').hidden = S.mode === 'time';
+  $('weapons-opt').hidden = S.mode === 'time';
+  $('track-block').hidden = S.mode === 'cup';
+  $('cup-block').hidden = S.mode !== 'cup';
+  $('mode-hint').textContent = {
+    race: 'Ty proti pěti soupeřům. Drift plní nitro, krabice s otazníkem dávají power-upy.',
+    cup: 'Tři závody za sebou. Body za umístění 10, 6, 4, 3, 2, 1 a vítězí nejvíc bodů.',
+    time: 'Sám na trati proti průhlednému ghostu svého nejlepšího kola.',
+  }[S.mode];
+  if (S.mode === 'cup') {
+    $('cup-list').innerHTML = CUP_TRACKS.map((id) => {
+      const def = TRACKS.find((t) => t.id === id);
+      const rec = store.record(id);
+      return `<li><span class="cl-name">${def.name}</span><span class="cl-meta">${rec.lap ? 'rekord ' + formatTime(rec.lap) : 'bez rekordu'}</span></li>`;
+    }).join('');
+    const best = store.records.cup?.best;
+    $('cup-best').textContent = best ? `Tvoje nejlepší celkové umístění: ${best}. místo.` : 'Šampionát jsi ještě nedokončil.';
+  }
   const wt = $('weapons-toggle');
   wt.setAttribute('aria-pressed', String(S.weapons));
   wt.querySelector('em').textContent = S.weapons ? 'Zapnuto' : 'Vypnuto';
@@ -351,11 +372,15 @@ function refreshMenu() {
 
 function bindMenu() {
   for (const b of $('mode-seg').children) {
-    b.addEventListener('click', () => {
+    b.addEventListener('click', async () => {
       S.mode = b.dataset.mode;
       store.save();
       refreshMenu();
-      if (G.world) buildShowcase();
+      const want = trackDef(currentTrackId()).id;
+      if (G.world && G.world.def.id !== want) {
+        await loadWorld(currentTrackId());
+        G.screen = 'menu';
+      } else if (G.world) buildShowcase();
     });
   }
   for (const b of $('diff-seg').children) {
@@ -372,7 +397,7 @@ function bindMenu() {
       store.save();
       refreshMenu();
       applyPixelRatio();
-      await loadWorld(S.track);
+      await loadWorld(currentTrackId());
       G.screen = 'menu';
     });
   }
@@ -397,16 +422,33 @@ function bindMenu() {
     store.save();
     refreshMenu();
   });
-  $('start-btn').addEventListener('click', () => startRace());
+  $('start-btn').addEventListener('click', () => startFromMenu());
   $('pause-btn').addEventListener('click', () => setPaused(!G.paused));
   $('resume-btn').addEventListener('click', () => setPaused(false));
   $('restart-btn').addEventListener('click', () => startRace());
   $('menu-btn').addEventListener('click', () => toMenu());
-  $('again-btn').addEventListener('click', () => startRace());
+  $('again-btn').addEventListener('click', () => {
+    if (G.cup) {
+      if (G.cup.round < CUP_TRACKS.length - 1) {
+        G.cup.round++;
+        G.cup.awarded = false;
+      } else G.cup = newCup();
+    }
+    startRace();
+  });
   $('res-menu-btn').addEventListener('click', () => toMenu());
 }
 
 // --- závod ---------------------------------------------------------------------------
+
+function newCup() {
+  return { round: 0, points: {}, awarded: false };
+}
+
+function startFromMenu() {
+  G.cup = S.mode === 'cup' ? newCup() : null;
+  return startRace();
+}
 
 function clearRace() {
   const r = G.race;
@@ -443,14 +485,17 @@ async function startRaceInner() {
   $('pause').hidden = true;
   G.paused = false;
   clearRace();
-  if (!G.world || G.world.def.id !== trackDef(S.track).id) await loadWorld(S.track);
+  if (S.mode === 'cup' && !G.cup) G.cup = newCup();
+  if (S.mode !== 'cup') G.cup = null;
+  const trackId = currentTrackId();
+  if (!G.world || G.world.def.id !== trackDef(trackId).id) await loadWorld(trackId);
   const w = G.world;
   for (const c of w.showcase) disposeCarMesh(c.mesh);
   w.showcase = [];
   w.effects.clear();
   const playerColor = PLAYER_COLORS[S.color]?.hex ?? PLAYER_COLORS[0].hex;
   const race = new Race({
-    track: w.track, biome: w.biome, mode: S.mode, laps: S.laps, difficulty: S.difficulty, playerColor, night: w.biome.night,
+    track: w.track, biome: w.biome, mode: raceMode(), laps: S.laps, difficulty: S.difficulty, playerColor, night: w.biome.night,
   });
   for (const c of race.cars) {
     scene.add(c.mesh.root);
@@ -470,7 +515,7 @@ async function startRaceInner() {
   G.bestBefore = Infinity;
   G.recorder = new GhostRecorder();
   G.ghost = null;
-  if (S.mode === 'time') {
+  if (raceMode() === 'time') {
     const data = store.ghost(w.def.id);
     if (data && data.frames && data.frames.length > 8) {
       G.ghost = new GhostPlayer(data);
@@ -479,7 +524,7 @@ async function startRaceInner() {
       scene.add(G.ghostMesh.root);
     }
   }
-  if (S.mode === 'race' && S.weapons) {
+  if (raceMode() === 'race' && S.weapons) {
     G.pickups = new Pickups({ track: w.track, scene, race, effects: w.effects, audio, seed: Date.now() % 100000 });
   }
   document.body.classList.toggle('items-on', !!G.pickups);
@@ -496,6 +541,7 @@ async function startRaceInner() {
   if (fromMenu) rig.flyTo(race.player);
   else rig.snap();
   w.track.setStartLights(0);
+  if (G.cup) hud.sub(`Šampionát · závod ${G.cup.round + 1}/${CUP_TRACKS.length} · ${w.def.name}`, 3.2);
   if (!isTouch && (S.racesStarted || 0) < 3) {
     hud.sub('<kbd>W</kbd> plyn · <kbd>A</kbd><kbd>D</kbd> zatáčení · <kbd>Mezerník</kbd> drift · <kbd>Shift</kbd> nitro' + (G.pickups ? ' · <kbd>F</kbd> power-up' : ''), 5, 'help');
   }
@@ -506,6 +552,7 @@ async function startRaceInner() {
 
 function toMenu() {
   clearRace();
+  G.cup = null;
   $('results').hidden = true;
   $('pause').hidden = true;
   hud.show(false);
@@ -548,7 +595,7 @@ function handleKeys(pressed) {
     }
     if (G.screen === 'menu') {
       const free = !document.activeElement || document.activeElement === document.body;
-      if (((code === 'Enter' || code === 'NumpadEnter') && free) || code === 'PadA') startRace();
+      if (((code === 'Enter' || code === 'NumpadEnter') && free) || code === 'PadA') startFromMenu();
       continue;
     }
     if (G.screen !== 'race') continue;
@@ -669,16 +716,21 @@ function showResults() {
   const race = G.race;
   const w = G.world;
   const p = race.player;
-  $('res-track').textContent = `${w.def.name} · ${race.laps} ${race.laps === 1 ? 'kolo' : race.laps < 5 ? 'kola' : 'kol'}`;
+  const lapsTxt = `${race.laps} ${race.laps === 1 ? 'kolo' : race.laps < 5 ? 'kola' : 'kol'}`;
+  const cup = G.cup;
+  $('res-track').textContent = cup
+    ? `Šampionát · závod ${cup.round + 1}/${CUP_TRACKS.length} · ${w.def.name}`
+    : `${w.def.name} · ${lapsTxt}`;
   $('res-title').textContent = race.mode === 'race' ? `${p.finishOrder}. místo` : formatTime(p.finishTime);
   const badges = [];
   if (race.mode === 'race' && p.finishOrder === 1) badges.push('Vítězství');
   if (G.results?.lap) badges.push('Nový rekord kola');
   if (G.results?.race) badges.push('Nový rekord závodu');
-  $('res-badges').innerHTML = badges.map((b) => `<span class="badge">${b}</span>`).join('');
   const rows = race.cars
     .map((c) => ({ c, t: race.estimateFinish(c) }))
     .sort((a, b) => a.t - b.t);
+  renderCup(rows, badges);
+  $('res-badges').innerHTML = badges.map((b) => `<span class="badge">${b}</span>`).join('');
   $('res-body').innerHTML = rows
     .map(({ c, t }, i) => {
       const est = !c.finished;
@@ -691,6 +743,52 @@ function showResults() {
     .join('');
   $('results').hidden = false;
   $('again-btn').focus();
+}
+
+// body do šampionátu a tabulka průběžného pořadí
+function renderCup(rows, badges) {
+  const cup = G.cup;
+  $('cup-wrap').hidden = !cup;
+  $('race-caption').hidden = !cup;
+  $('res-dialog').classList.toggle('cup', !!cup);
+  const again = $('again-btn');
+  if (!cup) {
+    again.textContent = 'Jet znovu';
+    return;
+  }
+  const gained = {};
+  rows.forEach(({ c }, i) => (gained[c.name] = CUP_POINTS[i] ?? 0));
+  if (!cup.awarded) {
+    for (const [name, pts] of Object.entries(gained)) cup.points[name] = (cup.points[name] || 0) + pts;
+    cup.awarded = true;
+    cup.colors = cup.colors || {};
+    for (const { c } of rows) cup.colors[c.name] = c.color;
+  }
+  const last = cup.round === CUP_TRACKS.length - 1;
+  const table = Object.entries(cup.points).sort((a, b) => b[1] - a[1]);
+  const myPlace = table.findIndex(([name]) => name === 'Ty') + 1;
+  $('cup-caption').textContent = last ? 'Konečné pořadí šampionátu' : `Šampionát po ${cup.round + 1}. závodě`;
+  $('cup-body').innerHTML = table
+    .map(([name, total], i) => {
+      const color = '#' + (cup.colors[name] ?? 0x888888).toString(16).padStart(6, '0');
+      return `<tr class="${name === 'Ty' ? 'me' : ''}"><td class="pos">${i + 1}</td>` +
+        `<td><span class="chip" style="background:${color}"></span>${name}</td>` +
+        `<td class="num plus">+${gained[name] ?? 0}</td><td class="num">${total}</td></tr>`;
+    })
+    .join('');
+  if (last) {
+    $('res-title').textContent = `Šampionát: ${myPlace}. místo`;
+    if (myPlace === 1) badges.unshift('Mistr Turbo Okruhu');
+    const rec = (store.records.cup = store.records.cup || {});
+    if (!rec.best || myPlace < rec.best) {
+      rec.best = myPlace;
+      store.save();
+    }
+    again.textContent = 'Nový šampionát';
+  } else {
+    const next = TRACKS.find((t) => t.id === CUP_TRACKS[cup.round + 1]);
+    again.textContent = `Další závod: ${next.name}`;
+  }
 }
 
 // --- efekty -----------------------------------------------------------------------
@@ -906,7 +1004,7 @@ async function boot() {
   }
   bindMenu();
   buildTrackList();
-  await loadWorld(S.track);
+  await loadWorld(currentTrackId());
   G.screen = 'menu';
   $('menu').hidden = false;
   requestAnimationFrame(frame);
@@ -919,7 +1017,7 @@ Object.assign(G, {
   autopilot: (on = true) => G.race && G.race.setAutopilot(on),
   start: (opts = {}) => {
     Object.assign(S, opts);
-    return startRace();
+    return startFromMenu();
   },
   toMenu,
   selectTrack,

@@ -4,6 +4,16 @@ import { RNG, clamp } from './rng.js';
 
 export const ITEM_NAMES = { rocket: 'Raketa', mine: 'Mina', shield: 'Štít', nitro: 'Nitro' };
 
+// čtverec vzdálenosti bodu p od úsečky a–b (dráha auta za poslední snímek)
+function segDist2(ax, az, bx, bz, px, pz) {
+  const dx = bx - ax, dz = bz - az;
+  const l2 = dx * dx + dz * dz;
+  let t = l2 > 1e-6 ? ((px - ax) * dx + (pz - az) * dz) / l2 : 0;
+  t = t < 0 ? 0 : t > 1 ? 1 : t;
+  const ex = ax + dx * t - px, ez = az + dz * t - pz;
+  return ex * ex + ez * ez;
+}
+
 function boxTexture() {
   const c = document.createElement('canvas');
   c.width = c.height = 128;
@@ -42,6 +52,7 @@ export class Pickups {
     this.rockets = [];
     this.mines = [];
     this.shields = new Map();
+    this.prev = new Map();
     this.time = 0;
     this.tmp = {};
 
@@ -120,10 +131,27 @@ export class Pickups {
     return table[table.length - 1][0];
   }
 
+  // kde bylo auto na začátku snímku (při teleportu po respawnu jen aktuální pozice)
+  from(car) {
+    const p = this.prev.get(car);
+    if (!p || Math.hypot(car.x - p.x, car.z - p.z) > 15) return { x: car.x, z: car.z };
+    return p;
+  }
+
   update(dt, playerWantsUse) {
     this.time += dt;
     const cars = this.race.cars;
     const racing = this.race.state !== 'countdown';
+    this.update2(dt, playerWantsUse, cars, racing);
+    for (const car of cars) {
+      const p = this.prev.get(car) || {};
+      p.x = car.x;
+      p.z = car.z;
+      this.prev.set(car, p);
+    }
+  }
+
+  update2(dt, playerWantsUse, cars, racing) {
 
     // krabice
     for (const b of this.boxes) {
@@ -141,8 +169,8 @@ export class Pickups {
       if (!racing) continue;
       for (const car of cars) {
         if (car.item || car.itemRoll > 0 || car.ghostTimer > 0) continue;
-        const dx = car.x - b.x, dz = car.z - b.z;
-        if (dx * dx + dz * dz < 4.2 && Math.abs(car.y - b.y) < 2.5) {
+        const f = this.from(car);
+        if (segDist2(f.x, f.z, car.x, car.z, b.x, b.z) < 4.2 && Math.abs(car.y - b.y) < 2.5) {
           b.respawn = 1.8;
           b.mesh.visible = false;
           car.itemRoll = car.isPlayer ? 1.1 : 0.8;
@@ -276,28 +304,31 @@ export class Pickups {
     for (let i = this.rockets.length - 1; i >= 0; i--) {
       const r = this.rockets[i];
       r.life -= dt;
-      r.s += r.speed * dt;
-      if (r.target) {
-        r.lat += clamp(r.target.proj.lat - r.lat, -10 * dt, 10 * dt);
+      let done = r.life <= 0;
+      // po krocích max. 1,5 m, aby raketa auto „nepřeskočila“
+      const sub = Math.max(1, Math.ceil((r.speed * dt) / 1.5));
+      const h = dt / sub;
+      for (let k = 0; k < sub && !done; k++) {
+        r.s += r.speed * h;
+        if (r.target) r.lat += clamp(r.target.proj.lat - r.lat, -10 * h, 10 * h);
+        r.lat = clamp(r.lat, -tr.edge + 1, tr.edge - 1);
+        for (const car of this.race.cars) {
+          if (car === r.owner || car.ghostTimer > 0) continue;
+          let ds = car.proj.s - r.s;
+          if (ds < -L / 2) ds += L;
+          else if (ds > L / 2) ds -= L;
+          if (ds > -2 && ds < 2.6 && Math.abs(car.proj.lat - r.lat) < 1.6) {
+            this.hit(car, r.owner, car.x, car.y, car.z);
+            done = true;
+            break;
+          }
+        }
       }
-      r.lat = clamp(r.lat, -tr.edge + 1, tr.edge - 1);
       const p = tr.sampleAt(r.s, r.lat, this.tmp);
       r.mesh.position.set(p.x, p.y + 0.75, p.z);
       r.mesh.rotation.y = p.hd;
       const bx = -Math.sin(p.hd), bz = -Math.cos(p.hd);
       this.effects.nitroFlame(p.x + bx * 0.7, p.y + 0.75, p.z + bz * 0.7, bx, bz, 0, 0);
-      let done = r.life <= 0;
-      for (const car of this.race.cars) {
-        if (car === r.owner || car.ghostTimer > 0) continue;
-        let ds = car.proj.s - r.s;
-        if (ds < -L / 2) ds += L;
-        else if (ds > L / 2) ds -= L;
-        if (ds > -2 && ds < 2.6 && Math.abs(car.proj.lat - r.lat) < 1.6) {
-          this.hit(car, r.owner, car.x, car.y, car.z);
-          done = true;
-          break;
-        }
-      }
       // zásah miny raketou
       for (let m = this.mines.length - 1; m >= 0 && !done; m--) {
         const mine = this.mines[m];
@@ -340,8 +371,8 @@ export class Pickups {
       if (m.arm > 0) continue;
       for (const car of this.race.cars) {
         if (car.ghostTimer > 0) continue;
-        const dx = car.x - m.x, dz = car.z - m.z;
-        if (dx * dx + dz * dz < 3.6) {
+        const f = this.from(car);
+        if (segDist2(f.x, f.z, car.x, car.z, m.x, m.z) < 3.6) {
           this.hit(car, m.owner, m.x, m.y, m.z);
           this.removeMine(i);
           break;
