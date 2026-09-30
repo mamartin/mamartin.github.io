@@ -131,7 +131,7 @@ function randomDef(seed) {
     cz /= cl.N;
     let d = Infinity;
     for (let k = 0; k < cl.N; k++) d = Math.min(d, Math.hypot(cl.px[k] - cx, cl.pz[k] - cz));
-    if (d > 100) def.lake = { x: cx, z: cz, r: Math.min(90, d - 45) };
+    if (d > 100) def.lake = { x: cx, z: cz, r: Math.min(80, (d - 30) / 1.7) };
   }
   return def;
 }
@@ -931,7 +931,7 @@ function frame(now) {
         if (c === p) continue;
         const r = c.mesh.root.position;
         const dx = r.x - camera.position.x, dy = r.y + 0.7 - camera.position.y, dz = r.z - camera.position.z;
-        if (dx * dx + dy * dy + dz * dz < 3.4 * 3.4) c.mesh.root.visible = false;
+        if (dx * dx + dy * dy + dz * dz < 4 * 4) c.mesh.root.visible = false;
       }
 
       // zvuk
@@ -945,7 +945,7 @@ function frame(now) {
         if (d < rd) { rd = d; rival = c; }
       }
       audio.update({
-        active: true,
+        active: $('results').hidden,
         rpm,
         throttle: ctrlNow.throttle,
         speed: p.speed,

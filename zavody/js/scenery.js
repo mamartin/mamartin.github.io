@@ -653,7 +653,7 @@ export function buildScenery(track, terrain, biomeKey, biome, quality, seed) {
     group.add(instancedChunks(rockGeo, new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }), rocks));
     if (lake) {
       const water = new THREE.Mesh(
-        new THREE.CircleGeometry(lake.r * 1.25, 64),
+        new THREE.CircleGeometry(lake.r * 1.06, 64),
         new THREE.MeshStandardMaterial({ color: 0x2b5670, roughness: 0.06, metalness: 0.2, transparent: true, opacity: 0.92 }),
       );
       water.rotation.x = -Math.PI / 2;

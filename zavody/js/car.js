@@ -1,5 +1,6 @@
 // Auto: 3D model z primitiv + arkádová fyzika.
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { clamp, angleDiff, lerp } from './rng.js';
 import { SURF_OFF, SURF_CURB } from './track.js';
 
@@ -24,6 +25,23 @@ export const CAR = {
 const TWO_PI = Math.PI * 2;
 
 // --- model ----------------------------------------------------------------
+// Díly se stejným materiálem jsou sloučené do jedné geometrie (méně draw callů).
+
+const ni = (g) => (g.index ? g.toNonIndexed() : g);
+function placed(geo, x, y, z, rx = 0) {
+  const g = geo.clone();
+  if (rx) g.rotateX(rx);
+  g.translate(x, y, z);
+  return ni(g);
+}
+
+// dvojitý závodní pruh po horních plochách karoserie (z, y úseků profilu)
+const STRIPE_SEGMENTS = [
+  [-2.2, 0.91, -1.5, 0.97],
+  [-0.9, 1.35, 0.12, 1.38],
+  [0.9, 0.93, 1.85, 0.77],
+  [1.85, 0.77, 2.22, 0.61],
+];
 
 let shared = null;
 function sharedParts() {
@@ -51,6 +69,7 @@ function sharedParts() {
   bodyGeo.rotateY(-Math.PI / 2);
   bodyGeo.translate(bodyW / 2, 0, 0);
   bodyGeo.computeVertexNormals();
+  bodyGeo.clearGroups();
 
   const cabin = new THREE.Shape();
   cabin.moveTo(-1.5, 0.86);
@@ -66,9 +85,36 @@ function sharedParts() {
   cabinGeo.translate(cabW / 2, 0, 0);
   cabinGeo.computeVertexNormals();
 
+  const wing = new THREE.BoxGeometry(1.86, 0.05, 0.4);
+  const strut = new THREE.BoxGeometry(0.06, 0.26, 0.18);
+  const headlight = new THREE.BoxGeometry(0.46, 0.12, 0.12);
+  const taillight = new THREE.BoxGeometry(0.52, 0.11, 0.06);
+  const paintGeo = mergeGeometries([bodyGeo, placed(wing, 0, 1.13, -1.98)]);
+  const darkGeo = mergeGeometries([
+    placed(strut, -0.56, 0.99, -1.95),
+    placed(strut, 0.56, 0.99, -1.95),
+    placed(new THREE.BoxGeometry(1.84, 0.06, 0.34), 0, 0.25, 2.12),
+    placed(new THREE.BoxGeometry(1.6, 0.16, 0.2), 0, 0.34, -2.2),
+  ]);
+  const headGeo = mergeGeometries([placed(headlight, -0.58, 0.6, 2.17, -0.45), placed(headlight, 0.58, 0.6, 2.17, -0.45)]);
+  const tailGeo = mergeGeometries([placed(taillight, -0.58, 0.74, -2.26), placed(taillight, 0.58, 0.74, -2.26)]);
   const tire = new THREE.CylinderGeometry(0.36, 0.36, 0.3, 18).rotateZ(Math.PI / 2);
-  const rim = new THREE.CylinderGeometry(0.23, 0.23, 0.32, 10).rotateZ(Math.PI / 2);
-  const spoke = new THREE.BoxGeometry(0.33, 0.06, 0.4);
+  const rimGeo = mergeGeometries([
+    ni(new THREE.CylinderGeometry(0.23, 0.23, 0.32, 10).rotateZ(Math.PI / 2)),
+    ni(new THREE.BoxGeometry(0.33, 0.06, 0.4)),
+  ]);
+  const stripeBox = new THREE.BoxGeometry(0.17, 0.014, 1);
+  const stripeParts = [];
+  for (const [z0, y0, z1, y1] of STRIPE_SEGMENTS) {
+    const len = Math.hypot(z1 - z0, y1 - y0);
+    const ang = Math.atan2(y1 - y0, z1 - z0);
+    for (const x of [-0.14, 0.14]) {
+      const g = stripeBox.clone().scale(1, 1, len).rotateX(-ang).translate(x, (y0 + y1) / 2 + 0.006, (z0 + z1) / 2);
+      stripeParts.push(ni(g));
+    }
+  }
+  const stripeGeo = mergeGeometries(stripeParts);
+  [wing, strut, headlight, taillight, stripeBox].forEach((g) => g.dispose());
 
   const blobTex = (() => {
     const c = document.createElement('canvas');
@@ -104,28 +150,29 @@ function sharedParts() {
   })();
 
   shared = {
-    bodyGeo, cabinGeo, tire, rim, spoke,
-    wing: new THREE.BoxGeometry(1.86, 0.05, 0.4),
-    strut: new THREE.BoxGeometry(0.06, 0.26, 0.18),
-    splitter: new THREE.BoxGeometry(1.84, 0.06, 0.34),
-    diffuser: new THREE.BoxGeometry(1.6, 0.16, 0.2),
-    headlight: new THREE.BoxGeometry(0.46, 0.12, 0.12),
-    taillight: new THREE.BoxGeometry(0.52, 0.11, 0.06),
+    paintGeo, cabinGeo, darkGeo, headGeo, tailGeo, tire, rimGeo, stripeGeo,
+    numberGeo: new THREE.PlaneGeometry(0.62, 0.62).rotateX(-Math.PI / 2),
     blob: new THREE.PlaneGeometry(2.7, 5.4).rotateX(-Math.PI / 2),
     beam: new THREE.PlaneGeometry(9, 26).rotateX(-Math.PI / 2),
-    blobTex, beamTex,
     tireMat: new THREE.MeshStandardMaterial({ color: 0x151515, roughness: 0.92, metalness: 0 }),
     rimMat: new THREE.MeshStandardMaterial({ color: 0xc9ccd1, roughness: 0.3, metalness: 0.85 }),
     darkMat: new THREE.MeshStandardMaterial({ color: 0x15171b, roughness: 0.6, metalness: 0.2 }),
     glassMat: new THREE.MeshStandardMaterial({ color: 0x0c131c, roughness: 0.08, metalness: 0.9 }),
     headMat: new THREE.MeshBasicMaterial({ color: 0xfff4dd, toneMapped: false }),
+    stripeLight: new THREE.MeshStandardMaterial({ color: 0xf2f2ee, roughness: 0.35, metalness: 0.3 }),
+    stripeDark: new THREE.MeshStandardMaterial({ color: 0x16181d, roughness: 0.35, metalness: 0.3 }),
+    blobMat: new THREE.MeshBasicMaterial({ map: blobTex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -6 }),
+    beamMat: new THREE.MeshBasicMaterial({
+      map: beamTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, polygonOffset: true, polygonOffsetFactor: -5,
+    }),
+    numberMats: new Map(),
   };
   return shared;
 }
 
-const numberTextures = new Map();
-function numberTexture(n) {
-  if (numberTextures.has(n)) return numberTextures.get(n);
+function numberMaterial(n) {
+  const P = sharedParts();
+  if (P.numberMats.has(n)) return P.numberMats.get(n);
   const c = document.createElement('canvas');
   c.width = c.height = 128;
   const g = c.getContext('2d');
@@ -141,47 +188,9 @@ function numberTexture(n) {
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   t.anisotropy = 4;
-  numberTextures.set(n, t);
-  return t;
-}
-
-// dvojitý závodní pruh po horních plochách karoserie (z, y úseků profilu + výška nad plochou)
-const STRIPE_SEGMENTS = [
-  [-2.2, 0.91, -1.5, 0.97],
-  [-0.9, 1.35, 0.12, 1.38],
-  [0.9, 0.93, 1.85, 0.77],
-  [1.85, 0.77, 2.22, 0.61],
-];
-let stripeGeo = null, numberGeo = null;
-const stripeMats = {};
-
-function addLivery(tilt, color, number) {
-  if (!stripeGeo) {
-    stripeGeo = new THREE.BoxGeometry(0.17, 0.014, 1);
-    numberGeo = new THREE.PlaneGeometry(0.62, 0.62).rotateX(-Math.PI / 2);
-  }
-  const col = new THREE.Color(color);
-  const lum = 0.2126 * col.r + 0.7152 * col.g + 0.0722 * col.b;
-  const key = lum > 0.45 ? 'dark' : 'light';
-  stripeMats[key] ??= new THREE.MeshStandardMaterial({ color: key === 'dark' ? 0x16181d : 0xf2f2ee, roughness: 0.35, metalness: 0.3 });
-  for (const [z0, y0, z1, y1] of STRIPE_SEGMENTS) {
-    const len = Math.hypot(z1 - z0, y1 - y0);
-    const ang = Math.atan2(y1 - y0, z1 - z0);
-    for (const x of [-0.14, 0.14]) {
-      const m = new THREE.Mesh(stripeGeo, stripeMats[key]);
-      m.scale.z = len;
-      m.position.set(x, (y0 + y1) / 2 + 0.006, (z0 + z1) / 2);
-      m.rotation.x = -ang;
-      tilt.add(m);
-    }
-  }
-  if (number != null) {
-    const mat = new THREE.MeshBasicMaterial({ map: numberTexture(number), transparent: true, polygonOffset: true, polygonOffsetFactor: -2 });
-    const plate = new THREE.Mesh(numberGeo, mat);
-    plate.position.set(0, 1.386, -0.36);
-    plate.rotation.x = 0;
-    tilt.add(plate);
-  }
+  const mat = new THREE.MeshBasicMaterial({ map: t, transparent: true, polygonOffset: true, polygonOffsetFactor: -2 });
+  P.numberMats.set(n, mat);
+  return mat;
 }
 
 export function createCarMesh(color, { ghost = false, night = false, number = null } = {}) {
@@ -198,28 +207,15 @@ export function createCarMesh(color, { ghost = false, night = false, number = nu
     mats = { paint: g(color), tail: g(0xff3322), glass: g(0x9fd8ff), dark: g(0x333333), tire: g(0x222222), rim: g(0xaaaaaa), head: g(0xffffff) };
   }
 
-  const bodyMesh = new THREE.Mesh(P.bodyGeo, mats.paint);
+  const bodyMesh = new THREE.Mesh(P.paintGeo, mats.paint);
   const cabinMesh = new THREE.Mesh(P.cabinGeo, mats.glass);
-  const wing = new THREE.Mesh(P.wing, mats.paint);
-  wing.position.set(0, 1.13, -1.98);
-  const struts = [-0.56, 0.56].map((x) => {
-    const s = new THREE.Mesh(P.strut, mats.dark);
-    s.position.set(x, 0.99, -1.95);
-    return s;
-  });
-  const splitter = new THREE.Mesh(P.splitter, mats.dark);
-  splitter.position.set(0, 0.25, 2.12);
-  const diffuser = new THREE.Mesh(P.diffuser, mats.dark);
-  diffuser.position.set(0, 0.34, -2.2);
-  tilt.add(bodyMesh, cabinMesh, wing, ...struts, splitter, diffuser);
-  for (const x of [-0.58, 0.58]) {
-    const h = new THREE.Mesh(P.headlight, mats.head);
-    h.position.set(x, 0.6, 2.17);
-    h.rotation.x = -0.45;
-    const t = new THREE.Mesh(P.taillight, mats.tail);
-    t.position.set(x, 0.74, -2.26);
-    tilt.add(h, t);
-  }
+  tilt.add(
+    bodyMesh,
+    cabinMesh,
+    new THREE.Mesh(P.darkGeo, mats.dark),
+    new THREE.Mesh(P.headGeo, mats.head),
+    new THREE.Mesh(P.tailGeo, mats.tail),
+  );
 
   const wheels = [];
   const wheelPos = [
@@ -229,33 +225,32 @@ export function createCarMesh(color, { ghost = false, night = false, number = nu
     const pivot = new THREE.Group();
     pivot.position.set(x, 0.36, z);
     const spin = new THREE.Group();
-    spin.add(new THREE.Mesh(P.tire, mats.tire));
-    spin.add(new THREE.Mesh(P.rim, mats.rim));
-    const sp = new THREE.Mesh(P.spoke, mats.dark);
-    spin.add(sp);
+    const tireMesh = new THREE.Mesh(P.tire, mats.tire);
+    spin.add(tireMesh, new THREE.Mesh(P.rimGeo, mats.rim));
     pivot.add(spin);
     tilt.add(pivot);
     wheels.push({ pivot, spin, front });
+    if (!ghost) tireMesh.castShadow = true;
   }
 
-  if (!ghost) addLivery(tilt, color, number);
-
   if (!ghost) {
-    const blob = new THREE.Mesh(P.blob, new THREE.MeshBasicMaterial({
-      map: P.blobTex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -6,
-    }));
+    const c = new THREE.Color(color);
+    const lum = 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
+    tilt.add(new THREE.Mesh(P.stripeGeo, lum > 0.45 ? P.stripeDark : P.stripeLight));
+    if (number != null) {
+      const plate = new THREE.Mesh(P.numberGeo, numberMaterial(number));
+      plate.position.set(0, 1.386, -0.36);
+      tilt.add(plate);
+    }
+    const blob = new THREE.Mesh(P.blob, P.blobMat);
     blob.position.y = 0.04;
     blob.renderOrder = 1;
     root.add(blob);
-    bodyMesh.castShadow = cabinMesh.castShadow = wing.castShadow = true;
-    for (const w of wheels) w.spin.children[0].castShadow = true;
+    bodyMesh.castShadow = cabinMesh.castShadow = true;
   }
   let beam = null;
   if (night && !ghost) {
-    beam = new THREE.Mesh(P.beam, new THREE.MeshBasicMaterial({
-      map: P.beamTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
-      polygonOffset: true, polygonOffsetFactor: -5,
-    }));
+    beam = new THREE.Mesh(P.beam, P.beamMat);
     beam.position.set(0, 0.06, 15);
     root.add(beam);
   }
@@ -265,7 +260,9 @@ export function createCarMesh(color, { ghost = false, night = false, number = nu
 // uvolní materiály patřící jen tomuto autu (sdílené geometrie a materiály zůstávají)
 export function disposeCarMesh(mesh) {
   const P = sharedParts();
-  const sharedMats = new Set([P.tireMat, P.rimMat, P.darkMat, P.glassMat, P.headMat, ...Object.values(stripeMats)]);
+  const sharedMats = new Set([
+    P.tireMat, P.rimMat, P.darkMat, P.glassMat, P.headMat, P.stripeLight, P.stripeDark, P.blobMat, P.beamMat, ...P.numberMats.values(),
+  ]);
   mesh.root.traverse((o) => {
     if (o.material && !sharedMats.has(o.material)) o.material.dispose();
   });

@@ -16,7 +16,7 @@ export class Track {
     this.tanBank = Float32Array.from(this.bank, Math.tan);
     this.curbMask = this.computeCurbs();
     this.buildRacingLine();
-    this.speedProfile = this.computeSpeedProfile(25, 19, 60);
+    this.speedProfile = this.computeSpeedProfile(22, 19, 60);
   }
 
   // --- dotazy -------------------------------------------------------------

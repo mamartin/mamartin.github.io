@@ -96,23 +96,38 @@ export class Terrain {
         const dBox = Math.hypot(bx, bz);
         const far = base + this.biomeHeight(x, z, d, dBox);
         const w = smoothstep(edge + 3, edge + 55, d);
-        let hv = lerp(low, far, w);
-        if (lake) {
-          const dl = Math.hypot(x - lake.x, z - lake.z);
-          hv = lerp(hv, meanY - 7, smoothstep(lake.r * 1.05, lake.r * 0.55, dl));
-        }
-        h[v] = hv;
+        h[v] = lerp(low, far, w);
       }
     }
     this.h = h;
-    if (lake) {
-      // hladina: o kousek níž než nejnižší břeh
-      let minShore = Infinity;
-      for (let a = 0; a < 64; a++) {
-        const ang = (a / 64) * Math.PI * 2;
-        minShore = Math.min(minShore, this.heightAt(lake.x + Math.cos(ang) * lake.r * 1.02, lake.z + Math.sin(ang) * lake.r * 1.02));
+    if (lake) this.carveLake(lake);
+  }
+
+  // jezero: okolí srovnat do roviny těsně nad hladinou a uprostřed vyhloubit dno
+  carveLake(lake) {
+    const { nx, nz, cell, x0, z0, h } = this;
+    const r = lake.r;
+    let sum = 0, n = 0;
+    for (let a = 0; a < 48; a++) {
+      const ang = (a / 48) * Math.PI * 2;
+      for (const f of [1.15, 1.35, 1.55]) {
+        sum += this.heightAt(lake.x + Math.cos(ang) * r * f, lake.z + Math.sin(ang) * r * f);
+        n++;
       }
-      this.waterY = Math.min(minShore - 0.6, meanY - 1.5);
+    }
+    const level = sum / n;
+    this.waterY = level;
+    for (let j = 0; j < nz; j++) {
+      const z = z0 + j * cell;
+      for (let i = 0; i < nx; i++) {
+        const x = x0 + i * cell;
+        const dl = Math.hypot(x - lake.x, z - lake.z);
+        if (dl > r * 1.7) continue;
+        const v = j * nx + i;
+        let hv = lerp(h[v], level + 0.7, smoothstep(r * 1.7, r * 1.08, dl));
+        hv = lerp(hv, level - 4.5, smoothstep(r * 1.0, r * 0.62, dl));
+        h[v] = hv;
+      }
     }
   }
 
@@ -193,14 +208,14 @@ export class Terrain {
         } else {
           c.copy(cA).lerp(cB, n1);
           c.lerp(cC, n2 * 0.3);
-          c.lerp(cRock, smoothstep(0.45, 0.9, slope));
+          c.lerp(cRock, smoothstep(0.6, 1.1, slope) * (0.55 + 0.45 * n2));
           c.lerp(cRock.clone().multiplyScalar(1.4), smoothstep(90, 140, h[v]) * 0.7);
         }
         const d = this.dist[v];
         c.lerp(cNear, (1 - smoothstep(this.track.edge, this.track.edge + 16, d)) * 0.6);
         if (lake) {
           const dl = Math.hypot(x - lake.x, z - lake.z);
-          c.lerp(cShore, smoothstep(lake.r * 1.25, lake.r * 1.0, dl));
+          c.lerp(cShore, smoothstep(lake.r * 1.16, lake.r * 1.02, dl));
         }
         const shade = 0.92 + n2 * 0.16;
         col[v * 3] = c.r * shade;

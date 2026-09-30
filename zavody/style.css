@@ -93,7 +93,16 @@ button:focus-visible, summary:focus-visible { outline: 2px solid var(--amber); o
   animation: load 1.1s ease-in-out infinite;
 }
 @keyframes load { from { transform: translateX(-100%); } to { transform: translateX(260%); } }
-#loading-text { margin: 0; color: var(--muted); letter-spacing: 0.04em; }
+#loading-text { margin: 0; color: var(--muted); letter-spacing: 0.04em; text-align: center; line-height: 2.2; }
+#loading-text .retry {
+  margin-left: 6px;
+  padding: 4px 12px;
+  border: 0;
+  background: var(--signal);
+  color: #fff;
+  font-family: var(--font-display);
+  font-weight: 700;
+}
 .loading.soft { background: rgba(11, 18, 32, 0.55); }
 .loading.soft .brand-mark { display: none; }
 

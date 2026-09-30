@@ -212,6 +212,16 @@
     </div>
   </div>
 
-  <script type="module" src="js/main.js"></script>
+  <script>
+    // záchrana, když se nenačte three.js z CDN nebo některý modul
+    function bootFailed(msg) {
+      var box = document.getElementById('loading-text');
+      if (!box || window.__game) return;
+      box.innerHTML = msg + ' <button type="button" class="retry" onclick="location.reload()">Zkusit znovu</button>';
+      document.querySelector('.loading-bar').hidden = true;
+    }
+    setTimeout(function () { bootFailed('Načítání trvá nezvykle dlouho.'); }, 20000);
+  </script>
+  <script type="module" src="js/main.js" onerror="bootFailed('Nepodařilo se stáhnout hru. Zkontroluj připojení k internetu.')"></script>
 </body>
 </html>
