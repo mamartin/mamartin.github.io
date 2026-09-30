@@ -176,6 +176,103 @@ function spruceGeometry() {
   return mergeGeometries(parts.map(ni));
 }
 
+function snowSpruceGeometry() {
+  const parts = [
+    colored(new THREE.CylinderGeometry(0.2, 0.32, 2.4, 6).translate(0, 1.2, 0), '#4a3322'),
+    colored(new THREE.ConeGeometry(2.4, 3.8, 7).translate(0, 3.3, 0), '#264b33'),
+    colored(new THREE.ConeGeometry(1.95, 1.7, 7).translate(0, 4.5, 0), '#f3f7fb'),
+    colored(new THREE.ConeGeometry(1.85, 3.2, 7).translate(0, 5.2, 0), '#2b5438'),
+    colored(new THREE.ConeGeometry(1.45, 1.5, 7).translate(0, 6.2, 0), '#f5f8fc'),
+    colored(new THREE.ConeGeometry(1.2, 2.7, 7).translate(0, 6.9, 0), '#2f5a3c'),
+    colored(new THREE.ConeGeometry(0.85, 1.4, 7).translate(0, 7.75, 0), '#ffffff'),
+  ];
+  return mergeGeometries(parts.map(ni));
+}
+
+// dřevěná chalupa se zasněženou střechou
+function cabinGeometry() {
+  const roof = new THREE.CylinderGeometry(3.6, 3.6, 7.4, 3, 1).rotateZ(Math.PI / 2).rotateX(Math.PI / 6);
+  roof.scale(1, 0.55, 1).translate(0, 4.4, 0);
+  const parts = [
+    colored(new THREE.BoxGeometry(6.4, 3.4, 5).translate(0, 1.7, 0), '#7a4f2e'),
+    colored(roof, '#f4f7fb'),
+    colored(new THREE.BoxGeometry(0.7, 2.2, 0.7).translate(1.8, 5.2, 0.8), '#6b6f76'),
+    colored(new THREE.BoxGeometry(1.1, 1.0, 0.1).translate(-1.4, 1.9, 2.52), '#ffd98a'),
+    colored(new THREE.BoxGeometry(1.1, 1.0, 0.1).translate(1.4, 1.9, 2.52), '#ffd98a'),
+    colored(new THREE.BoxGeometry(1.0, 2.0, 0.1).translate(0, 1.0, 2.52), '#4a3020'),
+  ];
+  return mergeGeometries(parts.map(ni));
+}
+
+function snowmanGeometry() {
+  const parts = [
+    colored(new THREE.SphereGeometry(0.8, 10, 8).translate(0, 0.7, 0), '#f7f9fc'),
+    colored(new THREE.SphereGeometry(0.58, 10, 8).translate(0, 1.8, 0), '#f7f9fc'),
+    colored(new THREE.SphereGeometry(0.42, 10, 8).translate(0, 2.6, 0), '#f7f9fc'),
+    colored(new THREE.ConeGeometry(0.08, 0.45, 6).rotateX(Math.PI / 2).translate(0, 2.6, 0.6), '#f07b2c'),
+    colored(new THREE.CylinderGeometry(0.3, 0.32, 0.4, 8).translate(0, 3.05, 0), '#23262d'),
+    colored(new THREE.SphereGeometry(0.06, 5, 4).translate(-0.14, 2.72, 0.38), '#111111'),
+    colored(new THREE.SphereGeometry(0.06, 5, 4).translate(0.14, 2.72, 0.38), '#111111'),
+  ];
+  return mergeGeometries(parts.map(ni));
+}
+
+// sníh: vločky ukotvené ve světě, zabalené do krychle kolem kamery (výpočet v shaderu)
+export function buildSnow(count) {
+  const B = 140;
+  const pos = new Float32Array(count * 3);
+  const seed = new Float32Array(count);
+  const rng = new RNG(31);
+  for (let i = 0; i < count; i++) {
+    pos[i * 3] = rng.range(0, B);
+    pos[i * 3 + 1] = rng.range(0, B);
+    pos[i * 3 + 2] = rng.range(0, B);
+    seed[i] = rng.next();
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  g.setAttribute('seed', new THREE.BufferAttribute(seed, 1));
+  const mat = new THREE.ShaderMaterial({
+    uniforms: { uCam: { value: new THREE.Vector3() }, uTime: { value: 0 }, uBox: { value: B }, uScale: { value: 500 } },
+    vertexShader: /* glsl */ `
+      attribute float seed;
+      uniform vec3 uCam; uniform float uTime; uniform float uBox; uniform float uScale;
+      varying float vA;
+      void main() {
+        vec3 p = position + vec3(sin(uTime * 0.6 + seed * 40.0) * 1.5 + uTime * 1.2, -uTime * (2.0 + seed * 1.6), uTime * 0.4);
+        p = mod(p - uCam + uBox * 0.5, uBox) - uBox * 0.5 + uCam;
+        vec4 mv = modelViewMatrix * vec4(p, 1.0);
+        float d = -mv.z;
+        vA = smoothstep(uBox * 0.5, uBox * 0.3, length(p - uCam)) * smoothstep(0.5, 2.0, d);
+        gl_PointSize = (0.15 + seed * 0.1) * uScale / max(d, 0.1);
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: /* glsl */ `
+      varying float vA;
+      void main() {
+        float r = length(gl_PointCoord - 0.5);
+        float a = smoothstep(0.5, 0.1, r) * vA * 0.9;
+        if (a <= 0.0) discard;
+        gl_FragColor = vec4(vec3(1.0), a);
+      }`,
+    transparent: true,
+    depthWrite: false,
+  });
+  const points = new THREE.Points(g, mat);
+  points.frustumCulled = false;
+  points.renderOrder = 4;
+  return {
+    points,
+    update(dt) {
+      mat.uniforms.uTime.value += dt;
+    },
+    setView(camera, heightPx) {
+      mat.uniforms.uCam.value.copy(camera.position);
+      mat.uniforms.uScale.value = heightPx / (2 * Math.tan((camera.fov * Math.PI) / 360));
+    },
+  };
+}
+
 function broadleafGeometry() {
   const parts = [
     colored(new THREE.CylinderGeometry(0.16, 0.24, 3.2, 6).translate(0, 1.6, 0), '#d8d2c4'),
@@ -681,6 +778,37 @@ export function buildScenery(track, terrain, biomeKey, biome, quality, seed) {
       x: r.x, y: r.y + 0.2, z: r.z, s: rng.range(0.4, 1.0), ry: rng.range(0, 6.28), color: 0xffffff,
     }));
     group.add(instancedChunks(colored(jitter(new THREE.IcosahedronGeometry(1, 0), 0.25, 13), '#8a8a45'), vmat, bushes, { castShadow: false }));
+  } else if (biomeKey === 'winter') {
+    const trees = scatter(rng, terrain, Math.round(700 * density), { minD: edge + 4, maxD: edge + 70 })
+      .concat(scatter(rng, terrain, Math.round(800 * density), {
+        minD: edge + 70, maxD: 420, accept: (x, z) => terrain.noise.noise(x / 110 + 40, z / 110) > -0.3,
+      }))
+      .map((t) => {
+        const sc = rng.range(0.8, 1.7);
+        return {
+          x: t.x, y: t.y - 0.2, z: t.z, s: sc, sy: sc * rng.range(0.9, 1.3), ry: rng.range(0, 6.28),
+          color: new THREE.Color().setHSL(0.35, 0.1, rng.range(0.82, 1.0)).getHex(),
+        };
+      });
+    const vmat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
+    group.add(instancedChunks(snowSpruceGeometry(), vmat, trees, { castShadow: quality !== 'low' }));
+    // chalupy natočené k trati
+    const cabins = scatter(rng, terrain, 14, { minD: edge + 14, maxD: edge + 60 }).map((c) => {
+      const p = track.project(c.x, c.z, -1, {});
+      return { x: c.x, y: c.y - 0.3, z: c.z, ry: Math.atan2(p.cx - c.x, p.cz - c.z), s: rng.range(0.9, 1.2), color: 0xffffff };
+    });
+    group.add(instancedChunks(cabinGeometry(), vmat, cabins));
+    const snowmen = scatter(rng, terrain, 12, { minD: edge + 5, maxD: edge + 22 }).map((c) => {
+      const p = track.project(c.x, c.z, -1, {});
+      return { x: c.x, y: c.y - 0.1, z: c.z, ry: Math.atan2(p.cx - c.x, p.cz - c.z), s: rng.range(0.9, 1.25), color: 0xffffff };
+    });
+    group.add(instancedChunks(snowmanGeometry(), vmat, snowmen));
+    const rocks = scatter(rng, terrain, Math.round(120 * density), { minD: edge + 3, maxD: 250 }).map((r) => ({
+      x: r.x, y: r.y, z: r.z, s: rng.range(0.6, 2.2), ry: rng.range(0, 6.28), color: 0xffffff,
+    }));
+    group.add(instancedChunks(colored(jitter(new THREE.DodecahedronGeometry(1, 0), 0.25, 8), '#7d848e'), vmat, rocks));
+    extra.snow = buildSnow(quality === 'low' ? 1200 : quality === 'medium' ? 2200 : 3500);
+    group.add(extra.snow.points);
   } else if (biomeKey === 'city') {
     group.add(buildCity(track, terrain, rng, quality));
     group.add(buildStreetLamps(track));

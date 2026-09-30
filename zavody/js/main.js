@@ -21,7 +21,7 @@ import { Post } from './post.js';
 import { TrackEditor, customToDef } from './editor.js';
 
 const STEP = 1 / 120;
-const CUP_TRACKS = ['sumava', 'kanon', 'mesto'];
+const CUP_TRACKS = ['sumava', 'kanon', 'serpentiny', 'mesto'];
 const CUP_POINTS = [10, 6, 4, 3, 2, 1];
 const $ = (id) => document.getElementById(id);
 
@@ -122,10 +122,10 @@ function showError(text) {
 
 function randomDef(seed) {
   const rng = new RNG(seed);
-  const biome = rng.pick(['forest', 'canyon', 'city']);
+  const biome = rng.pick(['forest', 'canyon', 'winter', 'city']);
   const city = biome === 'city';
   let points = randomTrackDef(seed);
-  const base = { width: city ? 14 : 16, runoff: city ? 3 : 7 };
+  const base = { width: city ? 14 : biome === 'winter' ? 15 : 16, runoff: city ? 3 : biome === 'winter' ? 6 : 7 };
   // pro jistotu ověř geometrii, případně zkus další variantu
   for (let t = 0; t < 8; t++) {
     const cl = buildCenterline({ points });
@@ -258,7 +258,7 @@ async function loadWorld(id) {
   const effects = new Effects(scene, S.quality);
   effects.setView(camera, renderer.domElement.height, scene.fog);
 
-  G.world = { def, biome, track, terrain, group, sky, lights, effects, envRT, showcase: [], crowd: scenery.extra.crowd };
+  G.world = { def, biome, track, terrain, group, sky, lights, effects, envRT, showcase: [], crowd: scenery.extra.crowd, snow: scenery.extra.snow };
   setupPost();
   buildShowcase();
   $('loading').hidden = true;
@@ -421,7 +421,7 @@ function refreshMenu() {
   $('cup-block').hidden = S.mode !== 'cup';
   $('mode-hint').textContent = {
     race: 'Ty proti pěti soupeřům. Drift plní nitro, krabice s otazníkem dávají power-upy.',
-    cup: 'Tři závody za sebou. Body za umístění 10, 6, 4, 3, 2, 1 a vítězí nejvíc bodů.',
+    cup: 'Čtyři závody za sebou. Body za umístění 10, 6, 4, 3, 2, 1 a vítězí nejvíc bodů.',
     time: 'Sám na trati proti průhlednému ghostu svého nejlepšího kola.',
   }[S.mode];
   if (S.mode === 'cup') {
@@ -1179,6 +1179,7 @@ function frame(now) {
   }
 
   w.effects.update(dt);
+  if (w.snow) w.snow.update(dt);
   renderViews(w);
 }
 
@@ -1216,6 +1217,7 @@ function renderViews(w) {
     aimSun(w, focus ? focus.x : rig.look.x, focus ? focus.y : rig.look.y, focus ? focus.z : rig.look.z);
     w.sky.position.copy(camera.position);
     w.effects.setView(camera, renderer.domElement.height, scene.fog);
+    if (w.snow) w.snow.setView(camera, renderer.domElement.height);
     if (G.post) G.post.render();
     else renderer.render(scene, camera);
     return;
@@ -1235,6 +1237,7 @@ function renderViews(w) {
     aimSun(w, car.x, car.y, car.z);
     w.sky.position.copy(cam.position);
     w.effects.setView(cam, h2 * renderer.getPixelRatio(), scene.fog);
+    if (w.snow) w.snow.setView(cam, h2 * renderer.getPixelRatio());
     const y = i === 0 ? H - h2 : 0;
     renderer.setViewport(0, y, W, h2);
     renderer.setScissor(0, y, W, h2);

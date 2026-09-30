@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { buildCenterline, smoothCircular } from './trackmath.js';
 import { clamp, angleDiff, RNG } from './rng.js';
+import { BIOMES } from './biomes.js';
 
 export const SURF_ROAD = 0, SURF_CURB = 1, SURF_OFF = 2;
 
@@ -16,7 +17,9 @@ export class Track {
     this.tanBank = Float32Array.from(this.bank, Math.tan);
     this.curbMask = this.computeCurbs();
     this.buildRacingLine();
-    this.speedProfile = this.computeSpeedProfile(22, 19, 60);
+    // AI počítá s přilnavostí povrchu (na sněhu jede opatrněji)
+    const roadGrip = BIOMES[def.biome]?.roadGrip ?? 1;
+    this.speedProfile = this.computeSpeedProfile(22 * roadGrip, 19 * roadGrip, 60);
   }
 
   // --- dotazy -------------------------------------------------------------

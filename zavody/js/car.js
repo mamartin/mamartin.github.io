@@ -329,7 +329,7 @@ export class Car {
     const biome = this.biome;
     this.surface = tr.surfaceAt(P.lat);
     const off = this.surface === SURF_OFF;
-    const gripMul = off ? biome.offGrip ?? 0.6 : this.surface === SURF_CURB ? 0.95 : 1;
+    const gripMul = off ? biome.offGrip ?? 0.6 : (this.surface === SURF_CURB ? 0.95 : 1) * (biome.roadGrip ?? 1);
     const dragMul = off ? biome.offDrag ?? 3 : 1;
     const topMul = off ? 0.6 : 1;
 

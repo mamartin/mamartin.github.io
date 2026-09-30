@@ -134,8 +134,9 @@ export class Terrain {
   biomeHeight(x, z, d, dBox) {
     const n = this.noise;
     const edge = this.track.edge;
-    if (this.biome === 'forest') {
-      const ramp = smoothstep(edge + 6, 220, d);
+    if (this.biome === 'forest' || this.biome === 'winter') {
+      const big = this.biome === 'winter' ? 1.35 : 1;
+      const ramp = smoothstep(edge + 6, 220, d) * big;
       const hills = (n.fbm(x / 170, z / 170, 4) * 0.5 + 0.5) * 34 * ramp;
       const mountains = smoothstep(120, 520, dBox) * (70 + 60 * n.fbm(x / 300 + 9, z / 300, 3));
       return hills + mountains + n.noise(x / 23, z / 23) * 1.2 * ramp;
@@ -205,6 +206,10 @@ export class Terrain {
           c.lerp(cRock, smoothstep(0.5, 1.2, slope) * 0.8);
         } else if (this.biome === 'city') {
           c.copy(cA).lerp(cB, n2 * 0.4);
+        } else if (this.biome === 'winter') {
+          c.copy(cA).lerp(cB, n1 * 0.7);
+          c.lerp(cC, n2 * 0.35);
+          c.lerp(cRock, smoothstep(0.75, 1.3, slope) * (0.5 + 0.5 * n2));
         } else {
           c.copy(cA).lerp(cB, n1);
           c.lerp(cC, n2 * 0.3);

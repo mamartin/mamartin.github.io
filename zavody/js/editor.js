@@ -6,6 +6,7 @@ import { clamp, hashString } from './rng.js';
 const SIZES = {
   forest: { width: 16, runoff: 7, maxBank: 0.07 },
   canyon: { width: 18, runoff: 8, maxBank: 0.06 },
+  winter: { width: 15, runoff: 6, maxBank: 0.06 },
   city: { width: 14, runoff: 3, maxBank: 0.015, smooth: 2 },
 };
 
