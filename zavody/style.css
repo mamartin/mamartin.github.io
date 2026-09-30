@@ -349,6 +349,19 @@ button:focus-visible, summary:focus-visible { outline: 2px solid var(--amber); o
 .start-btn span { display: inline-block; transition: transform 0.15s; }
 .start-btn:hover span { transform: translateX(6px); }
 
+.fs-btn {
+  align-self: flex-start;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.fs-btn:hover { color: var(--paper); border-color: var(--paper); }
 .menu-more { border-top: 1px solid var(--line); padding-top: 12px; }
 .menu-more summary {
   cursor: pointer;

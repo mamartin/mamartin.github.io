@@ -76,7 +76,12 @@ export class Input {
 
   pads() {
     if (!navigator.getGamepads) return [];
-    return [...navigator.getGamepads()].filter((p) => p && p.connected);
+    try {
+      return [...navigator.getGamepads()].filter((p) => p && p.connected);
+    } catch {
+      // v některých vložených stránkách je gamepad zakázaný
+      return [];
+    }
   }
 
   // Který hráč (0/1) ovládá gamepad s pořadím i.

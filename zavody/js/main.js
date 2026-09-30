@@ -549,6 +549,23 @@ function bindMenu() {
     refreshMenu();
   });
   $('start-btn').addEventListener('click', () => startFromMenu());
+  // celá obrazovka (kde to prohlížeč umí)
+  const fsOk = !!(document.documentElement.requestFullscreen && document.fullscreenEnabled);
+  const fsLabel = () => (document.fullscreenElement ? 'Ukončit celou obrazovku' : 'Celá obrazovka');
+  for (const b of document.querySelectorAll('[data-fullscreen]')) {
+    b.hidden = !fsOk;
+    b.addEventListener('click', async () => {
+      try {
+        if (document.fullscreenElement) await document.exitFullscreen();
+        else await document.documentElement.requestFullscreen({ navigationUI: 'hide' });
+      } catch {
+        /* prohlížeč odmítl */
+      }
+    });
+  }
+  document.addEventListener('fullscreenchange', () => {
+    for (const b of document.querySelectorAll('[data-fullscreen]')) b.textContent = fsLabel();
+  });
   $('new-track').addEventListener('click', () => openEditor(null));
   $('pause-btn').addEventListener('click', () => setPaused(!G.paused));
   $('resume-btn').addEventListener('click', () => setPaused(false));
