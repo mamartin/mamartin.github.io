@@ -734,7 +734,27 @@ body:not(.items-on) .touch-right .t-item { display: none; }
 .ed-range { display: grid; grid-template-columns: 1fr auto; gap: 6px; font-size: 15px; }
 .ed-range output { font-family: var(--font-display); font-weight: 700; font-variant-numeric: tabular-nums; }
 .ed-range input { grid-column: 1 / -1; width: 100%; accent-color: var(--amber); }
-.ed-tools { display: grid; gap: 8px; margin-top: auto; }
+.ed-tools { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: auto; }
+.ed-tools .btn { font-size: 14px; padding: 9px 8px; }
+.ed-tools .btn:disabled { opacity: 0.4; cursor: default; }
+.ed-tools .danger { grid-column: 1 / -1; }
+.ed-share-box { display: grid; gap: 6px; }
+.ed-share-box input {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 12px;
+}
+.menu-note {
+  margin: 0;
+  padding: 10px 12px;
+  border-left: 3px solid var(--go);
+  background: rgba(47, 212, 107, 0.12);
+  font-size: 15px;
+  line-height: 1.4;
+}
 .btn.danger { border-color: rgba(232, 57, 44, 0.6); }
 .btn.danger:hover { background: rgba(232, 57, 44, 0.25); }
 .btn.disabled { opacity: 0.55; }
@@ -768,6 +788,7 @@ body:not(.items-on) .touch-right .t-item { display: none; }
   .ed-canvas-wrap { flex: 1 1 55%; }
   .ed-panel { width: auto; border-left: 0; border-top: 1px solid var(--line); max-height: 45%; }
   .ed-tools { grid-template-columns: repeat(3, 1fr); margin-top: 0; }
+  .ed-tools .danger { grid-column: auto; }
 }
 
 /* --- dialogy --- */

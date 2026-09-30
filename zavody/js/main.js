@@ -18,7 +18,7 @@ import { GhostRecorder, GhostPlayer } from './ghost.js';
 import { Pickups, ITEM_NAMES } from './pickups.js';
 import { RNG, clamp } from './rng.js';
 import { Post } from './post.js';
-import { TrackEditor, customToDef } from './editor.js';
+import { TrackEditor, customToDef, decodeTrack, checkDef } from './editor.js';
 
 const STEP = 1 / 120;
 const CUP_TRACKS = ['sumava', 'kanon', 'serpentiny', 'mesto'];
@@ -218,7 +218,11 @@ function disposeWorld() {
   G.world = null;
 }
 
-const nextFrame = () => new Promise((r) => requestAnimationFrame(() => r()));
+// počká na vykreslení snímku (aby se ukázalo „Stavím trať…“); ve skryté kartě snímky nechodí, proto i časový limit
+const nextFrame = () => new Promise((r) => {
+  requestAnimationFrame(() => r());
+  setTimeout(r, 60);
+});
 
 let loadToken = 0;
 async function loadWorld(id) {
@@ -1276,6 +1280,27 @@ function renderViews(w) {
 
 // --- start ---------------------------------------------------------------------------
 
+// trať ze sdíleného odkazu (#t=...) se přidá mezi vlastní
+function importSharedTrack() {
+  const m = /^#t=([A-Za-z0-9_-]+)$/.exec(location.hash);
+  if (!m) return;
+  history.replaceState(null, '', location.pathname + location.search);
+  const t = decodeTrack(m[1]);
+  const note = $('menu-note');
+  if (!t) {
+    note.textContent = 'Odkaz na trať se nepodařilo přečíst.';
+    note.hidden = false;
+    return;
+  }
+  const track = { id: 'custom-' + Date.now().toString(36), ...t };
+  track.valid = checkDef(customToDef(track)).ok;
+  store.saveCustom(track);
+  if (track.valid) S.track = track.id;
+  store.save();
+  note.textContent = `Přidána trať „${track.name}“ ze sdíleného odkazu.` + (track.valid ? ' Je vybraná, stačí dát Na start.' : ' Potřebuje ještě doladit v editoru.');
+  note.hidden = false;
+}
+
 async function boot() {
   try {
     await Promise.race([
@@ -1288,6 +1313,7 @@ async function boot() {
   } catch {
     /* písma nejsou nutná */
   }
+  importSharedTrack();
   bindMenu();
   buildTrackList();
   await loadWorld(currentTrackId());

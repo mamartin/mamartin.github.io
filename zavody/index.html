@@ -34,6 +34,7 @@
   <!-- Hlavní menu -->
   <div id="menu" class="screen menu" hidden>
     <div class="menu-panel">
+      <p class="menu-note" id="menu-note" hidden></p>
       <header class="menu-head">
         <p class="eyebrow">Arkádové závody</p>
         <h1 class="title">Turbo<br>Okruh</h1>
@@ -224,8 +225,14 @@
           </label>
           <button type="button" class="btn" id="ed-pt-del">Smazat bod</button>
         </div>
-        <p class="hint">Klikni u trati a přidáš bod. Body přetahuj myší nebo prstem, prázdným místem posouváš mapu, kolečkem přibližuješ. Vybraný bod smaže klávesa Delete.</p>
+        <p class="hint">Klikni u trati a přidáš bod. Body přetahuj myší nebo prstem, prázdným místem posouváš mapu, kolečkem přibližuješ. Vybraný bod smaže Delete, krok zpět Ctrl+Z.</p>
+        <div class="ed-share-box" id="ed-share-box" hidden>
+          <p class="hint" id="ed-share-note"></p>
+          <input type="text" id="ed-share-url" readonly aria-label="Odkaz na trať">
+        </div>
         <div class="ed-tools">
+          <button type="button" class="btn" id="ed-undo" disabled>Zpět o krok</button>
+          <button type="button" class="btn" id="ed-share">Sdílet odkaz</button>
           <button type="button" class="btn" id="ed-random">Náhodný tvar</button>
           <button type="button" class="btn" id="ed-reverse">Otočit směr</button>
           <button type="button" class="btn danger" id="ed-delete">Smazat trať</button>

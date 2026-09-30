@@ -14,6 +14,38 @@ const DEFAULT_POINTS = [
   [-230, 10, 0, 60], [-140, -150, 4, 55], [110, -170, 10, 60], [250, -40, 8, 55], [170, 130, 3, 45], [-90, 150, 0, 55],
 ];
 
+// Sdílení: trať -> krátký text do adresy (#t=...) a zpět.
+export function encodeTrack(t) {
+  const pts = t.points.map((p) => p.map((v) => Math.round(v)).join(',')).join(';');
+  const raw = `${(t.name || '').replace(/[|]/g, ' ').slice(0, 28)}|${t.biome}|${pts}`;
+  const bytes = new TextEncoder().encode(raw);
+  let bin = '';
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+export function decodeTrack(code) {
+  try {
+    const b64 = code.replace(/-/g, '+').replace(/_/g, '/');
+    const bin = atob(b64 + '==='.slice((b64.length + 3) % 4));
+    const raw = new TextDecoder().decode(Uint8Array.from(bin, (c) => c.charCodeAt(0)));
+    const [name, biome, pts] = raw.split('|');
+    if (!(biome in SIZES) || !pts) return null;
+    const points = pts.split(';').map((q) => q.split(',').map(Number));
+    if (points.length < 4 || points.length > 80) return null;
+    for (const p of points) {
+      if (p.length !== 4 || p.some((v) => !isFinite(v))) return null;
+      p[0] = clamp(p[0], -5000, 5000);
+      p[1] = clamp(p[1], -5000, 5000);
+      p[2] = clamp(p[2], -10, 40);
+      p[3] = clamp(p[3], 15, 150);
+    }
+    return { name: (name || 'Sdílená trať').slice(0, 28), biome, points };
+  } catch {
+    return null;
+  }
+}
+
 // Uložená trať -> definice pro hru. Start leží uprostřed nejdelší rovinky.
 export function customToDef(t) {
   const size = SIZES[t.biome] || SIZES.forest;
@@ -98,9 +130,39 @@ export class TrackEditor {
     this.el('ed-name').value = this.track.name;
     this.el('ed-delete').textContent = 'Smazat trať';
     this.userView = false;
+    this.history = [];
+    this.lastCommit = { kind: '', time: 0 };
+    this.el('ed-share-box').hidden = true;
     this.resize();
     this.fit();
     this.changed(false);
+    this.commit('open');
+  }
+
+  // uloží stav do historie (tahání posuvníkem se slévá do jednoho kroku)
+  commit(kind) {
+    const snap = JSON.stringify({ b: this.track.biome, p: this.track.points });
+    const h = this.history;
+    if (h[h.length - 1] === snap) return;
+    const now = performance.now();
+    if (kind === 'slider' && this.lastCommit.kind === 'slider' && now - this.lastCommit.time < 900 && h.length > 1) h[h.length - 1] = snap;
+    else h.push(snap);
+    if (h.length > 80) h.shift();
+    this.lastCommit = { kind, time: now };
+    this.el('ed-undo').disabled = h.length < 2;
+  }
+
+  undo() {
+    const h = this.history;
+    if (h.length < 2) return;
+    h.pop();
+    const st = JSON.parse(h[h.length - 1]);
+    this.track.biome = st.b;
+    this.track.points = st.p;
+    this.sel = -1;
+    this.lastCommit = { kind: 'undo', time: 0 };
+    this.changed(true, null);
+    this.el('ed-undo').disabled = h.length < 2;
   }
 
   close() {
@@ -141,7 +203,13 @@ export class TrackEditor {
         this.sel = -1;
         this.changed(false);
       }
+      if (e.code === 'KeyZ' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        this.undo();
+      }
     });
+    this.el('ed-undo').addEventListener('click', () => this.undo());
+    this.el('ed-share').addEventListener('click', () => this.share());
     for (const b of this.el('ed-biome').children) {
       b.addEventListener('click', () => {
         this.track.biome = b.dataset.biome;
@@ -149,8 +217,8 @@ export class TrackEditor {
       });
     }
     this.el('ed-name').addEventListener('input', () => this.save());
-    this.el('ed-r').addEventListener('input', (e) => this.setPoint({ r: +e.target.value }));
-    this.el('ed-h').addEventListener('input', (e) => this.setPoint({ h: +e.target.value }));
+    this.el('ed-r').addEventListener('input', (e) => this.setPoint({ r: +e.target.value }, 'slider'));
+    this.el('ed-h').addEventListener('input', (e) => this.setPoint({ h: +e.target.value }, 'slider'));
     this.el('ed-pt-del').addEventListener('click', () => this.deletePoint(this.sel));
     this.el('ed-random').addEventListener('click', () => {
       const pts = randomTrackDef(Math.floor(Math.random() * 1e9)).slice(1);
@@ -317,12 +385,32 @@ export class TrackEditor {
     this.draw();
   }
 
-  setPoint(vals) {
+  setPoint(vals, kind = 'edit') {
     const p = this.track.points[this.sel];
     if (!p) return;
     if (vals.r != null) p[3] = vals.r;
     if (vals.h != null) p[2] = vals.h;
-    this.changed();
+    this.changed(true, kind);
+  }
+
+  async share() {
+    const url = `${location.origin}${location.pathname}#t=${encodeTrack({ ...this.track, name: this.el('ed-name').value })}`;
+    const box = this.el('ed-share-box');
+    const input = this.el('ed-share-url');
+    input.value = url;
+    box.hidden = false;
+    let ok = false;
+    try {
+      await navigator.clipboard.writeText(url);
+      ok = true;
+    } catch {
+      /* schránka nemusí být dostupná */
+    }
+    this.el('ed-share-note').textContent = ok ? 'Odkaz je ve schránce. Kdo ho otevře, dostane trať do svého menu.' : 'Zkopíruj odkaz ručně:';
+    if (!ok) {
+      input.focus();
+      input.select();
+    }
   }
 
   deletePoint(i) {
@@ -335,12 +423,15 @@ export class TrackEditor {
     this.changed();
   }
 
-  // přepočítá trať; persist = uložit rozpracovaný stav
-  changed(persist = true) {
+  // přepočítá trať; persist = uložit rozpracovaný stav (a zapsat krok do historie)
+  changed(persist = true, kind = 'edit') {
     const def = customToDef(this.track);
     this.def = def;
     this.check = checkDef(def);
-    if (persist) this.save();
+    if (persist) {
+      this.save();
+      if (kind && this.history) this.commit(kind);
+    }
     this.updatePanel();
     this.draw();
   }
@@ -349,7 +440,13 @@ export class TrackEditor {
     const ch = this.check;
     const st = this.el('ed-status');
     const km = (ch.length / 1000).toFixed(2).replace('.', ',');
-    st.innerHTML = `<span class="ed-stats">${km} km · poloměr min. ${Math.round(ch.minRadius)} m · stoupání max. ${Math.round(ch.maxGrade * 100)} %</span>` +
+    let hmin = Infinity, hmax = -Infinity;
+    for (let k = 0; k < ch.cl.N; k++) {
+      hmin = Math.min(hmin, ch.cl.py[k]);
+      hmax = Math.max(hmax, ch.cl.py[k]);
+    }
+    const climb = hmax - hmin > 1.5 ? ` · převýšení ${Math.round(hmax - hmin)} m` : '';
+    st.innerHTML = `<span class="ed-stats">${km} km · poloměr min. ${Math.round(ch.minRadius)} m · stoupání max. ${Math.round(ch.maxGrade * 100)} %${climb}</span>` +
       (ch.ok ? '<span class="ed-ok">Trať je připravená na závod.</span>' : `<span class="ed-err">${ch.message}</span>`);
     this.el('ed-drive').classList.toggle('disabled', !ch.ok);
     for (const b of this.el('ed-biome').children) b.setAttribute('aria-checked', String(b.dataset.biome === this.track.biome));
@@ -428,12 +525,35 @@ export class TrackEditor {
     g.strokeStyle = '#4a4f59';
     g.lineWidth = Math.max(2, def.width * zoom);
     g.stroke();
-    path();
-    g.setLineDash([6, 8]);
-    g.strokeStyle = 'rgba(243,245,248,0.35)';
-    g.lineWidth = 1;
-    g.stroke();
-    g.setLineDash([]);
+    // středová čára obarvená podle výšky (modrá = dole, oranžová = nahoře)
+    let minY = Infinity, maxY = -Infinity;
+    for (let k = 0; k < cl.N; k++) {
+      minY = Math.min(minY, cl.py[k]);
+      maxY = Math.max(maxY, cl.py[k]);
+    }
+    if (maxY - minY > 1.5) {
+      g.lineWidth = Math.max(1.5, Math.min(4, def.width * zoom * 0.22));
+      for (let k = 0; k < cl.N; k++) {
+        const n = (k + 1) % cl.N;
+        const t = (cl.py[k] - minY) / (maxY - minY);
+        const [x0, y0] = this.toScreen(cl.px[k], cl.pz[k]);
+        const [x1, y1] = this.toScreen(cl.px[n], cl.pz[n]);
+        g.strokeStyle = `hsl(${215 - t * 190}, 80%, ${55 + t * 5}%)`;
+        g.beginPath();
+        g.moveTo(x0, y0);
+        g.lineTo(x1, y1);
+        g.stroke();
+      }
+      this.heightRange = [minY, maxY];
+    } else {
+      path();
+      g.setLineDash([6, 8]);
+      g.strokeStyle = 'rgba(243,245,248,0.35)';
+      g.lineWidth = 1;
+      g.stroke();
+      g.setLineDash([]);
+      this.heightRange = null;
+    }
     // šipky směru jízdy
     const every = Math.max(1, Math.round(160 / cl.step));
     g.fillStyle = 'rgba(243,245,248,0.8)';
