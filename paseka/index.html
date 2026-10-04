@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <title>Paseka</title>
+  <meta name="description" content="Klidná hra o tom, jak se les vrací. Náladová scéna: ostrůvek v oblacích, roční období, den a noc, sázení stromů.">
+  <meta name="theme-color" content="#1f2a1f">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,400..700,100&family=Nunito+Sans:opsz,wght@6..12,400..800&display=swap">
+  <link rel="stylesheet" href="style.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.min.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <canvas id="scene" aria-label="Ostrůvek s lesem, loukou a tůní"></canvas>
+
+  <header class="brand">
+    <h1>Paseka</h1>
+    <p>Les, který se vrací <span class="tag">náladová scéna</span></p>
+  </header>
+
+  <section class="panel clock" aria-label="Čas a roční období">
+    <div class="seasons" role="radiogroup" aria-label="Roční období" id="seasons">
+      <button type="button" role="radio" data-season="0">Jaro</button>
+      <button type="button" role="radio" data-season="1">Léto</button>
+      <button type="button" role="radio" data-season="2">Podzim</button>
+      <button type="button" role="radio" data-season="3">Zima</button>
+    </div>
+    <div class="tod">
+      <button type="button" class="icon-btn" id="play" aria-label="Pozastavit čas" title="Pozastavit čas (mezerník)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path class="i-pause" d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/><path class="i-play" d="M8 5l11 7-11 7z"/></svg>
+      </button>
+      <input type="range" id="tod" min="0" max="1" step="0.001" aria-label="Denní doba">
+      <output id="tod-label">8:00</output>
+    </div>
+    <div class="chips">
+      <button type="button" class="chip" id="timelapse" aria-pressed="false" title="Zrychlit čas i roční období (T)">Časosběr</button>
+      <button type="button" class="chip" id="tilt" aria-pressed="true" title="Rozostření okrajů jako u makety">Maketa</button>
+    </div>
+  </section>
+
+  <aside class="panel herbar" id="herbar" hidden aria-live="polite">
+    <p class="herbar-kicker">Herbář</p>
+    <h2 id="herbar-name"></h2>
+    <p class="latin" id="herbar-latin"></p>
+    <p id="herbar-fact"></p>
+    <p class="where" id="herbar-where"></p>
+  </aside>
+
+  <nav class="plant-bar" id="plant-bar" aria-label="Rostliny k zasazení"></nav>
+  <p class="hint" id="hint">Vyber rostlinu a klikni na políčko. Tažením otáčíš ostrovem.</p>
+
+  <div class="tip" id="tip" hidden></div>
+
+  <div class="loading" id="loading">
+    <div class="loading-box">
+      <div class="sprout" aria-hidden="true"></div>
+      <p id="loading-text">Klíčí semínka…</p>
+    </div>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
