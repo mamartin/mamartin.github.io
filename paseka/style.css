@@ -1,0 +1,422 @@
+/* Paseka: papírové panely s jemným rozostřením nad živou scénou */
+:root {
+  --paper: rgba(250, 246, 236, 0.84);
+  --paper-solid: #faf6ec;
+  --ink: #1f2a1f;
+  --ink-soft: #55604f;
+  --moss: #4d6a3a;
+  --moss-hi: #5f8048;
+  --line: rgba(31, 42, 31, 0.12);
+  --bloom: #d44f8c;
+  --berry: #c8372d;
+  --bark: #6b5442;
+  --radius: 16px;
+  --gut: clamp(10px, 2.2vmin, 20px);
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-body: 'Nunito Sans', system-ui, sans-serif;
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-l: env(safe-area-inset-left, 0px);
+  --safe-r: env(safe-area-inset-right, 0px);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #9ec3dc;
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+
+#scene {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+  cursor: grab;
+}
+#scene.planting { cursor: crosshair; }
+#scene:active { cursor: grabbing; }
+
+button { font: inherit; color: inherit; }
+[hidden] { display: none !important; }
+
+.panel {
+  background: var(--paper);
+  backdrop-filter: blur(14px) saturate(1.2);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: var(--radius);
+  box-shadow: 0 10px 30px rgba(20, 35, 25, 0.18), 0 1px 0 rgba(255, 255, 255, 0.7) inset;
+}
+
+/* --- značka --------------------------------------------------------------- */
+
+.brand {
+  position: fixed;
+  top: calc(var(--gut) + var(--safe-t));
+  left: calc(var(--gut) + var(--safe-l));
+  pointer-events: none;
+  color: #fffdf6;
+  text-shadow: 0 2px 18px rgba(20, 40, 30, 0.35);
+}
+.brand h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-variation-settings: 'SOFT' 100, 'opsz' 144;
+  font-weight: 600;
+  font-size: clamp(34px, 6vmin, 58px);
+  line-height: 0.95;
+  letter-spacing: -0.01em;
+}
+.brand p {
+  margin: 6px 0 0;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: clamp(14px, 2.2vmin, 18px);
+  opacity: 0.95;
+}
+.tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(255, 253, 246, 0.22);
+  font-family: var(--font-body);
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  vertical-align: 2px;
+  text-shadow: none;
+}
+
+/* --- čas a roční období ------------------------------------------------------ */
+
+.clock {
+  position: fixed;
+  top: calc(var(--gut) + var(--safe-t));
+  right: calc(var(--gut) + var(--safe-r));
+  width: min(320px, calc(100vw - 2 * var(--gut)));
+  padding: 10px;
+  display: grid;
+  gap: 10px;
+}
+
+.seasons {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  padding: 3px;
+  border-radius: 11px;
+  background: rgba(31, 42, 31, 0.07);
+}
+.seasons button {
+  border: 0;
+  background: transparent;
+  padding: 7px 0;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.seasons button:hover { color: var(--ink); }
+.seasons button[aria-checked="true"] {
+  background: var(--paper-solid);
+  color: var(--ink);
+  box-shadow: 0 1px 3px rgba(31, 42, 31, 0.18);
+}
+
+.tod {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+}
+.tod output {
+  min-width: 42px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+.icon-btn {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: var(--moss);
+  color: #fff;
+  cursor: pointer;
+}
+.icon-btn:hover { background: var(--moss-hi); }
+.icon-btn svg { width: 16px; height: 16px; fill: currentColor; }
+.icon-btn .i-play { display: none; }
+.icon-btn.paused .i-play { display: block; }
+.icon-btn.paused .i-pause { display: none; }
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 22px;
+  background: transparent;
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 99px;
+  background: linear-gradient(90deg, #1b2547 0%, #e48b5c 24%, #9fcbe6 34%, #7fb6de 50%, #9fcbe6 66%, #e48b5c 76%, #1b2547 100%);
+}
+input[type="range"]::-moz-range-track {
+  height: 8px;
+  border-radius: 99px;
+  background: linear-gradient(90deg, #1b2547 0%, #e48b5c 24%, #9fcbe6 34%, #7fb6de 50%, #9fcbe6 66%, #e48b5c 76%, #1b2547 100%);
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  margin-top: -5px;
+  border-radius: 50%;
+  background: #fff6d8;
+  border: 3px solid #f2b844;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+input[type="range"]::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #fff6d8;
+  border: 3px solid #f2b844;
+}
+
+.chips { display: flex; gap: 6px; }
+.chip {
+  flex: 1;
+  border: 1px solid var(--line);
+  background: transparent;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.chip[aria-pressed="true"] {
+  background: var(--moss);
+  border-color: var(--moss);
+  color: #fff;
+}
+
+/* --- lišta rostlin ----------------------------------------------------------- */
+
+.plant-bar {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--gut) + var(--safe-b));
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  max-width: calc(100vw - 2 * var(--gut));
+  overflow-x: auto;
+  scrollbar-width: none;
+  background: var(--paper);
+  backdrop-filter: blur(14px) saturate(1.2);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(20, 35, 25, 0.18);
+}
+.plant-bar::-webkit-scrollbar { display: none; }
+
+.plant {
+  position: relative;
+  flex: 0 0 auto;
+  width: 76px;
+  padding: 8px 4px 7px;
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.18s, transform 0.18s;
+}
+.plant:hover { background: rgba(31, 42, 31, 0.06); }
+.plant svg { width: 38px; height: 38px; transition: transform 0.25s cubic-bezier(.3, 1.6, .5, 1); }
+.plant:hover svg { transform: translateY(-2px) scale(1.06); }
+.plant span { font-size: 12.5px; font-weight: 700; }
+.plant kbd {
+  position: absolute;
+  top: 5px;
+  right: 7px;
+  font: 700 10px var(--font-body);
+  color: var(--ink-soft);
+  opacity: 0.6;
+}
+.plant[aria-pressed="true"] {
+  background: var(--moss);
+  color: #fff;
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(45, 70, 35, 0.35);
+}
+.plant[aria-pressed="true"] kbd { color: #fff; }
+
+.hint {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--gut) + var(--safe-b) + 92px);
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(31, 42, 31, 0.55);
+  color: #fffdf6;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+  transition: opacity 0.6s;
+}
+.hint.gone { opacity: 0; }
+
+/* --- herbář ------------------------------------------------------------------ */
+
+.herbar {
+  position: fixed;
+  left: calc(var(--gut) + var(--safe-l));
+  bottom: calc(var(--gut) + var(--safe-b) + 98px);
+  width: min(300px, calc(100vw - 2 * var(--gut)));
+  padding: 14px 16px 12px;
+  animation: rise 0.35s cubic-bezier(.2, 1.2, .4, 1);
+}
+.herbar-kicker {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--moss);
+}
+.herbar h2 {
+  margin: 2px 0 0;
+  font-family: var(--font-display);
+  font-variation-settings: 'SOFT' 100;
+  font-weight: 600;
+  font-size: 22px;
+}
+.herbar .latin {
+  margin: 0 0 8px;
+  font-family: var(--font-display);
+  font-style: italic;
+  color: var(--ink-soft);
+}
+.herbar p { margin: 0 0 8px; line-height: 1.45; }
+.herbar .where { margin: 0; font-size: 12.5px; color: var(--ink-soft); }
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(8px); }
+}
+
+/* --- tooltip ----------------------------------------------------------------- */
+
+.tip {
+  position: fixed;
+  left: 0;
+  top: 0;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: rgba(31, 42, 31, 0.82);
+  color: #fffdf6;
+  font-size: 12.5px;
+  line-height: 1.35;
+  pointer-events: none;
+  white-space: nowrap;
+  transform: translate(14px, 14px);
+}
+.tip b { font-weight: 800; }
+.tip .bad { color: #ffb4a8; }
+
+/* --- načítání ---------------------------------------------------------------- */
+
+.loading {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 50% 40%, #cfe3ee, #8fb9d6);
+  transition: opacity 0.9s ease;
+  z-index: 10;
+}
+.loading.done { opacity: 0; pointer-events: none; }
+.loading-box { text-align: center; color: var(--ink); }
+.loading-box p { font-family: var(--font-display); font-style: italic; font-size: 18px; margin: 14px 0 0; }
+.sprout {
+  width: 14px;
+  height: 46px;
+  margin: 0 auto;
+  border-radius: 7px;
+  background: var(--moss);
+  transform-origin: bottom;
+  animation: sprout 1.6s ease-in-out infinite alternate;
+  position: relative;
+}
+.sprout::before, .sprout::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  width: 22px;
+  height: 12px;
+  border-radius: 12px 0;
+  background: var(--moss-hi);
+}
+.sprout::before { right: 10px; transform: rotate(-20deg); }
+.sprout::after { left: 10px; transform: scaleX(-1) rotate(-20deg); }
+@keyframes sprout {
+  from { transform: scaleY(0.6) rotate(-4deg); }
+  to { transform: scaleY(1) rotate(4deg); }
+}
+
+/* --- malé obrazovky ---------------------------------------------------------- */
+
+@media (max-width: 640px) {
+  .brand p { display: none; }
+  .clock { width: min(250px, calc(100vw - 130px)); padding: 8px; gap: 8px; }
+  .seasons button { font-size: 12px; padding: 6px 0; }
+  .plant-bar { gap: 2px; }
+  .plant { width: 56px; padding: 6px 2px; }
+  .plant svg { width: 30px; height: 30px; }
+  .plant kbd { display: none; }
+  .hint {
+    bottom: calc(var(--gut) + var(--safe-b) + 80px);
+    width: max-content;
+    max-width: calc(100vw - 2 * var(--gut));
+    white-space: normal;
+    text-align: center;
+    border-radius: 14px;
+    font-size: 12px;
+  }
+  .herbar { bottom: calc(var(--gut) + var(--safe-b) + 84px); font-size: 14px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sprout, .herbar { animation: none; }
+}
