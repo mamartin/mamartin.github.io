@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Jak věci fungují</title>
+  <meta name="description" content="Interaktivní vysvětlení věcí, které máme denně v ruce. Ke každému tématu patří model, se kterým si můžete hrát.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700&display=swap">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="wrap">
+    <header class="hub-head">
+      <div class="hub-intro">
+        <h1 class="display">Jak věci fungují</h1>
+        <p>Vysvětlení věcí, které máme denně v ruce. Ke každému tématu patří model, se kterým si můžete hrát: zasunout klíč do zámku, posunout telefon po mapě, rozebrat to, co se rozebrat nedá.</p>
+      </div>
+      <nav class="cat-nav" aria-label="Kategorie">
+        <span class="label">Kategorie</span>
+        <ul>
+          <li data-cat="domacnost"><a href="#domacnost">Domácnost</a></li>
+          <li data-cat="technika"><a href="#technika">Technika</a></li>
+          <li data-cat="doprava"><a href="#doprava">Doprava</a></li>
+          <li data-cat="priroda"><a href="#priroda">Příroda</a></li>
+          <li data-cat="telo"><a href="#telo">Lidské tělo</a></li>
+          <li data-cat="vesmir"><a href="#vesmir">Vesmír</a></li>
+        </ul>
+      </nav>
+    </header>
+
+    <section class="hub-sec" aria-labelledby="h-hotove">
+      <h2 class="label" id="h-hotove">Hotové články</h2>
+      <div class="featured">
+        <a class="card" href="zamek/" data-cat="domacnost">
+          <div class="card-fig">
+            <svg viewBox="0 0 320 180" aria-hidden="true">
+              <rect x="40" y="14" width="260" height="64" class="t-steel"/>
+              <rect x="40" y="78" width="260" height="88" class="t-plug"/>
+              <rect x="40" y="166" width="260" height="6" class="t-steel"/>
+              <rect x="40" y="100" width="252" height="62" class="t-hole"/>
+              <g class="t-hole">
+                <rect x="81" y="18" width="18" height="84"/>
+                <rect x="121" y="18" width="18" height="84"/>
+                <rect x="161" y="18" width="18" height="84"/>
+                <rect x="201" y="18" width="18" height="84"/>
+                <rect x="241" y="18" width="18" height="84"/>
+              </g>
+              <g class="t-spring">
+                <polyline points="90,18 96,21 84,25 96,29 84,33 96,37 90,38"/>
+                <polyline points="130,18 136,23 124,29 136,35 124,41 136,47 130,54"/>
+                <polyline points="170,18 176,21 164,24 176,26 164,29 176,31 170,32"/>
+                <polyline points="210,18 216,25 204,32 216,39 204,46 216,53 210,60"/>
+                <polyline points="250,18 256,23 244,27 256,32 244,37 256,41 250,46"/>
+              </g>
+              <rect x="83" y="38" width="14" height="40" rx="2" class="t-toppin"/>
+              <rect x="123" y="54" width="14" height="24" rx="2" class="t-toppin"/>
+              <rect x="163" y="32" width="14" height="46" rx="2" class="t-toppin"/>
+              <rect x="203" y="60" width="14" height="18" rx="2" class="t-toppin"/>
+              <rect x="243" y="46" width="14" height="32" rx="2" class="t-toppin"/>
+              <path class="t-keypin" d="M83 78H97V109L93 114H87L83 109Z"/>
+              <path class="t-keypin" d="M123 78H137V125L133 130H127L123 125Z"/>
+              <path class="t-keypin" d="M163 78H177V103L173 108H167L163 103Z"/>
+              <path class="t-keypin" d="M203 78H217V131L213 136H207L203 131Z"/>
+              <path class="t-keypin" d="M243 78H257V117L253 122H247L243 117Z"/>
+              <path class="t-key" d="M8 104H74L84 114H96L102 108L124 130H136L161 105L164 108H176L204 136H216L237 115L244 122H256L276 132L284 148L280 158H8Z"/>
+              <line x1="36" y1="78" x2="304" y2="78" class="t-shear"/>
+            </svg>
+          </div>
+          <div class="card-body">
+            <p class="eyebrow">Domácnost</p>
+            <h3>Zámek ve dveřích</h3>
+            <p>Proč dveře otevře jen jeden klíč a co přesně dělají zuby na něm.</p>
+            <span class="model">Model: řez cylindrickou vložkou</span>
+          </div>
+        </a>
+
+        <a class="card" href="gps/" data-cat="technika">
+          <div class="card-fig">
+            <svg viewBox="0 0 320 180" aria-hidden="true">
+              <circle cx="40" cy="30" r="147.6" class="t-circle t-a"/>
+              <circle cx="290" cy="40" r="134.2" class="t-circle t-b"/>
+              <circle cx="220" cy="170" r="86" class="t-circle t-c"/>
+              <g class="t-a"><rect x="34" y="24" width="12" height="12"/><rect x="18" y="27" width="12" height="6"/><rect x="50" y="27" width="12" height="6"/></g>
+              <g class="t-b"><rect x="284" y="34" width="12" height="12"/><rect x="268" y="37" width="12" height="6"/><rect x="300" y="37" width="12" height="6"/></g>
+              <g class="t-c"><rect x="214" y="160" width="12" height="12"/><rect x="198" y="163" width="12" height="6"/><rect x="230" y="163" width="12" height="6"/></g>
+              <rect x="163" y="88" width="14" height="24" rx="3" class="t-phone"/>
+              <rect x="165" y="91" width="10" height="16" class="t-phone-screen"/>
+            </svg>
+          </div>
+          <div class="card-body">
+            <p class="eyebrow">Technika</p>
+            <h3>GPS</h3>
+            <p>Jak telefon zjistí, kde je, když do vesmíru nic neposílá.</p>
+            <span class="model">Model: poloha ze vzdáleností od družic</span>
+          </div>
+        </a>
+      </div>
+    </section>
+
+    <section class="hub-sec" aria-labelledby="h-kategorie">
+      <h2 class="label" id="h-kategorie">Všechna témata podle kategorií</h2>
+      <div class="cats">
+        <section class="cat" id="domacnost" data-cat="domacnost">
+          <h3>Domácnost</h3>
+          <p>Věci, které doma používáte, aniž byste je kdy rozebrali.</p>
+          <ul class="topics">
+            <li><a href="zamek/">Zámek ve dveřích</a></li>
+            <li><span>Lednička</span></li>
+            <li><span>Mikrovlnná trouba</span></li>
+            <li><span>Splachovací nádržka</span></li>
+          </ul>
+        </section>
+        <section class="cat" id="technika" data-cat="technika">
+          <h3>Technika</h3>
+          <p>Elektronika a signály, které nejsou vidět.</p>
+          <ul class="topics">
+            <li><a href="gps/">GPS</a></li>
+            <li><span>Dotykový displej</span></li>
+            <li><span>QR kód</span></li>
+            <li><span>Wi-Fi</span></li>
+          </ul>
+        </section>
+        <section class="cat" id="doprava" data-cat="doprava">
+          <h3>Doprava</h3>
+          <p>Co se děje v autě, na kole a v letadle.</p>
+          <ul class="topics">
+            <li><span>Brzdy s ABS</span></li>
+            <li><span>Přehazovačka na kole</span></li>
+            <li><span>Proč letadlo letí</span></li>
+          </ul>
+        </section>
+        <section class="cat" id="priroda" data-cat="priroda">
+          <h3>Příroda</h3>
+          <p>Počasí, světlo a zvuky kolem nás.</p>
+          <ul class="topics">
+            <li><span>Proč je nebe modré</span></li>
+            <li><span>Jak vzniká blesk</span></li>
+            <li><span>Duha</span></li>
+          </ul>
+        </section>
+        <section class="cat" id="telo" data-cat="telo">
+          <h3>Lidské tělo</h3>
+          <p>Reflexy a smysly, které fungují samy.</p>
+          <ul class="topics">
+            <li><span>Proč kýcháme</span></li>
+            <li><span>Jak oko zaostřuje</span></li>
+            <li><span>Husí kůže</span></li>
+          </ul>
+        </section>
+        <section class="cat" id="vesmir" data-cat="vesmir">
+          <h3>Vesmír</h3>
+          <p>Měsíc, oběžné dráhy a stav beztíže.</p>
+          <ul class="topics">
+            <li><span>Fáze Měsíce</span></li>
+            <li><span>Příliv a odliv</span></li>
+            <li><span>Stav beztíže na ISS</span></li>
+          </ul>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-foot">
+    <div class="wrap">
+      <p>Jak věci fungují · nová témata přibývají postupně</p>
+    </div>
+  </footer>
+</body>
+</html>
