@@ -1,0 +1,672 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Jak funguje zámek ve dveřích</title>
+  <meta name="description" content="Co je uvnitř cylindrické vložky, proč dveře otevře jen jeden klíč a co přesně dělají zuby na něm. S interaktivním řezem zámkem.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700&display=swap">
+  <link rel="stylesheet" href="../style.css">
+  <style>
+    .lock-stage { display: grid; gap: 1rem; grid-template-columns: minmax(0, 1fr); align-items: center; }
+    @media (min-width: 60rem) { .lock-stage { grid-template-columns: minmax(0, 1fr) 12.5rem; } }
+    .endview { display: grid; gap: 0.35rem; justify-items: center; justify-self: center; width: min(11rem, 48%); }
+    .endview .label { text-align: center; }
+
+    #side { touch-action: pan-y; }
+    #keyg { cursor: grab; touch-action: none; }
+    #keyg.dragging { cursor: grabbing; }
+
+    .f-steel { fill: url(#hatch-steel); }
+    .f-plug { fill: url(#hatch-plug); }
+    .hatch-steel-bg { fill: var(--steel); }
+    .hatch-steel-ln { stroke: var(--steel-hatch); stroke-width: 1.2; }
+    .hatch-plug-bg { fill: var(--plug); }
+    .hatch-plug-ln { stroke: var(--plug-hatch); stroke-width: 1.2; }
+    .outline { fill: none; stroke: var(--metal-line); stroke-width: 1.4; }
+    .hole { fill: var(--hole); }
+    .spring { fill: none; stroke: var(--metal-line); stroke-width: 1.6; stroke-linejoin: round; }
+    .pin-top { fill: var(--pin-top); stroke: var(--metal-line); stroke-width: 1.2; }
+    .pin-key { fill: var(--pin-key); stroke: var(--metal-line); stroke-width: 1.2; }
+    .key { fill: var(--key); stroke: var(--metal-line); stroke-width: 1.4; }
+    .key-groove { fill: none; stroke: var(--metal-line); stroke-width: 1; opacity: 0.45; }
+    .key-hole { fill: var(--surface); stroke: var(--metal-line); stroke-width: 1.4; }
+    .shear { stroke: var(--cat); stroke-width: 2; stroke-dasharray: 7 5; }
+    .gap-mark { fill: var(--bad); transition: fill 0.2s; }
+    .gap-mark.ok { fill: var(--ok); }
+    .pin-num { fill: var(--ink-3); font: 600 13px var(--font-mono); text-anchor: middle; }
+    .pin-num.sel { fill: var(--ink); }
+    .callout text { fill: var(--ink-2); font: 500 13px var(--font-mono); }
+    .callout line { stroke: var(--ink-3); stroke-width: 1; }
+    .callout circle { fill: var(--ink-2); }
+    .section-mark { fill: var(--ink); font: 700 13px var(--font-mono); text-anchor: middle; }
+    .section-line { stroke: var(--ink); stroke-width: 2.4; }
+
+    .blocking .pin-top, .blocking .pin-key { animation: flash 0.9s ease-out 1; }
+    @keyframes flash { 0%, 60% { fill: var(--bad); } 100% { } }
+
+    #plug-rot {
+      transform-box: view-box;
+      transform-origin: 120px 150px;
+      transition: transform 0.9s cubic-bezier(0.3, 0.7, 0.2, 1);
+    }
+    #plug-rot.turned { transform: rotate(90deg); }
+    #plug-rot.jam { animation: jam 0.5s ease-in-out 1; }
+    @keyframes jam {
+      0%, 100% { transform: rotate(0deg); }
+      25% { transform: rotate(5deg); }
+      55% { transform: rotate(-3deg); }
+      80% { transform: rotate(2deg); }
+    }
+
+    .pinrow { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0.4rem; margin: 0; padding: 0; list-style: none; }
+    .pinrow li {
+      display: grid;
+      gap: 0.1rem;
+      padding: 0.45rem 0.5rem;
+      border: 1px solid var(--rule);
+      border-top: 3px solid var(--bad);
+      background: var(--surface);
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.3;
+    }
+    .pinrow li.ok { border-top-color: var(--ok); }
+    .pinrow .n { color: var(--ink-3); }
+    .pinrow .v { font-weight: 600; white-space: nowrap; }
+    .status { font-size: 1.02rem; }
+
+    .code { display: flex; gap: 0.3rem; }
+    .code .d {
+      display: grid;
+      place-items: center;
+      width: 2rem;
+      height: 2.5rem;
+      border: 1px solid var(--rule);
+      background: var(--surface);
+      font: 600 1rem var(--font-mono);
+    }
+    .stepper { display: grid; grid-template-rows: auto auto auto; width: 2rem; }
+    .stepper button {
+      height: 1.6rem;
+      border: 1px solid var(--ink);
+      background: var(--surface);
+      color: var(--ink);
+      font: 600 0.8rem/1 var(--font-mono);
+      cursor: pointer;
+    }
+    .stepper button:disabled { opacity: 0.35; cursor: not-allowed; }
+    .stepper output { display: grid; place-items: center; height: 2rem; border-inline: 1px solid var(--ink); font: 600 1rem var(--font-mono); background: var(--surface); }
+
+    .parts { display: grid; gap: 1rem; margin: 0; }
+    .parts div { display: grid; grid-template-columns: 1.1rem minmax(0, 1fr); gap: 0.15rem 0.75rem; }
+    .parts dt { grid-column: 2; font-family: var(--font-display); font-stretch: 110%; font-weight: 700; }
+    .parts dd { grid-column: 2; margin: 0; color: var(--ink-2); }
+    .sw { grid-row: 1; grid-column: 1; width: 1rem; height: 1rem; margin-top: 0.3rem; border: 1px solid var(--metal-line); }
+    .sw-steel { background: repeating-linear-gradient(45deg, var(--steel-hatch) 0 1px, var(--steel) 1px 5px); }
+    .sw-plug { background: repeating-linear-gradient(-45deg, var(--plug-hatch) 0 1px, var(--plug) 1px 5px); }
+    .sw-key { background: var(--pin-key); }
+    .sw-top { background: var(--pin-top); }
+    .sw-shear { height: 0; margin-top: 0.75rem; border: 0; border-top: 2px dashed var(--cat); }
+
+    @media (max-width: 46rem) {
+      .callout { display: none; }
+      .pinrow { gap: 0.25rem; }
+      .pinrow li { padding: 0.35rem 0.3rem; font-size: 0.72rem; }
+      .pinrow .wide { display: none; }
+    }
+  </style>
+</head>
+<body data-cat="domacnost">
+  <header class="topbar">
+    <div class="wrap">
+      <a class="brand" href="../">Jak věci fungují</a>
+      <nav class="crumbs" aria-label="Drobečková navigace"><a href="../#domacnost">Domácnost</a><span aria-hidden="true">/</span><span>Zámek ve dveřích</span></nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <header class="art-head">
+      <p class="eyebrow">Domácnost</p>
+      <h1 class="display">Jak funguje zámek ve dveřích</h1>
+      <p class="lede">V cylindrické vložce, do které každý den strkáte klíč, je pět párů drobných kovových kolíčků. Klíč musí každý z nich zvednout do přesně správné výšky. Když se jediný splete o půl milimetru, zámek se neotočí.</p>
+    </header>
+
+    <section class="tldr" aria-labelledby="h-zkratka">
+      <h2 class="label" id="h-zkratka">Ve zkratce</h2>
+      <ul>
+        <li>Vložka má pevné těleso a otočný rotor. Hranici mezi nimi se říká <span class="hl">dělicí rovina</span>.</li>
+        <li>Pružiny tlačí stavítka dolů, takže horní stavítka zasahují do rotoru a nedovolí mu otočit se.</li>
+        <li>Zuby klíče zvednou každý pár stavítek tak, aby jeho spára ležela přesně na dělicí rovině. Pak se rotor otočí.</li>
+      </ul>
+    </section>
+
+    <figure class="fig" id="obr1">
+      <div class="fig-head">
+        <p class="fig-num"><b>Obr. 1</b> Řez cylindrickou vložkou</p>
+        <span class="label">Táhněte klíčem nebo posuvníkem</span>
+      </div>
+      <div class="fig-stage lock-stage">
+        <svg id="side" viewBox="0 0 940 332" role="img" aria-label="Boční řez vložkou: těleso, rotor, pět párů stavítek s pružinami a klíč">
+          <defs>
+            <pattern id="hatch-steel" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <rect width="7" height="7" class="hatch-steel-bg"/>
+              <line x1="0" y1="0" x2="0" y2="7" class="hatch-steel-ln"/>
+            </pattern>
+            <pattern id="hatch-plug" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)">
+              <rect width="7" height="7" class="hatch-plug-bg"/>
+              <line x1="0" y1="0" x2="0" y2="7" class="hatch-plug-ln"/>
+            </pattern>
+          </defs>
+        </svg>
+        <div class="endview">
+          <svg id="front" viewBox="56 22 128 192" role="img" aria-label="Pohled zepředu na řez vybraným stavítkem"></svg>
+          <span class="label" id="front-label">Řez A–A · stavítko 1</span>
+        </div>
+      </div>
+      <div class="fig-controls">
+        <div class="ctl">
+          <span class="label" id="lbl-key">Klíč</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-key" id="key-seg">
+            <button type="button" role="radio" data-key="right" aria-checked="true">Správný</button>
+            <button type="button" role="radio" data-key="wrong" aria-checked="false">Cizí</button>
+            <button type="button" role="radio" data-key="custom" aria-checked="false">Vlastní</button>
+          </div>
+        </div>
+        <div class="ctl">
+          <span class="label" id="lbl-code">Kód klíče</span>
+          <div class="code" id="code" aria-labelledby="lbl-code"></div>
+        </div>
+        <div class="ctl ctl-grow">
+          <label class="label" for="insert">Zasunutí klíče</label>
+          <div class="ctl-row">
+            <input type="range" id="insert" min="0" max="100" step="1" value="62">
+            <output class="val" id="insert-val" for="insert">62 %</output>
+          </div>
+        </div>
+        <button type="button" class="btn" id="turn">Otočit klíčem</button>
+      </div>
+      <div class="fig-status" aria-live="polite">
+        <ol class="pinrow" id="pinrow" aria-label="Stav jednotlivých stavítek"></ol>
+        <p class="status" id="status"></p>
+      </div>
+      <figcaption class="fig-caption">Stavítka kopírují zuby klíče, jak se pod nimi posouvá. Čísla u stavítek ukazují, o kolik je jejich spára mimo dělicí rovinu. Šipka nahoru znamená, že spodní stavítko přečnívá do tělesa, šipka dolů, že horní stavítko zasahuje do rotoru.</figcaption>
+    </figure>
+
+    <section class="sec" aria-labelledby="h-uvnitr">
+      <div class="prose">
+        <h2 id="h-uvnitr">Co je uvnitř vložky</h2>
+        <p>Cylindrická vložka je ta kovová součástka ve dveřích, do které zasouváte klíč. Samotný zámek se závorou je schovaný v křídle dveří a vložka rozhoduje jen o jednom: smí se její prostředek otočit, nebo ne.</p>
+        <dl class="parts">
+          <div><span class="sw sw-steel" aria-hidden="true"></span><dt>Těleso (stator)</dt><dd>Pevná část přišroubovaná ve dveřích. Jsou v ní vyvrtané komůrky pro stavítka a pružiny.</dd></div>
+          <div><span class="sw sw-plug" aria-hidden="true"></span><dt>Rotor</dt><dd>Váleček s drážkou pro klíč. Když se otočí, pootočí vačkou, která posune závoru zámku.</dd></div>
+          <div><span class="sw sw-key" aria-hidden="true"></span><dt>Spodní stavítka</dt><dd>Mosazné kolíčky, které se opírají o klíč. Každé má jinou délku podle toho, jak hluboký zářez na klíči mu patří.</dd></div>
+          <div><span class="sw sw-top" aria-hidden="true"></span><dt>Horní stavítka a pružiny</dt><dd>Kolíčky nad nimi. Pružina je tlačí dolů, takže bez klíče zasahují přes hranici do rotoru.</dd></div>
+          <div><span class="sw sw-shear" aria-hidden="true"></span><dt>Dělicí rovina</dt><dd>Hranice mezi rotorem a tělesem. Rotor se otočí, jen když přes ni nepřečnívá žádné stavítko.</dd></div>
+        </dl>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Na okraj</span>
+        <p>Na obrázku jsou stavítka nahoře, jak se to obvykle kreslí. Ve dveřích bývá vložka otočená opačně a klíč zasouváte zuby dolů. Na principu to nic nemění.</p>
+        <p>Šrafování v řezu je technická konvence: sousední díly mají čáry v opačném směru. Stavítka a klíč se nešrafují.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-odemykani">
+      <div class="prose">
+        <h2 id="h-odemykani">Co se děje, když odemykáte</h2>
+        <ol class="steps">
+          <li><div><b>Bez klíče.</b> Pružiny tlačí oba páry stavítek dolů, dokud se spodní stavítko nezastaví v drážce pro klíč. Horní stavítka v tu chvíli zasahují do rotoru a drží ho na místě.</div></li>
+          <li><div><b>Zasouváte klíč.</b> Špička klíče je zkosená, takže stavítka nadzvedne. Jak klíč jede dál, stavítka skáčou nahoru a dolů po jeho zubech. To je to cvakání, které při zasouvání slyšíte.</div></li>
+          <li><div><b>Klíč je zasunutý celý.</b> Pod každým stavítkem je teď jeho zářez. Spodní stavítko je přesně tak dlouhé, že jeho horní konec končí na dělicí rovině. Horní stavítko je celé v tělese.</div></li>
+          <li><div><b>Otočíte.</b> Rotor už nic nedrží. Otočí se i se spodními stavítky, horní stavítka zůstanou v tělese a pružiny je přitlačí k povrchu rotoru. Vačka na konci rotoru odsune závoru.</div></li>
+        </ol>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>V obrázku vyberte Cizí klíč. Tři stavítka z pěti sedí, dvě ne. To stačí, aby rotor zůstal stát.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-kod">
+      <div class="prose">
+        <h2 id="h-kod">Klíč je vlastně číslo</h2>
+        <p>Hloubka každého zářezu se vybírá z několika pevných stupňů. Vložka na obrázku má pět stavítek a šest hloubek po zhruba půl milimetru, takže se klíč dá zapsat jako pětimístný kód, například <span class="num">3-5-2-6-4</span>. Možných kombinací je <span class="num">6⁵ = 7 776</span>.</p>
+        <p>Výrobci ve skutečnosti část kombinací nepoužívají. Vyřazují třeba klíče, kde by vedle sebe byl velmi mělký a velmi hluboký zářez: tak strmý zub by se snadno ulomil.</p>
+        <p>Z toho plyne praktická rada: <span class="hl">nefoťte své klíče a nedávejte je na sociální sítě.</span> Z dostatečně ostré fotky se dá kód přečíst a klíč podle něj vyrobit.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Vyberte Vlastní a nastavte kód šipkami. Kolik pokusů potřebujete, než trefíte správnou kombinaci?</p>
+        <p>Vložky se šesti stavítky a deseti hloubkami mají teoreticky milion kombinací.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-bezpecnost">
+      <div class="prose">
+        <h2 id="h-bezpecnost">Proč jde zámek otevřít i bez klíče</h2>
+        <p>Žádná vložka není vyrobená dokonale. Komůrky pro stavítka nejsou přesně v řadě, takže když se rotor zkusí pootočit, zasekne se nejdřív jen jedno stavítko a ostatní se ještě volně hýbou. Na tom stojí vyhmatávání zámků. Bezpečnostní vložky proto mají tvarovaná stavítka, která vyhmatávání ztěžují, a kalené vložky proti odvrtání.</p>
+        <p>Nejčastější vloupání se ale se stavítky vůbec nezdržuje. Když vložka přečnívá z kování, dá se ulomit a se zbytkem zámku pak stačí otočit šroubovákem. Vložka by proto měla být zapuštěná, nanejvýš pár milimetrů venku, a chránit by ji mělo bezpečnostní kování.</p>
+        <p>Odolnost vložek se zkouší podle evropské normy ČSN EN 1303. Ta hodnotí mimo jiné počet kombinací klíče a odolnost proti odvrtání a dalším násilným útokům.</p>
+      </div>
+    </section>
+
+    <section class="sec" aria-labelledby="h-historie">
+      <div class="prose">
+        <h2 id="h-historie">Odkud se vzal</h2>
+        <p>Princip padacích kolíků je starý tisíce let. Znali ho už ve starověkém Egyptě a Mezopotámii, jen se tehdy zamykalo dřevěnými zámky a dřevěnými klíči. Dnešní podobu s malým plochým klíčem a otočným válečkem mu dali v polovině 19. století američtí zámečníci Linus Yale starší a jeho syn Linus Yale mladší.</p>
+        <p>U nás se cylindrickým vložkám dodnes lidově říká fabky, podle výrobce FAB z Rychnova nad Kněžnou.</p>
+      </div>
+    </section>
+
+    <footer class="art-foot">
+      <a class="next" href="../gps/" data-cat="technika">
+        <span class="label">Další článek · Technika</span>
+        <span class="t">Jak funguje GPS</span>
+        <p>Jak telefon zjistí, kde je, když do vesmíru nic neposílá.</p>
+      </a>
+      <a class="back" href="../">Všechna témata</a>
+    </footer>
+  </main>
+
+  <script>
+  (() => {
+    const NS = "http://www.w3.org/2000/svg";
+    function el(tag, attrs, parent) {
+      const n = document.createElementNS(NS, tag);
+      for (const k in attrs || {}) n.setAttribute(k, attrs[k]);
+      if (parent) parent.appendChild(n);
+      return n;
+    }
+
+    /* ---------- geometrie bočního řezu (jednotky SVG) ---------- */
+    const FACE = 300, END = 800;            // čelo a konec vložky
+    const HT = 28, CH_TOP = 36;             // horní hrana tělesa, strop komůrek
+    const SL = 164;                         // dělicí rovina
+    const KW_TOP = 186, KW_BOT = 292;       // drážka pro klíč
+    const PB = 298, HB = 312;               // spodek rotoru, spodek tělesa
+    const BB = 284, HMAX = 92;              // spodní hrana čepele, max. výška čepele
+    const REST = 260;                       // kam spadne spodní stavítko bez klíče
+    const STACK = 132;                      // délka spodního + horního stavítka
+    const PIN_X = [380, 450, 520, 590, 660];
+    const PIN_W = 24, HOLE_W = 28;
+    const TIP_FULL = 720, TIP_START = 250, BLADE = TIP_FULL - FACE;
+    const MM = 0.05;                        // mm na jednotku: 10 jednotek = 0,5 mm
+    const cutY = (d) => 200 + (d - 1) * 10; // výška zubu klíče pro hloubku 1–6
+
+    const LOCK = [3, 5, 2, 6, 4];
+    const keyPinLen = LOCK.map((d) => cutY(d) - SL);
+    const driverLen = keyPinLen.map((L) => STACK - L);
+
+    const state = {
+      key: "right",
+      codes: { right: [3, 5, 2, 6, 4], wrong: [3, 4, 2, 6, 1], custom: [2, 2, 2, 2, 2] },
+      t: 0.62,
+      turned: false,
+    };
+    const code = () => state.codes[state.key];
+
+    // výška horní hrany čepele nad spodní hranou, u = vzdálenost od špičky
+    function keyHeight(c, u) {
+      let h = Math.min(HMAX, 12 + 1.6 * u);
+      for (let i = 0; i < 5; i++) {
+        const ui = TIP_FULL - PIN_X[i];
+        const hi = BB - cutY(c[i]);
+        h = Math.min(h, hi + 1.15 * Math.max(0, Math.abs(u - ui) - 5));
+      }
+      return h;
+    }
+    const tipX = (t) => TIP_START + t * (TIP_FULL - TIP_START);
+
+    function pinState(c, t) {
+      const tx = tipX(t);
+      return PIN_X.map((x, i) => {
+        const u = tx - x;
+        const keyTop = u >= 0 && u <= BLADE ? BB - keyHeight(c, u) : null;
+        const bottom = keyTop === null ? REST : Math.min(REST, keyTop);
+        const top = bottom - keyPinLen[i];
+        return { x, bottom, top, driverTop: top - driverLen[i], keyTop, off: top - SL };
+      });
+    }
+    const aligned = (p) => Math.abs(p.off) < 0.5;
+
+    /* ---------- statické části bočního řezu ---------- */
+    const side = document.getElementById("side");
+    const sideTitle = el("title", {}, side);
+    sideTitle.textContent = "Boční řez cylindrickou vložkou";
+
+    el("rect", { x: FACE, y: HT, width: END - FACE, height: SL - HT, class: "f-steel" }, side);
+    el("rect", { x: FACE, y: SL, width: END - 10 - FACE, height: PB - SL, class: "f-plug" }, side);
+    el("rect", { x: FACE, y: PB, width: END - FACE, height: HB - PB, class: "f-steel" }, side);
+    el("rect", { x: END - 10, y: SL, width: 10, height: PB - SL, class: "f-steel" }, side);
+    el("rect", { x: FACE, y: KW_TOP, width: TIP_FULL + 14 - FACE, height: KW_BOT - KW_TOP, class: "hole" }, side);
+    PIN_X.forEach((x) => el("rect", { x: x - HOLE_W / 2, y: CH_TOP, width: HOLE_W, height: KW_TOP - CH_TOP + 1, class: "hole" }, side));
+    el("rect", { x: FACE, y: HT, width: END - FACE, height: HB - HT, class: "outline" }, side);
+    el("line", { x1: FACE, y1: PB, x2: END - 10, y2: PB, class: "outline" }, side);
+    el("line", { x1: END - 10, y1: SL, x2: END - 10, y2: PB, class: "outline" }, side);
+
+    const pinGroups = PIN_X.map((x, i) => {
+      const g = el("g", {}, side);
+      return {
+        g,
+        spring: el("polyline", { class: "spring" }, g),
+        driver: el("rect", { class: "pin-top", x: x - PIN_W / 2, width: PIN_W, rx: 2.5 }, g),
+        keypin: el("path", { class: "pin-key" }, g),
+      };
+    });
+
+    // klíč: čepel + hlava, kreslený v souřadnicích, kde špička je v x = 0
+    const keyG = el("g", { id: "keyg" }, side);
+    const keyBlade = el("path", { class: "key" }, keyG);
+    el("line", { x1: -BLADE, y1: BB - 30, x2: -26, y2: BB - 30, class: "key-groove" }, keyG);
+    el("line", { x1: -BLADE, y1: BB - 16, x2: -14, y2: BB - 16, class: "key-groove" }, keyG);
+    el("rect", { x: -BLADE - 150, y: BB - 46 - 66, width: 140, height: 132, rx: 34, class: "key" }, keyG);
+    el("rect", { x: -BLADE - 11, y: BB - HMAX - 12, width: 12, height: HMAX + 12, class: "key" }, keyG);
+    el("circle", { cx: -BLADE - 108, cy: BB - 46, r: 15, class: "key-hole" }, keyG);
+
+    el("line", { x1: FACE - 10, y1: SL, x2: END + 10, y2: SL, class: "shear" }, side);
+    const gapMarks = PIN_X.map((x) => el("rect", { x: x - HOLE_W / 2 - 5, y: SL - 2, width: HOLE_W + 10, height: 4, class: "gap-mark" }, side));
+    const pinNums = PIN_X.map((x, i) => {
+      const t = el("text", { x, y: 20, class: "pin-num" }, side);
+      t.textContent = String(i + 1);
+      return t;
+    });
+    const sectionMark = el("g", {}, side);
+    el("line", { x1: 0, y1: HB + 4, x2: 0, y2: HB + 14, class: "section-line" }, sectionMark);
+    const secText = el("text", { x: 12, y: HB + 16, class: "section-mark" }, sectionMark);
+    secText.textContent = "A";
+
+    // popisky s odkazovými čarami (cíl některých se hýbe se stavítky)
+    function callout(label, tx, ty, anchor) {
+      const g = el("g", { class: "callout" }, side);
+      const line = el("line", {}, g);
+      const dot = el("circle", { r: 2.2 }, g);
+      const text = el("text", { x: tx, y: ty + 4, "text-anchor": anchor }, g);
+      text.textContent = label;
+      return (x2, y2) => {
+        const x1 = anchor === "end" ? tx + 6 : tx - 6;
+        line.setAttribute("x1", x1); line.setAttribute("y1", ty);
+        line.setAttribute("x2", x2); line.setAttribute("y2", y2);
+        dot.setAttribute("cx", x2); dot.setAttribute("cy", y2);
+      };
+    }
+    callout("těleso (stator)", 284, 50, "end")(332, 50);
+    const cSpring = callout("pružina", 284, 84, "end");
+    const cDriver = callout("horní stavítko", 284, 136, "end");
+    callout("dělicí rovina", 814, SL, "start")(END + 10, SL);
+    const cKeyPin = callout("spodní stavítko", 814, 214, "start");
+    callout("rotor", 814, 262, "start")(END - 22, 262);
+
+    /* ---------- pohled zepředu (řez A–A) ---------- */
+    const front = document.getElementById("front");
+    const C = { x: 120, y: 150 }, R_PLUG = 38;
+    const fy = (y) => C.y - R_PLUG + (y - SL) * 0.4;
+    front.innerHTML = side.querySelector("defs").outerHTML.replace(/id="hatch-/g, 'id="f-hatch-');
+    front.querySelectorAll("pattern").forEach((p) => p.setAttribute("patternUnits", "userSpaceOnUse"));
+    const housingPath = "M98 98.5 L98 54 A22 22 0 0 1 142 54 L142 98.5 A56 56 0 1 1 98 98.5 Z";
+    el("path", { d: housingPath, fill: "url(#f-hatch-steel)" }, front);
+    el("rect", { x: C.x - 7, y: fy(CH_TOP), width: 14, height: C.y - R_PLUG - fy(CH_TOP), class: "hole" }, front);
+    const fSpring = el("polyline", { class: "spring" }, front);
+    const fDriver = el("rect", { class: "pin-top", x: C.x - 6, width: 12, rx: 1.5 }, front);
+    const plugRot = el("g", { id: "plug-rot" }, front);
+    el("circle", { cx: C.x, cy: C.y, r: R_PLUG, fill: "url(#f-hatch-plug)" }, plugRot);
+    el("rect", { x: C.x - 7, y: C.y - R_PLUG - 2, width: 14, height: fy(KW_TOP) - (C.y - R_PLUG) + 2, class: "hole" }, plugRot);
+    el("rect", { x: C.x - 6, y: fy(KW_TOP), width: 12, height: fy(KW_BOT) - fy(KW_TOP), rx: 2, class: "hole" }, plugRot);
+    const fKey = el("rect", { class: "key", x: C.x - 3.5, width: 7, rx: 1 }, plugRot);
+    const fKeyPin = el("rect", { class: "pin-key", x: C.x - 6, width: 12, rx: 1.5 }, plugRot);
+    el("circle", { cx: C.x, cy: C.y, r: R_PLUG, class: "outline" }, plugRot);
+    el("path", { d: housingPath, class: "outline" }, front);
+    el("circle", { cx: C.x, cy: C.y, r: R_PLUG, class: "shear", fill: "none" }, front);
+
+    /* ---------- ovládání ---------- */
+    const seg = document.getElementById("key-seg");
+    const codeBox = document.getElementById("code");
+    const range = document.getElementById("insert");
+    const rangeVal = document.getElementById("insert-val");
+    const turnBtn = document.getElementById("turn");
+    const pinRow = document.getElementById("pinrow");
+    const statusEl = document.getElementById("status");
+    const frontLabel = document.getElementById("front-label");
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const fmtMM = new Intl.NumberFormat("cs-CZ", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+    const chips = PIN_X.map((_, i) => {
+      const li = document.createElement("li");
+      li.innerHTML = `<span class="n"><span class="wide">stavítko </span>${i + 1}</span><span class="v"></span>`;
+      pinRow.appendChild(li);
+      return li;
+    });
+
+    function springPts(x, y0, y1, amp) {
+      const n = 8;
+      let p = `${x},${y0}`;
+      for (let k = 1; k < 2 * n; k++) {
+        const y = y0 + ((y1 - y0) * k) / (2 * n);
+        p += ` ${x + (k % 2 ? amp : -amp)},${y.toFixed(1)}`;
+      }
+      return p + ` ${x},${y1}`;
+    }
+    function keyPinPath(x, top, bottom) {
+      const w = PIN_W / 2;
+      return `M${x - w + 2} ${top} H${x + w - 2} L${x + w} ${top + 2} V${bottom - 7} L${x + 4} ${bottom} H${x - 4} L${x - w} ${bottom - 7} V${top + 2} Z`;
+    }
+    function bladePath(c) {
+      let d = `M0 ${BB - 12}`;
+      for (let u = 2; u <= BLADE; u += 2) d += ` L${-u} ${(BB - keyHeight(c, u)).toFixed(1)}`;
+      return d + ` L${-BLADE} ${BB} L-6 ${BB} Z`;
+    }
+
+    function renderCode() {
+      const c = code();
+      codeBox.innerHTML = "";
+      c.forEach((d, i) => {
+        if (state.key === "custom") {
+          const s = document.createElement("div");
+          s.className = "stepper";
+          s.innerHTML =
+            `<button type="button" data-i="${i}" data-step="1" aria-label="Zářez ${i + 1} hlubší">▲</button>` +
+            `<output aria-label="Zářez ${i + 1}">${d}</output>` +
+            `<button type="button" data-i="${i}" data-step="-1" aria-label="Zářez ${i + 1} mělčí">▼</button>`;
+          s.querySelector('[data-step="1"]').disabled = state.turned || d >= 6;
+          s.querySelector('[data-step="-1"]').disabled = state.turned || d <= 1;
+          codeBox.appendChild(s);
+        } else {
+          const s = document.createElement("span");
+          s.className = "d";
+          s.textContent = d;
+          codeBox.appendChild(s);
+        }
+      });
+    }
+
+    function plural(list) {
+      if (list.length === 1) return `Stavítko ${list[0]}`;
+      return `Stavítka ${list.slice(0, -1).join(", ")} a ${list[list.length - 1]}`;
+    }
+
+    let selPin = 0;
+    function render() {
+      const c = code();
+      const pins = pinState(c, state.t);
+      const tx = tipX(state.t);
+
+      keyBlade.setAttribute("d", bladePath(c));
+      keyG.setAttribute("transform", `translate(${tx.toFixed(1)} 0)`);
+
+      pins.forEach((p, i) => {
+        const pg = pinGroups[i];
+        pg.spring.setAttribute("points", springPts(p.x, CH_TOP, p.driverTop, HOLE_W / 2 - 4));
+        pg.driver.setAttribute("y", p.driverTop);
+        pg.driver.setAttribute("height", driverLen[i]);
+        pg.keypin.setAttribute("d", keyPinPath(p.x, p.top, p.bottom));
+        gapMarks[i].classList.toggle("ok", aligned(p));
+
+        const li = chips[i];
+        li.classList.toggle("ok", aligned(p));
+        const v = li.querySelector(".v");
+        if (aligned(p)) v.innerHTML = '✓<span class="wide"> v rovině</span>';
+        else v.textContent = `${p.off < 0 ? "↑" : "↓"} ${fmtMM.format(Math.abs(p.off) * MM)} mm`;
+      });
+
+      cSpring(PIN_X[0] - 8, (CH_TOP + pins[0].driverTop) / 2);
+      cDriver(PIN_X[0] - PIN_W / 2, pins[0].driverTop + driverLen[0] / 2);
+      cKeyPin(PIN_X[4] + PIN_W / 2, (pins[4].top + pins[4].bottom) / 2);
+
+      // řez A–A ukazuje první blokující stavítko, jinak stavítko 1
+      const bad = pins.map((p, i) => (aligned(p) ? -1 : i)).filter((i) => i >= 0);
+      if (!state.turned) selPin = state.t > 0.999 && bad.length ? bad[0] : 0;
+      const sp = pins[selPin];
+      pinNums.forEach((n, i) => n.classList.toggle("sel", i === selPin));
+      sectionMark.setAttribute("transform", `translate(${PIN_X[selPin]} 0)`);
+      frontLabel.textContent = `Řez A–A · stavítko ${selPin + 1}`;
+
+      fSpring.setAttribute("points", springPts(C.x, fy(CH_TOP), fy(sp.driverTop), 4));
+      fDriver.setAttribute("y", fy(sp.driverTop));
+      fDriver.setAttribute("height", driverLen[selPin] * 0.4);
+      fKeyPin.setAttribute("y", fy(sp.top));
+      fKeyPin.setAttribute("height", (sp.bottom - sp.top) * 0.4);
+      if (sp.keyTop === null) fKey.setAttribute("visibility", "hidden");
+      else {
+        fKey.setAttribute("visibility", "visible");
+        fKey.setAttribute("y", fy(sp.keyTop));
+        fKey.setAttribute("height", (BB - sp.keyTop) * 0.4);
+      }
+
+      range.value = Math.round(state.t * 100);
+      rangeVal.textContent = `${Math.round(state.t * 100)} %`;
+
+      if (state.turned) {
+        statusEl.innerHTML = "<strong>Odemčeno.</strong> Rotor se otočil i se spodními stavítky, horní stavítka zůstala v tělese. Vačka teď odsouvá závoru.";
+      } else if (state.t < 0.001) {
+        statusEl.textContent = "Klíč je venku. Pružiny tlačí stavítka dolů a horní stavítka zasahují do rotoru, takže se nemůže otočit.";
+      } else if (state.t < 0.999) {
+        statusEl.textContent = `Klíč je zasunutý na ${Math.round(state.t * 100)} %. Stavítka jezdí nahoru a dolů po jeho zubech.`;
+      } else if (!bad.length) {
+        statusEl.innerHTML = "<strong>Všech pět spár je přesně na dělicí rovině.</strong> Nic už rotor nedrží, můžete otočit klíčem.";
+      } else {
+        const list = bad.map((i) => i + 1);
+        const verb = list.length === 1 ? "není" : "nejsou";
+        statusEl.innerHTML = `<strong>Klíč je zasunutý celý, ale nesedí.</strong> ${plural(list)} ${verb} na dělicí rovině, takže rotor zůstane stát.`;
+      }
+
+      turnBtn.textContent = state.turned ? "Otočit zpět" : "Otočit klíčem";
+      range.disabled = state.turned;
+      seg.querySelectorAll("button").forEach((b) => (b.disabled = state.turned));
+    }
+
+    let anim = 0;
+    function animateT(from, to, ms) {
+      cancelAnimationFrame(anim);
+      if (reduced) { state.t = to; render(); return; }
+      const t0 = performance.now();
+      const step = (now) => {
+        const k = Math.min(1, (now - t0) / ms);
+        const e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+        state.t = from + (to - from) * e;
+        render();
+        if (k < 1) anim = requestAnimationFrame(step);
+      };
+      anim = requestAnimationFrame(step);
+    }
+
+    seg.addEventListener("click", (e) => {
+      const b = e.target.closest("button[data-key]");
+      if (!b || state.turned) return;
+      state.key = b.dataset.key;
+      seg.querySelectorAll("button").forEach((x) => x.setAttribute("aria-checked", String(x === b)));
+      renderCode();
+      state.t = 0;
+      render();
+      animateT(0, 1, 1700);
+    });
+
+    codeBox.addEventListener("click", (e) => {
+      const b = e.target.closest("button[data-step]");
+      if (!b || state.turned) return;
+      const i = Number(b.dataset.i);
+      const c = state.codes.custom;
+      c[i] = Math.max(1, Math.min(6, c[i] + Number(b.dataset.step)));
+      renderCode();
+      codeBox.querySelector(`button[data-i="${i}"][data-step="${b.dataset.step}"]`)?.focus();
+      render();
+    });
+
+    range.addEventListener("input", () => {
+      cancelAnimationFrame(anim);
+      state.t = Number(range.value) / 100;
+      render();
+    });
+
+    function flashBlocking(pins) {
+      pins.forEach((p, i) => {
+        const g = pinGroups[i].g;
+        g.classList.remove("blocking");
+        if (!aligned(p)) { void g.getBoundingClientRect(); g.classList.add("blocking"); }
+      });
+    }
+
+    turnBtn.addEventListener("click", () => {
+      cancelAnimationFrame(anim);
+      if (state.turned) {
+        state.turned = false;
+        plugRot.classList.remove("turned");
+        renderCode();
+        render();
+        return;
+      }
+      const pins = pinState(code(), state.t);
+      const ok = state.t > 0.999 && pins.every(aligned);
+      if (ok) {
+        state.turned = true;
+        plugRot.classList.add("turned");
+        renderCode();
+        render();
+      } else {
+        render();
+        plugRot.classList.remove("jam");
+        void plugRot.getBoundingClientRect();
+        plugRot.classList.add("jam");
+        flashBlocking(pins);
+        if (state.t <= 0.999) statusEl.innerHTML = "<strong>Zaseklo se.</strong> Klíč není zasunutý celý, takže stavítka nejsou ve správné výšce.";
+      }
+    });
+    plugRot.addEventListener("animationend", () => plugRot.classList.remove("jam"));
+
+    // tažení klíče přímo v obrázku
+    let drag = null;
+    function svgX(evt) {
+      const m = side.getScreenCTM();
+      return m ? (evt.clientX - m.e) / m.a : 0;
+    }
+    keyG.addEventListener("pointerdown", (e) => {
+      if (state.turned) return;
+      cancelAnimationFrame(anim);
+      drag = { x0: svgX(e), t0: state.t };
+      keyG.setPointerCapture(e.pointerId);
+      keyG.classList.add("dragging");
+    });
+    keyG.addEventListener("pointermove", (e) => {
+      if (!drag) return;
+      const dt = (svgX(e) - drag.x0) / (TIP_FULL - TIP_START);
+      state.t = Math.max(0, Math.min(1, drag.t0 + dt));
+      render();
+    });
+    const endDrag = () => { drag = null; keyG.classList.remove("dragging"); };
+    keyG.addEventListener("pointerup", endDrag);
+    keyG.addEventListener("pointercancel", endDrag);
+
+    // na úzkém displeji ořízneme prázdné okraje, aby byl řez větší
+    const narrow = window.matchMedia("(max-width: 46rem)");
+    const fitView = () => side.setAttribute("viewBox", narrow.matches ? "150 4 664 328" : "0 0 940 332");
+    narrow.addEventListener("change", fitView);
+    fitView();
+
+    renderCode();
+    render();
+  })();
+  </script>
+</body>
+</html>
