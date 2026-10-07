@@ -47,13 +47,15 @@
     .blocking .pin-top, .blocking .pin-key { animation: flash 0.9s ease-out 1; }
     @keyframes flash { 0%, 60% { fill: var(--bad); } 100% { } }
 
-    #plug-rot {
+    .bridge { fill: var(--bad); stroke: var(--metal-line); stroke-width: 1.2; }
+
+    .plug-rot {
       transform-box: view-box;
       transform-origin: 120px 150px;
       transition: transform 0.9s cubic-bezier(0.3, 0.7, 0.2, 1);
     }
-    #plug-rot.turned { transform: rotate(90deg); }
-    #plug-rot.jam { animation: jam 0.5s ease-in-out 1; }
+    .plug-rot.turned { transform: rotate(90deg); }
+    .plug-rot.jam { animation: jam 0.5s ease-in-out 1; }
     @keyframes jam {
       0%, 100% { transform: rotate(0deg); }
       25% { transform: rotate(5deg); }
@@ -99,6 +101,27 @@
       cursor: pointer;
     }
     .stepper button:disabled { opacity: 0.35; cursor: not-allowed; }
+    .cases { display: grid; gap: 1.25rem; }
+    .case {
+      display: grid;
+      grid-template-columns: 7.5rem minmax(0, 1fr);
+      grid-template-rows: auto 1fr;
+      gap: 0.25rem 0.9rem;
+      align-items: start;
+      align-content: start;
+      padding-top: 0.7rem;
+      border-top: 3px solid var(--bad);
+    }
+    .case.ok { border-top-color: var(--ok); }
+    .case svg { grid-row: 1 / span 2; }
+    .case-t { margin: 0; font-family: var(--font-display); font-stretch: 110%; font-weight: 700; line-height: 1.2; }
+    .case p:not(.case-t) { margin: 0; font-size: 0.95rem; line-height: 1.5; color: var(--ink-2); }
+    @media (min-width: 46rem) {
+      .cases { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .case { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; }
+      .case svg { grid-row: auto; justify-self: center; max-width: 16rem; }
+    }
+
     .stepper output { display: grid; place-items: center; height: 2rem; border-inline: 1px solid var(--ink); font: 600 1rem var(--font-mono); background: var(--surface); }
 
     .parts { display: grid; gap: 1rem; margin: 0; }
@@ -193,7 +216,7 @@
         <ol class="pinrow" id="pinrow" aria-label="Stav jednotlivých stavítek"></ol>
         <p class="status" id="status"></p>
       </div>
-      <figcaption class="fig-caption">Stavítka kopírují zuby klíče, jak se pod nimi posouvá. Čísla u stavítek ukazují, o kolik je jejich spára mimo dělicí rovinu. Šipka nahoru znamená, že spodní stavítko přečnívá do tělesa, šipka dolů, že horní stavítko zasahuje do rotoru.</figcaption>
+      <figcaption class="fig-caption">Stavítka kopírují zuby klíče, jak se pod nimi posouvá. Čísla u stavítek ukazují, o kolik je jejich spára mimo dělicí rovinu. Šipka nahoru znamená, že spodní stavítko přečnívá do tělesa, šipka dolů, že horní stavítko zasahuje do rotoru. Červeně je vyznačený kus stavítka, který leží přes dělicí rovinu a rotor drží.</figcaption>
     </figure>
 
     <section class="sec" aria-labelledby="h-uvnitr">
@@ -214,6 +237,47 @@
         <p>Šrafování v řezu je technická konvence: sousední díly mají čáry v opačném směru. Stavítka a klíč se nešrafují.</p>
       </aside>
     </section>
+
+    <section class="sec" aria-labelledby="h-proc">
+      <div class="prose">
+        <h2 id="h-proc">Proč stačí jedno stavítko o kousek vedle</h2>
+        <p>Komůrka pro stavítka je jedna díra vyvrtaná skrz těleso až do rotoru. Když se rotor pootočí, jeho část díry odjede do strany a přestane navazovat na tu v tělese. Jde to jen tehdy, když v místě, kde se obě části rozcházejí, neleží žádný kov.</p>
+        <p>Stavítko je plný kolíček a přestřihnout se nedá. Jakmile jedním koncem vězí v rotoru a druhým v tělese, <span class="hl">spojuje je stejně, jako zástrčka spojuje dveře se zárubní.</span> Je jedno, jestli je to stavítko horní, nebo spodní, a jestli přečnívá o tři milimetry, nebo o půl.</p>
+        <p>Volno je v každé komůrce na jediném místě: ve spáře, kde se spodní a horní stavítko dotýkají. Klíč proto nemá stavítka zvednout co nejvýš, ale posunout spáru každého páru přesně na dělicí rovinu. Hlubší zářez ji nechá moc nízko, mělčí ji vytlačí moc vysoko, a v obou případech přes rovinu vede kov.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Proč pohled zepředu</span>
+        <p>Rotor se otáčí kolem klíče. V bočním řezu na obr. 1 by se tedy horní část rotoru pohnula směrem k vám, ven z obrázku, a není na něm vidět, o co se zarazí. Zepředu to vidět je.</p>
+      </aside>
+    </section>
+
+    <figure class="fig" id="obr2">
+      <div class="fig-head">
+        <p class="fig-num"><b>Obr. 2</b> Tři polohy téhož stavítka, pohled zepředu</p>
+        <span class="label">Rozdíly ve výšce jsou zvětšené</span>
+      </div>
+      <div class="fig-stage cases">
+        <div class="case">
+          <svg id="case-low" viewBox="56 22 128 192" role="img" aria-label="Spodní stavítko je moc nízko, horní stavítko zasahuje do rotoru"></svg>
+          <p class="case-t">Spodní stavítko moc nízko</p>
+          <p>Zářez na klíči je hlubší, než má být. Celý sloupec klesl a přes dělicí rovinu teď vede horní stavítko: nahoře vězí v tělese, dole v rotoru.</p>
+        </div>
+        <div class="case ok">
+          <svg id="case-ok" viewBox="56 22 128 192" role="img" aria-label="Spára mezi stavítky leží na dělicí rovině"></svg>
+          <p class="case-t">Spára přesně na rovině</p>
+          <p>Spodní stavítko je celé v rotoru, horní celé v tělese. Rotor se otočí a spodní stavítko si odveze s sebou.</p>
+        </div>
+        <div class="case">
+          <svg id="case-high" viewBox="56 22 128 192" role="img" aria-label="Spodní stavítko je moc vysoko a přečnívá do tělesa"></svg>
+          <p class="case-t">Spodní stavítko moc vysoko</p>
+          <p>Zářez je mělčí, než má být. Klíč vytlačil spodní stavítko příliš nahoru a jeho konec trčí do komůrky v tělese.</p>
+        </div>
+      </div>
+      <div class="fig-controls">
+        <button type="button" class="btn" id="cases-turn">Zkusit otočit</button>
+      </div>
+      <figcaption class="fig-caption">Červeně je kus stavítka, který leží zároveň v rotoru i v tělese. Dokud tam je, rotor se nepohne, ať za klíč táhnete jakkoli.</figcaption>
+    </figure>
 
     <section class="sec" aria-labelledby="h-odemykani">
       <div class="prose">
@@ -355,6 +419,7 @@
         spring: el("polyline", { class: "spring" }, g),
         driver: el("rect", { class: "pin-top", x: x - PIN_W / 2, width: PIN_W, rx: 2.5 }, g),
         keypin: el("path", { class: "pin-key" }, g),
+        bridge: el("rect", { class: "bridge", x: x - PIN_W / 2, width: PIN_W }, g),
       };
     });
 
@@ -407,19 +472,57 @@
     front.innerHTML = side.querySelector("defs").outerHTML.replace(/id="hatch-/g, 'id="f-hatch-');
     front.querySelectorAll("pattern").forEach((p) => p.setAttribute("patternUnits", "userSpaceOnUse"));
     const housingPath = "M98 98.5 L98 54 A22 22 0 0 1 142 54 L142 98.5 A56 56 0 1 1 98 98.5 Z";
-    el("path", { d: housingPath, fill: "url(#f-hatch-steel)" }, front);
-    el("rect", { x: C.x - 7, y: fy(CH_TOP), width: 14, height: C.y - R_PLUG - fy(CH_TOP), class: "hole" }, front);
-    const fSpring = el("polyline", { class: "spring" }, front);
-    const fDriver = el("rect", { class: "pin-top", x: C.x - 6, width: 12, rx: 1.5 }, front);
-    const plugRot = el("g", { id: "plug-rot" }, front);
-    el("circle", { cx: C.x, cy: C.y, r: R_PLUG, fill: "url(#f-hatch-plug)" }, plugRot);
-    el("rect", { x: C.x - 7, y: C.y - R_PLUG - 2, width: 14, height: fy(KW_TOP) - (C.y - R_PLUG) + 2, class: "hole" }, plugRot);
-    el("rect", { x: C.x - 6, y: fy(KW_TOP), width: 12, height: fy(KW_BOT) - fy(KW_TOP), rx: 2, class: "hole" }, plugRot);
-    const fKey = el("rect", { class: "key", x: C.x - 3.5, width: 7, rx: 1 }, plugRot);
-    const fKeyPin = el("rect", { class: "pin-key", x: C.x - 6, width: 12, rx: 1.5 }, plugRot);
-    el("circle", { cx: C.x, cy: C.y, r: R_PLUG, class: "outline" }, plugRot);
-    el("path", { d: housingPath, class: "outline" }, front);
-    el("circle", { cx: C.x, cy: C.y, r: R_PLUG, class: "shear", fill: "none" }, front);
+
+    // kus stavítka, který leží přes dělicí rovinu
+    function setBridge(rect, p, mapY, scale) {
+      if (aligned(p)) { rect.setAttribute("visibility", "hidden"); return; }
+      rect.setAttribute("visibility", "visible");
+      rect.setAttribute("y", mapY(Math.min(p.top, SL)));
+      rect.setAttribute("height", Math.abs(p.off) * scale);
+    }
+
+    function buildFront(svg) {
+      el("path", { d: housingPath, fill: "url(#f-hatch-steel)" }, svg);
+      el("rect", { x: C.x - 7, y: fy(CH_TOP), width: 14, height: C.y - R_PLUG - fy(CH_TOP), class: "hole" }, svg);
+      const rot = el("g", { class: "plug-rot" }, svg);
+      el("circle", { cx: C.x, cy: C.y, r: R_PLUG, fill: "url(#f-hatch-plug)" }, rot);
+      el("rect", { x: C.x - 7, y: C.y - R_PLUG - 2, width: 14, height: fy(KW_TOP) - (C.y - R_PLUG) + 2, class: "hole" }, rot);
+      el("rect", { x: C.x - 6, y: fy(KW_TOP), width: 12, height: fy(KW_BOT) - fy(KW_TOP), rx: 2, class: "hole" }, rot);
+      const key = el("rect", { class: "key", x: C.x - 3.5, width: 7, rx: 1 }, rot);
+      const keyPin = el("rect", { class: "pin-key", x: C.x - 6, width: 12, rx: 1.5 }, rot);
+      el("circle", { cx: C.x, cy: C.y, r: R_PLUG, class: "outline" }, rot);
+      // horní stavítko až nad rotorem, aby bylo vidět, i když do něj zasahuje
+      const spring = el("polyline", { class: "spring" }, svg);
+      const driver = el("rect", { class: "pin-top", x: C.x - 6, width: 12, rx: 1.5 }, svg);
+      const bridge = el("rect", { class: "bridge", x: C.x - 6, width: 12 }, svg);
+      el("path", { d: housingPath, class: "outline" }, svg);
+      el("circle", { cx: C.x, cy: C.y, r: R_PLUG, class: "shear", fill: "none" }, svg);
+      rot.addEventListener("animationend", () => rot.classList.remove("jam"));
+      return {
+        rot,
+        set(p, dLen) {
+          spring.setAttribute("points", springPts(C.x, fy(CH_TOP), fy(p.driverTop), 4));
+          driver.setAttribute("y", fy(p.driverTop));
+          driver.setAttribute("height", dLen * 0.4);
+          keyPin.setAttribute("y", fy(p.top));
+          keyPin.setAttribute("height", (p.bottom - p.top) * 0.4);
+          setBridge(bridge, p, fy, 0.4);
+          if (p.keyTop === null) key.setAttribute("visibility", "hidden");
+          else {
+            key.setAttribute("visibility", "visible");
+            key.setAttribute("y", fy(p.keyTop));
+            key.setAttribute("height", (BB - p.keyTop) * 0.4);
+          }
+        },
+      };
+    }
+    function jam(rot) {
+      rot.classList.remove("jam");
+      void rot.getBoundingClientRect();
+      rot.classList.add("jam");
+    }
+    const mainFront = buildFront(front);
+    const plugRot = mainFront.rot;
 
     /* ---------- ovládání ---------- */
     const seg = document.getElementById("key-seg");
@@ -482,9 +585,9 @@
       });
     }
 
-    function plural(list) {
-      if (list.length === 1) return `Stavítko ${list[0]}`;
-      return `Stavítka ${list.slice(0, -1).join(", ")} a ${list[list.length - 1]}`;
+    function uStavitek(list) {
+      if (list.length === 1) return `u stavítka ${list[0]}`;
+      return `u stavítek ${list.slice(0, -1).join(", ")} a ${list[list.length - 1]}`;
     }
 
     let selPin = 0;
@@ -502,6 +605,7 @@
         pg.driver.setAttribute("y", p.driverTop);
         pg.driver.setAttribute("height", driverLen[i]);
         pg.keypin.setAttribute("d", keyPinPath(p.x, p.top, p.bottom));
+        setBridge(pg.bridge, p, (y) => y, 1);
         gapMarks[i].classList.toggle("ok", aligned(p));
 
         const li = chips[i];
@@ -523,17 +627,7 @@
       sectionMark.setAttribute("transform", `translate(${PIN_X[selPin]} 0)`);
       frontLabel.textContent = `Řez A–A · stavítko ${selPin + 1}`;
 
-      fSpring.setAttribute("points", springPts(C.x, fy(CH_TOP), fy(sp.driverTop), 4));
-      fDriver.setAttribute("y", fy(sp.driverTop));
-      fDriver.setAttribute("height", driverLen[selPin] * 0.4);
-      fKeyPin.setAttribute("y", fy(sp.top));
-      fKeyPin.setAttribute("height", (sp.bottom - sp.top) * 0.4);
-      if (sp.keyTop === null) fKey.setAttribute("visibility", "hidden");
-      else {
-        fKey.setAttribute("visibility", "visible");
-        fKey.setAttribute("y", fy(sp.keyTop));
-        fKey.setAttribute("height", (BB - sp.keyTop) * 0.4);
-      }
+      mainFront.set(sp, driverLen[selPin]);
 
       range.value = Math.round(state.t * 100);
       rangeVal.textContent = `${Math.round(state.t * 100)} %`;
@@ -547,9 +641,13 @@
       } else if (!bad.length) {
         statusEl.innerHTML = "<strong>Všech pět spár je přesně na dělicí rovině.</strong> Nic už rotor nedrží, můžete otočit klíčem.";
       } else {
-        const list = bad.map((i) => i + 1);
-        const verb = list.length === 1 ? "není" : "nejsou";
-        statusEl.innerHTML = `<strong>Klíč je zasunutý celý, ale nesedí.</strong> ${plural(list)} ${verb} na dělicí rovině, takže rotor zůstane stát.`;
+        const low = bad.filter((i) => pins[i].off > 0).map((i) => i + 1);
+        const high = bad.filter((i) => pins[i].off < 0).map((i) => i + 1);
+        const why = [];
+        if (low.length) why.push(`${uStavitek(low)} zasahuje horní stavítko do rotoru`);
+        if (high.length) why.push(`${uStavitek(high)} přečnívá spodní stavítko do tělesa`);
+        const text = why.join(", ");
+        statusEl.innerHTML = `<strong>Klíč je zasunutý celý, ale nesedí.</strong> ${text[0].toUpperCase()}${text.slice(1)}, takže rotor zůstane stát.`;
       }
 
       turnBtn.textContent = state.turned ? "Otočit zpět" : "Otočit klíčem";
@@ -626,14 +724,29 @@
         render();
       } else {
         render();
-        plugRot.classList.remove("jam");
-        void plugRot.getBoundingClientRect();
-        plugRot.classList.add("jam");
+        jam(plugRot);
         flashBlocking(pins);
         if (state.t <= 0.999) statusEl.innerHTML = "<strong>Zaseklo se.</strong> Klíč není zasunutý celý, takže stavítka nejsou ve správné výšce.";
       }
     });
-    plugRot.addEventListener("animationend", () => plugRot.classList.remove("jam"));
+
+    /* ---------- obr. 2: tři polohy téhož stavítka ---------- */
+    const CASE_PIN = 60, CASE_OFF = 26;     // délka stavítek a přehnaná odchylka
+    const cases = [["case-low", CASE_OFF], ["case-ok", 0], ["case-high", -CASE_OFF]].map(([id, off]) => {
+      const top = SL + off, bottom = top + CASE_PIN;
+      const f = buildFront(document.getElementById(id));
+      f.set({ top, bottom, driverTop: top - CASE_PIN, keyTop: bottom, off }, CASE_PIN);
+      return { rot: f.rot, ok: off === 0 };
+    });
+    const casesBtn = document.getElementById("cases-turn");
+    casesBtn.addEventListener("click", () => {
+      const turned = cases.some((c) => c.rot.classList.contains("turned"));
+      cases.forEach((c) => {
+        if (c.ok) c.rot.classList.toggle("turned", !turned);
+        else if (!turned) jam(c.rot);
+      });
+      casesBtn.textContent = turned ? "Zkusit otočit" : "Vrátit zpět";
+    });
 
     // tažení klíče přímo v obrázku
     let drag = null;
