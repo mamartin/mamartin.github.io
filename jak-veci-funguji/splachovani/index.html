@@ -21,6 +21,9 @@
     .flap { fill: var(--hot); stroke: var(--metal-line); stroke-width: 1.2; }
     .chain { stroke: var(--ink-3); stroke-width: 1.4; stroke-dasharray: 3 3; }
     .knob { fill: var(--steel); stroke: var(--metal-line); stroke-width: 1.4; }
+    .trickle { fill: none; stroke: var(--cold); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 7 6; }
+    .formula { margin: 0; font-family: var(--font-mono); font-size: 0.85rem; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+    .formula b { color: var(--ink); font-weight: 600; }
   </style>
 </head>
 <body data-cat="domacnost">
@@ -67,14 +70,17 @@
         </div>
       </div>
       <div class="fig-status split">
-        <p class="status" id="status" aria-live="polite"></p>
+        <div style="display:grid; gap:.6rem; min-width:0">
+          <p class="status" id="status" aria-live="polite"></p>
+          <p class="formula" id="lapse"></p>
+        </div>
         <ul class="stats" aria-label="Stav modelu">
           <li><span class="n">V nádržce</span><span class="v" id="st-tank"></span></li>
-          <li><span class="n">V míse</span><span class="v" id="st-bowl"></span></li>
+          <li><span class="n" id="st-bowl-n">V míse</span><span class="v" id="st-bowl"></span></li>
           <li><span class="n" id="st-used-n">Spotřebováno</span><span class="v" id="st-used"></span></li>
         </ul>
       </div>
-      <figcaption class="fig-caption">Schematický řez, ne v měřítku. Napouštění je oproti skutečnosti zrychlené, opravdová nádržka se plní asi minutu. Červená klapka je vypouštěcí ventil, žlutá koule plovák.</figcaption>
+      <figcaption class="fig-caption">Schematický řez, ne v měřítku. Napouštění je oproti skutečnosti zrychlené, opravdová nádržka se plní asi minutu. Když ventil protéká, běží čas mezi dopouštěním třicetkrát rychleji, aby bylo vidět, jak hladina klesá. Červená klapka je vypouštěcí ventil, žlutá koule plovák.</figcaption>
     </figure>
 
     <section class="sec" aria-labelledby="h-zasobnik">
@@ -138,7 +144,7 @@
       </div>
       <aside class="note" aria-label="Poznámka na okraj">
         <span class="label">Zkuste</span>
-        <p>Přepněte ventil na Protéká. Pramínek do mísy skoro není vidět, ale počítadlo ukáže, kolik vody by tak uteklo za den.</p>
+        <p>Přepněte ventil na Protéká. Model zrychlí čas, takže uvidíte to, co se doma děje nepozorovaně: hladina v nádržce pomalu klesá, plovák s ní, a každých pár minut ventil vodu dopustí. Počítadlo sčítá, kolik jí mezitím uteklo.</p>
       </aside>
     </section>
 
@@ -177,7 +183,8 @@
     const PRIME = 1.85;             // při tomhle množství se koleno zaplní a začne sát
     const BREAK = 0.6;              // hladina u ústí odpadu: do trubky se dostane vzduch
     const LEAK = 0.004;             // l/s netěsnou klapkou
-    const s = { tank: FULL, bowl: REST, open: false, stopAt: 0, siphon: false, filling: false, leak: false, used: 0, flow: 0 };
+    const LEAK_SPEED = 30;          // kolikrát rychleji běží čas, když se jen čeká na protékání
+    const s = { tank: FULL, bowl: REST, open: false, stopAt: 0, siphon: false, filling: false, leak: false, used: 0, flow: 0, leaked: 0, leakTime: 0, topUps: 0 };
 
     function flush(litres) {
       if (s.open || s.tank < 1) return;
@@ -195,9 +202,12 @@
       } else if (s.leak && s.tank > 0.2) {
         s.flow = LEAK;
         s.tank -= LEAK * dt;
+        s.leaked += LEAK * dt;
       }
+      if (s.leak) s.leakTime += dt;
       // plovák: otevře, když hladina klesne, a zavře, když je plno
-      if (!s.filling && s.tank < FULL - 0.12) s.filling = true;
+      // netěsný ventil: plovák dopouští, až když hladina klesne o znatelný kus
+      if (!s.filling && s.tank < FULL - (s.leak ? 0.6 : 0.12)) { s.filling = true; if (s.leak && !s.open) s.topUps++; }
       let refill = 0;
       if (s.filling && !s.open) {
         const q = 0.32 * Math.min(1, (FULL - s.tank) / 0.4 + 0.08);
@@ -251,6 +261,8 @@
     // mísa a koleno
     el("path", { d: "M346 262 V330 Q346 404 420 404 H500 M500 262 V368 M504 306 H580 V476 M540 476 V330", class: "porcelain" }, svg);
     const drain = el("line", { x1: 560, x2: 560, y1: 440, y2: 476, class: "stream" }, svg);
+    const trickle = el("path", { class: "trickle" }, svg);
+    const trickleOut = el("path", { d: "M532 327 H548 V476", class: "trickle" }, svg);
 
     function callout(label, tx, ty, anchor, x, y) {
       const g = el("g", { class: "callout" }, svg);
@@ -270,6 +282,7 @@
     /* ---------- výpis ---------- */
     const fmt1 = new Intl.NumberFormat("cs-CZ", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
     const fmt0 = new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 0 });
+    const fmt2 = new Intl.NumberFormat("cs-CZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const $ = (id) => document.getElementById(id);
     const cache = new WeakMap();
     function put(node, str, html) {
@@ -298,18 +311,34 @@
       arm.setAttribute("x2", 178); arm.setAttribute("y2", fy.toFixed(1));
       inStream.setAttribute("visibility", s.filling && !s.open ? "visible" : "hidden");
       inStream.setAttribute("y2", Math.max(80, ty).toFixed(1));
+      // protékání: tenký pramínek pod klapkou do mísy a přes hrb do odpadu
+      const leaking = s.leak && !s.open && s.flow > 0;
+      trickle.setAttribute("visibility", leaking ? "visible" : "hidden");
+      trickleOut.setAttribute("visibility", leaking && !s.siphon && s.bowl >= REST ? "visible" : "hidden");
+      if (leaking) {
+        trickle.setAttribute("d", `M240 246 V278 H352 V${Math.min(398, by).toFixed(1)}`);
+        const off = (-(performance.now() / 22) % 13).toFixed(1);
+        trickle.setAttribute("stroke-dashoffset", off); trickleOut.setAttribute("stroke-dashoffset", off);
+      }
       const lift = s.open ? 34 : 0;
       flap.setAttribute("transform", `translate(0 ${-lift}) rotate(${s.open ? -18 : 0} 262 237)`);
       chain.setAttribute("y2", 234 - lift);
 
-      put($("st-tank"), `${fmt1.format(s.tank)} l`);
-      put($("st-bowl"), s.siphon ? "saje" : s.bowl < REST - 0.05 ? "dopouští se" : "po hrb");
       if (s.leak) {
-        put($("st-used-n"), "Uteče za den");
+        put($("st-tank"), `${fmt2.format(s.tank)} l`);
+        put($("st-bowl-n"), "Uteklo do mísy");
+        put($("st-bowl"), `${fmt2.format(s.leaked)} l`);
+        put($("st-used-n"), "Za den to dělá");
         put($("st-used"), `${fmt0.format(LEAK * 86400)} l`);
+        const min = Math.floor(s.leakTime / 60), sec = Math.floor(s.leakTime % 60);
+        put($("lapse"), `čas běží ${LEAK_SPEED}× rychleji · uplynulo <b>${min} min ${String(sec).padStart(2, "0")} s</b> · plovák dopouštěl <b>${s.topUps}×</b>`, true);
       } else {
+        put($("st-tank"), `${fmt1.format(s.tank)} l`);
+        put($("st-bowl-n"), "V míse");
+        put($("st-bowl"), s.siphon ? "saje" : s.bowl < REST - 0.05 ? "dopouští se" : "po hrb");
         put($("st-used-n"), "Spotřebováno");
         put($("st-used"), `${fmt1.format(s.used)} l`);
+        put($("lapse"), "");
       }
 
       let status;
@@ -321,8 +350,10 @@
         status = "<strong>Nádržka je prázdná, koleno dosává.</strong> Jakmile se do trubky dostane vzduch, sání se přeruší.";
       } else if (s.filling && s.tank < FULL - 0.3) {
         status = "<strong>Napouští se.</strong> Plovák klesl s hladinou a otevřel přívod vody. Jak hladina stoupá, zvedá ho a ventil se přivírá. Mísa se mezitím dopouští po hrb.";
+      } else if (s.leak && s.filling) {
+        status = "<strong>Plovák dopouští.</strong> Hladina klesla tak, že plovák pootevřel přívod. Trvá to pár sekund a je slyšet jen krátké zasyčení. Tohle je jediná známka, že záchod protéká.";
       } else if (s.leak) {
-        status = "<strong>Protéká.</strong> Netěsnou klapkou teče do mísy tenký pramínek. Plovák každou chvíli pozná pokles a nádržku dopustí. Není to skoro vidět ani slyšet.";
+        status = "<strong>Protéká.</strong> Netěsnou klapkou teče do mísy tenký pramínek a přes hrb rovnou do odpadu. Hladina v nádržce pomalu klesá a plovák s ní.";
       } else {
         status = "<strong>Připraveno.</strong> Nádržka je plná, plovák drží přívod zavřený a klapku na dně tiskne váha vody. V koleni stojí voda a nepustí zápach z kanalizace.";
       }
@@ -338,6 +369,7 @@
       if (!b) return;
       seg.querySelectorAll("button").forEach((x) => x.setAttribute("aria-checked", String(x === b)));
       s.leak = b.dataset.v === "1";
+      Object.assign(s, { leaked: 0, leakTime: 0, topUps: 0 });
     });
 
     // na úzkém displeji ořízneme okraje s popisky
@@ -350,6 +382,8 @@
     function frame(now) {
       let dt = Math.min(0.1, (now - prev) / 1000);
       prev = now;
+      // samotné protékání je pomalé, proto se čekání mezi dopouštěním zrychluje
+      if (s.leak && !s.open && !s.siphon && !s.filling) dt *= LEAK_SPEED;
       for (; dt > 0; dt -= 0.02) step(Math.min(0.02, dt));
       render();
       requestAnimationFrame(frame);
