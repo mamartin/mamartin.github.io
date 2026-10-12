@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Jak funguje husí kůže</title>
+  <meta name="description" content="Proč nám v zimě, při leknutí a při hudbě vstávají chlupy, který sval to dělá a k čemu to bylo dobré. S řezem kůží, na kterém si to můžete pustit.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700&display=swap">
+  <link rel="stylesheet" href="../style.css">
+  <style>
+    .dermis { fill: var(--sunk); }
+    .fat { fill: var(--plug); opacity: 0.55; }
+    .fat-cell { fill: var(--surface); stroke: var(--plug-hatch); stroke-width: 1.2; }
+    .epi { fill: var(--plug); stroke: var(--metal-line); stroke-width: 1.4; stroke-linejoin: round; }
+    .sheath { stroke: var(--steel-hatch); stroke-width: 10; stroke-linecap: round; }
+    .bulb { fill: var(--steel-hatch); stroke: var(--metal-line); stroke-width: 1.2; }
+    .hair { stroke: var(--ink); stroke-linecap: round; }
+    .gland { fill: var(--pin-key); stroke: var(--metal-line); stroke-width: 1.2; }
+    .muscle { fill: var(--hot); stroke: var(--metal-line); stroke-width: 1.2; stroke-linejoin: round; }
+    .nerve { fill: none; stroke: #d9981a; stroke-width: 2.4; stroke-linecap: round; }
+    .pulse { fill: #ffd84a; stroke: var(--metal-line); stroke-width: 1; }
+    .airlayer { fill: var(--cool); opacity: 0.22; }
+    .wind { stroke: var(--cool); stroke-width: 2.4; stroke-linecap: round; stroke-dasharray: 46 130; }
+    .dim line { stroke: var(--ink); stroke-width: 1.6; }
+    .dim text { fill: var(--ink); font: 600 13px var(--font-mono); text-anchor: end; paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
+    .callout text { fill: var(--ink-2); font: 500 13px var(--font-mono); paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
+    .callout line { stroke: var(--ink-3); stroke-width: 1; }
+    .callout circle { fill: var(--ink-2); }
+
+    .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.4rem; margin: 0; padding: 0; list-style: none; }
+    .stats li { display: grid; gap: 0.1rem; align-content: start; padding: 0.45rem 0.6rem; border: 1px solid var(--rule); border-top: 3px solid var(--cat); background: var(--surface); font-family: var(--font-mono); font-size: 0.78rem; line-height: 1.3; }
+    .stats .n { color: var(--ink-3); }
+    .stats .v { font-family: var(--font-display); font-stretch: 112%; font-weight: 800; font-size: 1.25rem; color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .status { font-size: 1.02rem; }
+    .gb-status { display: grid; gap: 0.9rem; }
+
+    @media (max-width: 46rem) {
+      .callout { display: none; }
+      .dim text { font-size: 22px; stroke-width: 6px; }
+      .stats .v { font-size: 1.05rem; }
+      .stats li { padding: 0.4rem 0.45rem; }
+    }
+    @media (min-width: 60rem) {
+      .gb-status { grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); align-items: start; gap: 2rem; }
+    }
+  </style>
+</head>
+<body data-cat="telo">
+  <header class="topbar">
+    <div class="wrap">
+      <a class="brand" href="../">Jak věci fungují</a>
+      <nav class="crumbs" aria-label="Drobečková navigace"><a href="../#telo">Lidské tělo</a><span aria-hidden="true">/</span><span>Husí kůže</span></nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <header class="art-head">
+      <p class="eyebrow">Lidské tělo</p>
+      <h1 class="display">Jak funguje husí kůže</h1>
+      <p class="lede">U každého chlupu na těle máte maličký sval. Když je vám zima nebo se leknete, všechny se naráz stáhnou a chlupy postaví. Zvířeti s kožichem to pomáhá. Nám po tom zbyly jen pupínky.</p>
+    </header>
+
+    <section class="tldr" aria-labelledby="h-zkratka">
+      <h2 class="label" id="h-zkratka">Ve zkratce</h2>
+      <ul>
+        <li>Každý chlup má vlastní sval, <span class="hl">vzpřimovač chlupu.</span> Když se stáhne, chlup se postaví a kůže kolem něj se vyboulí.</li>
+        <li>Sval neovládáte vůlí. Povel dává nervová soustava sama, při chladu a při silných emocích.</li>
+        <li>Je to dědictví po chlupatých předcích. Načepýřená srst lépe hřeje a zvíře v ní vypadá větší.</li>
+      </ul>
+    </section>
+
+    <figure class="fig" id="obr1">
+      <div class="fig-head">
+        <p class="fig-num"><b>Obr. 1</b> Řez kůží</p>
+        <span class="label">Snižte teplotu nebo se lekněte</span>
+      </div>
+      <div class="fig-stage">
+        <svg id="skin" viewBox="0 0 940 430" role="img" aria-label="Řez kůží: chlupy ve váčcích, u každého sval vzpřimovač, mazová žláza a nerv"></svg>
+      </div>
+      <div class="fig-controls">
+        <div class="ctl ctl-grow">
+          <label class="label" for="temp">Teplota vzduchu</label>
+          <div class="ctl-row">
+            <input type="range" id="temp" min="0" max="30" step="1" value="24">
+            <output class="val" id="temp-val" for="temp">24 °C</output>
+          </div>
+        </div>
+        <div class="ctl">
+          <span class="label" id="lbl-kind">Kůže</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-kind" id="kind-seg">
+            <button type="button" role="radio" data-v="human" aria-checked="true">Člověk</button>
+            <button type="button" role="radio" data-v="fur" aria-checked="false">Zvíře s kožichem</button>
+          </div>
+        </div>
+        <button type="button" class="btn" id="scare">Leknutí</button>
+      </div>
+      <div class="fig-status gb-status">
+        <p class="status" id="status" aria-live="polite"></p>
+        <ul class="stats" aria-label="Stav modelu">
+          <li><span class="n">Stažení svalu</span><span class="v" id="st-muscle"></span></li>
+          <li><span class="n">Sklon chlupu</span><span class="v" id="st-angle"></span></li>
+          <li><span class="n" id="st-air-n">Vzduch v srsti</span><span class="v" id="st-air"></span></li>
+        </ul>
+      </div>
+      <figcaption class="fig-caption">Schematický řez, ne v měřítku: chlup je ve skutečnosti mnohem tenčí a sval kratší než milimetr. Žluté tečky jsou nervové vzruchy, které svalu říkají, aby se stáhl. U kožichu model počítá, o kolik zesílí vrstva vzduchu, kterou srst drží u těla.</figcaption>
+    </figure>
+
+    <section class="sec" aria-labelledby="h-sval">
+      <div class="prose">
+        <h2 id="h-sval">Sval u každého chlupu</h2>
+        <p>Chlup neroste z kůže kolmo, ale šikmo, a vězí v úzké kapse, které se říká vlasový váček. K váčku se z boku upíná tenký pruh svalu. Druhým koncem je ukotvený těsně pod povrchem kůže, na té straně, ke které se chlup naklání. Latinsky se jmenuje <span class="num">musculus arrector pili,</span> česky vzpřimovač chlupu.</p>
+        <p>Když se sval stáhne, přitáhne váček k sobě. Chlup se tím napřímí a kůže kolem něj se vytlačí do hrbolku. V místě, kde je sval ukotvený, se kůže naopak trochu vtáhne. Milion takových hrbolků vedle sebe je husí kůže.</p>
+        <p>Cestou sval mačká mazovou žlázu, která sedí mezi ním a chlupem, a zřejmě z ní tak pomáhá vytlačit trochu mazu na kůži.</p>
+      </div>
+      <aside class="note" aria-label="Husí kůže v číslech">
+        <span class="label">V číslech</span>
+        <dl class="facts">
+          <div><dt>≈ 5 milionů</dt><dd>chlupů má člověk na těle, většinu skoro neviditelných</dd></div>
+          <div><dt>&lt; 1 mm</dt><dd>měří jeden vzpřimovač chlupu</dd></div>
+          <div><dt>pár sekund</dt><dd>trvá, než husí kůže naskočí</dd></div>
+        </dl>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-povel">
+      <div class="prose">
+        <h2 id="h-povel">Kdo dává povel</h2>
+        <p>Vzpřimovač je hladký sval, stejný druh jako ve stěně žaludku nebo cév. Takové svaly vůlí neovládáte. Řídí je část nervové soustavy, která se stará o věci, na které nemusíte myslet: tep, pocení, šířku zornic.</p>
+        <p>Při chladu to probíhá takhle. Čidla v kůži ohlásí pokles teploty do hypotalamu, což je v mozku něco jako termostat. Ten pošle po nervech povel zpátky do kůže. Na konci nervu se uvolní noradrenalin, sval se stáhne a chlup se postaví. Zároveň se zúží cévy v kůži, aby krev neztrácela teplo, a když to nestačí, začnete se třást.</p>
+        <p>Stejné nervy se zapínají při <span class="hl">poplachu.</span> Když se leknete, tělo se připravuje na útěk nebo boj: zrychlí srdce, rozšíří zornice a mimo jiné postaví chlupy. Proto máte husí kůži i ve chvíli, kdy vám zima vůbec není.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Stáhněte teplotu pod 20 °C. Po nervu začnou běhat vzruchy, sval zčervená a zkrátí se, chlup se postaví. Tlačítko Leknutí udělá totéž bez zimy, jen na pár sekund.</p>
+        <p>Pár lidí umí husí kůži vyvolat vůlí. Vědci je popsali, ale jak to dělají, se neví.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-kozich">
+      <div class="prose">
+        <h2 id="h-kozich">K čemu to bylo</h2>
+        <p>Srst nehřeje sama o sobě. Hřeje vzduch, který se mezi chlupy drží a nemůže proudit. Když se chlupy postaví, vrstva nehybného vzduchu zesílí a zvíře ztrácí méně tepla. Ptáci dělají totéž s peřím, když se v zimě načepýří do koule.</p>
+        <p>Druhý užitek je zastrašování. Kočka s naježeným hřbetem a ocasem vypadá o třetinu větší. Šimpanzi se ježí, když se chystají na souboj. Dikobraz stejnými svaly staví své ostny.</p>
+        <p>Naši předkové přišli o srst asi před milionem let, zřejmě proto, aby se při dlouhém běhu na slunci lépe chladili potem. Svaly i nervy ale zůstaly. Postaví chloupek, který je tak tenký a krátký, že žádný vzduch neudrží a nikoho nevyděsí.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Přepněte kůži na Zvíře s kožichem a stáhněte teplotu. Modrá vrstva vzduchu v srsti zesílí asi o čtvrtinu a studený vítr se ke kůži nedostane. U člověka fouká mezi chloupky dál.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-hudba">
+      <div class="prose">
+        <h2 id="h-hudba">Mráz po zádech</h2>
+        <p>Husí kůže naskakuje i při věcech, které s nebezpečím nemají nic společného: při hudbě, při silné scéně ve filmu, při státní hymně na stadionu. Zná to zhruba polovina až dvě třetiny lidí.</p>
+        <p>Nejčastěji přichází ve chvíli, kdy hudba překvapí. Nečekaná změna harmonie, nástup sboru, náhlé ztišení nebo hlas, který vystoupá nad orchestr. Mozek neustále odhaduje, co přijde, a prudké porušení odhadu vyhodnotí jako událost hodnou pozornosti. Poplachový systém na okamžik zabere, i když vědomě víte, že se nic neděje.</p>
+        <p>Měření mozku při tom ukazují uvolnění dopaminu, stejné látky, která se podílí na potěšení z jídla. Proto je mráz po zádech příjemný, i když je to vlastně drobné leknutí.</p>
+      </div>
+    </section>
+
+    <section class="sec" aria-labelledby="h-uzitek">
+      <div class="prose">
+        <h2 id="h-uzitek">Úplně k ničemu to není</h2>
+        <p>Dlouho se vzpřimovač chlupu uváděl jako učebnicový příklad orgánu, který nám zbyl a nic nedělá. V roce 2020 ukázali vědci z Harvardu na myších, že má ještě jednu práci.</p>
+        <p>Nerv, který sval ovládá, se cestou dotýká i kmenových buněk, ze kterých chlup dorůstá. Sval ten nerv drží na místě. Krátký chlad jen postaví chlup. Když ale chlad trvá déle, stejný nervový signál kmenové buňky probudí a začne růst chlup nový. Tělo tak na zimu odpovídá dvakrát: hned načepýřením a za pár týdnů hustší srstí.</p>
+        <p>Když myším sval odstranili, nerv se ke kmenovým buňkám nedostal a chlupy dorůstaly pomaleji.</p>
+      </div>
+    </section>
+
+    <section class="sec" aria-labelledby="h-jmeno">
+      <div class="prose">
+        <h2 id="h-jmeno">Proč zrovna husí</h2>
+        <p>Oškubaná husa má na kůži hrbolky v místech, kde rostlo peří. Vypadají stejně jako naše. Většina jazyků si vybrala nějakého ptáka: Němci a Angličané také husu, Francouzi, Španělé a Nizozemci slepici, Japonci prostě ptáka. Lékaři říkají <span class="num">cutis anserina,</span> což je husí kůže latinsky.</p>
+        <p>Na dlaních a chodidlech husí kůži nedostanete, nejsou tam chlupy. Řasy a obočí sice chlupy jsou, ale vzpřimovač nemají.</p>
+      </div>
+    </section>
+
+    <footer class="art-foot">
+      <a class="next" href="../zamek/" data-cat="domacnost">
+        <span class="label">Další článek · Domácnost</span>
+        <span class="t">Jak funguje zámek ve dveřích</span>
+        <p>Proč dveře otevře jen jeden klíč a co přesně dělají zuby na něm.</p>
+      </a>
+      <a class="back" href="../">Všechna témata</a>
+    </footer>
+  </main>
+
+  <script>
+  (() => {
+    const NS = "http://www.w3.org/2000/svg";
+    function el(tag, attrs, parent) {
+      const n = document.createElementNS(NS, tag);
+      for (const k in attrs || {}) n.setAttribute(k, attrs[k]);
+      if (parent) parent.appendChild(n);
+      return n;
+    }
+    const svg = document.getElementById("skin");
+
+    /* ---------- geometrie řezu ---------- */
+    const W = 940, H = 430;
+    const Y0 = 176;                 // povrch kůže v klidu
+    const EPI = 16;                 // tloušťka pokožky
+    const FAT_Y = 344;
+    const A_REST = 52, A_UP = 80;   // sklon chlupu ke kůži ve stupních
+    const L_IN = 110;               // délka váčku pod kůží
+    const MUSCLE_AT = 0.62;         // kde se sval upíná na váček
+    const ANCHOR_DX = 62;           // kde je ukotvený pod povrchem
+    const PX_PER_MM = 12;
+    const KINDS = {
+      human: { xs: [330, 540, 750], out: 54, width: 2.4 },
+      fur: { xs: Array.from({ length: 20 }, (_, i) => 80 + i * 44), out: 150, width: 3.4 },
+    };
+
+    const s = { kind: "human", temp: 24, scare: 0, c: 0 };
+    const drive = () => Math.max(Math.max(0, Math.min(1, (20 - s.temp) / 10)), s.scare);
+
+    let fols = [];
+    function surface(x) {
+      let y = Y0;
+      for (const f of fols) {
+        y -= s.c * 10 * Math.exp(-(((x - f.x + 4) / 22) ** 2));        // hrbolek kolem chlupu
+        y += s.c * 3.5 * Math.exp(-(((x - f.x - ANCHOR_DX) / 9) ** 2)); // důlek nad úponem svalu
+      }
+      return y;
+    }
+    function pose(f) {
+      const a = ((A_REST + (A_UP - A_REST) * s.c) * Math.PI) / 180;
+      const u = { x: Math.cos(a), y: -Math.sin(a) };                    // směr chlupu ven z kůže
+      const n = { x: Math.sin(a), y: Math.cos(a) };                     // kolmice na stranu svalu
+      const E = { x: f.x, y: surface(f.x) };
+      const along = (k) => ({ x: E.x + u.x * k, y: E.y + u.y * k });
+      const M = along(-MUSCLE_AT * L_IN);
+      const A = { x: f.x + ANCHOR_DX, y: surface(f.x + ANCHOR_DX) + EPI + 5 };
+      return { u, n, E, M, A, bulb: along(-L_IN), tip: along(KINDS[s.kind].out), gland: { x: along(-0.34 * L_IN).x + n.x * 11, y: along(-0.34 * L_IN).y + n.y * 11 }, deg: (a * 180) / Math.PI };
+    }
+
+    /* ---------- vrstvy ---------- */
+    el("rect", { x: 0, y: Y0 + 4, width: W, height: H - Y0 - 4, class: "dermis" }, svg);
+    el("rect", { x: 0, y: FAT_Y, width: W, height: H - FAT_Y, class: "fat" }, svg);
+    for (let i = 0; i < 20; i++) {
+      el("ellipse", { cx: 24 + i * 48 + (i % 2) * 8, cy: FAT_Y + 30 + (i % 3) * 16, rx: 21, ry: 15, class: "fat-cell" }, svg);
+      el("ellipse", { cx: 46 + i * 48, cy: FAT_Y + 66 + (i % 2) * 10, rx: 20, ry: 14, class: "fat-cell" }, svg);
+    }
+    const air = el("path", { class: "airlayer" }, svg);
+    const winds = [0, 1, 2, 3, 4].map((i) => el("line", { x1: -200, x2: W + 200, class: "wind", "stroke-dashoffset": i * 61 }, svg));
+    const under = el("g", {}, svg);      // nervy, váčky, žlázy, svaly
+    const epi = el("path", { class: "epi" }, svg);
+    const hairs = el("g", {}, svg);
+    const dim = el("g", { class: "dim" }, svg);
+    const dimLine = el("line", {}, dim), dimTop = el("line", {}, dim), dimBot = el("line", {}, dim), dimText = el("text", {}, dim);
+
+    function callout(label, tx, ty, anchor) {
+      const g = el("g", { class: "callout" }, svg);
+      const line = el("line", {}, g), dot = el("circle", { r: 2.2 }, g);
+      el("text", { x: tx, y: ty + 4, "text-anchor": anchor }, g).textContent = label;
+      const move = (x, y) => {
+        line.setAttribute("x1", anchor === "end" ? tx + 6 : tx - 6); line.setAttribute("y1", ty);
+        line.setAttribute("x2", x.toFixed(1)); line.setAttribute("y2", y.toFixed(1));
+        dot.setAttribute("cx", x.toFixed(1)); dot.setAttribute("cy", y.toFixed(1));
+      };
+      move.g = g;
+      return move;
+    }
+    const cHair = callout("chlup", 214, 112, "end");
+    const cEpi = callout("pokožka", 214, 172, "end");
+    const cGland = callout("mazová žláza", 214, 212, "end");
+    const cDermis = callout("škára", 214, 252, "end");
+    const cBulb = callout("vlasový váček", 214, 300, "end");
+    const cFat = callout("podkožní tuk", 214, 388, "end");
+    const cMuscle = callout("vzpřimovač chlupu", 452, 250, "start");
+    const cNerve = callout("nerv", 470, 322, "start");
+    const callouts = [cHair, cEpi, cGland, cDermis, cBulb, cFat, cMuscle, cNerve];
+
+    function build() {
+      const kind = KINDS[s.kind];
+      under.textContent = "";
+      hairs.textContent = "";
+      fols = kind.xs.map((x, i) => {
+        const full = s.kind === "human" || i % 4 === 1;     // v husté srsti kreslíme nervy a žlázy jen někde
+        const f = { x, full };
+        if (full) {
+          f.nerve = el("path", { class: "nerve" }, under);
+          f.pulses = [0, 1, 2].map(() => el("circle", { r: 3.6, class: "pulse" }, under));
+        }
+        f.sheath = el("line", { class: "sheath" }, under);
+        f.bulb = el("circle", { r: 8, class: "bulb" }, under);
+        if (full) f.gland = el("ellipse", { rx: 14, class: "gland" }, under);
+        f.muscle = el("path", { class: "muscle" }, under);
+        f.hair = el("line", { class: "hair", "stroke-width": kind.width }, hairs);
+        return f;
+      });
+      callouts.forEach((c) => c.g.setAttribute("visibility", s.kind === "human" ? "visible" : "hidden"));
+    }
+
+    /* ---------- výpis ---------- */
+    const fmt0 = new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 0 });
+    const fmt1 = new Intl.NumberFormat("cs-CZ", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    const $ = (id) => document.getElementById(id);
+    const statusEl = $("status"), tempIn = $("temp"), tempVal = $("temp-val");
+    const cache = new WeakMap();
+    function put(node, str, html) {
+      if (cache.get(node) === str) return;
+      cache.set(node, str);
+      if (html) node.innerHTML = str; else node.textContent = str;
+    }
+
+    // na úzkém displeji ukážeme jen výřez, aby byl řez větší
+    const narrow = window.matchMedia("(max-width: 46rem)");
+    let viewRight = W;
+    const fitView = () => {
+      svg.setAttribute("viewBox", narrow.matches ? `236 0 560 ${H}` : `0 0 ${W} ${H}`);
+      viewRight = narrow.matches ? 796 : W;
+    };
+    narrow.addEventListener("change", fitView);
+    fitView();
+
+    let phase = 0, windOff = 0;
+    function render() {
+      const kind = KINDS[s.kind];
+      const signal = drive();
+
+      // pokožka kopíruje povrch, hrbolky se dolů propisují jen zčásti
+      let top = "", bottom = "";
+      for (let x = -10; x <= W + 10; x += 5) {
+        const y = surface(x);
+        top += `${x === -10 ? "M" : "L"}${x} ${y.toFixed(1)}`;
+        bottom = `L${x} ${(Y0 + EPI + (y - Y0) * 0.45).toFixed(1)}` + bottom;
+      }
+      epi.setAttribute("d", top + bottom + "Z");
+
+      let poses = fols.map(pose), first = poses[0];
+      fols.forEach((f, i) => {
+        const p = poses[i];
+        f.sheath.setAttribute("x1", p.bulb.x.toFixed(1)); f.sheath.setAttribute("y1", p.bulb.y.toFixed(1));
+        f.sheath.setAttribute("x2", (p.E.x - p.u.x * 4).toFixed(1)); f.sheath.setAttribute("y2", (p.E.y - p.u.y * 4).toFixed(1));
+        f.bulb.setAttribute("cx", p.bulb.x.toFixed(1)); f.bulb.setAttribute("cy", p.bulb.y.toFixed(1));
+        f.hair.setAttribute("x1", p.bulb.x.toFixed(1)); f.hair.setAttribute("y1", p.bulb.y.toFixed(1));
+        f.hair.setAttribute("x2", p.tip.x.toFixed(1)); f.hair.setAttribute("y2", p.tip.y.toFixed(1));
+
+        // sval: vřeteno mezi váčkem a úponem, při stažení kratší a tlustší
+        const dx = p.A.x - p.M.x, dy = p.A.y - p.M.y, len = Math.hypot(dx, dy);
+        const nx = -dy / len, ny = dx / len, w = 5 + 5.5 * s.c;
+        const mid = { x: (p.M.x + p.A.x) / 2, y: (p.M.y + p.A.y) / 2 };
+        f.muscle.setAttribute("d", `M${p.M.x.toFixed(1)} ${p.M.y.toFixed(1)} Q${(mid.x + nx * w).toFixed(1)} ${(mid.y + ny * w).toFixed(1)} ${p.A.x.toFixed(1)} ${p.A.y.toFixed(1)} Q${(mid.x - nx * w).toFixed(1)} ${(mid.y - ny * w).toFixed(1)} ${p.M.x.toFixed(1)} ${p.M.y.toFixed(1)}Z`);
+        f.muscle.setAttribute("fill-opacity", (0.55 + 0.45 * s.c).toFixed(2));
+
+        if (f.full) {
+          f.gland.setAttribute("cx", p.gland.x.toFixed(1)); f.gland.setAttribute("cy", p.gland.y.toFixed(1));
+          f.gland.setAttribute("ry", (8.5 - 2.5 * s.c).toFixed(1));
+          f.gland.setAttribute("transform", `rotate(${(-p.deg).toFixed(1)} ${p.gland.x.toFixed(1)} ${p.gland.y.toFixed(1)})`);
+          const nx0 = f.x + 96, c1 = { x: f.x + 96, y: 330 }, c2 = { x: mid.x + 40, y: mid.y + 46 };
+          f.nerve.setAttribute("d", `M${nx0} ${H} C${c1.x} ${c1.y} ${c2.x.toFixed(1)} ${c2.y.toFixed(1)} ${mid.x.toFixed(1)} ${(mid.y + 3).toFixed(1)}`);
+          const total = f.nerve.getTotalLength();
+          f.pulses.forEach((dot, k) => {
+            const at = f.nerve.getPointAtLength(((phase + k / 3) % 1) * total);
+            dot.setAttribute("cx", at.x.toFixed(1)); dot.setAttribute("cy", at.y.toFixed(1));
+            dot.setAttribute("opacity", signal > 0.02 ? Math.min(1, 0.35 + signal).toFixed(2) : "0");
+          });
+        }
+      });
+
+      // vzduch držený v srsti a vítr nad ní
+      const thick = kind.out * Math.sin((first.deg * Math.PI) / 180);
+      const rest = kind.out * Math.sin((A_REST * Math.PI) / 180);
+      const fur = s.kind === "fur";
+      air.setAttribute("visibility", fur ? "visible" : "hidden");
+      dim.setAttribute("visibility", fur ? "visible" : "hidden");
+      if (fur) {
+        let d = `M0 ${surface(0).toFixed(1)}`;
+        for (let x = 0; x <= W; x += 10) d += `L${x} ${surface(x).toFixed(1)}`;
+        air.setAttribute("d", `${d}L${W} ${(Y0 - thick).toFixed(1)}L0 ${(Y0 - thick).toFixed(1)}Z`);
+        const x = viewRight - 22, y1 = Y0 - thick, y2 = Y0;
+        dimLine.setAttribute("x1", x); dimLine.setAttribute("x2", x); dimLine.setAttribute("y1", y1.toFixed(1)); dimLine.setAttribute("y2", y2);
+        dimTop.setAttribute("x1", x - 7); dimTop.setAttribute("x2", x + 7); dimTop.setAttribute("y1", y1.toFixed(1)); dimTop.setAttribute("y2", y1.toFixed(1));
+        dimBot.setAttribute("x1", x - 7); dimBot.setAttribute("x2", x + 7); dimBot.setAttribute("y1", y2); dimBot.setAttribute("y2", y2);
+        dimText.setAttribute("x", x - 12); dimText.setAttribute("y", ((y1 + y2) / 2 + 4).toFixed(1));
+        dimText.textContent = `${fmt1.format(thick / PX_PER_MM)} mm vzduchu`;
+      }
+      const cold = Math.max(0, Math.min(1, (22 - s.temp) / 14));
+      const roof = fur ? Y0 - thick - 10 : Y0 - 14;       // v srsti nefouká, mezi řídkými chloupky ano
+      winds.forEach((w, i) => {
+        const y = 14 + (i / (winds.length - 1)) * Math.max(0, roof - 14);
+        w.setAttribute("y1", y.toFixed(1)); w.setAttribute("y2", y.toFixed(1));
+        w.setAttribute("opacity", (cold * 0.85).toFixed(2));
+        w.setAttribute("stroke-dashoffset", (i * 61 - windOff).toFixed(1));
+      });
+
+      if (s.kind === "human") {
+        const p = first, mid = { x: (p.M.x + p.A.x) / 2, y: (p.M.y + p.A.y) / 2 };
+        cHair(p.E.x + p.u.x * 30, p.E.y + p.u.y * 30);
+        cEpi(262, surface(262) + EPI / 2);
+        cGland(p.gland.x - 8, p.gland.y);
+        cDermis(246, 252);
+        cBulb(p.bulb.x - 6, p.bulb.y);
+        cFat(246, 388);
+        cMuscle(mid.x + 4, mid.y + 2);
+        cNerve(fols[0].nerve.getPointAtLength(fols[0].nerve.getTotalLength() * 0.3).x + 2, fols[0].nerve.getPointAtLength(fols[0].nerve.getTotalLength() * 0.3).y);
+      }
+
+      put($("st-muscle"), `${fmt0.format(Math.round(s.c * 100))} %`);
+      put($("st-angle"), `${fmt0.format(Math.round(first.deg))}°`);
+      put($("st-air-n"), fur ? "Únik tepla srstí" : "Vzduch u kůže");
+      put($("st-air"), fur ? (thick - rest < 1 ? "jako v klidu" : `−${fmt0.format(Math.round((1 - rest / thick) * 100))} %`) : "neudrží");
+
+      let status;
+      const tail = fur
+        ? "Srst se načepýřila, drží u těla silnější vrstvu vzduchu a zvíře ztrácí méně tepla."
+        : "Chloupek je ale tak řídký a tenký, že žádný vzduch neudrží. Zbyl jen hrbolek.";
+      if (s.scare > 0.15 && s.scare >= Math.max(0, (20 - s.temp) / 10)) {
+        status = `<strong>Leknutí.</strong> Poplachové nervy na pár sekund stáhly všechny vzpřimovače naráz, i když zima není. ${fur ? "Zvíře s naježenou srstí vypadá větší." : "Husí kůže za chvíli zase povolí."}`;
+      } else if (signal > 0.02) {
+        status = `<strong>Zima.</strong> Čidla v kůži ohlásila chlad a mozek poslal po nervech povel. Svaly se stáhly a chlupy se postavily. ${tail}`;
+      } else {
+        status = "<strong>Klid.</strong> Je teplo, po nervu nic neběží. Sval je povolený a chlup leží šikmo při kůži.";
+      }
+      put(statusEl, status, true);
+    }
+
+    /* ---------- ovládání ---------- */
+    tempIn.addEventListener("input", () => { s.temp = Number(tempIn.value); tempVal.textContent = `${s.temp} °C`; });
+    $("scare").addEventListener("click", () => { s.scare = 1; });
+    const seg = $("kind-seg");
+    seg.addEventListener("click", (e) => {
+      const b = e.target.closest("button[data-v]");
+      if (!b) return;
+      seg.querySelectorAll("button").forEach((x) => x.setAttribute("aria-checked", String(x === b)));
+      s.kind = b.dataset.v;
+      build();
+      render();
+    });
+
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let prev = performance.now();
+    function frame(now) {
+      const dt = Math.min(0.1, (now - prev) / 1000);
+      prev = now;
+      s.scare *= Math.exp(-dt / 2.2);
+      if (s.scare < 0.01) s.scare = 0;
+      const target = drive();
+      s.c += (target - s.c) * (1 - Math.exp(-dt * (target > s.c ? 4.5 : 1.3)));
+      if (reduced) s.c = target;
+      else {
+        phase = (phase + dt * (0.25 + 0.9 * target)) % 1;
+        windOff = (windOff + dt * 150) % 176;
+      }
+      render();
+      requestAnimationFrame(frame);
+    }
+    build();
+    render();
+    requestAnimationFrame(frame);
+  })();
+  </script>
+</body>
+</html>

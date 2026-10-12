@@ -39,6 +39,12 @@
   --sat-b: #08754f;
   --sat-c: #673acb;
 
+  /* chladicí okruh */
+  --hot: #c8371f;
+  --warm: #d97a1e;
+  --cold: #1f63c9;
+  --cool: #4c9fd0;
+
   --cat: var(--ink);
 
   --font-display: "Archivo", "Arial Narrow", system-ui, sans-serif;
@@ -79,6 +85,10 @@
     --sat-a: #ff9657;
     --sat-b: #3ccf91;
     --sat-c: #b39bff;
+    --hot: #ff7461;
+    --warm: #ffab52;
+    --cold: #6ea4ff;
+    --cool: #93cdf0;
     color-scheme: dark;
   }
 }
@@ -114,6 +124,10 @@
   --sat-a: #ff9657;
   --sat-b: #3ccf91;
   --sat-c: #b39bff;
+  --hot: #ff7461;
+  --warm: #ffab52;
+  --cold: #6ea4ff;
+  --cool: #93cdf0;
   color-scheme: dark;
 }
 
@@ -562,6 +576,25 @@ input[type="range"] { width: 100%; min-width: 0; accent-color: var(--cat); }
 .t-circle.t-a, .t-circle.t-b, .t-circle.t-c { fill: none; }
 .t-phone { fill: var(--ink); }
 .t-phone-screen { fill: var(--surface); }
+.t-coil { fill: none; stroke-width: 3.5; stroke-linejoin: round; stroke-linecap: round; }
+.t-coil.t-hot { stroke: var(--hot); }
+.t-coil.t-cold { stroke: var(--cold); }
+.t-cap { fill: none; stroke: var(--warm); stroke-width: 1.5; }
+.t-shelf { stroke: var(--metal-line); stroke-width: 1.5; opacity: 0.5; }
+.t-wall { fill: var(--plug); stroke: var(--metal-line); stroke-width: 1; }
+.t-spot { fill: var(--hot); opacity: 0.3; }
+.t-plate { fill: none; stroke: var(--metal-line); stroke-width: 1.5; }
+.t-food { fill: var(--warm); opacity: 0.6; }
+.t-paper { fill: #fff; }
+.t-module { fill: #14181e; }
+.t-wave { fill: none; stroke: var(--cat); stroke-width: 2.5; }
+.t-room { fill: none; stroke: var(--ink); stroke-width: 4; }
+.t-orbit { fill: none; stroke: var(--metal-line); stroke-width: 1.2; stroke-dasharray: 3 6; opacity: 0.6; }
+.t-ocean { fill: var(--cold); fill-opacity: 0.5; stroke: var(--cold); stroke-width: 1.5; }
+.t-night { fill: var(--ink); opacity: 0.28; }
+.t-moon { fill: var(--pin-top); }
+.t-muscle { fill: var(--hot); stroke: var(--metal-line); stroke-width: 1; }
+.t-hairline { stroke: var(--ink); stroke-width: 3; stroke-linecap: round; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
