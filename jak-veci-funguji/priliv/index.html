@@ -47,6 +47,13 @@
     .plot-text { fill: var(--ink-2); font: 500 12px var(--font-mono); }
     .plot-text.note { fill: var(--ink); font-weight: 600; paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
     .plot-title { fill: var(--ink-3); font: 500 11px var(--font-mono); letter-spacing: 0.08em; }
+    #month { touch-action: pan-y; cursor: ew-resize; }
+    .plot-curve.thin { stroke-width: 1.3; }
+    .month-now line { stroke: var(--cat); stroke-width: 2; }
+    .month-now circle { fill: var(--cat); stroke: var(--surface); stroke-width: 2; }
+    .month-tick { stroke: var(--ink-3); stroke-width: 1; stroke-dasharray: 2 4; }
+    .month-lbl { fill: var(--ink-2); font: 500 12px var(--font-mono); }
+    .month-lbl.kind { fill: var(--ink-3); }
 
     .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.4rem; margin: 0; padding: 0; list-style: none; }
     .stats li { display: grid; gap: 0.1rem; align-content: start; padding: 0.45rem 0.6rem; border: 1px solid var(--rule); border-top: 3px solid var(--cat); background: var(--surface); font-family: var(--font-mono); font-size: 0.78rem; line-height: 1.3; }
@@ -59,7 +66,7 @@
     .td-status { display: grid; gap: 0.9rem; }
 
     @media (max-width: 46rem) {
-      .lbl { display: none; }
+      .lbl, .month-lbl { display: none; }
       .you text { font-size: 22px; stroke-width: 6px; }
       .plot-text { font-size: 17px; }
       .plot-title { font-size: 15px; }
@@ -175,10 +182,36 @@
         <p>Slunce přitahuje Zemi skoro dvěstěkrát silněji než Měsíc. Na příliv má přesto menší vliv. Nezáleží totiž na síle samotné, ale na tom, jak moc se liší na jedné a druhé straně Země. Slunce je čtyřistakrát dál, takže průměr Země je pro něj skoro nic a rozdíl vychází malý: necelá polovina toho, co udělá Měsíc.</p>
         <p>Obě dvojice boulí se sčítají. Při novu a úplňku leží Slunce, Země a Měsíc v jedné přímce, boule se kryjí a příliv je nejvyšší a odliv nejnižší. Říká se tomu <span class="hl">skočné dmutí.</span> Při první a poslední čtvrti táhne Slunce kolmo na Měsíc, jeho boule vyplňují měsíční sníženiny a rozdíl mezi přílivem a odlivem je nejmenší. To je hluché dmutí.</p>
         <p>Celé se to opakuje dvakrát za lunární měsíc, tedy zhruba po čtrnácti dnech.</p>
+        <p>Do toho mluví ještě vzdálenost Měsíce. Jeho dráha není kruh, a tak je k Zemi jednou za oběh o padesát tisíc kilometrů blíž než na opačném konci dráhy. Slapová síla klesá se třetí mocninou vzdálenosti, takže v nejbližším bodě je skoro o polovinu větší než v nejvzdálenějším. Když se nejbližší bod sejde s novem nebo úplňkem, jsou přílivy nejvyšší v roce.</p>
       </div>
       <aside class="note" aria-label="Poznámka na okraj">
         <span class="label">Zkuste</span>
         <p>Posuňte stáří Měsíce na 7,4 dne, tedy na první čtvrť, a pak na 14,8 dne, úplněk. Graf vpravo se zploští a zase vytáhne. Pak Slunce vynechte: všechny přílivy budou stejné.</p>
+      </aside>
+    </section>
+
+    <figure class="fig" id="obr2">
+      <div class="fig-head">
+        <p class="fig-num"><b>Obr. 2</b> Hladina během celého měsíce</p>
+        <span class="label">Klepnutím do grafu nastavíte den</span>
+      </div>
+      <div class="fig-stage">
+        <svg id="month" viewBox="0 0 940 252" role="img" aria-label="Graf hladiny u pozorovatele během jednoho lunárního měsíce: výška přílivů roste k novu a úplňku a klesá ke čtvrtím"></svg>
+      </div>
+      <figcaption class="fig-caption">Stejný model jako nahoře, jen roztažený na 29,5 dne. Každý zub je jeden příliv a odliv. Obálka křivky se dvakrát za měsíc nafoukne a dvakrát stáhne. Svislá čára ukazuje den, který je právě nastavený v prvním obrázku, a přepínač Slunce platí pro oba.</figcaption>
+    </figure>
+
+    <section class="sec" aria-labelledby="h-odliv">
+      <div class="prose">
+        <h2 id="h-odliv">Kam se voda při odlivu ztrácí</h2>
+        <p>Nikam. Odliv není opak přílivu, je to tatáž vlna viděná z druhé strany. Vody je v oceánu pořád stejně, jen je jinak rozložená. Když u vás moře ustupuje, teče voda do boule, která se mezitím zvedá o čtvrtinu obvodu Země dál. Za šest hodin se vrátí.</p>
+        <p>Na otevřeném moři si toho nevšimnete, hladina tam stoupne o půl metru za šest hodin. Jinak je to na mělkém pobřeží. Kde dno klesá jen pozvolna, stačí pár metrů výšky na to, aby moře ustoupilo o kilometry. V zátoce u Mont-Saint-Michel odchází při skočném dmutí až patnáct kilometrů daleko. V mělkém Wattovém moři u německého a nizozemského pobřeží se při odlivu chodí pěšky po dně na ostrovy.</p>
+        <p>Právě tam je odliv zrádný. Voda se nevrací jako vlna, kterou vidíte přicházet. Nejdřív zaplní prohlubně a koryta, často za vašimi zády, a písčina, na které stojíte, se změní v ostrov. O přílivu u Mont-Saint-Michel se říká, že přichází rychlostí cválajícího koně. Ve skutečnosti jde rychlostí svižné chůze, ale na útěk po bahně to stačí. <span class="hl">Na takové pobřeží se chodí podle tabulek přílivu,</span> ne podle oka.</p>
+        <p>Pás pobřeží, který je dvakrát denně pod vodou a dvakrát na suchu, je zvláštní místo k životu. Slávky, svijonožci a přílipky se tam musejí umět zavřít a přečkat hodiny na slunci, a pak zase hodiny v příboji.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Slovníček</span>
+        <p>Příliv je stoupání hladiny, odliv klesání. Oběma dohromady se říká dmutí. Slapy jsou obecný název pro všechno, co slapová síla dělá, s vodou i s pevninou.</p>
       </aside>
     </section>
 
@@ -188,6 +221,22 @@
         <p>Na otevřeném oceánu by podle modelu měl být rozdíl mezi přílivem a odlivem kolem půl metru, a zhruba tolik tam opravdu je. U pobřeží je všechno jinak. Bouli stojí v cestě kontinenty, takže nemůže Zemi prostě obíhat. Voda se místo toho přelévá v oceánských pánvích sem a tam, podobně jako ve vaně, se kterou někdo pohnul.</p>
         <p>Kde má záliv tvar a hloubku, které se s rytmem přílivu trefí, se voda rozhoupe. V zátoce Fundy v Kanadě dělá rozdíl hladin až 16 metrů, u Mont-Saint-Michel ve Francii kolem 14. Uzavřená moře jsou naopak příliš malá, aby se v nich boule stačila vytvořit. Ve Středozemním moři jde o desítky centimetrů, v Baltu o centimetry.</p>
         <p>Příliv také nepřichází přesně ve chvíli, kdy je Měsíc nejvýš. Voda má setrvačnost a tře se o dno, a tak se v každém přístavu opožďuje o jinou dobu. Tabulky přílivu se proto nepočítají z polohy Měsíce, ale pro každý přístav zvlášť z dlouhodobých měření.</p>
+      </div>
+    </section>
+
+    <section class="sec" aria-labelledby="h-jednou">
+      <div class="prose">
+        <h2 id="h-jednou">Někde jen jednou denně</h2>
+        <p>Obrázek nahoře se dívá na Zemi od pólu a kreslí Měsíc přesně nad rovníkem. Tam ale bývá málokdy. Jeho dráha je vůči rovníku skloněná, a tak je během měsíce chvíli nad severní polokoulí a chvíli nad jižní. Boule se naklánějí s ním: jedna míří na sever od rovníku, druhá na jih.</p>
+        <p>Místo ve středních šířkách proto projede jednou boulí blíž k jejímu vrcholu a druhou jen po okraji. Dva přílivy téhož dne tak nebývají stejně vysoké. Na některých pobřežích se k tomu přidá tvar moře a nižší příliv zmizí úplně. V Mexickém zálivu nebo u břehů Vietnamu přichází příliv jen jednou za den.</p>
+      </div>
+    </section>
+
+    <section class="sec" aria-labelledby="h-vlna">
+      <div class="prose">
+        <h2 id="h-vlna">Vlna proti proudu a elektřina z přílivu</h2>
+        <p>Kde se příliv tlačí do zužujícího se ústí řeky, nemá voda kam uhnout a čelo přílivu se zvedne ve skutečnou vlnu, která běží proti proudu. Na anglické řece Severn bývá vysoká přes metr a surfaři se na ní vezou i několik kilometrů. Na čínské řece Čchien-tchang dosahuje až devíti metrů a jezdí se na ni dívat davy lidí.</p>
+        <p>Ta energie se dá i sbírat. Přílivová elektrárna je hráz přes ústí zálivu. Při přílivu se nádrž za ní naplní, při odlivu se voda pouští zpátky přes turbíny. První velká stojí od roku 1966 na řece Rance ve francouzské Bretani a má výkon 240 megawattů, asi jako pětina jednoho temelínského bloku. Výhoda je, že na rozdíl od větru a slunce se příliv dá spočítat na desítky let dopředu. Nevýhoda, že vhodných zálivů je na světě jen pár a hráz v nich změní život všemu, co v nich žije.</p>
       </div>
     </section>
 
@@ -205,6 +254,14 @@
         <p>Země se otáčí rychleji, než Měsíc obíhá, a třením strhává boule kousek před něj. Měsíc tahá za bližší bouli zpátky, a tím otáčení Země nepatrně brzdí. Den se prodlužuje asi o dvě tisíciny sekundy za století.</p>
         <p>Energie se neztrácí, dostává ji Měsíc. Boule ho táhne dopředu, a on se proto vzdaluje, každý rok o 3,8 centimetru. Víme to přesně díky odražečům, které na něm nechali astronauti z Apolla a na které se dodnes střílí laserem.</p>
         <p>Před čtyřmi sty miliony let měl den jen asi 22 hodin a do roku se jich vešlo přes čtyři sta. Je to vidět na přírůstcích zkamenělých korálů. Měsíc sám už má brzdění za sebou. Země ho zpomalila natolik, že se otočí přesně jednou za oběh, a proto z něj vidíme pořád stejnou stranu.</p>
+      </div>
+    </section>
+
+    <section class="sec" aria-labelledby="h-jinde">
+      <div class="prose">
+        <h2 id="h-jinde">Slapy jinde ve vesmíru</h2>
+        <p>Slapová síla působí všude, kde je menší těleso blízko velkého. Jupiterův měsíc Io obíhá tak těsně, že ho Jupiter při každém oběhu prohněte o desítky metrů. Tření uvnitř ho zahřívá natolik, že je to sopečně nejživější těleso sluneční soustavy. Sousední Europa má díky stejnému ohřevu pod ledovou krustou oceán tekuté vody.</p>
+        <p>Když se těleso dostane příliš blízko, slapy ho roztrhají. Kometu Shoemaker–Levy 9 rozlámal Jupiter v roce 1992 na víc než dvacet kusů, které do něj o dva roky později jeden po druhém dopadly. Podobně možná vznikly Saturnovy prstence.</p>
       </div>
     </section>
 
@@ -320,6 +377,29 @@
     const marks = el("g", {}, plot);
     const nowDot = el("circle", { r: 6, class: "plot-now" }, plot);
 
+    /* ---------- druhý obrázek: celý měsíc ---------- */
+    const month = document.getElementById("month");
+    const Q = { x: 46, y: 30, w: 880, h: 150 };
+    const monthX = (day) => Q.x + (day / MONTH) * Q.w;
+    const monthY = (cm) => Q.y + ((P.max - cm) / (P.max - P.min)) * Q.h;
+    el("rect", { x: Q.x, y: Q.y, width: Q.w, height: Q.h, class: "plot-bg" }, month);
+    [-25, 0, 25, 50].forEach((cm) => {
+      el("line", { x1: Q.x, y1: monthY(cm), x2: Q.x + Q.w, y2: monthY(cm), class: cm ? "plot-grid" : "plot-zero" }, month);
+      el("text", { x: Q.x - 6, y: monthY(cm) + 4, "text-anchor": "end", class: "plot-text" }, month).textContent = (cm > 0 ? "+" : cm < 0 ? "−" : "") + Math.abs(cm);
+    });
+    el("text", { x: Q.x - 6, y: Q.y - 8, "text-anchor": "end", class: "plot-text" }, month).textContent = "cm";
+    const monthCurve = el("path", { class: "plot-curve thin" }, month);
+    const monthIcons = el("g", {}, month);
+    const monthNow = el("g", { class: "month-now" }, month);
+    const monthLine = el("line", { y1: Q.y, y2: Q.y + Q.h }, monthNow);
+    const monthDot = el("circle", { r: 5 }, monthNow);
+
+    function renderMonth() {
+      let d = "";
+      for (let h = 0; h <= MONTH * 24; h += 0.5) d += `${h ? "L" : "M"}${monthX(h / 24).toFixed(1)} ${monthY(level(youDir(h), h / 24)).toFixed(1)}`;
+      monthCurve.setAttribute("d", d);
+    }
+
     /* ---------- výpis ---------- */
     const fmt0 = new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 0 });
     const fmt1 = new Intl.NumberFormat("cs-CZ", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
@@ -343,8 +423,19 @@
       return `<circle r="${r}" class="moon-dark"/><path d="${limb} ${term}" class="moon-lit"/>`;
     }
 
+    [[0, "nov", "skočné dmutí"], [MONTH / 4, "první čtvrť", "hluché dmutí"], [MONTH / 2, "úplněk", "skočné dmutí"], [(3 * MONTH) / 4, "poslední čtvrť", "hluché dmutí"], [MONTH, "nov", "skočné dmutí"]].forEach(([day, name, kind]) => {
+      const x = monthX(day);
+      el("line", { x1: x, y1: Q.y, x2: x, y2: Q.y + Q.h + 6, class: "month-tick" }, monthIcons);
+      el("g", { transform: `translate(${x.toFixed(1)} ${Q.y + Q.h + 20})` }, monthIcons).innerHTML = phaseIcon(day % MONTH);
+      const anchor = day === 0 ? "start" : day === MONTH ? "end" : "middle", tx = day === 0 ? x - 10 : day === MONTH ? x + 10 : x;
+      el("text", { x: tx, y: Q.y + Q.h + 46, class: "month-lbl", "text-anchor": anchor }, monthIcons).textContent = name;
+      el("text", { x: tx, y: Q.y + Q.h + 62, class: "month-lbl kind", "text-anchor": anchor }, monthIcons).textContent = kind;
+    });
+
     function render() {
       const md = moonDir(s.age), yd = youDir(s.clock);
+      monthLine.setAttribute("x1", monthX(s.age).toFixed(1)); monthLine.setAttribute("x2", monthX(s.age).toFixed(1));
+      monthDot.setAttribute("cx", monthX(s.age).toFixed(1)); monthDot.setAttribute("cy", Q.y);
 
       // oceán: obrys vytažený podle slapu
       let d = "";
@@ -445,7 +536,7 @@
         render();
       });
     }
-    bindSeg("sun-seg", (v) => { s.sun = v === 1; });
+    bindSeg("sun-seg", (v) => { s.sun = v === 1; renderMonth(); });
     bindSeg("speed-seg", (v) => { s.speed = v; });
     playBtn.addEventListener("click", () => { s.playing = !s.playing; playBtn.setAttribute("aria-pressed", String(!s.playing)); render(); });
 
@@ -471,12 +562,26 @@
       render();
     });
 
+    let scrubbing = false;
+    function scrub(e) {
+      const m = month.getScreenCTM();
+      if (!m) return;
+      const p = new DOMPoint(e.clientX, e.clientY).matrixTransform(m.inverse());
+      s.age = Math.max(0, Math.min(MONTH - 0.01, ((p.x - Q.x) / Q.w) * MONTH));
+      render();
+    }
+    month.addEventListener("pointerdown", (e) => { scrubbing = true; if (e.pointerType === "mouse") month.setPointerCapture(e.pointerId); scrub(e); });
+    month.addEventListener("pointermove", (e) => { if (scrubbing && (e.pointerType !== "mouse" || e.buttons)) scrub(e); });
+    const endScrub = () => { scrubbing = false; };
+    month.addEventListener("pointerup", endScrub);
+    month.addEventListener("pointercancel", endScrub);
+
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) { s.playing = false; playBtn.setAttribute("aria-pressed", "true"); }
     let prev = performance.now();
     function frame(now) {
       const dt = Math.min(0.1, (now - prev) / 1000);
       prev = now;
-      if (s.playing && !dragging) {
+      if (s.playing && !dragging && !scrubbing) {
         const h = dt * s.speed;
         s.clock = (s.clock + h) % 24;
         s.age = wrapAge(s.age + h / 24);
@@ -484,6 +589,7 @@
       }
       requestAnimationFrame(frame);
     }
+    renderMonth();
     render();
     requestAnimationFrame(frame);
   })();
