@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Jak funguje LCD a OLED displej</title>
+  <meta name="description" content="Jak ze tří barevných proužků vznikne jakákoli barva, proč LCD potřebuje podsvícení a OLED ne a proč tmavý režim šetří baterii jen na některých telefonech. S pixelem, který si můžete namíchat.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700&display=swap">
+  <link rel="stylesheet" href="../style.css?v=5">
+  <style>
+    /* displej svítí na tmavém pozadí, scéna je proto tmavá v obou režimech */
+    #panel { border: 1px solid var(--rule); }
+    .dark { fill: #0b0d12; }
+    .lab { fill: #cdd6ea; font: 500 12.5px var(--font-mono); }
+    .lab.cap { fill: #8f9ab5; font-size: 11px; letter-spacing: 0.08em; }
+    .layer-glass { fill: #2a3142; stroke: #55607a; stroke-width: 1; }
+    .polar { fill: #3a4257; stroke: #7b87a3; stroke-width: 1; }
+    .polar-ln { stroke: #9aa6c2; stroke-width: 1; }
+    .back { fill: #f4f1e6; }
+    .rod { stroke: #cdd6ea; stroke-width: 2.4; stroke-linecap: round; }
+    .cell { fill: #171c28; stroke: #55607a; stroke-width: 1; }
+    .ray { stroke-linecap: round; }
+    .swatch { display: inline-block; width: 1.5rem; height: 1.5rem; border: 1px solid var(--rule); vertical-align: middle; }
+    .ch { display: grid; grid-template-columns: 1.2rem minmax(0, 1fr) 3.2ch; align-items: center; gap: 0.6rem; font: 600 0.85rem var(--font-mono); }
+    .chs { display: grid; gap: 0.35rem; flex: 1 1 15rem; min-width: 0; }
+    .ch output { text-align: right; font-weight: 500; }
+    #r { accent-color: #e5372b; } #g { accent-color: #2aa84a; } #b { accent-color: #2f6fe0; }
+    @media (max-width: 46rem) { .lab { display: none; } }
+  </style>
+</head>
+<body data-cat="technika">
+  <header class="topbar">
+    <div class="wrap">
+      <a class="brand" href="../">Jak věci fungují</a>
+      <nav class="crumbs" aria-label="Drobečková navigace"><a href="../#technika">Technika</a><span aria-hidden="true">/</span><span>LCD a OLED displej</span></nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <header class="art-head">
+      <p class="eyebrow">Technika</p>
+      <h1 class="display">Jak funguje LCD a OLED displej</h1>
+      <p class="lede">Na žádném displeji není žlutá, růžová ani bílá. Jsou tam jen miliony červených, zelených a modrých proužků tak malých, že je oko nerozliší a slije si je dohromady. Dva hlavní druhy displejů se liší v tom, jak ty proužky rozsvěcují.</p>
+    </header>
+
+    <section class="tldr" aria-labelledby="h-zkratka">
+      <h2 class="label" id="h-zkratka">Ve zkratce</h2>
+      <ul>
+        <li>Každý bod obrazu tvoří tři proužky: červený, zelený a modrý. Jejich jasem se namíchá jakákoli barva.</li>
+        <li>LCD má vzadu lampu, která svítí pořád. Tekuté krystaly před ní fungují jako <span class="hl">žaluzie</span> a světlo jen pouštějí nebo zadržují.</li>
+        <li>V OLED displeji svítí každý proužek sám. Černá je tam opravdu zhasnuto.</li>
+      </ul>
+    </section>
+
+    <figure class="fig" id="obr1">
+      <div class="fig-head">
+        <p class="fig-num"><b>Obr. 1</b> Displej pod lupou</p>
+        <span class="label">Namíchejte barvu a přepněte druh displeje</span>
+      </div>
+      <div class="fig-stage">
+        <svg id="panel" viewBox="0 0 860 420" role="img" aria-label="Vlevo zvětšené body displeje složené z červených, zelených a modrých proužků, vpravo řez jedním bodem po vrstvách">
+          <defs><filter id="far" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="15"/></filter></defs>
+        </svg>
+      </div>
+      <div class="fig-controls">
+        <div class="chs">
+          <label class="ch"><span>R</span><input type="range" id="r" min="0" max="255" value="255" aria-label="Červená"><output id="r-val"></output></label>
+          <label class="ch"><span>G</span><input type="range" id="g" min="0" max="255" value="200" aria-label="Zelená"><output id="g-val"></output></label>
+          <label class="ch"><span>B</span><input type="range" id="b" min="0" max="255" value="0" aria-label="Modrá"><output id="b-val"></output></label>
+        </div>
+        <div class="ctl">
+          <span class="label" id="lbl-tech">Displej</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-tech" id="tech-seg">
+            <button type="button" role="radio" data-v="lcd" aria-checked="true">LCD</button>
+            <button type="button" role="radio" data-v="oled" aria-checked="false">OLED</button>
+          </div>
+        </div>
+        <div class="ctl">
+          <span class="label" id="lbl-view">Pohled</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-view" id="view-seg">
+            <button type="button" role="radio" data-v="near" aria-checked="true">Pod lupou</button>
+            <button type="button" role="radio" data-v="far" aria-checked="false">Z dálky</button>
+          </div>
+        </div>
+      </div>
+      <div class="fig-status split">
+        <p class="status" id="status" aria-live="polite"></p>
+        <ul class="stats" aria-label="Stav modelu">
+          <li><span class="n">Výsledná barva</span><span class="v"><i class="swatch" id="sw"></i></span></li>
+          <li><span class="n">Spotřeba</span><span class="meter" aria-hidden="true"><i id="st-power"></i></span></li>
+          <li><span class="n">Černé pozadí</span><span class="v small" id="st-black"></span></li>
+        </ul>
+      </div>
+      <figcaption class="fig-caption">Vlevo je kousek obrazu, kolečko vaší barvy na černém pozadí, zvětšený asi stokrát. Vpravo řez jedním bodem: světlo jde zdola nahoru k vašemu oku. Vrstvy nejsou v měřítku a skutečný displej jich má víc.</figcaption>
+    </figure>
+
+    <section class="sec" aria-labelledby="h-tri">
+      <div class="prose">
+        <h2 id="h-tri">Tři barvy stačí</h2>
+        <p>Oko má na barvy tři druhy čidel: jedny reagují nejvíc na červené světlo, druhé na zelené, třetí na modré. Žlutou samostatně nevidí. Poznají ji podle toho, že se zároveň ozvou červená a zelená čidla.</p>
+        <p>Displej toho využívá. Žluté světlo vůbec nevyrábí. Rozsvítí vedle sebe červený a zelený proužek, a protože jsou příliš malé na to, abyste je viděli zvlášť, oko je sečte a ohlásí žlutou. Všechny tři naplno dají bílou. Všechny zhasnuté černou.</p>
+        <p>Každý proužek umí 256 stupňů jasu. Tři proužky dohromady tedy dají přes šestnáct milionů barev, víc, než oko rozliší.</p>
+      </div>
+      <aside class="note" aria-label="Displej v číslech">
+        <span class="label">V číslech</span>
+        <dl class="facts">
+          <div><dt>3</dt><dd>svítící proužky tvoří jeden bod obrazu</dd></div>
+          <div><dt>16,7 milionu</dt><dd>barev se z nich dá namíchat</dd></div>
+          <div><dt>≈ 0,06 mm</dt><dd>měří jeden bod na displeji telefonu</dd></div>
+          <div><dt>60–120×</dt><dd>za sekundu se celý obraz překreslí</dd></div>
+        </dl>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-lcd">
+      <div class="prose">
+        <h2 id="h-lcd">LCD: lampa a žaluzie</h2>
+        <p>LCD displej sám nesvítí. Vzadu má bílou lampu, dnes řadu svítivých diod, která svítí pořád a rovnoměrně po celé ploše. Všechno před ní se stará jen o to, kolik toho světla kterým místem projde.</p>
+        <p>Světlo nejdřív projde filtrem, který z něj propustí jen vlny kmitající jedním směrem. Pak vrstvou tekutých krystalů. To je zvláštní látka: teče jako kapalina, ale její protáhlé molekuly se řadí vedle sebe jako v krystalu. Podle toho, jak jsou natočené, světlu stáčejí směr kmitání. A natočit je jde elektrickým napětím.</p>
+        <p>Na konci je druhý filtr, otočený napříč k prvnímu. Propustí jen to světlo, které krystaly cestou stočily. Bez napětí neprojde nic, s plným napětím všechno, a mezi tím je plynulá škála. Před každým proužkem je ještě barevné sklíčko: červené, zelené nebo modré.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Stáhněte jeden posuvník na nulu a sledujte v řezu tyčinky tekutých krystalů v tom sloupci. Otočí se a světlo, které lampa dál posílá, uvízne v horním filtru.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-oled">
+      <div class="prose">
+        <h2 id="h-oled">OLED: každý svítí sám</h2>
+        <p>OLED displej žádnou lampu nemá. Každý proužek je maličká svítivá dioda z organické látky, která svítí, když jí teče proud. Čím větší proud, tím jasněji. Červený proužek svítí červeně, protože je z látky, která vydává červené světlo. Žádné filtry nejsou potřeba.</p>
+        <p>Je to jednodušší a tenčí. Chybí lampa, oba filtry i tekuté krystaly. Proto jde OLED displej ohnout nebo přeložit napůl.</p>
+      </div>
+    </section>
+
+    <section class="sec" aria-labelledby="h-cerna">
+      <div class="prose">
+        <h2 id="h-cerna">Hlavní rozdíl je v černé</h2>
+        <p>Na LCD displeji lampa svítí, i když má být obraz černý. Krystaly se světlo snaží zadržet, ale žaluzie nikdy nedoléhají úplně a trocha ho proleze. Černá je proto ve tmě tmavě šedá a v rozích trochu prosvítá.</p>
+        <p>Na OLED displeji je černý bod prostě vypnutý. Nesvítí vůbec. Hvězdy ve filmu jsou na něm ostré body na opravdu černém nebi.</p>
+        <p>Souvisí s tím i spotřeba. LCD žere skoro pořád stejně, protože lampa svítí naplno, ať je na obraze cokoli. OLED spotřebuje tolik, kolik toho zrovna svítí. <span class="hl">Tmavý režim proto šetří baterii jen na OLED displejích.</span> Na LCD nezmění nic.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Přepínejte mezi LCD a OLED a dívejte se na černé pozadí kolem kolečka. Na LCD lehce svítí. Pak stáhněte všechny tři posuvníky na nulu a porovnejte spotřebu.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-vady">
+      <div class="prose">
+        <h2 id="h-vady">Co má OLED za to</h2>
+        <p>Organické látky, které v OLED displeji svítí, se svícením opotřebovávají. Čím déle a jasněji proužek svítí, tím je slabší. Když je na jednom místě roky stejný obraz, třeba lišta s hodinami, to místo zeslábne víc než okolí a zůstane tam trvalý stín. Říká se tomu vypálení.</p>
+        <p>Nejrychleji stárne modrá. Výrobci proto dělají modré proužky větší než ostatní, aby mohly svítit s menším úsilím, a telefon sám obraz čas od času o pár bodů posune.</p>
+        <p>LCD nestárne skoro vůbec a je levnější. Najdete ho proto ve většině monitorů a levnějších televizí. OLED je v dražších telefonech, hodinkách a televizích, kde záleží na černé a na tloušťce.</p>
+      </div>
+    </section>
+
+    <section class="sec" aria-labelledby="h-historie">
+      <div class="prose">
+        <h2 id="h-historie">Začalo to v Praze u mrkve</h2>
+        <p>Tekuté krystaly objevil v roce 1888 botanik Friedrich Reinitzer na německé univerzitě v Praze. Zkoumal látku získanou z mrkve a všiml si, že má dva body tání. Při první teplotě se změnila v kalnou kapalinu, při druhé v čirou. Ta kalná fáze mezi nimi byla něco nového: kapalina, která se světlem zachází jako krystal.</p>
+        <p>Osmdesát let s tím nikdo nevěděl co dělat. První displej z tekutých krystalů vznikl koncem šedesátých let a objevil se v kalkulačkách a digitálkách. Svítící organické diody přišly o dvacet let později a v telefonech jsou běžné od roku 2010.</p>
+      </div>
+    </section>
+
+    <footer class="art-foot">
+      <a class="next" href="../abs/" data-cat="doprava">
+        <span class="label">Další článek · Doprava</span>
+        <span class="t">Jak fungují brzdy s ABS</span>
+        <p>Proč zablokované kolo brzdí hůř a proč ABS uprostřed brzdění povoluje.</p>
+      </a>
+      <a class="back" href="../">Všechna témata</a>
+    </footer>
+  </main>
+
+  <script>
+  (() => {
+    const NS = "http://www.w3.org/2000/svg";
+    function el(tag, attrs, parent) {
+      const n = document.createElementNS(NS, tag);
+      for (const k in attrs || {}) n.setAttribute(k, attrs[k]);
+      if (parent) parent.appendChild(n);
+      return n;
+    }
+    const svg = document.getElementById("panel");
+    const PRIM = ["#ff3b30", "#34c759", "#2f7bff"];
+    const LEAK = 0.045;                       // kolik světla proleze zavřenými krystaly LCD
+    const s = { rgb: [255, 200, 0], tech: "lcd", view: "near" };
+
+    /* ---------- zvětšený kousek obrazu ---------- */
+    el("rect", { x: 0, y: 0, width: 860, height: 420, class: "dark" }, svg);
+    el("text", { x: 24, y: 30, class: "lab cap" }, svg).textContent = "KOUSEK OBRAZU STOKRÁT ZVĚTŠENÝ";
+    const COLS = 9, ROWS = 8, PX = 36, GX = 26, GY = 50;
+    const grid = el("g", {}, svg);
+    const pixels = [];
+    for (let j = 0; j < ROWS; j++) for (let i = 0; i < COLS; i++) {
+      const inside = Math.hypot(i - (COLS - 1) / 2, j - (ROWS - 1) / 2) < 3.1;
+      const subs = [0, 1, 2].map((k) => el("rect", { x: GX + i * PX + 2 + k * 11, y: GY + j * PX + 2, width: 9.5, height: PX - 4, rx: 1.5, fill: PRIM[k] }, grid));
+      pixels.push({ inside, subs });
+    }
+
+    /* ---------- řez jedním bodem ---------- */
+    const SX = 420, SW = 84;                  // levý okraj řezu a šířka jednoho proužku
+    el("text", { x: SX - 10, y: 30, class: "lab cap" }, svg).textContent = "ŘEZ JEDNÍM BODEM";
+    const cut = el("g", {}, svg);
+    const fmt = new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 0 });
+    const $ = (id) => document.getElementById(id);
+
+    function drawCut(levels) {
+      cut.textContent = "";
+      const lab = (y, text) => { el("text", { x: SX + 3 * SW + 14, y: y + 4, class: "lab" }, cut).textContent = text; };
+      const xs = [0, 1, 2].map((k) => SX + k * SW);
+      if (s.tech === "lcd") {
+        el("rect", { x: SX, y: 362, width: 3 * SW, height: 22, class: "back" }, cut); lab(373, "lampa");
+        el("rect", { x: SX, y: 334, width: 3 * SW, height: 12, class: "polar" }, cut); lab(340, "filtr");
+        for (let x = SX + 6; x < SX + 3 * SW; x += 9) el("line", { x1: x, y1: 336, x2: x, y2: 344, class: "polar-ln" }, cut);
+        lab(292, "tekuté krystaly");
+        lab(232, "barevná sklíčka");
+        el("rect", { x: SX, y: 196, width: 3 * SW, height: 12, class: "polar" }, cut); lab(202, "druhý filtr");
+        for (let y = 199; y < 208; y += 4) el("line", { x1: SX + 2, y1: y, x2: SX + 3 * SW - 2, y2: y, class: "polar-ln" }, cut);
+        xs.forEach((x, k) => {
+          const pass = LEAK + (1 - LEAK) * levels[k];
+          el("rect", { x: x + 3, y: 252, width: SW - 6, height: 76, class: "cell" }, cut);
+          // tyčinky krystalů: čím víc mají propustit, tím víc jsou pootočené
+          for (let m = 0; m < 5; m++) {
+            const cy = 262 + m * 14, a = (levels[k] * (m / 4) * Math.PI) / 2, len = 13;
+            [x + 24, x + SW - 24].forEach((cx) => el("line", { x1: cx - len * Math.cos(a), y1: cy - 3 * Math.sin(a), x2: cx + len * Math.cos(a), y2: cy + 3 * Math.sin(a), class: "rod", opacity: 0.55 + 0.45 * Math.sin(a) }, cut));
+          }
+          el("rect", { x: x + 3, y: 222, width: SW - 6, height: 20, fill: PRIM[k], opacity: 0.9 }, cut);
+          // světlo: bílé z lampy, obarvené sklíčkem, oslabené druhým filtrem
+          el("line", { x1: x + SW / 2, y1: 360, x2: x + SW / 2, y2: 246, stroke: "#f4f1e6", "stroke-width": 7, class: "ray", opacity: 0.85 }, cut);
+          el("line", { x1: x + SW / 2, y1: 220, x2: x + SW / 2, y2: 210, stroke: PRIM[k], "stroke-width": 7, class: "ray" }, cut);
+          el("line", { x1: x + SW / 2, y1: 192, x2: x + SW / 2, y2: 80, stroke: PRIM[k], "stroke-width": 1 + 8 * pass, class: "ray", opacity: 0.25 + 0.75 * pass }, cut);
+          el("path", { d: `M${x + SW / 2} 62 l-9 20 h18 Z`, fill: PRIM[k], opacity: 0.25 + 0.75 * pass }, cut);
+        });
+      } else {
+        el("rect", { x: SX, y: 344, width: 3 * SW, height: 40, class: "layer-glass" }, cut); lab(364, "podklad s tranzistory");
+        lab(310, "svítící vrstva");
+        el("rect", { x: SX, y: 262, width: 3 * SW, height: 12, class: "layer-glass" }, cut); lab(268, "krycí sklo");
+        el("text", { x: SX + 1.5 * SW, y: 404, "text-anchor": "middle", class: "lab" }, cut).textContent = "žádná lampa";
+        xs.forEach((x, k) => {
+          const lv = levels[k];
+          el("rect", { x: x + 3, y: 288, width: SW - 6, height: 44, class: "cell" }, cut);
+          el("rect", { x: x + 3, y: 288, width: SW - 6, height: 44, fill: PRIM[k], opacity: lv }, cut);
+          if (lv > 0.01) {
+            el("line", { x1: x + SW / 2, y1: 284, x2: x + SW / 2, y2: 80, stroke: PRIM[k], "stroke-width": 1 + 8 * lv, class: "ray", opacity: 0.25 + 0.75 * lv }, cut);
+            el("path", { d: `M${x + SW / 2} 62 l-9 20 h18 Z`, fill: PRIM[k], opacity: 0.25 + 0.75 * lv }, cut);
+          }
+        });
+      }
+      el("text", { x: SX + 1.5 * SW, y: 48, "text-anchor": "middle", class: "lab" }, cut).textContent = "k oku";
+    }
+
+    function render() {
+      const levels = s.rgb.map((v) => v / 255), lcd = s.tech === "lcd";
+      // LCD nikdy nezavře úplně: i černá trochu svítí
+      const shown = (lv) => (lcd ? LEAK + (1 - LEAK) * lv : lv);
+      pixels.forEach((p) => p.subs.forEach((r, k) => r.setAttribute("opacity", shown(p.inside ? levels[k] : 0).toFixed(3))));
+      grid.setAttribute("filter", s.view === "far" ? "url(#far)" : "");
+      drawCut(levels);
+
+      ["r", "g", "b"].forEach((id, k) => { $(`${id}-val`).textContent = s.rgb[k]; });
+      $("sw").style.background = `rgb(${s.rgb.join(",")})`;
+      const lit = pixels.filter((p) => p.inside).length / pixels.length;
+      const power = lcd ? 1 : (lit * (levels[0] + levels[1] + levels[2])) / 3;
+      $("st-power").style.width = `${Math.round(power * 100)}%`;
+      $("st-black").textContent = lcd ? "prosvítá" : "zhasnuté";
+
+      const [r, g, b] = s.rgb, sum = r + g + b;
+      const name = sum < 40 ? "černou" : r > 200 && g > 200 && b > 200 ? "bílou" : r > 180 && g > 150 && b < 90 ? "žlutou" : r > 180 && b > 150 && g < 110 ? "purpurovou" : g > 170 && b > 170 && r < 110 ? "tyrkysovou" : "tuhle barvu";
+      let status;
+      if (s.view === "far") {
+        status = `<strong>Z dálky proužky splynou.</strong> Oko už je nerozliší a sečte si je. Místo tří barev vedle sebe vidí ${name}. ${lcd ? "Černé pozadí kolem je na LCD lehce našedlé." : "Pozadí kolem je černé, tam nesvítí nic."}`;
+      } else if (lcd) {
+        status = `<strong>LCD.</strong> Lampa vzadu svítí naplno pod všemi třemi proužky. Tekuté krystaly určují, kolik světla pustí k hornímu filtru${sum < 40 ? ", a i když mají zavřeno, trocha proleze" : ""}. Spotřeba je pořád stejná.`;
+      } else {
+        status = `<strong>OLED.</strong> Každý proužek svítí sám tolik, kolik má.${sum < 40 ? " Teď nesvítí žádný a displej nebere skoro nic." : " Zhasnuté body kolem neberou žádný proud."}`;
+      }
+      $("status").innerHTML = status;
+    }
+
+    /* ---------- ovládání ---------- */
+    ["r", "g", "b"].forEach((id, k) => $(id).addEventListener("input", (e) => { s.rgb[k] = Number(e.target.value); render(); }));
+    function bindSeg(id, apply) {
+      const seg = $(id);
+      seg.addEventListener("click", (e) => {
+        const btn = e.target.closest("button[data-v]");
+        if (!btn) return;
+        seg.querySelectorAll("button").forEach((x) => x.setAttribute("aria-checked", String(x === btn)));
+        apply(btn.dataset.v);
+        render();
+      });
+    }
+    bindSeg("tech-seg", (v) => { s.tech = v; });
+    bindSeg("view-seg", (v) => { s.view = v; });
+    render();
+  })();
+  </script>
+</body>
+</html>

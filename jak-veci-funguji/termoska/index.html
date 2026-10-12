@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Jak funguje termoska</title>
+  <meta name="description" content="Kudy teplo z čaje utíká a jak mu termoska zavře všechny tři cesty. Proč v ní vydrží horké horké a studené studené. S termoskou, kterou si můžete rozebrat.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700&display=swap">
+  <link rel="stylesheet" href="../style.css?v=5">
+  <style>
+    .shell { fill: none; stroke: var(--pin-top); stroke-width: 7; stroke-linejoin: round; }
+    .gap { fill: var(--surface); }
+    .air-dot { fill: var(--ink-3); opacity: 0.55; }
+    .mirror { fill: none; stroke: #dfe6f2; stroke-width: 3; }
+    .dull { fill: none; stroke: var(--steel-hatch); stroke-width: 3; }
+    .cork { fill: var(--plug); stroke: var(--metal-line); stroke-width: 1.4; }
+    .cup { fill: var(--steel); stroke: var(--metal-line); stroke-width: 1.4; }
+    .flow { fill: none; stroke: var(--hot); stroke-linecap: round; stroke-linejoin: round; }
+    .flow-head { fill: var(--hot); }
+    .steam { fill: none; stroke: var(--ink-3); stroke-width: 3; stroke-linecap: round; opacity: 0.6; }
+    .tag { fill: var(--ink-2); font: 500 12.5px var(--font-mono); }
+    .big { fill: var(--ink); font: 800 40px var(--font-display); font-stretch: 112%; font-variant-numeric: tabular-nums; }
+    .cap { fill: var(--ink-3); font: 500 11px var(--font-mono); letter-spacing: 0.08em; }
+    .c-axis { stroke: var(--ink-3); stroke-width: 1; }
+    .c-grid { stroke: var(--grid); stroke-width: 1; }
+    .c-room { stroke: var(--ink-3); stroke-width: 1; stroke-dasharray: 2 4; }
+    .c-line { fill: none; stroke: var(--cat); stroke-width: 3; stroke-linejoin: round; }
+    .c-mug { fill: none; stroke: var(--ink-3); stroke-width: 2; stroke-dasharray: 6 5; }
+    .c-dot { fill: var(--cat); stroke: var(--surface); stroke-width: 2; }
+    .c-text { fill: var(--ink-2); font: 500 12px var(--font-mono); }
+    .split3 { display: flex; height: 0.8rem; border: 1px solid var(--rule); }
+    .split3 i { display: block; min-width: 1px; }
+    .legend { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; margin: 0; padding: 0; list-style: none; font-family: var(--font-mono); font-size: 0.75rem; color: var(--ink-2); }
+    .legend li { display: inline-flex; align-items: center; gap: 0.4rem; }
+    .legend i { width: 0.7rem; height: 0.7rem; }
+    @media (max-width: 46rem) { .tag { display: none; } .c-text { font-size: 17px; } }
+  </style>
+</head>
+<body data-cat="domacnost">
+  <header class="topbar">
+    <div class="wrap">
+      <a class="brand" href="../">Jak věci fungují</a>
+      <nav class="crumbs" aria-label="Drobečková navigace"><a href="../#domacnost">Domácnost</a><span aria-hidden="true">/</span><span>Termoska</span></nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <header class="art-head">
+      <p class="eyebrow">Domácnost</p>
+      <h1 class="display">Jak funguje termoska</h1>
+      <p class="lede">Termoska nic nehřeje ani nechladí. Jen teplu nedovolí odejít. Má na to tři triky, na každou cestu, kterou se teplo umí šířit, jeden.</p>
+    </header>
+
+    <section class="tldr" aria-labelledby="h-zkratka">
+      <h2 class="label" id="h-zkratka">Ve zkratce</h2>
+      <ul>
+        <li>Teplo se stěhuje třemi způsoby: vedením, prouděním a sáláním.</li>
+        <li>Termoska je láhev v láhvi. Mezi stěnami je <span class="hl">vakuum,</span> a kde nic není, tam se nedá vést ani proudit.</li>
+        <li>Sálání zastaví lesklý povrch stěn, který teplo odráží zpátky. Zbývá jediná slabina: hrdlo a zátka.</li>
+      </ul>
+    </section>
+
+    <figure class="fig" id="obr1">
+      <div class="fig-head">
+        <p class="fig-num"><b>Obr. 1</b> Řez termoskou</p>
+        <span class="label">Vypínejte jednotlivé ochrany a sledujte, kudy teplo utíká</span>
+      </div>
+      <div class="fig-stage">
+        <svg id="flask" viewBox="0 0 720 440" role="img" aria-label="Řez termoskou s dvojitou stěnou a zátkou, šipky ukazují únik tepla, vpravo graf teploty v čase"></svg>
+      </div>
+      <div class="fig-controls">
+        <div class="ctl">
+          <span class="label" id="lbl-gap">Mezi stěnami</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-gap" id="gap-seg">
+            <button type="button" role="radio" data-v="1" aria-checked="true">Vakuum</button>
+            <button type="button" role="radio" data-v="0" aria-checked="false">Vzduch</button>
+          </div>
+        </div>
+        <div class="ctl">
+          <span class="label" id="lbl-mirror">Povrch stěn</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-mirror" id="mirror-seg">
+            <button type="button" role="radio" data-v="1" aria-checked="true">Lesklý</button>
+            <button type="button" role="radio" data-v="0" aria-checked="false">Matný</button>
+          </div>
+        </div>
+        <div class="ctl">
+          <span class="label" id="lbl-cork">Zátka</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-cork" id="cork-seg">
+            <button type="button" role="radio" data-v="1" aria-checked="true">Zavřená</button>
+            <button type="button" role="radio" data-v="0" aria-checked="false">Otevřená</button>
+          </div>
+        </div>
+        <div class="ctl">
+          <span class="label" id="lbl-fill">Uvnitř</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-fill" id="fill-seg">
+            <button type="button" role="radio" data-v="hot" aria-checked="true">Horký čaj</button>
+            <button type="button" role="radio" data-v="cold" aria-checked="false">Ledová limonáda</button>
+          </div>
+        </div>
+        <div class="ctl ctl-grow">
+          <label class="label" for="time">Uplynulo</label>
+          <div class="ctl-row">
+            <input type="range" id="time" min="0" max="24" step="0.5" value="0">
+            <output class="val" id="time-val" for="time">0 h</output>
+          </div>
+        </div>
+      </div>
+      <div class="fig-status split">
+        <p class="status" id="status" aria-live="polite"></p>
+        <div style="display:grid; gap:.7rem; min-width:0">
+          <ul class="stats" aria-label="Stav modelu">
+            <li><span class="n">Teď má</span><span class="v" id="st-now"></span></li>
+            <li><span class="n" id="st-flow-n">Uniká</span><span class="v" id="st-flow"></span></li>
+            <li><span class="n">Za 12 hodin</span><span class="v" id="st-12"></span></li>
+          </ul>
+          <div class="split3" id="split" aria-hidden="true"></div>
+          <ul class="legend" aria-hidden="true">
+            <li><i style="background:var(--hot)"></i>sálání</li>
+            <li><i style="background:var(--warm)"></i>plyn mezi stěnami</li>
+            <li><i style="background:var(--ink-3)"></i>hrdlo a zátka</li>
+          </ul>
+        </div>
+      </div>
+      <figcaption class="fig-caption">Zjednodušený výpočet pro třičtvrtělitrovou termosku v pokoji s 22 °C. Tloušťka šipek odpovídá tomu, kolik tepla danou cestou prochází. Přerušovaná čára v grafu je pro srovnání obyčejný hrnek na stole.</figcaption>
+    </figure>
+
+    <section class="sec" aria-labelledby="h-cesty">
+      <div class="prose">
+        <h2 id="h-cesty">Tři cesty tepla</h2>
+        <ol class="steps">
+          <li><div><b>Vedení.</b> Teplo je pohyb molekul. Rychlé molekuly strkají do pomalejších sousedů a rozhýbávají je. Tak se ohřeje lžička v čaji nebo ucho hrnku. Potřebuje k tomu látku, kterou se strkání přenáší.</div></li>
+          <li><div><b>Proudění.</b> Ohřátý vzduch nebo voda je lehčí, stoupá a teplo odnáší s sebou. Na jeho místo se tlačí studený. Tak topí radiátor a tak stydne polévka, když na ni foukáte. I tohle potřebuje látku, která může téct.</div></li>
+          <li><div><b>Sálání.</b> Každá teplá věc vysílá neviditelné infračervené světlo. Cítíte ho na tváři u ohně i přes sklo kamen. Nepotřebuje nic. Projde i prázdným prostorem, a právě tak k nám dorazilo teplo ze Slunce.</div></li>
+        </ol>
+      </div>
+      <aside class="note" aria-label="Termoska v číslech">
+        <span class="label">V číslech</span>
+        <dl class="facts">
+          <div><dt>≈ 70 °C</dt><dd>má čaj v dobré termosce po dvanácti hodinách</dd></div>
+          <div><dt>15 minut</dt><dd>stačí, aby tentýž čaj v hrnku zvlažněl</dd></div>
+          <div><dt>1892</dt><dd>skotský chemik James Dewar postavil první</dd></div>
+        </dl>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-vakuum">
+      <div class="prose">
+        <h2 id="h-vakuum">Vakuum: kde nic není, nic nevede</h2>
+        <p>Termoska je nádoba ve větší nádobě. Dotýkají se jen nahoře u hrdla. Z prostoru mezi nimi výrobce vyčerpal skoro všechen vzduch a zatavil ho.</p>
+        <p>Tím jedním tahem vypadly dvě cesty ze tří. Vedení potřebuje molekuly, které do sebe strkají, a tam žádné nejsou. Proudění potřebuje něco, co teče, a tam není co. <span class="hl">Prázdný prostor je nejlepší izolant, jaký existuje,</span> lepší než polystyren, peří nebo vlna, které fungují jen tím, že drží vzduch na místě.</p>
+        <p>Proto je termoska po pádu často k ničemu, i když zvenku vypadá celá. Stačí vlasová prasklina ve svaru, mezi stěny se nasaje vzduch a z termosky je obyčejná láhev. Pozná se to snadno: nalijte do ní horkou vodu a za pár minut sáhněte na plášť. Dobrá termoska je zvenku studená.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Přepněte prostor mezi stěnami na Vzduch. Objeví se oranžové šipky napříč stěnou a čaj, který měl vydržet do zítřka, je vlažný za pár hodin.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-zrcadlo">
+      <div class="prose">
+        <h2 id="h-zrcadlo">Zrcadlo: sálání pošle zpátky</h2>
+        <p>Vakuum sálání nezastaví, infračervené světlo jím projde bez potíží. Na to má termoska druhý trik. Stěny, které jsou obrácené do vakua, jsou lesklé jako zrcadlo. U skleněných termosek jsou postříbřené, u nerezových vyleštěné nebo pokovené mědí.</p>
+        <p>Lesklý kov dělá dvě věci. Sám sálá velmi málo, asi dvacetkrát méně než matný povrch stejné teploty. A to málo, co vnitřní stěna vyzáří, se od vnější stěny odrazí a vrátí se zpátky.</p>
+        <p>Stejný princip má záchranářská fólie, kterou se přikrývají lidé po nehodě, a hliníková strana izolace za radiátorem.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Nechte vakuum a přepněte povrch na Matný. Vedení a proudění jsou pořád zastavené, ale červené vlnovky sálání zesílí a termoska ztrácí desetkrát víc.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-zatka">
+      <div class="prose">
+        <h2 id="h-zatka">Slabé místo je nahoře</h2>
+        <p>Úplně oddělit dvě nádoby nejde. Někudy se musí nalévat a někde na sobě musejí držet. To místo je hrdlo. Vnitřní a vnější stěna se tam potkávají a teplo po tenkém plechu pomalu přeleze ven. Zátka ucpává otvor, ale sama je z plastu a trochu vede.</p>
+        <p>U dobré termosky tudy odchází většina tepla. Proto mají termosky úzké hrdlo a proto drží teplo hůř termohrnky se širokým víkem, ze kterého se dá pít.</p>
+        <p>A proto se vyplatí neotvírat ji zbytečně. Otevřená termoska je hrnec bez pokličky. Z hladiny horkého čaje stoupá pára a s každým gramem vypařené vody odchází spousta tepla.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Na okraj</span>
+        <p>Než nalijete čaj, vypláchněte termosku vroucí vodou. Studená vnitřní stěna by si jinak z čaje hned na začátku vzala pár stupňů.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-studene">
+      <div class="prose">
+        <h2 id="h-studene">Jak pozná, co má dělat</h2>
+        <p>Starý vtip se ptá, jak termoska ví, že má čaj držet horký a limonádu studenou. Neví. Dělá v obou případech totéž: nepouští teplo skrz stěnu. Jednou se teplo snaží ven, podruhé dovnitř.</p>
+        <p>Teplo teče vždycky z teplejšího místa na chladnější a tím rychleji, čím větší je mezi nimi rozdíl. Ledová limonáda je od pokoje vzdálená jen o osmnáct stupňů, horký čaj skoro o sedmdesát. Studené proto v termosce vydrží ještě déle než horké.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Přepněte náplň na Ledovou limonádu. Šipky se otočí dovnitř a jsou mnohem tenčí.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-historie">
+      <div class="prose">
+        <h2 id="h-historie">Nádoba na kapalný vzduch</h2>
+        <p>Termosku nevymyslel nikdo, kdo by chtěl teplý čaj. James Dewar potřeboval v roce 1892 někde skladovat zkapalněné plyny, které mají minus dvě stě stupňů a v obyčejné nádobě se během minut vyvaří. Dvojitá skleněná baňka s vakuem a postříbřením je udržela hodiny.</p>
+        <p>Dewar si vynález nenechal patentovat. Udělali to o deset let později dva němečtí skláři, kteří si všimli, že stejná nádoba udrží teplé i mléko pro dítě, a dali jí jméno Thermos.</p>
+        <p>V laboratořích se dodnes říká Dewarova nádoba a kapalný dusík se v ničem jiném nepřeváží. A největší termoska ze všech je vesmír. Kosmická loď je obklopená vakuem, takže se nemůže ochladit vedením ani prouděním. Teplo z přístrojů a posádky se z ní dostane jen sáláním a konstruktéři mají větší starost s tím, jak ho odvést, než jak ho udržet.</p>
+      </div>
+    </section>
+
+    <footer class="art-foot">
+      <a class="next" href="../splachovani/" data-cat="domacnost">
+        <span class="label">Další článek · Domácnost</span>
+        <span class="t">Jak funguje splachovací nádržka</span>
+        <p>Co se stane po zmáčknutí tlačítka a jak mísu vyprázdní obyčejné koleno v trubce.</p>
+      </a>
+      <a class="back" href="../">Všechna témata</a>
+    </footer>
+  </main>
+
+  <script>
+  (() => {
+    const NS = "http://www.w3.org/2000/svg";
+    function el(tag, attrs, parent) {
+      const n = document.createElementNS(NS, tag);
+      for (const k in attrs || {}) n.setAttribute(k, attrs[k]);
+      if (parent) parent.appendChild(n);
+      return n;
+    }
+    const svg = document.getElementById("flask");
+
+    /* ---------- model: kolik wattů uteče na každý stupeň rozdílu ---------- */
+    const ROOM = 22, START = { hot: 92, cold: 4 };
+    const HEAT_CAP = 0.75 * 4186;                    // tři čtvrtě litru vody, J/K
+    const MUG = (0.25 * 4186) / 1.2 / 3600;          // časová konstanta hrnku v hodinách
+    const s = { vacuum: true, mirror: true, cork: true, fill: "hot", hours: 0 };
+    function paths() {
+      return {
+        rad: s.mirror ? 0.006 : 0.33,                // sálání mezi stěnami
+        gas: s.vacuum ? 0.002 : 0.3,                 // vedení a proudění plynu ve stěně
+        top: s.cork ? 0.02 : s.fill === "hot" ? 0.38 : 0.16,   // hrdlo; otevřený horký čaj se navíc vypařuje
+      };
+    }
+    const total = (p) => p.rad + p.gas + p.top;
+    const tempAt = (h, tauH) => ROOM + (START[s.fill] - ROOM) * Math.exp(-h / tauH);
+
+    /* ---------- barva nápoje podle teploty ---------- */
+    const STOPS = [[4, [47, 86, 176]], [22, [150, 190, 215]], [45, [222, 205, 160]], [65, [236, 170, 70]], [92, [205, 70, 30]]];
+    function tint(t) {
+      let k = 1;
+      while (k < STOPS.length - 1 && t > STOPS[k][0]) k++;
+      const [t0, a] = STOPS[k - 1], [t1, b] = STOPS[k], f = Math.max(0, Math.min(1, (t - t0) / (t1 - t0)));
+      return `rgb(${a.map((v, i) => Math.round(v + (b[i] - v) * f)).join(",")})`;
+    }
+
+    /* ---------- kresba termosky ---------- */
+    const OUT = "M96 126 Q96 96 126 96 H150 V66 H230 V96 H254 Q284 96 284 126 V386 Q284 412 258 412 H122 Q96 412 96 386 Z";
+    const INN = "M122 136 Q122 122 136 122 H162 V72 H218 V122 H244 Q258 122 258 136 V372 Q258 386 244 386 H136 Q122 386 122 372 Z";
+    el("path", { d: OUT, class: "gap" }, svg);
+    const airG = el("g", {}, svg);
+    for (let y = 132; y < 400; y += 13) [103, 114, 266, 277].forEach((x, i) => el("circle", { cx: x, cy: y + (i % 2) * 6, r: 1.8, class: "air-dot" }, airG));
+    for (let x = 130; x < 260; x += 13) el("circle", { cx: x, cy: 399, r: 1.8, class: "air-dot" }, airG);
+    const drink = el("path", { d: "M126 150 H254 V372 Q254 382 244 382 H136 Q126 382 126 372 Z" }, svg);
+    const coatOut = el("path", { d: "M102 130 V384 Q102 406 124 406 H256 Q278 406 278 384 V130" }, svg);
+    const coatIn = el("path", { d: "M116 140 V374 Q116 392 134 392 H246 Q264 392 264 374 V140" }, svg);
+    el("path", { d: OUT, class: "shell" }, svg);
+    el("path", { d: INN, class: "shell" }, svg);
+    const flowG = el("g", {}, svg);
+    const steamG = el("g", {}, svg);
+    [176, 190, 204].forEach((x, i) => el("path", { d: `M${x} 60 q-9 -12 0 -24 q9 -12 0 -24`, class: "steam", transform: `translate(0 ${i % 2 ? -4 : 0})` }, steamG));
+    const cork = el("g", {}, svg);
+    el("path", { d: "M164 54 H216 L212 104 H168 Z", class: "cork" }, cork);
+    el("rect", { x: 152, y: 40, width: 76, height: 16, rx: 5, class: "cup" }, cork);
+    const gapTag = el("text", { x: 296, y: 300, class: "tag" }, svg);
+    el("text", { x: 296, y: 280, class: "tag" }, svg).textContent = "dvojitá stěna,";
+    const corkTag = el("text", { x: 250, y: 52, class: "tag" }, svg);
+    el("text", { x: 150, y: 428, "text-anchor": "middle", class: "cap" }, svg);
+    const big = el("text", { x: 190, y: 276, "text-anchor": "middle", class: "big" }, svg);
+
+    // šipka tepla: rovná pro vedení, vlnitá pro sálání
+    function arrow(x1, y1, x2, y2, w, wavy) {
+      if (w < 0.6) return;
+      const dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy), ux = dx / len, uy = dy / len;
+      let d = `M${x1} ${y1}`;
+      if (wavy) {
+        const n = Math.max(2, Math.round(len / 9));
+        for (let k = 1; k <= n; k++) { const t = (k / n) * (len - 7), side = k % 2 ? 3.2 : -3.2; d += ` L${(x1 + ux * t - uy * side).toFixed(1)} ${(y1 + uy * t + ux * side).toFixed(1)}`; }
+      } else d += ` L${(x2 - ux * 7).toFixed(1)} ${(y2 - uy * 7).toFixed(1)}`;
+      el("path", { d, class: "flow", "stroke-width": w.toFixed(1) }, flowG);
+      const h = 5 + w;
+      el("path", { d: `M${x2} ${y2} L${(x2 - ux * h - uy * h * 0.6).toFixed(1)} ${(y2 - uy * h + ux * h * 0.6).toFixed(1)} L${(x2 - ux * h + uy * h * 0.6).toFixed(1)} ${(y2 - uy * h - ux * h * 0.6).toFixed(1)} Z`, class: "flow-head" }, flowG);
+    }
+
+    /* ---------- graf ---------- */
+    const G = { x: 482, y: 60, w: 214, h: 300 };
+    const gx = (h) => G.x + (h / 24) * G.w, gy = (t) => G.y + G.h - (t / 100) * G.h;
+    el("text", { x: G.x, y: 40, class: "cap" }, svg).textContent = "TEPLOTA BĚHEM 24 HODIN";
+    [0, 25, 50, 75, 100].forEach((t) => {
+      el("line", { x1: G.x, y1: gy(t), x2: G.x + G.w, y2: gy(t), class: t ? "c-grid" : "c-axis" }, svg);
+      el("text", { x: G.x - 8, y: gy(t) + 4, "text-anchor": "end", class: "c-text" }, svg).textContent = `${t}°`;
+    });
+    [0, 6, 12, 18, 24].forEach((h) => el("text", { x: gx(h), y: G.y + G.h + 20, "text-anchor": "middle", class: "c-text" }, svg).textContent = `${h} h`);
+    el("line", { x1: G.x, y1: G.y, x2: G.x, y2: G.y + G.h, class: "c-axis" }, svg);
+    el("line", { x1: G.x, y1: gy(ROOM), x2: G.x + G.w, y2: gy(ROOM), class: "c-room" }, svg);
+    el("text", { x: G.x + G.w, y: gy(ROOM) - 6, "text-anchor": "end", class: "c-text" }, svg).textContent = "pokoj";
+    const mugLine = el("path", { class: "c-mug" }, svg), line = el("path", { class: "c-line" }, svg), dot = el("circle", { r: 6, class: "c-dot" }, svg);
+
+    /* ---------- výpis ---------- */
+    const fmt0 = new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 0 });
+    const fmt1 = new Intl.NumberFormat("cs-CZ", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    const $ = (id) => document.getElementById(id);
+
+    function render() {
+      const p = paths(), g = total(p), tau = HEAT_CAP / g / 3600, now = tempAt(s.hours, tau), diff = now - ROOM;
+      const out = diff >= 0;                        // horké: teplo ven; studené: teplo dovnitř
+      drink.setAttribute("fill", tint(now));
+      drink.setAttribute("fill-opacity", 0.75);
+      airG.setAttribute("visibility", s.vacuum ? "hidden" : "visible");
+      coatOut.setAttribute("class", s.mirror ? "mirror" : "dull");
+      coatIn.setAttribute("class", s.mirror ? "mirror" : "dull");
+      cork.setAttribute("transform", s.cork ? "" : "translate(86 -34) rotate(24 190 70)");
+      steamG.setAttribute("visibility", !s.cork && s.fill === "hot" && now > 40 ? "visible" : "hidden");
+      gapTag.textContent = s.vacuum ? "uvnitř vakuum" : "uvnitř vzduch";
+      corkTag.textContent = s.cork ? "zátka" : "";
+      put(big, `${fmt0.format(Math.round(now))} °C`);
+
+      // šipky: tloušťka podle wattů, směr podle toho, kde je tepleji
+      flowG.textContent = "";
+      const watts = { rad: p.rad * Math.abs(diff), gas: p.gas * Math.abs(diff), top: p.top * Math.abs(diff) };
+      const width = (w) => Math.min(7, 0.9 * Math.sqrt(w) * 1.6);
+      [180, 250, 320].forEach((y) => {
+        const a = out ? [118, 100] : [100, 118], b = out ? [262, 280] : [280, 262];
+        arrow(a[0], y, a[1], y, width(watts.rad), true); arrow(b[0], y, b[1], y, width(watts.rad), true);
+        arrow(a[0], y + 34, a[1], y + 34, width(watts.gas), false); arrow(b[0], y + 34, b[1], y + 34, width(watts.gas), false);
+      });
+      if (out) { arrow(150, 118, 150, 78, width(watts.top), false); arrow(230, 118, 230, 78, width(watts.top), false); }
+      else { arrow(150, 78, 150, 118, width(watts.top), false); arrow(230, 78, 230, 118, width(watts.top), false); }
+
+      let d = "", m = "";
+      for (let h = 0; h <= 24; h += 0.25) {
+        d += `${h ? "L" : "M"}${gx(h).toFixed(1)} ${gy(tempAt(h, tau)).toFixed(1)}`;
+        m += `${h ? "L" : "M"}${gx(h).toFixed(1)} ${gy(tempAt(h, MUG)).toFixed(1)}`;
+      }
+      line.setAttribute("d", d); mugLine.setAttribute("d", m);
+      dot.setAttribute("cx", gx(s.hours).toFixed(1)); dot.setAttribute("cy", gy(now).toFixed(1));
+
+      const sum = watts.rad + watts.gas + watts.top;
+      put($("st-now"), `${fmt0.format(Math.round(now))} °C`);
+      put($("st-flow-n"), out ? "Uniká ven" : "Teče dovnitř");
+      put($("st-flow"), `${sum < 10 ? fmt1.format(sum) : fmt0.format(Math.round(sum))} W`);
+      put($("st-12"), `${fmt0.format(Math.round(tempAt(12, tau)))} °C`);
+      put($("time-val"), `${String(s.hours).replace(".", ",")} h`);
+      $("split").innerHTML = `<i style="flex:${p.rad} 0 0;background:var(--hot)"></i><i style="flex:${p.gas} 0 0;background:var(--warm)"></i><i style="flex:${p.top} 0 0;background:var(--ink-3)"></i>`;
+
+      const worst = p.rad >= p.gas && p.rad >= p.top ? "rad" : p.gas >= p.top ? "gas" : "top";
+      let status;
+      if (s.vacuum && s.mirror && s.cork) {
+        status = `<strong>Všechny tři ochrany drží.</strong> Vakuum zastavilo vedení i proudění, lesklé stěny vracejí sálání. To málo, co prochází, jde skoro celé hrdlem a zátkou. ${s.fill === "hot" ? "Čaj bude horký ještě zítra ráno." : "Limonáda vydrží studená celý den."}`;
+      } else if (worst === "top") {
+        status = "<strong>Otevřené hrdlo.</strong> Stěna izoluje dál, ale nahoře je díra. Z hladiny stoupá teplý vzduch a pára a odnáší teplo rychleji než všechno ostatní dohromady.";
+      } else if (worst === "gas" || (!s.vacuum && !s.mirror)) {
+        status = "<strong>Ve stěně je vzduch.</strong> Molekuly vzduchu si teplo předávají od vnitřní stěny k vnější a ohřátý vzduch navíc ve štěrbině koluje. Takhle dopadne termoska, která po pádu nasála vzduch.";
+      } else {
+        status = "<strong>Matné stěny sálají.</strong> Vakuum drží, ale infračervené světlo jím projde. Matný povrch ho hodně vyzařuje a nic neodráží, takže teplo přeskakuje ze stěny na stěnu.";
+      }
+      put($("status"), status, true);
+    }
+    const cache = new WeakMap();
+    function put(node, str, html) {
+      if (cache.get(node) === str) return;
+      cache.set(node, str);
+      if (html) node.innerHTML = str; else node.textContent = str;
+    }
+
+    /* ---------- ovládání ---------- */
+    function bindSeg(id, apply) {
+      const seg = $(id);
+      seg.addEventListener("click", (e) => {
+        const b = e.target.closest("button[data-v]");
+        if (!b) return;
+        seg.querySelectorAll("button").forEach((x) => x.setAttribute("aria-checked", String(x === b)));
+        apply(b.dataset.v);
+        render();
+      });
+    }
+    bindSeg("gap-seg", (v) => { s.vacuum = v === "1"; });
+    bindSeg("mirror-seg", (v) => { s.mirror = v === "1"; });
+    bindSeg("cork-seg", (v) => { s.cork = v === "1"; });
+    bindSeg("fill-seg", (v) => { s.fill = v; });
+    $("time").addEventListener("input", (e) => { s.hours = Number(e.target.value); render(); });
+    render();
+  })();
+  </script>
+</body>
+</html>

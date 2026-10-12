@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Jak vzniká zácpa z ničeho</title>
+  <meta name="description" content="Proč se doprava na dálnici zastaví, i když tam není nehoda ani zúžení, proč zácpa couvá proti směru jízdy a co s tím může udělat každý řidič. S okruhem plným aut.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700&display=swap">
+  <link rel="stylesheet" href="../style.css?v=5">
+  <style>
+    .jam-stage { display: grid; gap: 1rem; grid-template-columns: minmax(0, 1fr); align-items: center; }
+    .strip { display: grid; gap: 0.35rem; margin: 0; }
+    .strip canvas { display: block; width: 100%; height: auto; border: 1px solid var(--rule); image-rendering: pixelated; }
+    .strip .label { display: flex; justify-content: space-between; gap: 1rem; }
+    @media (min-width: 60rem) { .jam-stage { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1.5rem; } }
+    #ring { justify-self: center; max-width: 30rem; }
+    .road { fill: none; stroke: var(--sunk); stroke-width: 34; }
+    .road-edge { fill: none; stroke: var(--rule); stroke-width: 1.5; }
+    .mid { fill: var(--ink); font: 800 38px var(--font-display); font-stretch: 112%; text-anchor: middle; font-variant-numeric: tabular-nums; }
+    .mid-cap { fill: var(--ink-3); font: 500 11px var(--font-mono); letter-spacing: 0.08em; text-anchor: middle; }
+    .car { stroke: var(--metal-line); stroke-width: 0.8; }
+    .legend { display: flex; align-items: center; gap: 0.6rem; margin: 0; font-family: var(--font-mono); font-size: 0.75rem; color: var(--ink-3); }
+    .legend i { flex: 1; height: 0.6rem; border: 1px solid var(--rule); }
+  </style>
+</head>
+<body data-cat="doprava">
+  <header class="topbar">
+    <div class="wrap">
+      <a class="brand" href="../">Jak věci fungují</a>
+      <nav class="crumbs" aria-label="Drobečková navigace"><a href="../#doprava">Doprava</a><span aria-hidden="true">/</span><span>Zácpa z ničeho</span></nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <header class="art-head">
+      <p class="eyebrow">Doprava</p>
+      <h1 class="display">Jak vzniká zácpa z ničeho</h1>
+      <p class="lede">Stojíte v koloně, popojíždíte, a po deseti minutách se doprava zase rozjede. Žádná nehoda, žádná uzavírka, nic. Zácpu nezpůsobilo nic na silnici. Způsobili ji řidiči tím, jak brzdí.</p>
+    </header>
+
+    <section class="tldr" aria-labelledby="h-zkratka">
+      <h2 class="label" id="h-zkratka">Ve zkratce</h2>
+      <ul>
+        <li>Když jedou auta blízko za sebou, každý řidič reaguje na brzdění před sebou se zpožděním a o něco silněji, než bylo třeba.</li>
+        <li>Malé přibrzdění tak cestou dozadu roste. <span class="hl">O dvacet aut dál už se stojí.</span></li>
+        <li>Zácpa pak žije vlastním životem. Auta do ní zezadu najíždějí a vpředu z ní vyjíždějí, takže se posouvá proti směru jízdy.</li>
+      </ul>
+    </section>
+
+    <figure class="fig" id="obr1">
+      <div class="fig-head">
+        <p class="fig-num"><b>Obr. 1</b> Okruh plný aut</p>
+        <span class="label">Přidejte auta a počkejte, nebo jedno přibrzděte</span>
+      </div>
+      <div class="fig-stage jam-stage">
+        <svg id="ring" viewBox="0 0 440 440" role="img" aria-label="Kruhová silnice s auty obarvenými podle rychlosti"></svg>
+        <figure class="strip">
+          <canvas id="strip" width="360" height="300" role="img" aria-label="Záznam: kde na okruhu byla která auta v posledních minutách, pomalá jsou červeně"></canvas>
+          <span class="label"><span>začátek okruhu</span><span>místo na okruhu →</span><span>konec</span></span>
+          <p class="legend" aria-hidden="true"><span>stojí</span><i id="scale"></i><span>jede volně</span></p>
+        </figure>
+      </div>
+      <div class="fig-controls">
+        <div class="ctl ctl-grow">
+          <label class="label" for="count">Aut na okruhu</label>
+          <div class="ctl-row">
+            <input type="range" id="count" min="8" max="36" step="1" value="21">
+            <output class="val" id="count-val" for="count">21</output>
+          </div>
+        </div>
+        <div class="ctl">
+          <span class="label" id="lbl-driver">Řídí</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-driver" id="driver-seg">
+            <button type="button" role="radio" data-v="human" aria-checked="true">Lidé</button>
+            <button type="button" role="radio" data-v="acc" aria-checked="false">Tempomaty s odstupem</button>
+          </div>
+        </div>
+        <button type="button" class="btn" id="brake">Přibrzdit jedno auto</button>
+        <button type="button" class="btn ghost" id="reset">Srovnat auta</button>
+      </div>
+      <div class="fig-status split">
+        <p class="status" id="status" aria-live="polite"></p>
+        <ul class="stats" aria-label="Stav modelu">
+          <li><span class="n">Průměrná rychlost</span><span class="v" id="st-mean"></span></li>
+          <li><span class="n">Nejpomalejší auto</span><span class="v" id="st-min"></span></li>
+          <li><span class="n">Projede za hodinu</span><span class="v" id="st-flow"></span></li>
+        </ul>
+      </div>
+      <figcaption class="fig-caption">Okruh je dlouhý 400 metrů a auta na něm nemohou předjíždět ani odbočit. Každé auto se řídí jen tím, jak daleko a jak rychle jede to před ním. Záznam vpravo ukazuje poslední minuty: každý řádek je jeden okamžik, nahoře ten nejnovější. Zácpa je v něm šikmý červený pruh. Čas běží šestkrát rychleji.</figcaption>
+    </figure>
+
+    <section class="sec" aria-labelledby="h-pokus">
+      <div class="prose">
+        <h2 id="h-pokus">Pokus s dvaadvaceti auty</h2>
+        <p>V roce 2008 postavili japonští fyzici na parkoviště dvaadvacet aut do kruhu o obvodu 230 metrů. Řidiči dostali jediný pokyn: jeďte dokola rychlostí třicet kilometrů v hodině a držte stejný odstup.</p>
+        <p>Chvíli to šlo. Pak někdo o trochu ubral, auto za ním přibrzdilo o něco víc, a za necelou minutu na jednom místě kruhu stálo pět aut úplně. Hlouček stojících aut se pomalu posouval dokola, proti směru jízdy. Auta do něj zezadu najížděla, chvíli stála a vpředu z něj zase vyjížděla.</p>
+        <p>Na silnici přitom nebylo vůbec nic. Žádná překážka, žádná zatáčka, žádný důvod. Od té doby se tomu říká fantomová zácpa.</p>
+      </div>
+      <aside class="note" aria-label="Zácpa v číslech">
+        <span class="label">V číslech</span>
+        <dl class="facts">
+          <div><dt>≈ 1 s</dt><dd>trvá, než řidič zareaguje na brzdová světla</dd></div>
+          <div><dt>15–20 km/h</dt><dd>touhle rychlostí couvá zácpa proti směru jízdy</dd></div>
+          <div><dt>2 s</dt><dd>bezpečný odstup od auta před vámi</dd></div>
+        </dl>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-proc">
+      <div class="prose">
+        <h2 id="h-proc">Proč malé přibrzdění roste</h2>
+        <p>Řidič nevidí, co se děje deset aut před ním. Řídí se jedním autem, tím před sebou. A reaguje pozdě: než si všimne brzdových světel a přendá nohu, uplyne skoro sekunda. Za tu sekundu se mezera zmenšila víc, než by měla.</p>
+        <p>Aby to dohnal, musí zabrzdit o něco víc než auto před ním. Řidič za ním je na tom stejně, jen už reaguje na silnější brzdění, a tak brzdí ještě víc. Každé další auto v řadě zpomalí o kousek víc než to předchozí. <span class="hl">Vlna brzdění cestou dozadu sílí,</span> až se někdo zastaví úplně.</p>
+        <p>Když jsou mezi auty velké mezery, nestane se nic. Řidič má čas, ubere plyn a vlna se utlumí. Záleží na hustotě. Pod určitou hranicí se každé zaváhání vstřebá, nad ní se každé rozroste.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Nastavte 12 aut a jedno přibrzděte. Vlnka proběhne dozadu a zmizí. Pak přidejte na 22 aut a udělejte totéž. Většinou ani brzdit nemusíte, stačí počkat.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-couva">
+      <div class="prose">
+        <h2 id="h-couva">Zácpa, která couvá</h2>
+        <p>Hotová zácpa je zvláštní věc. Není to skupina aut. Je to místo, kterým auta procházejí. Každé do ní zezadu vjede, chvíli stojí a vpředu se zase rozjede. Auta jedou dopředu, zácpa dozadu.</p>
+        <p>Posouvá se proto, že vpředu z ní auta odjíždějí pomaleji, než do ní zezadu přijíždějí. Rozjezd totiž trvá: řidič čeká, až se auto před ním dá do pohybu, a teprve pak přidá. Tahle zdržení se sčítají a čelo zácpy se sune proti směru jízdy rychlostí kolem dvaceti kilometrů v hodině.</p>
+        <p>Proto vás zácpa na dálnici potká tam, kde se nic nestalo. Vznikla třeba před čtvrt hodinou o pět kilometrů dál u nájezdu a mezitím docouvala k vám.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Dívejte se na záznam vpravo. Auta v něm jedou zleva doprava, ale červený pruh zácpy se posouvá doleva. Čím je pruh širší, tím víc aut v zácpě stojí.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-kapacita">
+      <div class="prose">
+        <h2 id="h-kapacita">Víc aut, menší průjezd</h2>
+        <p>Silnice má něco jako ideální obsazenost. Když na ni přidáváte auta, projede jich za hodinu víc a víc, i když trochu zpomalí. Pak přijde bod, kdy se tok zlomí. Vzniknou vlny, průměrná rychlost spadne a silnicí najednou projede méně aut než předtím, i když je jich na ní víc.</p>
+        <p>Proto zácpa po ranní špičce nezmizí hned, jakmile aut ubude. Silnice ucpaná vlnami propouští méně, než kolik na ni přijíždí, a rozpouští se pomalu.</p>
+        <p>Na některých dálnicích se proto před špičkou snižuje povolená rychlost proměnnými značkami. Pomalejší, ale plynulý proud propustí víc aut než rychlý, který se láme do vln.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Přidávejte auta po jednom a sledujte číslo Projede za hodinu. Nejdřív roste. Kolem čtrnácti aut je nejvyšší a pak klesá, i když aut přibývá.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-co">
+      <div class="prose">
+        <h2 id="h-co">Co s tím nadělá jeden řidič</h2>
+        <p>Vlnu živí prudké brzdění a pomalé rozjezdy. Kdo je nedělá, vlnu tlumí. Stačí držet větší odstup a v koloně jet stálou pomalou rychlostí místo střídání plynu a brzdy. Mezera před vámi pak funguje jako polštář: když auto vpředu přibrzdí, vy jen uberete plyn a za vámi už nebrzdí nikdo.</p>
+        <p>Pokusy ukázaly, že k rozpuštění vlny může stačit jedno takhle řízené auto mezi dvaceti.</p>
+        <p>Adaptivní tempomat, který sám hlídá odstup, to dělá líp než člověk. Reaguje hned, nebrzdí víc, než musí, a rozjíždí se bez čekání. Kolona takových aut vlny nevytváří vůbec.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Nechte vzniknout zácpu a přepněte řízení na tempomaty. Vlna se během minuty rozpustí a stejný počet aut jede plynule, stejnou rychlostí jako lidé před zácpou.</p>
+      </aside>
+    </section>
+
+    <footer class="art-foot">
+      <a class="next" href="../letadlo/" data-cat="doprava">
+        <span class="label">Další článek · Doprava</span>
+        <span class="t">Proč letadlo letí</span>
+        <p>Jak křídlo drží ve vzduchu stovky tun a co je špatně na vysvětlení z učebnic.</p>
+      </a>
+      <a class="back" href="../">Všechna témata</a>
+    </footer>
+  </main>
+
+  <script>
+  (() => {
+    const NS = "http://www.w3.org/2000/svg";
+    function el(tag, attrs, parent) {
+      const n = document.createElementNS(NS, tag);
+      for (const k in attrs || {}) n.setAttribute(k, attrs[k]);
+      if (parent) parent.appendChild(n);
+      return n;
+    }
+    const svg = document.getElementById("ring");
+
+    /* ---------- model: každé auto se řídí jen tím před sebou ---------- */
+    const LAP = 400, CAR = 4.5;             // délka okruhu a auta v metrech
+    const SPEEDUP = 6;                      // kolikrát rychleji běží čas
+    const DRIVERS = {
+      // v0 = kolik by jel sám, a = jak ochotně zrychluje, b = pohodlné brzdění, T = časový odstup, s0 = mezera v klidu
+      human: { v0: 33, a: 0.6, b: 2.0, T: 1.2, s0: 2, noise: 0.15 },
+      acc: { v0: 33, a: 3.0, b: 3.0, T: 1.2, s0: 2, noise: 0 },
+    };
+    const s = { n: 21, driver: "human", cars: [], t: 0, kick: null };
+
+    function steady(n, p) {
+      // rychlost, při které by se rovnoměrně rozestavěná kolona ustálila
+      const gap = LAP / n - CAR;
+      let lo = 0, hi = p.v0;
+      for (let k = 0; k < 40; k++) {
+        const v = (lo + hi) / 2;
+        if (1 - (v / p.v0) ** 4 - ((p.s0 + v * p.T) / gap) ** 2 > 0) lo = v; else hi = v;
+      }
+      return lo;
+    }
+    function reset() {
+      const v = steady(s.n, DRIVERS[s.driver]);
+      // řidiči se nikdy nerozestaví úplně přesně
+      s.cars = Array.from({ length: s.n }, (_, i) => ({ x: (i * LAP) / s.n + (Math.random() - 0.5) * 1.5, v: v * (0.97 + Math.random() * 0.06) }));
+      s.kick = null;
+    }
+    function step(h) {
+      const p = DRIVERS[s.driver], n = s.cars.length;
+      const acc = s.cars.map((c, i) => {
+        const lead = s.cars[(i + 1) % n];
+        const gap = Math.max(0.3, ((lead.x - c.x + LAP) % LAP) - CAR), closing = c.v - lead.v;
+        const want = p.s0 + Math.max(0, c.v * p.T + (c.v * closing) / (2 * Math.sqrt(p.a * p.b)));
+        let a = p.a * (1 - (c.v / p.v0) ** 4 - (want / gap) ** 2);
+        if (p.noise) a += (Math.random() - 0.5) * 2 * p.noise;        // lidé nedrží plyn úplně rovně
+        if (s.kick && s.kick.i === i) a = -4;
+        return Math.max(-8, a);
+      });
+      s.cars.forEach((c, i) => { c.v = Math.max(0, c.v + acc[i] * h); c.x = (c.x + c.v * h) % LAP; });
+      s.t += h;
+      if (s.kick && (s.kick.left -= h) <= 0) s.kick = null;
+    }
+
+    /* ---------- barva podle rychlosti ---------- */
+    const STOPS = [[0, [204, 49, 37]], [18, [228, 126, 40]], [40, [232, 196, 80]], [70, [60, 160, 110]], [110, [36, 120, 190]]];
+    function tint(kmh) {
+      let k = 1;
+      while (k < STOPS.length - 1 && kmh > STOPS[k][0]) k++;
+      const [a0, a] = STOPS[k - 1], [b0, b] = STOPS[k], f = Math.max(0, Math.min(1, (kmh - a0) / (b0 - a0)));
+      return a.map((v, i) => Math.round(v + (b[i] - v) * f));
+    }
+    document.getElementById("scale").style.background = `linear-gradient(90deg, ${STOPS.map(([v, c]) => `rgb(${c.join(",")}) ${Math.round((v / 110) * 100)}%`).join(", ")})`;
+
+    /* ---------- okruh ---------- */
+    const C = 220, RAD = 172;
+    el("circle", { cx: C, cy: C, r: RAD, class: "road" }, svg);
+    el("circle", { cx: C, cy: C, r: RAD + 17, class: "road-edge" }, svg);
+    el("circle", { cx: C, cy: C, r: RAD - 17, class: "road-edge" }, svg);
+    el("text", { x: C, y: C - 20, class: "mid-cap" }, svg).textContent = "PRŮMĚRNÁ RYCHLOST";
+    const mid = el("text", { x: C, y: C + 22, class: "mid" }, svg);
+    const carG = el("g", {}, svg);
+    let nodes = [];
+    function buildCars() {
+      carG.textContent = "";
+      const len = (CAR / LAP) * 2 * Math.PI * RAD;
+      nodes = s.cars.map(() => el("rect", { x: -len / 2, y: -6.5, width: len, height: 13, rx: 3, class: "car" }, carG));
+    }
+
+    /* ---------- záznam v čase ---------- */
+    const canvas = document.getElementById("strip"), ctx = canvas.getContext("2d");
+    const ROW = 2;
+    function clearStrip() {
+      ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--surface").trim() || "#fbfbf9";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+    function logRow() {
+      // starší řádky posuneme dolů a nahoru přikreslíme nový
+      ctx.drawImage(canvas, 0, 0, canvas.width, canvas.height - ROW, 0, ROW, canvas.width, canvas.height - ROW);
+      ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--surface").trim() || "#fbfbf9";
+      ctx.fillRect(0, 0, canvas.width, ROW);
+      const w = Math.max(3, (CAR / LAP) * canvas.width);
+      s.cars.forEach((c) => { ctx.fillStyle = `rgb(${tint(c.v * 3.6).join(",")})`; ctx.fillRect((c.x / LAP) * canvas.width - w / 2, 0, w, ROW); });
+    }
+
+    /* ---------- výpis ---------- */
+    const fmt0 = new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 0 });
+    const $ = (id) => document.getElementById(id);
+    const cache = new WeakMap();
+    function put(node, str, html) {
+      if (cache.get(node) === str) return;
+      cache.set(node, str);
+      if (html) node.innerHTML = str; else node.textContent = str;
+    }
+    let smooth = { mean: 0, min: 0 };
+
+    function render() {
+      let sum = 0, min = Infinity;
+      s.cars.forEach((c, i) => {
+        const a = (c.x / LAP) * 2 * Math.PI - Math.PI / 2;
+        nodes[i].setAttribute("transform", `translate(${(C + RAD * Math.cos(a)).toFixed(1)} ${(C + RAD * Math.sin(a)).toFixed(1)}) rotate(${((a * 180) / Math.PI + 90).toFixed(1)})`);
+        nodes[i].setAttribute("fill", `rgb(${tint(c.v * 3.6).join(",")})`);
+        sum += c.v; if (c.v < min) min = c.v;
+      });
+      const mean = sum / s.cars.length;
+      // čísla vyhladíme, ať neposkakují
+      smooth.mean += (mean - smooth.mean) * 0.05; smooth.min += (min - smooth.min) * 0.08;
+      const kmh = smooth.mean * 3.6, flow = (s.cars.length / LAP) * smooth.mean * 3600;
+      put(mid, `${fmt0.format(Math.round(kmh))} km/h`);
+      put($("st-mean"), `${fmt0.format(Math.round(kmh))} km/h`);
+      put($("st-min"), smooth.min * 3.6 < 1.5 ? "stojí" : `${fmt0.format(Math.round(smooth.min * 3.6))} km/h`);
+      put($("st-flow"), `${fmt0.format(Math.round(flow / 10) * 10)} aut`);
+
+      const spread = (smooth.mean - smooth.min) * 3.6;
+      let status;
+      if (s.driver === "acc" && spread < 6) {
+        status = "<strong>Plynulý proud.</strong> Tempomaty reagují okamžitě, nebrzdí víc, než musí, a rozjíždějí se bez čekání. Vlna se nemá jak rozrůst, ani při hustotě, při které by lidé dávno stáli.";
+      } else if (smooth.min * 3.6 < 1.5) {
+        status = "<strong>Zácpa z ničeho.</strong> Na jednom místě okruhu auta stojí, o kus dál jedou volně. Hlouček stojících aut se posouvá proti směru jízdy: zezadu do něj auta najíždějí, vpředu z něj vyjíždějí.";
+      } else if (spread > 12) {
+        status = "<strong>Vlny.</strong> Auta střídavě zrychlují a brzdí. Každé zpomalení se cestou dozadu trochu zvětší. Ještě chvíli a někdo zastaví úplně.";
+      } else if (s.n <= 13) {
+        status = "<strong>Volná silnice.</strong> Mezi auty je dost místa. Když někdo přibrzdí, auto za ním má čas jen ubrat plyn a vlnka se ztratí.";
+      } else {
+        status = "<strong>Zatím to teče.</strong> Auta jedou těsně za sebou stejnou rychlostí. Rovnováha je ale vratká: stačí, aby jeden řidič na okamžik zaváhal.";
+      }
+      put($("status"), status, true);
+    }
+
+    /* ---------- ovládání ---------- */
+    function restart() { reset(); buildCars(); smooth = { mean: s.cars[0].v, min: s.cars[0].v }; clearStrip(); }
+    $("count").addEventListener("input", (e) => { s.n = Number(e.target.value); $("count-val").textContent = s.n; restart(); });
+    const seg = $("driver-seg");
+    seg.addEventListener("click", (e) => {
+      const b = e.target.closest("button[data-v]");
+      if (!b) return;
+      seg.querySelectorAll("button").forEach((x) => x.setAttribute("aria-checked", String(x === b)));
+      s.driver = b.dataset.v;        // auta nechá, kde jsou: je vidět, jak se zácpa rozpustí
+    });
+    $("brake").addEventListener("click", () => { s.kick = { i: Math.floor(Math.random() * s.cars.length), left: 2 }; });
+    $("reset").addEventListener("click", restart);
+
+    let prev = performance.now(), sinceRow = 0;
+    function frame(now) {
+      const dt = Math.min(0.1, (now - prev) / 1000);
+      prev = now;
+      let left = dt * SPEEDUP;
+      for (; left > 0; left -= 0.1) step(Math.min(0.1, left));
+      sinceRow += dt * SPEEDUP;
+      if (sinceRow >= 1) { sinceRow = 0; logRow(); }
+      render();
+      requestAnimationFrame(frame);
+    }
+    restart();
+    render();
+    requestAnimationFrame(frame);
+  })();
+  </script>
+</body>
+</html>

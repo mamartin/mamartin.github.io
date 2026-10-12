@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Jak funguje čárový kód</title>
+  <meta name="description" content="Jak se do čar zapíše třináct číslic, proč jde kód přečíst i vzhůru nohama a jak poslední číslice odhalí překlep. S pravým čárovým kódem, který si můžete přepsat.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700&display=swap">
+  <link rel="stylesheet" href="../style.css?v=5">
+  <style>
+    .bc-stage { display: grid; gap: 1.25rem; grid-template-columns: minmax(0, 1fr); align-items: start; }
+    @media (min-width: 60rem) { .bc-stage { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 2rem; } }
+    #bars { border: 1px solid var(--rule); cursor: pointer; }
+    .panel { display: grid; gap: 1rem; min-width: 0; }
+    .zoom { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; max-width: 16rem; }
+    .zoom i { display: grid; place-items: end center; height: 4.2rem; padding-bottom: 0.2rem; border: 1px solid var(--rule); background: #fff; color: #14181e; font: 600 0.8rem var(--font-mono); font-style: normal; }
+    .zoom i.on { background: #14181e; color: #fff; }
+    .meta { margin: 0; font-family: var(--font-mono); font-size: 0.85rem; color: var(--ink-2); }
+    .meta b { color: var(--ink); font-weight: 600; }
+    .sum { margin: 0; font-family: var(--font-mono); font-size: 0.82rem; line-height: 1.7; color: var(--ink-2); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+    .sum b { color: var(--ink); font-weight: 600; }
+    .sum .x3 { color: var(--cat); }
+    .keys { display: flex; flex-wrap: wrap; gap: 0.3rem 1rem; margin: 0; padding: 0; list-style: none; font-family: var(--font-mono); font-size: 0.78rem; color: var(--ink-2); }
+    .keys li { display: inline-flex; align-items: center; gap: 0.45rem; }
+    .keys i { width: 0.7rem; height: 0.7rem; }
+    .ctl-text { flex: 1 1 16rem; }
+    .txt { width: 100%; min-height: 42px; padding: 0.55rem 0.7rem; border: 1px solid var(--ink); border-radius: 0; background: var(--surface); color: var(--ink); font: 600 1.05rem var(--font-mono); letter-spacing: 0.08em; }
+    .warn { margin: 0; font-family: var(--font-mono); font-size: 0.8rem; color: var(--bad); }
+    .status.bad strong { color: var(--bad); }
+  </style>
+</head>
+<body data-cat="technika">
+  <header class="topbar">
+    <div class="wrap">
+      <a class="brand" href="../">Jak věci fungují</a>
+      <nav class="crumbs" aria-label="Drobečková navigace"><a href="../#technika">Technika</a><span aria-hidden="true">/</span><span>Čárový kód</span></nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <header class="art-head">
+      <p class="eyebrow">Technika</p>
+      <h1 class="display">Jak funguje čárový kód</h1>
+      <p class="lede">Čárový kód je třináct číslic napsaných tak, aby je přečetl i hloupý a rychlý stroj. Nic víc v něm není: žádná cena, žádný název zboží. Poslední číslice navíc hlídá, jestli se ty předchozí přečetly správně.</p>
+    </header>
+
+    <section class="tldr" aria-labelledby="h-zkratka">
+      <h2 class="label" id="h-zkratka">Ve zkratce</h2>
+      <ul>
+        <li>Každá číslice je zapsaná sedmi proužky stejné šířky, černými nebo bílými. Čáry různé tloušťky vznikají tím, že se sousední černé proužky slijí.</li>
+        <li>Tři dvojice delších čar na krajích a uprostřed číslice nenesou. Čtečka podle nich pozná, jak je kód velký a kde začíná.</li>
+        <li>Třináctá číslice je <span class="hl">kontrolní.</span> Počítá se z ostatních dvanácti a prozradí, když se některá přečetla nebo opsala špatně.</li>
+      </ul>
+    </section>
+
+    <figure class="fig" id="obr1">
+      <div class="fig-head">
+        <p class="fig-num"><b>Obr. 1</b> Pravý kód EAN-13</p>
+        <span class="label">Opište kód z čehokoli v kuchyni a pak v něm udělejte chybu</span>
+      </div>
+      <div class="fig-stage bc-stage">
+        <svg id="bars" viewBox="0 0 720 300" role="img" aria-label="Čárový kód EAN-13 s číslicemi"></svg>
+        <div class="panel">
+          <p class="meta" id="meta"></p>
+          <div style="display:grid; gap:.45rem">
+            <span class="label" id="zoom-label">Jedna číslice zblízka</span>
+            <div class="zoom" id="zoom" aria-hidden="true"></div>
+            <p class="meta" id="zoom-note"></p>
+          </div>
+          <div style="display:grid; gap:.35rem">
+            <span class="label">Výpočet kontrolní číslice</span>
+            <p class="sum" id="sum"></p>
+          </div>
+        </div>
+      </div>
+      <div class="fig-controls">
+        <div class="ctl ctl-text">
+          <label class="label" for="code">Číslice kódu</label>
+          <input class="txt" type="text" id="code" inputmode="numeric" maxlength="16" value="859400123456" autocomplete="off">
+          <p class="warn" id="warn" hidden></p>
+        </div>
+        <div class="ctl">
+          <span class="label" id="lbl-view">Zobrazení</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-view" id="view-seg">
+            <button type="button" role="radio" data-v="code" aria-checked="true">Kód</button>
+            <button type="button" role="radio" data-v="parts" aria-checked="false">Co je co</button>
+          </div>
+        </div>
+        <button type="button" class="btn" id="typo">Udělat překlep</button>
+        <button type="button" class="btn ghost" id="swap">Prohodit dvě číslice</button>
+        <button type="button" class="btn ghost" id="fix">Opravit</button>
+      </div>
+      <div class="fig-status">
+        <p class="status" id="status" aria-live="polite"></p>
+        <ul class="keys" id="keys" hidden>
+          <li><i style="background:#b72155"></i>ochranné čáry</li>
+          <li><i style="background:#14181e"></i>levá půlka, sada L</li>
+          <li><i style="background:#2442c2"></i>levá půlka, sada G</li>
+          <li><i style="background:#08754f"></i>pravá půlka, sada R</li>
+        </ul>
+      </div>
+      <figcaption class="fig-caption">Kód je pravý a v zobrazení Kód ho přečte pokladní čtečka i telefon. Stačí zadat dvanáct číslic, třináctou model dopočítá. Když jich zadáte třináct, zkontroluje ji. Klepnutím na číslici pod kódem si ji zvětšíte.</figcaption>
+    </figure>
+
+    <section class="sec" aria-labelledby="h-cary">
+      <div class="prose">
+        <h2 id="h-cary">Sedm proužků na číslici</h2>
+        <p>Kód je rozdělený na úzké svislé proužky stejné šířky, kterým se říká moduly. Celý kód jich má 95. Každý modul je buď černý, nebo bílý. Když jsou vedle sebe dva černé, vidíte jednu tlustší čáru. Čáry tak mají čtyři možné tloušťky a mezery mezi nimi také.</p>
+        <p>Jedna číslice zabírá sedm modulů a vždy se skládá ze dvou čar a dvou mezer. Sedmička je třeba <span class="num">0111011</span>: mezera, tři moduly černé, mezera, dva moduly černé.</p>
+        <p>Čtečka na kód posvítí červeným světlem a měří, kolik se ho odrazí. Černá světlo pohltí, bílá vrátí. Čtečka neměří milimetry, jen poměry: tahle čára je dvakrát širší než tamta. Proto přečte kód velký jako dlaň i jako nehet, zblízka i z půl metru.</p>
+      </div>
+      <aside class="note" aria-label="Čárový kód v číslech">
+        <span class="label">V číslech</span>
+        <dl class="facts">
+          <div><dt>95</dt><dd>modulů má celý kód</dd></div>
+          <div><dt>7</dt><dd>modulů připadá na jednu číslici</dd></div>
+          <div><dt>859</dt><dd>začínají kódy firem registrovaných v Česku</dd></div>
+          <div><dt>1974</dt><dd>první zboží načtené u pokladny</dd></div>
+        </dl>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-znacky">
+      <div class="prose">
+        <h2 id="h-znacky">K čemu jsou delší čáry</h2>
+        <p>Na obou krajích kódu a uprostřed je dvojice tenkých čar, které jsou o kousek delší než ostatní. Číslice nenesou. Jsou to značky.</p>
+        <p>Krajní značka má tvar černá, bílá, černá, každá na jeden modul. Čtečka si z ní změří, jak široký modul zrovna je, a tím si seřídí metr pro zbytek kódu. Prostřední značka kód dělí na dvě půlky po šesti číslicích.</p>
+        <p>Půlky nejsou zapsané stejně. Pravá používá jiné vzory než levá: jsou to negativy těch levých. Díky tomu čtečka pozná, kterým směrem kód čte. Když zboží držíte vzhůru nohama, přečte ho pozpátku, zjistí to a číslice otočí. <span class="hl">Proto pokladní nemusí řešit, jak zboží drží.</span></p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Přepněte zobrazení na Co je co. Růžové jsou značky, černá a modrá levá půlka, zelená pravá. Všimněte si, že pravé číslice vždy začínají čarou a levé mezerou.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-trinact">
+      <div class="prose">
+        <h2 id="h-trinact">Kam se schovala třináctá číslice</h2>
+        <p>Spočítejte si to: dvě půlky po šesti číslicích je dvanáct. Kód jich má ale třináct a ta první je vytištěná vlevo před čarami. Žádné vlastní čáry nemá.</p>
+        <p>Je schovaná ve způsobu, jakým je zapsaná levá půlka. Pro levé číslice existují dvě sady vzorů, L a G. Která číslice použije kterou sadu, to se řídí právě první číslicí. Když je první číslice 8, je pořadí sad L, G, L, G, G, L. Čtečka přečte šest číslic, podívá se, jaké sady u nich našla, a z toho pořadí pozná sedmou.</p>
+        <p>Vzniklo to z nouze. Americký kód měl číslic dvanáct. Když ho Evropa přebírala, potřebovala jednu navíc na označení země, a nechtěla, aby staré čtečky přestaly fungovat.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Změňte první číslici kódu a nic jiného. Čáry v pravé půlce zůstanou, v levé se některé změní, i když číslice pod nimi jsou stejné.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-kontrola">
+      <div class="prose">
+        <h2 id="h-kontrola">Číslice, která hlídá ostatní</h2>
+        <p>Poslední číslice nenese žádnou informaci o zboží. Dopočítá se z předchozích dvanácti: číslice na lichých místech se sečtou tak, jak jsou, číslice na sudých se nejdřív vynásobí třemi. Kontrolní číslice je to, co součtu chybí do nejbližší desítky.</p>
+        <p>Čtečka po načtení provede stejný výpočet. Když jí vyjde jiná číslice, než jakou přečetla, ví, že je někde chyba, a místo pípnutí mlčí. Pokladní kód přejede znovu.</p>
+        <p>Trik s trojkou zaručuje, že se odhalí každá změna jedné číslice. Odhalí i většinu případů, kdy někdo při ručním opisování dvě sousední číslice prohodí. Uniknou jen dvojice, které se liší přesně o pět, třeba 2 a 7.</p>
+        <p>Stejný nápad je v každém delším čísle, které lidé opisují. Rodné číslo musí být dělitelné jedenácti. Číslo účtu, číslo platební karty i IBAN mají vlastní kontrolní číslice. Banka díky nim pozná překlep dřív, než peníze odejdou jinam.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Zmáčkněte Udělat překlep. Model změní jednu číslici a kontrolní nechá. Výpočet přestane sedět. Pak zkoušejte Prohodit dvě číslice, dokud nenarazíte na dvojici, která projde.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-cena">
+      <div class="prose">
+        <h2 id="h-cena">Cena v kódu není</h2>
+        <p>Kód je jen číslo zboží, něco jako rodné číslo jogurtu. Pokladna ho pošle do počítače obchodu a ten k němu vyhledá název a cenu. Proto může tentýž výrobek stát v každém obchodě jinak a zlevnit se dá bez přelepování.</p>
+        <p>První tři číslice říkají, ve které zemi si firma kódy zaregistrovala. Česko má 859, Slovensko 858, Německo 400 až 440. O tom, kde se zboží vyrobilo, to neříká nic. Česká firma může pod kódem 859 prodávat čaj z Číny.</p>
+        <p>Některé začátky mají zvláštní význam. Čísla 978 a 979 patří knihám. Kódy začínající dvojkou si obchod tiskne sám, třeba na sáček s navážnými rohlíky, a ty jediné v sobě cenu nebo váhu opravdu mají.</p>
+      </div>
+    </section>
+
+    <section class="sec" aria-labelledby="h-historie">
+      <div class="prose">
+        <h2 id="h-historie">Morseovka v písku</h2>
+        <p>S nápadem přišel v roce 1949 Američan Norman Woodland. Seděl na pláži, přemýšlel, jak zapsat číslo, aby ho přečetl stroj, a kreslil prsty do písku tečky a čárky Morseovy abecedy. Když je protáhl dolů, měl tenké a tlusté čáry.</p>
+        <p>Trvalo čtvrt století, než se objevil laser a počítač dost levné na to, aby čtečka mohla stát u každé pokladny. První zboží s čárovým kódem prošlo pokladnou 26. června 1974 v Ohiu. Byl to balíček žvýkaček.</p>
+        <p>Mladší příbuzný čárového kódu je <a href="../qr-kod/">QR kód</a>. Místo jedné řady čar má čtverečky ve dvou směrech, a tak se do něj vejde stokrát víc.</p>
+      </div>
+    </section>
+
+    <footer class="art-foot">
+      <a class="next" href="../wifi/" data-cat="technika">
+        <span class="label">Další článek · Technika</span>
+        <span class="t">Jak funguje Wi-Fi</span>
+        <p>Jak se internet dostane vzduchem do telefonu a proč mu vadí zeď.</p>
+      </a>
+      <a class="back" href="../">Všechna témata</a>
+    </footer>
+  </main>
+
+  <script>
+  (() => {
+    const NS = "http://www.w3.org/2000/svg";
+    function el(tag, attrs, parent) {
+      const n = document.createElementNS(NS, tag);
+      for (const k in attrs || {}) n.setAttribute(k, attrs[k]);
+      if (parent) parent.appendChild(n);
+      return n;
+    }
+
+    /* ---------- kódování EAN-13 ---------- */
+    const L_CODE = ["0001101", "0011001", "0010011", "0111101", "0100011", "0110001", "0101111", "0111011", "0110111", "0001011"];
+    const R_CODE = L_CODE.map((c) => [...c].map((b) => (b === "1" ? "0" : "1")).join(""));   // pravá sada je negativ levé
+    const G_CODE = R_CODE.map((c) => [...c].reverse().join(""));                              // a třetí sada je pravá pozpátku
+    // první číslice se nekreslí: určuje, které z levých číslic použijí sadu L a které G
+    const PARITY = ["LLLLLL", "LLGLGG", "LLGGLG", "LLGGGL", "LGLLGG", "LGGLLG", "LGGGLL", "LGLGLG", "LGLGGL", "LGGLGL"];
+    function checkDigit(first12) {
+      const sum = [...first12].reduce((acc, d, i) => acc + Number(d) * (i % 2 ? 3 : 1), 0);
+      return (10 - (sum % 10)) % 10;
+    }
+    // vrací 95 modulů: { bit, part, digit } – part říká, k čemu modul patří
+    function eanModules(code13) {
+      const d = [...code13].map(Number), out = [];
+      const push = (bits, part, digit) => [...bits].forEach((b) => out.push({ bit: b === "1", part, digit }));
+      push("101", "guard", -1);
+      for (let i = 1; i <= 6; i++) { const set = PARITY[d[0]][i - 1]; push((set === "L" ? L_CODE : G_CODE)[d[i]], set, i); }
+      push("01010", "guard", -1);
+      for (let i = 7; i <= 12; i++) push(R_CODE[d[i]], "R", i);
+      push("101", "guard", -1);
+      return out;
+    }
+
+    /* ---------- stav a kresba ---------- */
+    const PREFIXES = [[0, 139, "USA a Kanada"], [200, 299, "vnitřní kód obchodu"], [300, 379, "Francie"], [400, 440, "Německo"], [450, 459, "Japonsko"], [460, 469, "Rusko"], [490, 499, "Japonsko"], [500, 509, "Velká Británie"], [540, 549, "Belgie a Lucembursko"], [590, 590, "Polsko"], [599, 599, "Maďarsko"], [690, 699, "Čína"], [730, 739, "Švédsko"], [760, 769, "Švýcarsko"], [800, 839, "Itálie"], [840, 849, "Španělsko"], [858, 858, "Slovensko"], [859, 859, "Česko"], [870, 879, "Nizozemsko"], [880, 880, "Jižní Korea"], [890, 890, "Indie"], [900, 919, "Rakousko"], [978, 979, "knihy"]];
+    // kód musí zůstat černý na bílé v obou režimech, barvy jsou proto pevné
+    const PART = { guard: "#b72155", L: "#14181e", G: "#2442c2", R: "#08754f" };
+    const M = 6, X0 = 66, TOP = 28, BOTTOM = 212;       // šířka modulu a poloha čar
+    const svg = document.getElementById("bars");
+    const $ = (id) => document.getElementById(id);
+    const s = { code: "", view: "code", pick: 12 };
+
+    function draw() {
+      const mods = eanModules(s.code), valid = Number(s.code[12]) === checkDigit(s.code.slice(0, 12));
+      svg.textContent = "";
+      el("rect", { width: 720, height: 300, fill: "#fff" }, svg);
+      mods.forEach((m, i) => {
+        if (!m.bit) return;
+        const color = s.view === "parts" ? PART[m.part] : "#000";
+        el("rect", { x: X0 + i * M, y: TOP, width: M + 0.3, height: (m.part === "guard" ? BOTTOM + 18 : BOTTOM) - TOP, fill: color }, svg);
+      });
+      // číslice pod kódem: první stojí před čarami, protože vlastní čáry nemá
+      [...s.code].forEach((d, i) => {
+        const x = i === 0 ? X0 - 26 : i <= 6 ? X0 + (3 + (i - 1) * 7 + 3.5) * M : X0 + (50 + (i - 7) * 7 + 3.5) * M;
+        const picked = i === s.pick;
+        if (picked) el("rect", { x: x - 17, y: BOTTOM + 14, width: 34, height: 42, fill: "#ffe15c" }, svg);
+        const t = el("text", { x, y: BOTTOM + 46, "text-anchor": "middle", "font-family": "IBM Plex Mono, monospace", "font-size": 30, "font-weight": 600, fill: i === 12 && !valid ? "#cc3125" : "#14181e", "data-i": i }, svg);
+        t.textContent = d;
+      });
+      // dvojice červených čar: tudy čte čtečka
+      el("line", { x1: 20, y1: 110, x2: 700, y2: 110, stroke: "#e2231a", "stroke-width": 2, opacity: s.view === "code" ? 0.55 : 0 }, svg);
+    }
+
+    function describe() {
+      const d = [...s.code].map(Number), valid = d[12] === checkDigit(s.code.slice(0, 12));
+      const prefix = Number(s.code.slice(0, 3)), land = PREFIXES.find(([a, b]) => prefix >= a && prefix <= b);
+      $("meta").innerHTML = `začátek <b>${s.code.slice(0, 3)}</b> · ${land ? land[2] : "jiná země"} · vzor levé půlky <b>${PARITY[d[0]]}</b>`;
+
+      // jedna číslice zblízka
+      const i = s.pick, zoom = $("zoom");
+      zoom.textContent = "";
+      if (i === 0) {
+        $("zoom-label").textContent = `První číslice: ${d[0]}`;
+        $("zoom-note").innerHTML = `Vlastní čáry nemá. Je zapsaná v tom, které sady používá levá půlka: <b>${PARITY[d[0]]}</b>.`;
+      } else {
+        const set = i <= 6 ? PARITY[d[0]][i - 1] : "R", bits = (set === "L" ? L_CODE : set === "G" ? G_CODE : R_CODE)[d[i]];
+        [...bits].forEach((b) => { const c = document.createElement("i"); c.textContent = b; if (b === "1") c.className = "on"; zoom.appendChild(c); });
+        $("zoom-label").textContent = `${i + 1}. číslice: ${d[i]}${i === 12 ? " (kontrolní)" : ""}`;
+        $("zoom-note").innerHTML = `Sada <b>${set}</b>, sedm modulů <b>${bits}</b>.`;
+      }
+
+      // výpočet kontrolní číslice
+      const terms = d.slice(0, 12).map((v, k) => (k % 2 ? `<span class="x3">${v}·3</span>` : `${v}`));
+      const sum = d.slice(0, 12).reduce((a, v, k) => a + v * (k % 2 ? 3 : 1), 0), need = checkDigit(s.code.slice(0, 12));
+      $("sum").innerHTML = `${terms.join(" + ")} = <b>${sum}</b><br>do nejbližší desítky chybí <b>${need}</b> · v kódu je <b>${d[12]}</b> ${valid ? "✓" : "✗"}`;
+
+      $("status").classList.toggle("bad", !valid);
+      $("status").innerHTML = valid
+        ? (s.note || "<strong>Kód je v pořádku.</strong> Kontrolní číslice odpovídá ostatním dvanácti. Pokladna pípne a pošle číslo do počítače, který k němu najde název a cenu.")
+        : (s.note || "<strong>Kontrolní číslice nesedí.</strong> Některá číslice je jinak, než má být. Čtečka takový kód odmítne a nepípne.");
+      $("keys").hidden = s.view !== "parts";
+    }
+    function show(note) { s.note = note || ""; draw(); describe(); }
+
+    function fromInput() {
+      const digits = $("code").value.replace(/\D/g, ""), warn = $("warn");
+      if (digits.length !== 12 && digits.length !== 13) {
+        warn.hidden = false;
+        warn.textContent = `Zadejte 12 nebo 13 číslic. Teď jich je ${digits.length}.`;
+        return;
+      }
+      warn.hidden = true;
+      s.code = digits.length === 12 ? digits + checkDigit(digits) : digits;
+      show();
+    }
+
+    /* ---------- ovládání ---------- */
+    $("code").addEventListener("input", fromInput);
+    const seg = $("view-seg");
+    seg.addEventListener("click", (e) => {
+      const b = e.target.closest("button[data-v]");
+      if (!b) return;
+      seg.querySelectorAll("button").forEach((x) => x.setAttribute("aria-checked", String(x === b)));
+      s.view = b.dataset.v;
+      show(s.note);
+    });
+    svg.addEventListener("click", (e) => {
+      const i = e.target.getAttribute && e.target.getAttribute("data-i");
+      if (i !== null && i !== undefined) { s.pick = Number(i); show(s.note); }
+    });
+    const setCode = (digits, note) => { s.code = digits.join(""); $("code").value = s.code; $("warn").hidden = true; show(note); };
+    $("typo").addEventListener("click", () => {
+      const d = [...s.code], i = Math.floor(Math.random() * 12);
+      let n;
+      do { n = String(Math.floor(Math.random() * 10)); } while (n === d[i]);
+      const was = d[i];
+      d[i] = n;
+      s.pick = i;
+      setCode(d, `<strong>Překlep odhalen.</strong> Na ${i + 1}. místě je ${n} místo ${was}. Součet se změnil, kontrolní číslice přestala sedět a čtečka kód odmítne. Takhle se pozná každá změna jedné číslice.`);
+    });
+    $("swap").addEventListener("click", () => {
+      const d = [...s.code], spots = [];
+      for (let i = 0; i < 11; i++) if (d[i] !== d[i + 1]) spots.push(i);
+      if (!spots.length) return;
+      const i = spots[Math.floor(Math.random() * spots.length)];
+      [d[i], d[i + 1]] = [d[i + 1], d[i]];
+      s.pick = i;
+      const ok = Number(d[12]) === checkDigit(d.slice(0, 12).join(""));
+      setCode(d, ok
+        ? `<strong>Tohle prošlo.</strong> Prohozené číslice ${d[i + 1]} a ${d[i]} se liší přesně o pět. Součet se změnil o násobek deseti a kontrolní číslice si ničeho nevšimla. Je to jediný druh prohození, který unikne.`
+        : `<strong>Prohození odhaleno.</strong> Číslice ${d[i + 1]} a ${d[i]} si vyměnily místo. Jedna se teď násobí třemi a druhá ne, součet vyšel jinak a kontrolní číslice nesedí.`);
+    });
+    $("fix").addEventListener("click", () => { const base = s.code.slice(0, 12); setCode([...(base + checkDigit(base))]); });
+
+    fromInput();
+  })();
+  </script>
+</body>
+</html>

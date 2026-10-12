@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Jak funguje diferenciál</title>
+  <meta name="description" content="Proč se kola auta v zatáčce musejí točit různě rychle, jak to zařídí čtyři ozubená kolečka a proč auto s jedním kolem na ledu stojí. S nápravou, kterou si můžete projet zatáčku.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700&display=swap">
+  <link rel="stylesheet" href="../style.css?v=5">
+  <style>
+    .track { fill: none; stroke: var(--ink-3); stroke-width: 2; stroke-dasharray: 6 6; }
+    .track.long { stroke: var(--cat); stroke-width: 2.6; }
+    .ice { fill: var(--cool); opacity: 0.45; }
+    .car { fill: var(--sunk); stroke: var(--metal-line); stroke-width: 1.6; }
+    .axle { stroke: var(--metal-line); stroke-width: 6; stroke-linecap: round; }
+    .tyre { fill: var(--ink); }
+    .tread { stroke: var(--surface); stroke-width: 2.4; opacity: 0.85; }
+    .skid { stroke: var(--bad); stroke-width: 3; stroke-linecap: round; }
+    .box { fill: var(--surface); stroke: var(--metal-line); stroke-width: 1.6; }
+    .gear { fill: var(--steel); stroke: var(--metal-line); stroke-width: 1.6; stroke-linejoin: round; }
+    .gear.sat { fill: var(--pin-key); }
+    .gear.ring { fill: var(--pin-top); }
+    .tooth { stroke: var(--metal-line); stroke-width: 2; }
+    .shaft { fill: var(--steel-hatch); stroke: var(--metal-line); stroke-width: 1.4; }
+    .cage { fill: none; stroke: var(--cat); stroke-width: 4; stroke-linejoin: round; }
+    .lock { stroke: var(--bad); stroke-width: 7; stroke-linecap: round; }
+    .rpm { fill: var(--ink); font: 700 15px var(--font-mono); text-anchor: middle; font-variant-numeric: tabular-nums; }
+    .cap { fill: var(--ink-3); font: 500 11px var(--font-mono); letter-spacing: 0.08em; }
+    @media (max-width: 46rem) { .rpm { font-size: 22px; } .cap { display: none; } }
+  </style>
+</head>
+<body data-cat="doprava">
+  <header class="topbar">
+    <div class="wrap">
+      <a class="brand" href="../">Jak věci fungují</a>
+      <nav class="crumbs" aria-label="Drobečková navigace"><a href="../#doprava">Doprava</a><span aria-hidden="true">/</span><span>Diferenciál</span></nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <header class="art-head">
+      <p class="eyebrow">Doprava</p>
+      <h1 class="display">Jak funguje diferenciál</h1>
+      <p class="lede">V zatáčce musí vnější kolo auta ujet delší cestu než vnitřní. Motor je přitom jeden a pohání obě. Mezi koly proto sedí čtveřice ozubených koleček, která otáčky rozdělí tak, jak si každé kolo řekne.</p>
+    </header>
+
+    <section class="tldr" aria-labelledby="h-zkratka">
+      <h2 class="label" id="h-zkratka">Ve zkratce</h2>
+      <ul>
+        <li>Kola na jedné nápravě jedou v zatáčce po různě dlouhých obloucích. Kdyby byla napevno spojená, jedno by muselo smýkat.</li>
+        <li>Diferenciál dovolí, aby se jedno kolo točilo rychleji a druhé o stejný kus pomaleji. <span class="hl">Jejich průměr zůstává stejný.</span></li>
+        <li>Má jednu slabinu: sílu dává oběma kolům stejnou. Když jedno kolo nemá o co zabrat, nedostane sílu ani to druhé.</li>
+      </ul>
+    </section>
+
+    <figure class="fig" id="obr1">
+      <div class="fig-head">
+        <p class="fig-num"><b>Obr. 1</b> Hnaná náprava shora a diferenciál v řezu</p>
+        <span class="label">Zatočte a sledujte satelity uprostřed</span>
+      </div>
+      <div class="fig-stage">
+        <svg id="diff" viewBox="0 0 940 440" role="img" aria-label="Vlevo auto shora se stopami kol v zatáčce, vpravo řez diferenciálem s ozubenými koly"></svg>
+      </div>
+      <div class="fig-controls">
+        <div class="ctl ctl-grow">
+          <label class="label" for="turn">Volant</label>
+          <div class="ctl-row">
+            <input type="range" id="turn" min="-100" max="100" step="5" value="55">
+            <output class="val" id="turn-val" for="turn"></output>
+          </div>
+        </div>
+        <div class="ctl">
+          <span class="label" id="lbl-road">Pod koly</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-road" id="road-seg">
+            <button type="button" role="radio" data-v="dry" aria-checked="true">Asfalt</button>
+            <button type="button" role="radio" data-v="ice" aria-checked="false">Levé kolo na ledu</button>
+          </div>
+        </div>
+        <div class="ctl">
+          <span class="label" id="lbl-lock">Diferenciál</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-lock" id="lock-seg">
+            <button type="button" role="radio" data-v="0" aria-checked="true">Volný</button>
+            <button type="button" role="radio" data-v="1" aria-checked="false">S uzávěrkou</button>
+          </div>
+        </div>
+      </div>
+      <div class="fig-status split">
+        <p class="status" id="status" aria-live="polite"></p>
+        <ul class="stats" aria-label="Stav modelu">
+          <li><span class="n">Levé kolo</span><span class="v" id="st-left"></span></li>
+          <li><span class="n">Pravé kolo</span><span class="v" id="st-right"></span></li>
+          <li><span class="n">Auto jede</span><span class="v" id="st-car"></span></li>
+        </ul>
+      </div>
+      <figcaption class="fig-caption">Vlevo je auto shora, kamera jede s ním. Pruhy na pneumatikách běží tak rychle, jak se kolo točí. Vpravo je diferenciál rozříznutý svisle: čárky na kolech jsou zuby a ukazují, jak rychle se které kolo otáčí. Žlutá kolečka jsou satelity. Pohyb je zpomalený.</figcaption>
+    </figure>
+
+    <section class="sec" aria-labelledby="h-zatacka">
+      <div class="prose">
+        <h2 id="h-zatacka">Dva oblouky, jedna náprava</h2>
+        <p>Projeďte se v duchu kolem kruhového objezdu. Kola na vnitřní straně opisují menší kruh, kola na vnější větší. Auto je široké metr a půl, a tak vnější kolo při každém obkroužení ujede skoro o deset metrů víc.</p>
+        <p>Za stejnou dobu delší cesta, to znamená, že vnější kolo se musí točit rychleji. Kolům, která motor nepohání, je to jedno. Každé sedí na vlastním ložisku a točí se, jak potřebuje.</p>
+        <p>Hnaná kola to tak snadno nemají. Musejí být obě spojená s motorem. Kdyby je spojovala jedna pevná tyč, točila by se obě stejně a v každé zatáčce by jedno z nich muselo po silnici smýkat. Auto by se bránilo zatáčení, pneumatiky by se dřely a na mokru by to bylo o ústa. Motokáry to tak mají a je to na nich znát.</p>
+      </div>
+      <aside class="note" aria-label="Diferenciál v číslech">
+        <span class="label">V číslech</span>
+        <dl class="facts">
+          <div><dt>4</dt><dd>ozubená kolečka uvnitř klece</dd></div>
+          <div><dt>1827</dt><dd>patent francouzského hodináře Pecqueura</dd></div>
+          <div><dt>3</dt><dd>diferenciály má auto s pohonem všech kol</dd></div>
+        </dl>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-uvnitr">
+      <div class="prose">
+        <h2 id="h-uvnitr">Co je v té kouli na nápravě</h2>
+        <p>Hřídel od motoru končí malým ozubeným kolem, pastorkem. Ten otáčí velkým talířovým kolem, které je přišroubované ke kleci. Klec se tedy točí tak rychle, jak motor poručí.</p>
+        <p>Ke kolům auta ale klec napevno připojená není. Každé kolo má svou poloosu a ta končí uvnitř klece vlastním kuželovým kolem. Mezi těmi dvěma jsou vložená malá kolečka, satelity. Sedí na čepu, který je zasazený do klece, a zabírají do obou poloos najednou.</p>
+        <p>Když auto jede rovně, satelity se na svém čepu neotáčejí. Klec je unáší dokola a ony jako klíny tlačí na obě poloosy stejně. Celé soukolí se točí jako jeden kus.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Dejte volant doprostřed. Čárky na žlutých satelitech stojí, všechno ostatní běží stejně rychle. Pak zatočte. Satelity se roztočí a čárky na levé a pravé poloose se rozejdou.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-deleni">
+      <div class="prose">
+        <h2 id="h-deleni">Jak se otáčky rozdělí</h2>
+        <p>V zatáčce začne vnitřní kolo brzdit, silnice mu nedovolí točit se tak rychle jako vnějšímu. Jeho poloosa se proti kleci opozdí. Satelit, který do ní zabírá, se o ni opře a začne se na svém čepu odvalovat.</p>
+        <p>Odvalující se satelit ale zabírá i do druhé poloosy, a tu tím postrčí dopředu. O kolik se jedna poloosa opozdí, o tolik druhá přidá. <span class="hl">Klec se přitom točí pořád stejně, přesně uprostřed mezi nimi.</span></p>
+        <p>Nikdo nic neřídí. Kola si otáčky rozdělí sama podle toho, jak je silnice nutí, a motor to nepozná.</p>
+      </div>
+    </section>
+
+    <section class="sec" aria-labelledby="h-led">
+      <div class="prose">
+        <h2 id="h-led">Proč auto s jedním kolem na ledu stojí</h2>
+        <p>Stejná vlastnost, která pomáhá v zatáčce, zrazuje na ledu. Satelit tlačí na obě poloosy stejnou silou. Vždycky. Nemůže na jednu tlačit víc než na druhou, protože se o tu druhou opírá.</p>
+        <p>Když jedno kolo stojí na ledu, nemá o co zabrat a protočí se skoro bez odporu. Satelit se o jeho poloosu nemá jak opřít, a tak na druhou poloosu netlačí taky skoro vůbec. Kolo na asfaltu, které by auto utáhlo, nedostane žádnou sílu a stojí. Kolo na ledu se točí dvakrát rychleji než klec.</p>
+        <p>Platí to i pro kolo ve vzduchu nebo v blátě. Diferenciál pošle všechny otáčky tam, kde je to nejsnazší, a to je přesně tam, kde jsou k ničemu.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Dejte levé kolo na led. Točí se jako splašené, pravé stojí a auto se nehne. Pak zapněte uzávěrku.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-uzaverka">
+      <div class="prose">
+        <h2 id="h-uzaverka">Tři způsoby, jak to spravit</h2>
+        <p>Uzávěrka diferenciálu je kolík nebo zubová spojka, která klec spojí napevno s jednou poloosou. Satelity se pak nemohou odvalovat a obě kola se točí stejně, ať jsou na čemkoli. Mají ji traktory a terénní auta. Na pevné silnici se musí vypnout, protože auto s ní zase neumí zatáčet.</p>
+        <p>Samosvorný diferenciál je kompromis. Má uvnitř lamely nebo šneková kola, která odvalování satelitů brzdí. Malý rozdíl otáček v zatáčce dovolí, velké protáčení jednoho kola ne. Bývá ve sportovních autech.</p>
+        <p>Většina dnešních aut to řeší elektronikou. Diferenciál mají obyčejný, ale když čidla <a href="../abs/">ABS</a> zjistí, že se jedno kolo protáčí, přibrzdí ho. Brzda nahradí odpor, který kolu na ledu chybí. Satelit se má o co opřít a pošle sílu na druhou stranu.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Vraťte se na asfalt, nechte uzávěrku zapnutou a zatočte. Obě kola se točí stejně, i když jedou po různě dlouhých obloucích, a vnitřní kolo smýká.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-vice">
+      <div class="prose">
+        <h2 id="h-vice">Kolik jich auto potřebuje</h2>
+        <p>Auto s pohonem jedné nápravy má diferenciál jeden. Auto s pohonem všech čtyř kol potřebuje tři: jeden vpředu, jeden vzadu a třetí mezi nápravami, protože přední kola jedou v zatáčce po jiném oblouku než zadní.</p>
+        <p>Elektromobily se dvěma motory na jedné nápravě diferenciál nepotřebují vůbec. Každé kolo má svůj motor a počítač mu řekne, jak rychle se má točit. Umí to i naopak: v zatáčce pošle víc síly na vnější kolo a auto do ní vtáhne.</p>
+      </div>
+    </section>
+
+    <footer class="art-foot">
+      <a class="next" href="../motor/" data-cat="doprava">
+        <span class="label">Další článek · Doprava</span>
+        <span class="t">Jak funguje čtyřdobý motor</span>
+        <p>Co se děje ve válci během dvou otáček a čím se liší benzín od nafty.</p>
+      </a>
+      <a class="back" href="../">Všechna témata</a>
+    </footer>
+  </main>
+
+  <script>
+  (() => {
+    const NS = "http://www.w3.org/2000/svg";
+    function el(tag, attrs, parent) {
+      const n = document.createElementNS(NS, tag);
+      for (const k in attrs || {}) n.setAttribute(k, attrs[k]);
+      if (parent) parent.appendChild(n);
+      return n;
+    }
+    const svg = document.getElementById("diff");
+
+    /* ---------- model ---------- */
+    const TRACK = 1.5, WHEEL_R = 0.3;          // rozchod kol a poloměr kola v metrech
+    const SPEED = 20 / 3.6;                    // rychlost, o kterou se motor snaží, m/s
+    const s = { turn: 55, road: "dry", lock: false };
+    const toRpm = (v) => (v / WHEEL_R / (2 * Math.PI)) * 60;
+
+    function solve() {
+      const kappa = (s.turn / 100) / 4;                       // křivost zatáčky, nejmenší poloměr 4 m; kladná = doprava
+      const cage = SPEED;                                      // klec se točí podle motoru
+      if (s.road === "ice") {
+        // volný diferenciál: kolo na ledu vezme všechny otáčky, druhé stojí
+        return s.lock ? { left: cage, right: cage, car: cage, cage, kappa: 0, slip: "" } : { left: 2 * cage, right: 0, car: 0, cage, kappa: 0, slip: "" };
+      }
+      const want = { left: cage * (1 + (kappa * TRACK) / 2), right: cage * (1 - (kappa * TRACK) / 2) };
+      if (s.lock) return { left: cage, right: cage, car: cage, cage, kappa, slip: Math.abs(kappa) < 0.01 ? "" : kappa > 0 ? "right" : "left", want };
+      return { ...want, car: cage, cage, kappa, slip: "" };
+    }
+
+    /* ---------- auto shora ---------- */
+    const CX = 235, AY = 300, PX = 100;        // střed zadní nápravy a měřítko: 100 jednotek = 1 m
+    el("clipPath", { id: "left-clip" }, svg).appendChild(el("rect", { x: 0, y: 0, width: 470, height: 440 }));
+    const roadG = el("g", { "clip-path": "url(#left-clip)" }, svg);
+    const ice = el("rect", { x: CX - 132, y: 60, width: 114, height: 330, rx: 24, class: "ice" }, roadG);
+    const tracks = [el("path", { class: "track" }, roadG), el("path", { class: "track" }, roadG)];
+    const skids = el("g", {}, roadG);
+    el("rect", { x: CX - 62, y: 110, width: 124, height: 236, rx: 26, class: "car" }, svg);
+    el("line", { x1: CX - 75, y1: AY, x2: CX + 75, y2: AY, class: "axle" }, svg);
+    el("circle", { cx: CX, cy: AY, r: 17, class: "box" }, svg);
+    const front = [-1, 1].map((side) => el("rect", { x: CX + side * 75 - 9, y: 135, width: 18, height: 44, rx: 5, class: "tyre" }, svg));
+    const wheels = [-1, 1].map((side) => {
+      const x = CX + side * 75;
+      el("rect", { x: x - 12, y: AY - 28, width: 24, height: 56, rx: 6, class: "tyre" }, svg);
+      const clip = el("clipPath", { id: `w${side}` }, svg);
+      el("rect", { x: x - 12, y: AY - 28, width: 24, height: 56, rx: 6 }, clip);
+      const g = el("g", { "clip-path": `url(#w${side})` }, svg);
+      return { lines: [0, 1, 2, 3, 4, 5].map(() => el("line", { x1: x - 12, x2: x + 12, class: "tread" }, g)), y0: AY - 28, phase: 0 };
+    });
+    el("text", { x: 20, y: 28, class: "cap" }, svg).textContent = "NÁPRAVA SHORA";
+
+    /* ---------- řez diferenciálem ---------- */
+    const MX = 705, MY = 228;                  // střed soukolí
+    el("text", { x: 500, y: 28, class: "cap" }, svg).textContent = "DIFERENCIÁL V ŘEZU";
+    // poloosy
+    el("rect", { x: 500, y: MY - 10, width: 132, height: 20, class: "shaft" }, svg);
+    el("rect", { x: 778, y: MY - 10, width: 142, height: 20, class: "shaft" }, svg);
+    // pastorek a talířové kolo
+    el("rect", { x: 560, y: 60, width: 22, height: 56, class: "shaft" }, svg);
+    el("path", { d: "M548 116 H594 L604 150 H538 Z", class: "gear" }, svg);
+    el("rect", { x: 596, y: 150, width: 18, height: 190, class: "gear ring" }, svg);
+    el("path", { d: `M614 ${MY - 86} H796 V${MY + 86} H614 Z`, class: "cage" }, svg);
+    // kuželová kola poloos a satelity
+    el("path", { d: `M632 ${MY - 52} L672 ${MY - 26} V${MY + 26} L632 ${MY + 52} Z`, class: "gear" }, svg);
+    el("path", { d: `M778 ${MY - 52} L738 ${MY - 26} V${MY + 26} L778 ${MY + 52} Z`, class: "gear" }, svg);
+    el("path", { d: `M${MX - 52} ${MY - 78} H${MX + 52} L${MX + 26} ${MY - 38} H${MX - 26} Z`, class: "gear sat" }, svg);
+    el("path", { d: `M${MX - 52} ${MY + 78} H${MX + 52} L${MX + 26} ${MY + 38} H${MX - 26} Z`, class: "gear sat" }, svg);
+    const lockBar = el("line", { x1: 620, y1: MY - 70, x2: 650, y2: MY - 40, class: "lock" }, svg);
+
+    // zuby jako čárky, které ubíhají: vodorovné u kol na vodorovné ose, svislé u satelitů
+    function teeth(id, x, y, w, h, vertical) {
+      const clip = el("clipPath", { id }, svg);
+      el("rect", { x, y, width: w, height: h }, clip);
+      const g = el("g", { "clip-path": `url(#${id})` }, svg);
+      const n = Math.ceil((vertical ? w : h) / 12) + 2;
+      const lines = Array.from({ length: n }, () => el("line", { class: "tooth" }, g));
+      return { lines, x, y, w, h, vertical, phase: 0 };
+    }
+    const T = {
+      left: [teeth("t-ls", 504, MY - 9, 124, 18, false), teeth("t-lg", 640, MY - 24, 28, 48, false)],
+      right: [teeth("t-rs", 782, MY - 9, 134, 18, false), teeth("t-rg", 742, MY - 24, 28, 48, false)],
+      cage: [teeth("t-ring", 598, 154, 14, 182, false)],
+      sat: [teeth("t-s1", MX - 24, MY - 74, 48, 32, true), teeth("t-s2", MX - 24, MY + 42, 48, 32, true)],
+    };
+    function drawTeeth(t) {
+      const off = ((t.phase % 12) + 12) % 12;
+      t.lines.forEach((ln, k) => {
+        const p = -12 + off + k * 12;
+        if (t.vertical) { ln.setAttribute("x1", t.x + p); ln.setAttribute("x2", t.x + p); ln.setAttribute("y1", t.y); ln.setAttribute("y2", t.y + t.h); }
+        else { ln.setAttribute("x1", t.x); ln.setAttribute("x2", t.x + t.w); ln.setAttribute("y1", t.y + p); ln.setAttribute("y2", t.y + p); }
+      });
+    }
+    const rpmL = el("text", { x: 566, y: MY + 44, class: "rpm" }, svg), rpmR = el("text", { x: 848, y: MY + 44, class: "rpm" }, svg), rpmC = el("text", { x: MX, y: MY + 118, class: "rpm" }, svg);
+
+    function callout(label, tx, ty, anchor, x, y) {
+      const g = el("g", { class: "callout" }, svg);
+      el("line", { x1: anchor === "end" ? tx + 6 : tx - 6, y1: ty, x2: x, y2: y }, g);
+      el("circle", { cx: x, cy: y, r: 2.2 }, g);
+      el("text", { x: tx, y: ty + 4, "text-anchor": anchor }, g).textContent = label;
+    }
+    callout("od motoru", 540, 70, "end", 560, 80);
+    callout("talířové kolo", 548, 396, "start", 604, 336);
+    callout("klec", 830, 110, "start", 796, 150);
+    callout("satelit", 830, 136, "start", MX + 30, MY - 62);
+    callout("levá poloosa", 500, 190, "start", 540, MY - 10);
+    callout("pravá poloosa", 826, 190, "start", 880, MY - 10);
+
+    /* ---------- výpis ---------- */
+    const fmt0 = new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 0 });
+    const $ = (id) => document.getElementById(id);
+    const cache = new WeakMap();
+    function put(node, str, html) {
+      if (cache.get(node) === str) return;
+      cache.set(node, str);
+      if (html) node.innerHTML = str; else node.textContent = str;
+    }
+
+    function render(o) {
+      // stopy zadních kol: v zatáčce dva oblouky se společným středem
+      const R = Math.abs(o.kappa) > 0.002 ? PX / o.kappa : 0;
+      [-1, 1].forEach((side, i) => {
+        const x = CX + side * 75;
+        if (!R) tracks[i].setAttribute("d", `M${x} 440 V0`);
+        else {
+          const cx = CX + R, r = Math.abs(cx - x);
+          tracks[i].setAttribute("d", `M${cx - r} ${AY} A${r} ${r} 0 1 1 ${cx + r} ${AY} A${r} ${r} 0 1 1 ${cx - r} ${AY}`);
+        }
+        const longer = R && (side > 0) === (o.kappa < 0);
+        tracks[i].setAttribute("class", longer ? "track long" : "track");
+        front[i].setAttribute("transform", `rotate(${(Math.atan(o.kappa * 2.6) * 180) / Math.PI} ${x} 157)`);
+      });
+      ice.setAttribute("visibility", s.road === "ice" ? "visible" : "hidden");
+      skids.textContent = "";
+      if (o.slip) {
+        const x = CX + (o.slip === "left" ? -75 : 75);
+        [-9, 0, 9].forEach((dx) => el("line", { x1: x + dx, y1: AY + 34, x2: x + dx, y2: AY + 86, class: "skid" }, skids));
+      }
+      lockBar.setAttribute("visibility", s.lock ? "visible" : "hidden");
+
+      put(rpmL, `${fmt0.format(Math.round(toRpm(o.left)))} ot/min`);
+      put(rpmR, `${fmt0.format(Math.round(toRpm(o.right)))} ot/min`);
+      put(rpmC, `klec ${fmt0.format(Math.round(toRpm(o.cage)))} ot/min`);
+      put($("st-left"), `${fmt0.format(Math.round(toRpm(o.left)))}/min`);
+      put($("st-right"), `${fmt0.format(Math.round(toRpm(o.right)))}/min`);
+      put($("st-car"), o.car > 0.1 ? `${fmt0.format(Math.round(o.car * 3.6))} km/h` : "stojí");
+      put($("turn-val"), Math.abs(s.turn) < 3 ? "rovně" : s.turn > 0 ? "doprava" : "doleva");
+
+      let status;
+      if (s.road === "ice" && !s.lock) {
+        status = "<strong>Levé kolo se protáčí, auto stojí.</strong> Kolo na ledu neklade odpor, takže satelity se o jeho poloosu nemají jak opřít a na pravou netlačí skoro vůbec. Všechny otáčky tečou tam, kde nejsou k ničemu.";
+      } else if (s.road === "ice") {
+        status = "<strong>Uzávěrka drží, auto jede.</strong> Klec je spojená s poloosou napevno, satelity se nemohou odvalovat a obě kola se točí stejně. Pravé kolo na asfaltu auto utáhne.";
+      } else if (s.lock && o.slip) {
+        status = `<strong>Uzávěrka v zatáčce: ${o.slip === "left" ? "levé" : "pravé"} kolo smýká.</strong> Obě kola se točí stejně, i když jedou po různě dlouhých obloucích. Vnitřní kolo se točí rychleji, než kolik ujede, a dře o silnici.`;
+      } else if (s.lock) {
+        status = "<strong>Uzávěrka rovně nevadí.</strong> Kola by se točila stejně i bez ní.";
+      } else if (Math.abs(o.kappa) < 0.01) {
+        status = "<strong>Rovně.</strong> Obě kola se točí stejně rychle jako klec. Satelity se na svém čepu neotáčejí a celé soukolí se točí jako jeden kus.";
+      } else {
+        const pct = Math.round((Math.max(o.left, o.right) / Math.min(o.left, o.right) - 1) * 100);
+        status = `<strong>Zatáčka ${o.kappa > 0 ? "doprava" : "doleva"}.</strong> Vnější kolo jede po delším oblouku a točí se o ${pct} % rychleji než vnitřní. Satelity se odvalují: co jedné poloose uberou, to druhé přidají. Klec se točí pořád stejně.`;
+      }
+      put($("status"), status, true);
+    }
+
+    /* ---------- ovládání ---------- */
+    $("turn").addEventListener("input", (e) => { s.turn = Number(e.target.value); });
+    function bindSeg(id, apply) {
+      const seg = $(id);
+      seg.addEventListener("click", (e) => {
+        const b = e.target.closest("button[data-v]");
+        if (!b) return;
+        seg.querySelectorAll("button").forEach((x) => x.setAttribute("aria-checked", String(x === b)));
+        apply(b.dataset.v);
+      });
+    }
+    bindSeg("road-seg", (v) => { s.road = v; $("turn").disabled = v === "ice"; });
+    bindSeg("lock-seg", (v) => { s.lock = v === "1"; });
+
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const SLOW = 14;                            // jednotek SVG za sekundu na 1 m/s
+    let prev = performance.now();
+    function frame(now) {
+      const dt = Math.min(0.1, (now - prev) / 1000);
+      prev = now;
+      const o = solve();
+      if (!reduced) {
+        const speeds = { left: o.left, right: o.right, cage: o.cage, sat: (o.left - o.right) / 2 };
+        Object.keys(T).forEach((k) => T[k].forEach((t) => { t.phase += speeds[k] * SLOW * dt; }));
+        wheels[0].phase += o.left * SLOW * dt; wheels[1].phase += o.right * SLOW * dt;
+      }
+      Object.keys(T).forEach((k) => T[k].forEach(drawTeeth));
+      wheels.forEach((w) => {
+        const off = ((w.phase % 12) + 12) % 12;
+        w.lines.forEach((ln, k) => { const y = w.y0 - 12 + off + k * 12; ln.setAttribute("y1", y); ln.setAttribute("y2", y); });
+      });
+      render(o);
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+    render(solve());
+  })();
+  </script>
+</body>
+</html>

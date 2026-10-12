@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Jak funguje čtyřdobý motor</title>
+  <meta name="description" content="Co se děje ve válci během dvou otáček klikové hřídele, k čemu jsou ventily a svíčka a čím se liší benzín od nafty. S válcem, který si můžete krokovat po taktech.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700&display=swap">
+  <link rel="stylesheet" href="../style.css?v=5">
+  <style>
+    .eng-stage { display: grid; gap: 1rem; grid-template-columns: minmax(0, 1fr); align-items: center; }
+    .side { display: grid; gap: 0.35rem; margin: 0; justify-self: center; width: min(17rem, 80%); }
+    .side svg { border: 1px solid var(--rule); background: var(--surface); }
+    .side .label { text-align: center; }
+    @media (min-width: 60rem) {
+      .eng-stage { grid-template-columns: minmax(0, 1fr) 17rem; }
+      .side { width: 100%; }
+    }
+    .block { fill: url(#hatch-block); }
+    .block-bg { fill: var(--steel); }
+    .block-ln { stroke: var(--steel-hatch); stroke-width: 1.2; }
+    .edge { fill: none; stroke: var(--metal-line); stroke-width: 1.6; stroke-linejoin: round; }
+    .bore { fill: var(--surface); }
+    .piston { fill: var(--pin-top); stroke: var(--metal-line); stroke-width: 1.6; }
+    .ring { stroke: var(--metal-line); stroke-width: 2; }
+    .rod { stroke: var(--metal-line); stroke-width: 12; stroke-linecap: round; }
+    .crank { fill: var(--steel); stroke: var(--metal-line); stroke-width: 1.6; }
+    .crank-arm { stroke: var(--ink); stroke-width: 16; stroke-linecap: round; }
+    .pin { fill: var(--surface); stroke: var(--metal-line); stroke-width: 1.6; }
+    .valve { fill: var(--ink); stroke: var(--metal-line); stroke-width: 1; }
+    .cam { fill: var(--pin-key); stroke: var(--metal-line); stroke-width: 1.4; }
+    .plug { fill: var(--surface); stroke: var(--metal-line); stroke-width: 1.4; }
+    .spark { fill: #ffd84a; stroke: var(--hot); stroke-width: 1.5; }
+    .flowarrow line { stroke-width: 4; stroke-linecap: round; }
+    .flowarrow.in line { stroke: var(--cold); } .flowarrow.in path { fill: var(--cold); }
+    .flowarrow.out line { stroke: var(--ink-3); } .flowarrow.out path { fill: var(--ink-3); }
+    .big { fill: var(--ink); font: 800 30px var(--font-display); font-stretch: 112%; }
+    .cap { fill: var(--ink-3); font: 500 11px var(--font-mono); letter-spacing: 0.08em; }
+    .c-axis { stroke: var(--ink-3); stroke-width: 1; }
+    .c-band { fill: var(--ink); opacity: 0.05; }
+    .c-line { fill: none; stroke: var(--cat); stroke-width: 2.4; stroke-linejoin: round; }
+    .c-dot { fill: var(--cat); stroke: var(--surface); stroke-width: 1.5; }
+    .c-text { fill: var(--ink-2); font: 500 10.5px var(--font-mono); text-anchor: middle; }
+    @media (max-width: 46rem) { .big { font-size: 26px; } }
+  </style>
+</head>
+<body data-cat="doprava">
+  <header class="topbar">
+    <div class="wrap">
+      <a class="brand" href="../">Jak věci fungují</a>
+      <nav class="crumbs" aria-label="Drobečková navigace"><a href="../#doprava">Doprava</a><span aria-hidden="true">/</span><span>Čtyřdobý motor</span></nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <header class="art-head">
+      <p class="eyebrow">Doprava</p>
+      <h1 class="display">Jak funguje čtyřdobý motor</h1>
+      <p class="lede">Motor auta je řada malých výbuchů. Každý válec nasaje trochu vzduchu s palivem, zmáčkne ji, zapálí a zplodiny vyfoukne ven. Trvá mu to dvě otáčky a pracuje z nich jen čtvrtinu času. Zbytek se veze setrvačností.</p>
+    </header>
+
+    <section class="tldr" aria-labelledby="h-zkratka">
+      <h2 class="label" id="h-zkratka">Ve zkratce</h2>
+      <ul>
+        <li>Píst jezdí ve válci nahoru a dolů a přes ojnici otáčí klikovou hřídelí, stejně jako noha šlape na pedál kola.</li>
+        <li>Čtyři doby jsou <span class="hl">sání, stlačení, hoření a výfuk.</span> Každá je jedna cesta pístu a práci koná jen ta třetí.</li>
+        <li>Dva ventily nahoře pouštějí směs dovnitř a zplodiny ven. Otevírají se přesně podle polohy pístu.</li>
+      </ul>
+    </section>
+
+    <figure class="fig" id="obr1">
+      <div class="fig-head">
+        <p class="fig-num"><b>Obr. 1</b> Jeden válec v řezu</p>
+        <span class="label">Krokujte po taktech nebo nechte motor běžet</span>
+      </div>
+      <div class="fig-stage eng-stage">
+        <svg id="engine" viewBox="0 0 640 480" role="img" aria-label="Řez válcem: píst s ojnicí a klikovou hřídelí, nahoře dva ventily a svíčka">
+          <defs>
+            <pattern id="hatch-block" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <rect width="7" height="7" class="block-bg"/>
+              <line x1="0" y1="0" x2="0" y2="7" class="block-ln"/>
+            </pattern>
+          </defs>
+        </svg>
+        <figure class="side">
+          <svg id="chart" viewBox="0 0 240 170" role="img" aria-label="Graf tlaku ve válci během čtyř dob"></svg>
+          <span class="label">Tlak ve válci během cyklu</span>
+        </figure>
+      </div>
+      <div class="fig-controls">
+        <button type="button" class="btn" id="play" aria-pressed="false">Zastavit</button>
+        <button type="button" class="btn ghost" id="next">Další doba</button>
+        <div class="ctl ctl-grow">
+          <label class="label" for="speed">Rychlost</label>
+          <div class="ctl-row">
+            <input type="range" id="speed" min="5" max="120" step="5" value="25">
+            <output class="val" id="speed-val" for="speed"></output>
+          </div>
+        </div>
+        <div class="ctl">
+          <span class="label" id="lbl-fuel">Palivo</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-fuel" id="fuel-seg">
+            <button type="button" role="radio" data-v="petrol" aria-checked="true">Benzín</button>
+            <button type="button" role="radio" data-v="diesel" aria-checked="false">Nafta</button>
+          </div>
+        </div>
+      </div>
+      <div class="fig-status split">
+        <p class="status" id="status" aria-live="polite"></p>
+        <ul class="stats" aria-label="Stav modelu">
+          <li><span class="n">Doba</span><span class="v small" id="st-stroke"></span></li>
+          <li><span class="n">Tlak ve válci</span><span class="v" id="st-p"></span></li>
+          <li><span class="n">Teplota plynu</span><span class="v" id="st-t"></span></li>
+        </ul>
+      </div>
+      <figcaption class="fig-caption">Zjednodušený válec. Skutečný motor se točí tisíckrát až šesttisíckrát za minutu, tady jde o desítky. Tlak a teplota jsou orientační hodnoty pro plný plyn. Ventily ve skutečnosti otevírají o chvilku dřív a zavírají později, než ukazuje model.</figcaption>
+    </figure>
+
+    <section class="sec" aria-labelledby="h-klika">
+      <div class="prose">
+        <h2 id="h-klika">Z přímého pohybu otáčení</h2>
+        <p>Hoření umí jednu věc: roztáhnout plyn a něco před sebou odtlačit. Auto ale potřebuje, aby se něco točilo. Motor proto dělá totéž, co cyklista. Noha jde nahoru a dolů, a klika s pedálem z toho udělá otáčení.</p>
+        <p>Ve válci je nohou píst, kovový špalek, který těsně jezdí ve vyvrtané díře. Ojnice ho spojuje s klikovou hřídelí. Když píst sjede dolů, pootočí hřídelí o půl otáčky. Když ho hřídel vytlačí zpátky nahoru, je to druhá půlka.</p>
+        <p>Jedna cesta pístu, shora dolů nebo zdola nahoru, se nazývá doba nebo takt. Celý cyklus má čtyři, a tedy dvě otáčky hřídele.</p>
+      </div>
+      <aside class="note" aria-label="Motor v číslech">
+        <span class="label">V číslech</span>
+        <dl class="facts">
+          <div><dt>2 otáčky</dt><dd>klikové hřídele na jeden pracovní cyklus</dd></div>
+          <div><dt>25×</dt><dd>za sekundu zapálí každý válec při 3 000 otáčkách</dd></div>
+          <div><dt>≈ 2 000 °C</dt><dd>má plyn ve válci těsně po zážehu</dd></div>
+          <div><dt>30–40 %</dt><dd>energie paliva skončí na kolech</dd></div>
+        </dl>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-doby">
+      <div class="prose">
+        <h2 id="h-doby">Čtyři doby</h2>
+        <ol class="steps">
+          <li><div><b>Sání.</b> Píst jde dolů a sací ventil je otevřený. Ve válci se dělá místo a tlak okolního vzduchu do něj natlačí čerstvou směs vzduchu s benzinovou mlhou.</div></li>
+          <li><div><b>Stlačení.</b> Oba ventily jsou zavřené a píst jde nahoru. Směs zmáčkne na desetinu původního objemu. Stlačený plyn se zahřeje na několik set stupňů a po zapálení hoří mnohem prudčeji než volně.</div></li>
+          <li><div><b>Hoření.</b> Těsně před horní polohou přeskočí na svíčce jiskra. Směs shoří za pár tisícin sekundy, teplota vyletí ke dvěma tisícům stupňů a tlak na desítky atmosfér. Plyn tlačí píst dolů. Tohle je jediná doba, která dává sílu.</div></li>
+          <li><div><b>Výfuk.</b> Otevře se výfukový ventil a píst cestou nahoru vytlačí spálené plyny ven. Nahoře se výfukový ventil zavře, sací otevře a jede se znovu.</div></li>
+        </ol>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Zastavte motor a mačkejte Další doba. U každé si všimněte, který ventil je otevřený a kterým směrem jde píst. Pak sledujte graf tlaku: tři doby se drží u dna a třetí vystřelí.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-setrvacnik">
+      <div class="prose">
+        <h2 id="h-setrvacnik">Kdo motor táhne zbylé tři doby</h2>
+        <p>Když sílu dává jen jedna doba ze čtyř, musí píst během ostatních tří něco pohánět. Stlačit směs dokonce stojí dost práce.</p>
+        <p>Na konci klikové hřídele je proto těžký kotouč, setrvačník. Při hoření se roztočí a pak svou setrvačností protáhne motor zbytkem cyklu. Sekačka s jedním válcem na něj spoléhá úplně.</p>
+        <p>Auta mají válců víc, nejčastěji čtyři, a jejich doby jsou proti sobě posunuté. Vždycky některý z nich zrovna pracuje. <span class="hl">Při čtyřech válcích přijde jeden zážeh každou půlotáčku,</span> a motor běží tím klidněji, čím víc válců má.</p>
+      </div>
+    </section>
+
+    <section class="sec" aria-labelledby="h-ventily">
+      <div class="prose">
+        <h2 id="h-ventily">Kdo otevírá ventily</h2>
+        <p>Ventily vypadají jako hřebíky s velkou plochou hlavou. Pružina je drží zavřené. Otevírá je vačka, kolečko s hrbem na otáčející se hřídeli. Když hrb najede na ventil, zatlačí ho dolů do válce. Když přejede, pružina ventil vrátí.</p>
+        <p>Každý ventil se má otevřít jednou za cyklus, tedy jednou za dvě otáčky klikové hřídele. Vačková hřídel se proto točí přesně poloviční rychlostí. Spojuje je ozubený řemen nebo řetěz, rozvody.</p>
+        <p>Na tom řemenu visí život motoru. Když praskne, vačky se zastaví a některé ventily zůstanou trčet ve válci. Kliková hřídel se setrvačností točí dál a písty do nich narazí. Proto se rozvodový řemen mění po určitém počtu kilometrů, i když vypadá dobře.</p>
+      </div>
+    </section>
+
+    <section class="sec" aria-labelledby="h-nafta">
+      <div class="prose">
+        <h2 id="h-nafta">Nafta: bez svíčky</h2>
+        <p>Naftový motor má stejné čtyři doby, ale zapaluje jinak. Nasává čistý vzduch, bez paliva, a stlačí ho skoro dvakrát víc než benzínový. Vzduch se tím zahřeje na šest set stupňů. Teprve do toho rozžhaveného vzduchu vstřikovač nastříkne naftu, a ta se vznítí sama.</p>
+        <p>Benzínový motor si takhle silné stlačení dovolit nemůže. Směs by se vznítila dřív, než má, ještě když píst jde nahoru. Tomu se říká klepání a motor to ničí.</p>
+        <p>Silnější stlačení znamená, že se z paliva vytěží víc práce. Proto mají naftové motory menší spotřebu. Musejí ale vydržet větší tlaky, jsou těžší a hlučnější.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Přepněte na Naftu. Píst v horní poloze zajede blíž k hlavě, tlak na konci stlačení je několikrát vyšší a místo svíčky je nahoře vstřikovač.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-ucinnost">
+      <div class="prose">
+        <h2 id="h-ucinnost">Kam se ztratí dvě třetiny benzínu</h2>
+        <p>Z energie, která je v palivu, se na pohyb auta přemění jen asi třetina. Zbytek je teplo. Zhruba třetina odletí horkými plyny do výfuku a další třetinu musí odvést chladič, jinak by se motor roztavil.</p>
+        <p>Nejde o nedbalost konstruktérů. Každý stroj, který vyrábí práci z tepla, musí část tepla vyhodit, to je fyzikální zákon. Dá se jen ubírat ze ztrát. Turbodmychadlo třeba bere energii z výfukových plynů a používá ji k tomu, aby do válce natlačilo víc vzduchu.</p>
+      </div>
+    </section>
+
+    <section class="sec" aria-labelledby="h-historie">
+      <div class="prose">
+        <h2 id="h-historie">Sto padesát let stejný princip</h2>
+        <p>První fungující čtyřdobý motor postavil v roce 1876 německý obchodní cestující a samouk Nikolaus Otto. Jeho čtyřem dobám se dodnes říká Ottův cyklus. Motor na vznícení stlačením si o sedmnáct let později nechal patentovat Rudolf Diesel.</p>
+        <p>Od té doby přibyly vstřikování, elektronika, turba a proměnné časování ventilů. Píst, ojnice, kliková hřídel a čtyři doby zůstaly, jak byly.</p>
+      </div>
+    </section>
+
+    <footer class="art-foot">
+      <a class="next" href="../zacpa/" data-cat="doprava">
+        <span class="label">Další článek · Doprava</span>
+        <span class="t">Jak vzniká zácpa z ničeho</span>
+        <p>Proč se doprava zastaví bez nehody i zúžení a proč zácpa couvá proti směru jízdy.</p>
+      </a>
+      <a class="back" href="../">Všechna témata</a>
+    </footer>
+  </main>
+
+  <script>
+  (() => {
+    const NS = "http://www.w3.org/2000/svg";
+    function el(tag, attrs, parent) {
+      const n = document.createElementNS(NS, tag);
+      for (const k in attrs || {}) n.setAttribute(k, attrs[k]);
+      if (parent) parent.appendChild(n);
+      return n;
+    }
+    const svg = document.getElementById("engine"), chart = document.getElementById("chart");
+
+    /* ---------- geometrie a termodynamika ---------- */
+    const CX = 300, HEAD = 112;                 // osa válce a spodní hrana hlavy
+    const BORE = 150, CRANK_Y = 384, R = 66, ROD = 150, CROWN = 34;
+    const FUELS = {
+      petrol: { gap: 15, pIn: 0.9, tIn: 40, boost: 3.4, name: "benzín" },      // gap = mezera mezi pístem a hlavou nahoře
+      diesel: { gap: 8, pIn: 1.0, tIn: 40, boost: 2.6, name: "nafta" },
+    };
+    const STROKES = ["sání", "stlačení", "hoření", "výfuk"];
+    const s = { phi: 20, playing: true, speed: 25, fuel: "petrol", target: -1 };
+    const rad = (d) => (d * Math.PI) / 180;
+    // výška pístu pod horní úvratí pro úhel kliky (0 = nahoře)
+    const drop = (deg) => R + ROD - (R * Math.cos(rad(deg)) + Math.sqrt(ROD * ROD - (R * Math.sin(rad(deg))) ** 2));
+    function gas(phi, fuel) {
+      const F = FUELS[fuel], v = (deg) => F.gap + drop(deg), vMax = F.gap + 2 * R, k = 1.33;
+      const st = Math.floor((((phi % 720) + 720) % 720) / 180), a = ((phi % 720) + 720) % 720;
+      const pTop = F.pIn * (vMax / F.gap) ** k, tTop = (F.tIn + 273) * (vMax / F.gap) ** (k - 1);
+      if (st === 0) return { st, p: F.pIn, t: F.tIn };
+      if (st === 1) { const r = vMax / v(a); return { st, p: F.pIn * r ** k, t: (F.tIn + 273) * r ** (k - 1) - 273 }; }
+      if (st === 2) {
+        // hoření zvedne tlak i teplotu, pak plyn při rozpínání chladne
+        const burn = Math.min(1, (a - 360) / 12), r = F.gap / v(a);
+        const p = pTop * (1 + (F.boost - 1) * burn) * r ** k, t = tTop * (1 + (F.boost - 1) * burn) * r ** (k - 1) - 273;
+        return { st, p, t, burn };
+      }
+      return { st, p: 1.15, t: 650 - (a - 540) * 0.6 };
+    }
+
+    /* ---------- kresba ---------- */
+    const L = CX - BORE / 2, Rt = CX + BORE / 2;
+    // blok a hlava
+    el("path", { d: `M${L - 34} ${HEAD - 70} H${Rt + 34} V${HEAD + 2 * R + 60} H${Rt} V${HEAD} H${L} V${HEAD + 2 * R + 60} H${L - 34} Z`, class: "block" }, svg);
+    el("rect", { x: L, y: HEAD, width: BORE, height: 2 * R + 60, class: "bore" }, svg);
+    // sací a výfukový kanál v hlavě
+    el("path", { d: `M${L - 34} ${HEAD - 54} H${CX - 62} Q${CX - 44} ${HEAD - 54} ${CX - 44} ${HEAD - 30} V${HEAD} H${CX - 76} V${HEAD - 26} H${L - 34} Z`, class: "bore" }, svg);
+    el("path", { d: `M${Rt + 34} ${HEAD - 54} H${CX + 62} Q${CX + 44} ${HEAD - 54} ${CX + 44} ${HEAD - 30} V${HEAD} H${CX + 76} V${HEAD - 26} H${Rt + 34} Z`, class: "bore" }, svg);
+    const gasRect = el("rect", { x: L, y: HEAD, width: BORE }, svg);
+    el("path", { d: `M${L - 34} ${HEAD - 70} H${Rt + 34} V${HEAD + 2 * R + 60} H${Rt} V${HEAD} H${L} V${HEAD + 2 * R + 60} H${L - 34} Z`, class: "edge" }, svg);
+    const arrIn = el("g", { class: "flowarrow in" }, svg);
+    el("line", { x1: L - 60, y1: HEAD - 40, x2: L - 26, y2: HEAD - 40 }, arrIn); el("path", { d: `M${L - 14} ${HEAD - 40} l-13 -8 v16 Z` }, arrIn);
+    const arrOut = el("g", { class: "flowarrow out" }, svg);
+    el("line", { x1: Rt + 20, y1: HEAD - 40, x2: Rt + 54, y2: HEAD - 40 }, arrOut); el("path", { d: `M${Rt + 66} ${HEAD - 40} l-13 -8 v16 Z` }, arrOut);
+    // ventily a vačky
+    const valves = [CX - 60, CX + 60].map((x) => {
+      const cam = el("ellipse", { cx: x, cy: HEAD - 96, rx: 13, ry: 19, class: "cam" }, svg);
+      const g = el("g", {}, svg);
+      el("rect", { x: x - 3, y: HEAD - 78, width: 6, height: 76, class: "valve" }, g);
+      el("path", { d: `M${x - 17} ${HEAD + 2} H${x + 17} L${x + 8} ${HEAD - 8} H${x - 8} Z`, class: "valve" }, g);
+      return { g, cam, x };
+    });
+    // svíčka nebo vstřikovač
+    const plug = el("g", {}, svg);
+    el("rect", { x: CX - 7, y: HEAD - 80, width: 14, height: 74, rx: 3, class: "plug" }, plug);
+    el("rect", { x: CX - 2, y: HEAD - 8, width: 4, height: 12, class: "valve" }, plug);
+    const spark = el("path", { d: `M${CX} ${HEAD + 4} l-9 8 l7 2 l-8 10 l14 -9 l-7 -2 l9 -9 Z`, class: "spark", visibility: "hidden" }, svg);
+    // píst, ojnice, klika
+    el("circle", { cx: CX, cy: CRANK_Y, r: R + 20, class: "crank" }, svg);
+    const arm = el("line", { x1: CX, y1: CRANK_Y, class: "crank-arm" }, svg);
+    const rod = el("line", { class: "rod" }, svg);
+    const piston = el("g", {}, svg);
+    el("rect", { x: L + 1, y: 0, width: BORE - 2, height: 62, rx: 5, class: "piston" }, piston);
+    [10, 20].forEach((y) => el("line", { x1: L + 1, y1: y, x2: Rt - 1, y2: y, class: "ring" }, piston));
+    el("circle", { cx: CX, cy: CROWN, r: 9, class: "pin" }, piston);
+    const pinDot = el("circle", { r: 11, class: "pin" }, svg);
+    el("circle", { cx: CX, cy: CRANK_Y, r: 12, class: "pin" }, svg);
+    el("text", { x: 20, y: 424, class: "cap" }, svg).textContent = "PRÁVĚ PROBÍHÁ";
+    const big = el("text", { x: 18, y: 458, class: "big" }, svg);
+
+    function callout(label, tx, ty, anchor, x, y) {
+      const g = el("g", { class: "callout" }, svg);
+      el("line", { x1: anchor === "end" ? tx + 6 : tx - 6, y1: ty, x2: x, y2: y }, g);
+      el("circle", { cx: x, cy: y, r: 2.2 }, g);
+      el("text", { x: tx, y: ty + 4, "text-anchor": anchor }, g).textContent = label;
+      return g;
+    }
+    callout("sací ventil", 150, 100, "end", CX - 68, HEAD - 50);
+    callout("výfukový ventil", 478, 100, "start", CX + 68, HEAD - 50);
+    callout("vačka", 150, 20, "end", CX - 72, HEAD - 96);
+    const plugTag = callout("svíčka", 478, 20, "start", CX + 8, HEAD - 70);
+    callout("píst", 150, 250, "end", L + 6, 250);
+    callout("ojnice", 478, 300, "start", CX + 14, 300);
+    callout("kliková hřídel", 478, 420, "start", CX + R + 16, 404);
+
+    /* ---------- graf tlaku ---------- */
+    const G = { x: 24, y: 14, w: 204, h: 122 };
+    const gx = (phi) => G.x + (phi / 720) * G.w;
+    let pMax = 80;
+    const gy = (p) => G.y + G.h - (Math.min(p, pMax) / pMax) * G.h;
+    [1, 3].forEach((k) => el("rect", { x: gx(k * 180), y: G.y, width: G.w / 4, height: G.h, class: "c-band" }, chart));
+    el("line", { x1: G.x, y1: G.y, x2: G.x, y2: G.y + G.h, class: "c-axis" }, chart);
+    el("line", { x1: G.x, y1: G.y + G.h, x2: G.x + G.w, y2: G.y + G.h, class: "c-axis" }, chart);
+    STROKES.forEach((name, k) => { el("text", { x: gx(k * 180 + 90), y: G.y + G.h + 15, class: "c-text" }, chart).textContent = name; });
+    const top = el("text", { x: G.x + 4, y: G.y + 9, class: "c-text", "text-anchor": "start" }, chart);
+    const pLine = el("path", { class: "c-line" }, chart), pDot = el("circle", { r: 5, class: "c-dot" }, chart);
+    function drawCurve() {
+      pMax = s.fuel === "diesel" ? 120 : 80;
+      top.textContent = `${pMax} bar`;
+      let d = "";
+      for (let phi = 0; phi <= 720; phi += 3) d += `${phi ? "L" : "M"}${gx(phi).toFixed(1)} ${gy(gas(Math.min(phi, 719.9), s.fuel).p).toFixed(1)}`;
+      pLine.setAttribute("d", d);
+    }
+
+    /* ---------- výpis ---------- */
+    const fmt0 = new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 0 });
+    const fmt1 = new Intl.NumberFormat("cs-CZ", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    const $ = (id) => document.getElementById(id);
+    const cache = new WeakMap();
+    function put(node, str, html) {
+      if (cache.get(node) === str) return;
+      cache.set(node, str);
+      if (html) node.innerHTML = str; else node.textContent = str;
+    }
+
+    function render() {
+      const F = FUELS[s.fuel], a = ((s.phi % 720) + 720) % 720, th = a % 360, g = gas(a, s.fuel);
+      const top = HEAD + F.gap + drop(th);                          // horní hrana pístu
+      piston.setAttribute("transform", `translate(0 ${top.toFixed(1)})`);
+      const px = CX + R * Math.sin(rad(th)), py = CRANK_Y - R * Math.cos(rad(th));
+      arm.setAttribute("x2", px.toFixed(1)); arm.setAttribute("y2", py.toFixed(1));
+      rod.setAttribute("x1", CX); rod.setAttribute("y1", (top + CROWN).toFixed(1)); rod.setAttribute("x2", px.toFixed(1)); rod.setAttribute("y2", py.toFixed(1));
+      pinDot.setAttribute("cx", px.toFixed(1)); pinDot.setAttribute("cy", py.toFixed(1));
+
+      // ventily: sací při sání, výfukový při výfuku; vačky se točí poloviční rychlostí
+      const lift = [g.st === 0 ? Math.sin(rad(a)) : 0, g.st === 3 ? Math.sin(rad(a - 540)) : 0];
+      valves.forEach((v, i) => {
+        v.g.setAttribute("transform", `translate(0 ${(Math.max(0, lift[i]) * 13).toFixed(1)})`);
+        v.cam.setAttribute("transform", `rotate(${(a / 2 + (i ? -180 : 90)).toFixed(1)} ${v.x} ${HEAD - 96})`);
+      });
+      arrIn.setAttribute("opacity", lift[0] > 0.1 ? 1 : 0.12);
+      arrOut.setAttribute("opacity", lift[1] > 0.1 ? 1 : 0.12);
+
+      // plyn: čerstvá směs je modrá, při stlačení teplá, při hoření žhne, zplodiny jsou šedé
+      const hot = Math.max(0, Math.min(1, (g.t - 100) / 1900));
+      const color = g.st === 3 ? "var(--ink-3)" : g.st === 0 ? "var(--cool)" : hot > 0.35 ? "var(--hot)" : "var(--warm)";
+      gasRect.setAttribute("height", Math.max(0, top - HEAD).toFixed(1));
+      gasRect.setAttribute("fill", color);
+      gasRect.setAttribute("opacity", (g.st === 3 ? 0.3 : g.st === 0 ? 0.28 : 0.25 + 0.6 * hot).toFixed(2));
+      const firing = a > 352 && a < 372;
+      spark.setAttribute("visibility", firing ? "visible" : "hidden");
+      plugTag.querySelector("text").textContent = s.fuel === "diesel" ? "vstřikovač" : "svíčka";
+
+      pDot.setAttribute("cx", gx(a).toFixed(1)); pDot.setAttribute("cy", gy(g.p).toFixed(1));
+      put(big, STROKES[g.st][0].toUpperCase() + STROKES[g.st].slice(1));
+      put($("st-stroke"), `${g.st + 1}. ${STROKES[g.st]}`);
+      put($("st-p"), `${g.p < 10 ? fmt1.format(g.p) : fmt0.format(Math.round(g.p))} bar`);
+      put($("st-t"), `${fmt0.format(Math.round(g.t / 10) * 10)} °C`);
+
+      const diesel = s.fuel === "diesel";
+      const text = [
+        `<strong>Sání.</strong> Píst jde dolů, sací ventil je otevřený. Do válce proudí ${diesel ? "čistý vzduch, palivo zatím žádné" : "vzduch s rozprášeným benzínem"}.`,
+        `<strong>Stlačení.</strong> Oba ventily jsou zavřené. Píst mačká ${diesel ? "vzduch na osmnáctinu objemu a ten se tím rozžhaví" : "směs na desetinu objemu"}. Tuhle práci dodává setrvačník.`,
+        `<strong>Hoření.</strong> ${diesel ? "Vstřikovač nastříkl naftu do rozžhaveného vzduchu a ta se vznítila sama" : "Jiskra zapálila směs"}. Rozpínající se plyn tlačí píst dolů. Jediná doba, která dává sílu.`,
+        "<strong>Výfuk.</strong> Výfukový ventil je otevřený a píst cestou nahoru vytlačuje spálené plyny ven. Nahoře se ventily vystřídají a cyklus začíná znovu.",
+      ][g.st];
+      put($("status"), text, true);
+      put($("play"), s.playing ? "Zastavit" : "Spustit");
+      $("play").setAttribute("aria-pressed", String(!s.playing));
+      put($("speed-val"), `${s.speed} ot/min`);
+    }
+
+    /* ---------- ovládání ---------- */
+    $("play").addEventListener("click", () => { s.playing = !s.playing; s.target = -1; });
+    $("next").addEventListener("click", () => {
+      // dojet na konec právě běžící doby a zastavit uprostřed té další
+      const a = ((s.phi % 720) + 720) % 720;
+      s.target = s.phi - a + (Math.floor(a / 180) + 1) * 180 + 90;
+      s.playing = false;
+    });
+    $("speed").addEventListener("input", (e) => { s.speed = Number(e.target.value); });
+    const seg = $("fuel-seg");
+    seg.addEventListener("click", (e) => {
+      const b = e.target.closest("button[data-v]");
+      if (!b) return;
+      seg.querySelectorAll("button").forEach((x) => x.setAttribute("aria-checked", String(x === b)));
+      s.fuel = b.dataset.v;
+      drawCurve();
+    });
+
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) { s.playing = false; s.phi = 450; }
+    let prev = performance.now();
+    function frame(now) {
+      const dt = Math.min(0.1, (now - prev) / 1000);
+      prev = now;
+      if (s.playing) s.phi += s.speed * 6 * dt;
+      else if (s.target >= 0) { s.phi = Math.min(s.target, s.phi + 260 * dt); if (s.phi >= s.target) s.target = -1; }
+      render();
+      requestAnimationFrame(frame);
+    }
+    drawCurve();
+    render();
+    requestAnimationFrame(frame);
+  })();
+  </script>
+</body>
+</html>

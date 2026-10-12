@@ -1,0 +1,442 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Jak pluje plachetnice proti větru</title>
+  <meta name="description" content="Jak může loď, kterou pohání jen vítr, plout proti němu, k čemu je kýl a proč některé plachetnice jedou rychleji než vítr. S lodí, které si můžete nastavit kurz a plachtu.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700&display=swap">
+  <link rel="stylesheet" href="../style.css?v=5">
+  <style>
+    .sail-stage { display: grid; gap: 1rem; grid-template-columns: minmax(0, 1fr); align-items: center; }
+    .side { display: grid; gap: 0.35rem; margin: 0; justify-self: center; width: min(16rem, 70%); }
+    .side svg { border: 1px solid var(--rule); background: var(--surface); }
+    .side .label { text-align: center; }
+    @media (min-width: 60rem) {
+      .sail-stage { grid-template-columns: minmax(0, 1fr) 16rem; }
+      .side { width: 100%; }
+    }
+    #sea { border: 1px solid var(--rule); }
+    .water { fill: var(--cool); opacity: 0.16; }
+    .gust line { stroke: var(--ink-3); stroke-width: 2; stroke-linecap: round; }
+    .gust path { fill: var(--ink-3); }
+    .hull { fill: var(--surface); stroke: var(--metal-line); stroke-width: 2; stroke-linejoin: round; }
+    .keel { stroke: var(--ink); stroke-width: 6; stroke-linecap: round; opacity: 0.55; }
+    .mast { fill: var(--ink); }
+    .canvas { fill: none; stroke: var(--ink); stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
+    .wake { stroke: var(--cool); stroke-width: 2; stroke-linecap: round; opacity: 0.8; }
+    .vec line { stroke-width: 3.2; stroke-linecap: round; }
+    .vec text { font: 600 12.5px var(--font-mono); paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
+    .vec.app line { stroke: var(--ink-3); } .vec.app path, .vec.app text { fill: var(--ink-3); }
+    .vec.force line { stroke: var(--hot); } .vec.force path, .vec.force text { fill: var(--hot); }
+    .vec.drive line { stroke: var(--ok); } .vec.drive path, .vec.drive text { fill: var(--ok); }
+    .vec.push line { stroke: var(--warm); } .vec.push path, .vec.push text { fill: var(--warm); }
+    .vec.hold line { stroke: var(--ink); } .vec.hold path, .vec.hold text { fill: var(--ink); }
+    .cap { fill: var(--ink-3); font: 500 11px var(--font-mono); letter-spacing: 0.08em; }
+    .p-grid { fill: none; stroke: var(--grid); stroke-width: 1; }
+    .p-dead { fill: var(--bad); opacity: 0.12; }
+    .p-curve { fill: var(--cat); fill-opacity: 0.14; stroke: var(--cat); stroke-width: 2.2; stroke-linejoin: round; }
+    .p-dot { fill: var(--cat); stroke: var(--surface); stroke-width: 1.5; }
+    .p-text { fill: var(--ink-2); font: 500 10.5px var(--font-mono); text-anchor: middle; }
+    .legend { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; margin: 0; padding: 0; list-style: none; font-family: var(--font-mono); font-size: 0.75rem; color: var(--ink-2); }
+    .legend li { display: inline-flex; align-items: center; gap: 0.4rem; }
+    .legend i { width: 1.2rem; height: 3px; }
+    @media (max-width: 46rem) { .vec text { display: none; } }
+  </style>
+</head>
+<body data-cat="doprava">
+  <header class="topbar">
+    <div class="wrap">
+      <a class="brand" href="../">Jak věci fungují</a>
+      <nav class="crumbs" aria-label="Drobečková navigace"><a href="../#doprava">Doprava</a><span aria-hidden="true">/</span><span>Plachetnice proti větru</span></nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <header class="art-head">
+      <p class="eyebrow">Doprava</p>
+      <h1 class="display">Jak pluje plachetnice proti větru</h1>
+      <p class="lede">Že vítr odfoukne loď po větru, nepřekvapí nikoho. Plachetnice ale umí plout i šikmo proti němu, a některé dokonce rychleji, než vítr fouká. Stačí jim k tomu dvě křídla: jedno ve vzduchu a druhé pod vodou.</p>
+    </header>
+
+    <section class="tldr" aria-labelledby="h-zkratka">
+      <h2 class="label" id="h-zkratka">Ve zkratce</h2>
+      <ul>
+        <li>Plachta nastavená šikmo k větru funguje jako křídlo. Síla na ni míří hlavně do boku lodi a jen trochu dopředu.</li>
+        <li><span class="hl">Kýl pod lodí nedovolí, aby jela bokem.</span> Z celé síly tak zbude jen ta malá část, která míří dopředu.</li>
+        <li>Přímo proti větru to nejde. Loď musí plout šikmo, nejlíp asi 45 stupňů od větru, a k cíli se dostává cik cak.</li>
+      </ul>
+    </section>
+
+    <figure class="fig" id="obr1">
+      <div class="fig-head">
+        <p class="fig-num"><b>Obr. 1</b> Loď shora</p>
+        <span class="label">Natočte loď proti větru a zkuste nastavit plachtu</span>
+      </div>
+      <div class="fig-stage sail-stage">
+        <svg id="sea" viewBox="0 0 640 460" role="img" aria-label="Plachetnice shora, vítr fouká shora dolů, šipky ukazují síly na plachtu a kýl"></svg>
+        <figure class="side">
+          <svg id="polar" viewBox="0 0 200 210" role="img" aria-label="Jak rychle loď pluje podle směru vůči větru"></svg>
+          <span class="label">Rychlost podle kurzu</span>
+        </figure>
+      </div>
+      <div class="fig-controls">
+        <div class="ctl ctl-grow">
+          <label class="label" for="course">Kurz vůči větru</label>
+          <div class="ctl-row">
+            <input type="range" id="course" min="0" max="180" step="5" value="50">
+            <output class="val" id="course-val" for="course"></output>
+          </div>
+        </div>
+        <div class="ctl ctl-grow">
+          <label class="label" for="sheet">Plachta povolená o</label>
+          <div class="ctl-row">
+            <input type="range" id="sheet" min="0" max="90" step="1" value="22">
+            <output class="val" id="sheet-val" for="sheet"></output>
+          </div>
+        </div>
+        <div class="ctl">
+          <span class="label" id="lbl-trim">Plachtu nastavuje</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-trim" id="trim-seg">
+            <button type="button" role="radio" data-v="auto" aria-checked="true">Zkušený lodník</button>
+            <button type="button" role="radio" data-v="me" aria-checked="false">Já</button>
+          </div>
+        </div>
+        <div class="ctl">
+          <span class="label" id="lbl-keel">Kýl</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-keel" id="keel-seg">
+            <button type="button" role="radio" data-v="1" aria-checked="true">Má</button>
+            <button type="button" role="radio" data-v="0" aria-checked="false">Nemá</button>
+          </div>
+        </div>
+      </div>
+      <div class="fig-status split">
+        <div style="display:grid; gap:.6rem; min-width:0">
+          <p class="status" id="status" aria-live="polite"></p>
+          <ul class="legend" aria-hidden="true">
+            <li><i style="background:var(--ink-3)"></i>vítr, jak ho cítí loď</li>
+            <li><i style="background:var(--hot)"></i>síla na plachtu</li>
+            <li><i style="background:var(--ok)"></i>její část dopředu</li>
+            <li><i style="background:var(--warm)"></i>její část do boku</li>
+            <li><i style="background:var(--ink)"></i>odpor kýlu</li>
+          </ul>
+        </div>
+        <ul class="stats" aria-label="Stav modelu">
+          <li><span class="n">Rychlost lodi</span><span class="v" id="st-speed"></span></li>
+          <li><span class="n">Postup proti větru</span><span class="v" id="st-up"></span></li>
+          <li><span class="n">Vítr na palubě</span><span class="v" id="st-app"></span></li>
+        </ul>
+      </div>
+      <figcaption class="fig-caption">Zjednodušený model malé jachty s jednou plachtou při větru 8 metrů za sekundu, tedy asi 16 uzlů. Vítr fouká shora dolů. Graf vpravo ukazuje, jak rychle loď dopluje kterým směrem, když je plachta nastavená co nejlíp. Uzel je 1,85 km/h.</figcaption>
+    </figure>
+
+    <section class="sec" aria-labelledby="h-povetru">
+      <div class="prose">
+        <h2 id="h-povetru">Po větru to umí každý</h2>
+        <p>Nejjednodušší plachta je prostěradlo napnuté napříč lodi. Vítr se do něj opře a tlačí loď před sebou. Tak pluly vory, egyptské čluny i vikingské lodě, když měly štěstí na směr.</p>
+        <p>Má to dvě vady. Loď může plout jen tam, kam fouká. A nikdy nepopluje rychleji než vítr, dokonce ani stejně rychle. Čím rychleji jede, tím slabší vítr na palubě cítí, a kdyby vítr dohnala, plachta by zplihla.</p>
+        <p>Kapitáni velkých plachetnic s příčnými plachtami proto čekali v přístavech týdny na správný vítr a přes oceány pluli po oklikách, kterými vanou stálé pasáty.</p>
+      </div>
+      <aside class="note" aria-label="Plachtění v číslech">
+        <span class="label">V číslech</span>
+        <dl class="facts">
+          <div><dt>≈ 45°</dt><dd>od větru se proti němu postupuje nejrychleji</dd></div>
+          <div><dt>1,4×</dt><dd>delší je cesta k cíli přímo proti větru</dd></div>
+          <div><dt>3–4×</dt><dd>rychleji než vítr jezdí závodní jachty na křídlech</dd></div>
+        </dl>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-kridlo">
+      <div class="prose">
+        <h2 id="h-kridlo">Plachta je křídlo postavené na výšku</h2>
+        <p>Když vítr nefouká do plachty zezadu, ale klouže podél ní pod malým úhlem, chová se plachta stejně jako <a href="../letadlo/">křídlo letadla</a>. Vyboulí se, vzduch ji obtéká, na závětrné straně zrychlí a jeho tlak tam klesne. Plachta stáčí proud vzduchu a vzduch ji za to táhne napříč.</p>
+        <p>Síla, která tak vznikne, je několikrát větší, než kdyby se vítr do stejné plachty jen opíral. Nemíří ale po větru. Míří skoro kolmo na plachtu, tedy hlavně do boku lodi a jen trochu dopředu.</p>
+        <p>Na první pohled je to k ničemu. Loď, kterou něco silně tlačí do boku a slabě dopředu, pojede hlavně bokem.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Podívejte se na červenou šipku síly na plachtu. Při kurzu 40 stupňů míří skoro celá do boku. Zelená část, která loď pohání, je z ní jen malý kousek.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-kyl">
+      <div class="prose">
+        <h2 id="h-kyl">Kýl: druhé křídlo pod vodou</h2>
+        <p>Proto má plachetnice pod trupem kýl, velkou svislou ploutev. Dopředu řeže vodu skoro bez odporu. Bokem ji protlačit nejde, je to jako tlačit dveře plochou proti vodě.</p>
+        <p>Kýl tak boční část síly zachytí a opře ji o vodu. Zbude jen ta malá část, která míří dopředu, a loď se po ní rozjede. Je to jako když zmáčknete mezi prsty mokrou pecku. Tlačíte na ni ze stran, a ona vystřelí dopředu, jediným směrem, který jí zbyl.</p>
+        <p><span class="hl">Plachetnice tedy nepluje proti větru navzdory vodě, ale díky ní.</span> Potřebuje dvě prostředí, která se vůči sobě pohybují, vzduch a vodu, a opírá se o jedno, aby se odrazila od druhého.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Přepněte kýl na Nemá. Stejná plachta, stejný vítr. Loď ale sjíždí bokem po větru a proti němu neudělá ani metr.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-mrtvy">
+      <div class="prose">
+        <h2 id="h-mrtvy">Proč ne úplně proti</h2>
+        <p>Čím ostřeji loď proti větru míří, tím víc se síla na plachtu stáčí do boku a tím menší kousek z ní zbývá na pohon. Pod 45 stupni od větru loď rychle zpomaluje a kolem 30 stupňů už nezbude nic. Plachta přestane držet tvar a třepe se jako prapor.</p>
+        <p>Tomu výseku se říká mrtvý úhel. Do cíle, který leží přímo proti větru, se proto pluje cik cak. Chvíli šikmo vpravo od větru, pak loď přídí projde přes vítr, plachta se přehodí na druhou stranu a pluje se šikmo vlevo. Tomu se říká křižování.</p>
+        <p>Cesta je tak asi o čtyřicet procent delší než vzdušnou čarou. Proti tomu, co měli námořníci s příčnými plachtami, je to ale zázrak: dá se doplout kamkoli a za jakéhokoli větru.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Stahujte kurz k nule a sledujte Postup proti větru. Největší je kolem 45 stupňů. Ostřeji loď zpomaluje a pod 30 stupni se zastaví. V grafu vpravo je mrtvý úhel vyznačený červeně.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-plachta">
+      <div class="prose">
+        <h2 id="h-plachta">Přitáhnout, nebo povolit</h2>
+        <p>Plachta funguje jen v úzkém rozmezí. Musí k větru stát pod úhlem zhruba patnáct až dvacet stupňů.</p>
+        <p>Když ji povolíte moc, vítr začne foukat z obou stran a plachta se rozplápolá. Když ji přitáhnete moc, postaví se větru na odpor. Proud vzduchu se od ní odtrhne, stejně jako od přetaženého křídla, a místo tahu dopředu zbude jen tlak do boku, který loď naklání.</p>
+        <p>Pravidlo, které se učí první den, proto zní: povoluj, dokud se přední lem plachty nezačne třepat, a pak o kousek přitáhni. Při každé změně kurzu znovu.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Přepněte nastavování plachty na Já a jezděte posuvníkem. Rychlost má jedno úzké maximum. Na obě strany od něj rychle padá.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-zdanlivy">
+      <div class="prose">
+        <h2 id="h-zdanlivy">Rychleji než vítr</h2>
+        <p>Loď necítí ten vítr, který fouká nad vodou. Cítí ho složený s vlastní jízdou, stejně jako cyklista cítí protivítr i za bezvětří. Námořníci tomu říkají zdánlivý vítr.</p>
+        <p>Když loď pluje šikmo proti větru, zdánlivý vítr je silnější než skutečný a přichází víc zepředu. A čím rychleji loď jede, tím je silnější. Loď, která klade vodě malý odpor, si tak vlastní rychlostí vyrábí další vítr a z něj další rychlost.</p>
+        <p>Má to své meze, ale u některých plavidel jsou daleko. Závodní jachty, které se zvednou z vody na podvodních křídlech, jezdí třikrát až čtyřikrát rychleji, než fouká vítr. Jachty na ledě, kterým nebrání skoro nic, ještě rychleji. Jednou věcí to ale nejde: přímo po větru. Tam zdánlivý vítr s rychlostí slábne.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Porovnejte Vítr na palubě při kurzu 50 stupňů a při 180. Fouká pořád stejných osm metrů za sekundu. Proti větru jich ale loď cítí přes devět, po větru necelých šest.</p>
+      </aside>
+    </section>
+
+    <footer class="art-foot">
+      <a class="next" href="../modre-nebe/" data-cat="priroda">
+        <span class="label">Další článek · Příroda</span>
+        <span class="t">Proč je nebe modré</span>
+        <p>Proč je obloha modrá, západ slunce červený a mraky bílé, když je to pořád stejné světlo.</p>
+      </a>
+      <a class="back" href="../">Všechna témata</a>
+    </footer>
+  </main>
+
+  <script>
+  (() => {
+    const NS = "http://www.w3.org/2000/svg";
+    function el(tag, attrs, parent) {
+      const n = document.createElementNS(NS, tag);
+      for (const k in attrs || {}) n.setAttribute(k, attrs[k]);
+      if (parent) parent.appendChild(n);
+      return n;
+    }
+    const svg = document.getElementById("sea"), polar = document.getElementById("polar");
+
+    /* ---------- model ---------- */
+    const WIND = 8;                 // m/s, fouká shora dolů
+    const AREA = 20, RHO = 1.2;     // plocha plachty a hustota vzduchu
+    const WINDAGE = 0.15;           // odpor trupu, stěžně a lan ve větru (jako podíl plochy plachty)
+    const HULL = { k2: 60, k4: 6 }; // odpor trupu ve vodě: s rychlostí prudce roste
+    // boční opora ve vodě: vztlak ploutve, odpor při jízdě bokem a kolik pohonu to stojí
+    const WATER = { keel: { lift: 2000, cross: 1500, eps: 10 }, none: { lift: 40, cross: 350, eps: 30 } };
+    const rad = (d) => (d * Math.PI) / 180;
+    const s = { course: 50, sheet: 22, auto: true, keel: true };
+
+    // síla větru na loď pro daný kurz, povolení plachty a pohyb lodi
+    function sailForce(course, sheet, v, vs) {
+      const t = rad(course), d = rad(sheet);
+      const h = [Math.sin(t), -Math.cos(t)], p = [Math.cos(t), Math.sin(t)];      // směr přídě a závětrný bok
+      const ax = -(v * h[0] + vs * p[0]), ay = WIND - (v * h[1] + vs * p[1]);        // vítr, jak ho cítí loď
+      const va = Math.hypot(ax, ay) || 1e-6, a = [ax / va, ay / va];
+      const n = [h[0] * Math.sin(d) + p[0] * Math.cos(d), h[1] * Math.sin(d) + p[1] * Math.cos(d)];   // kolmice na plachtu
+      const q = 0.5 * RHO * va * va * AREA, sinA = a[0] * n[0] + a[1] * n[1];
+      let f, alpha = 0;
+      if (sinA <= 0.03) f = [a[0] * q * 0.1, a[1] * q * 0.1];                        // vítr fouká podél plachty: jen plápolá
+      else {
+        const al = Math.asin(Math.min(1, sinA));
+        alpha = (al * 180) / Math.PI;
+        // vztlak roste do 18°, pak se proud odtrhne; odpor roste pořád
+        const cl = alpha <= 18 ? 1.4 * Math.sin((Math.PI / 2) * (alpha / 18)) : Math.max(1.1 * Math.sin(2 * al), 1.4 - 0.07 * (alpha - 18));
+        const cd = 0.05 + 1.25 * sinA * sinA;
+        let lx = n[0] - sinA * a[0], ly = n[1] - sinA * a[1];
+        const ll = Math.hypot(lx, ly) || 1;
+        lx /= ll; ly /= ll;
+        f = [q * (cl * lx + cd * a[0]), q * (cl * ly + cd * a[1])];
+      }
+      f = [f[0] + a[0] * q * WINDAGE, f[1] + a[1] * q * WINDAGE];
+      return { f, h, p, a, va, alpha, drive: f[0] * h[0] + f[1] * h[1], side: f[0] * p[0] + f[1] * p[1] };
+    }
+    function speedFor(net) {
+      if (net <= 0) return 0;
+      let lo = 0, hi = 12;
+      for (let i = 0; i < 40; i++) {
+        const m = (lo + hi) / 2;
+        if (HULL.k2 * m * m + HULL.k4 * m ** 4 < net) lo = m; else hi = m;
+      }
+      return lo;
+    }
+    // ustálená jízda: loď zrychluje, dokud odpor vody nevyrovná tah plachty
+    function settle(course, sheet, keel) {
+      const w = keel ? WATER.keel : WATER.none;
+      let v = 0, vs = 0, o;
+      for (let i = 0; i < 120; i++) {
+        o = sailForce(course, sheet, v, vs);
+        v += (speedFor(o.drive - Math.abs(o.side) * Math.tan(rad(w.eps))) - v) * 0.25;
+        const push = Math.abs(o.side), b = w.lift * v;
+        vs += (Math.sign(o.side) * (-b + Math.sqrt(b * b + 4 * w.cross * push)) / (2 * w.cross) - vs) * 0.25;
+      }
+      const t = rad(course);
+      return { ...o, v, vs, up: v * Math.cos(t) - vs * Math.sin(t) };
+    }
+    function best(course, keel) {
+      let top = null;
+      for (let sheet = 0; sheet <= 90; sheet += 2) {
+        const o = settle(course, sheet, keel);
+        if (!top || o.v > top.v + 1e-9) top = { ...o, sheet };
+      }
+      // když nejede nic, nechá lodník plachtu volně vlát po větru
+      if (top.v < 0.05) top = { ...settle(course, Math.min(90, course), keel), sheet: Math.min(90, course) };
+      return top;
+    }
+
+    /* ---------- scéna ---------- */
+    const B = { x: 300, y: 255 }, SCALE = 1.4;
+    el("rect", { x: 0, y: 0, width: 640, height: 460, class: "water" }, svg);
+    el("text", { x: 20, y: 28, class: "cap" }, svg).textContent = "VÍTR";
+    [90, 195, 300, 405, 510].forEach((x) => {
+      const g = el("g", { class: "gust" }, svg);
+      el("line", { x1: x, y1: 16, x2: x, y2: 50 }, g);
+      el("path", { d: `M${x} 62 l-7 -14 h14 Z` }, g);
+    });
+    const wakeG = el("g", {}, svg);
+    const boat = el("g", {}, svg);
+    const keelLine = el("line", { x1: 0, y1: -24, x2: 0, y2: 26, class: "keel" }, boat);
+    el("path", { d: "M0 -56 Q20 -20 16 34 Q15 50 0 52 Q-15 50 -16 34 Q-20 -20 0 -56 Z", class: "hull" }, boat);
+    const sail = el("path", { class: "canvas" }, boat);
+    el("circle", { cx: 0, cy: -14, r: 4.5, class: "mast" }, boat);
+    const vecG = el("g", {}, svg);
+    function vector(cls, x, y, dx, dy, label) {
+      const len = Math.hypot(dx, dy);
+      if (len < 9) return;
+      const ux = dx / len, uy = dy / len, g = el("g", { class: `vec ${cls}` }, vecG);
+      el("line", { x1: x, y1: y, x2: x + dx - ux * 9, y2: y + dy - uy * 9 }, g);
+      el("path", { d: `M${(x + dx).toFixed(1)} ${(y + dy).toFixed(1)} L${(x + dx - ux * 12 - uy * 6).toFixed(1)} ${(y + dy - uy * 12 + ux * 6).toFixed(1)} L${(x + dx - ux * 12 + uy * 6).toFixed(1)} ${(y + dy - uy * 12 - ux * 6).toFixed(1)} Z` }, g);
+      if (label && len > 40) el("text", { x: (x + dx + ux * 10).toFixed(1), y: (y + dy + uy * 10 + 4).toFixed(1), "text-anchor": ux > 0.3 ? "start" : ux < -0.3 ? "end" : "middle" }, g).textContent = label;
+    }
+
+    /* ---------- graf rychlosti podle kurzu ---------- */
+    const PC = { x: 100, y: 104, r: 84 };
+    const polarG = el("g", {}, polar), dot = el("circle", { r: 5, class: "p-dot" }, polar);
+    let curve = [], top = 1;
+    function drawPolar() {
+      curve = [];
+      for (let c = 0; c <= 180; c += 5) curve.push([c, best(c, s.keel).v]);
+      top = Math.max(...curve.map(([, v]) => v), 0.5);
+      polarG.textContent = "";
+      [0.5, 1].forEach((k) => el("circle", { cx: PC.x, cy: PC.y, r: PC.r * k, class: "p-grid" }, polarG));
+      const dead = curve.filter(([, v]) => v < 0.15).map(([c]) => c), edge = dead.length ? Math.max(...dead) + 2.5 : 0;
+      if (edge) {
+        const ex = PC.r * Math.sin(rad(edge)), ey = PC.r * Math.cos(rad(edge));
+        el("path", { d: `M${PC.x} ${PC.y} L${PC.x - ex} ${PC.y - ey} A${PC.r} ${PC.r} 0 0 1 ${PC.x + ex} ${PC.y - ey} Z`, class: "p-dead" }, polarG);
+      }
+      const pt = (c, v, side) => `${(PC.x + side * (v / top) * PC.r * Math.sin(rad(c))).toFixed(1)} ${(PC.y - (v / top) * PC.r * Math.cos(rad(c))).toFixed(1)}`;
+      const right = curve.map(([c, v]) => pt(c, v, 1)), left = curve.slice().reverse().map(([c, v]) => pt(c, v, -1));
+      el("path", { d: `M${right.concat(left).join(" L")} Z`, class: "p-curve" }, polarG);
+      el("text", { x: PC.x, y: 12, class: "p-text" }, polarG).textContent = "vítr ↓";
+      el("text", { x: PC.x, y: 204, class: "p-text" }, polarG).textContent = `kruh = ${(top * 1.944).toFixed(1).replace(".", ",")} uzlu`;
+    }
+
+    /* ---------- výpis ---------- */
+    const fmt1 = new Intl.NumberFormat("cs-CZ", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    const $ = (id) => document.getElementById(id);
+    const knots = (v) => `${fmt1.format(v * 1.944)} uzlu`;
+
+    function render() {
+      const ideal = best(s.course, s.keel);
+      if (s.auto) s.sheet = ideal.sheet;
+      const o = settle(s.course, s.sheet, s.keel);
+      $("sheet").value = s.sheet; $("sheet").disabled = s.auto;
+      $("course-val").textContent = `${s.course}°`;
+      $("sheet-val").textContent = `${s.sheet}°`;
+
+      boat.setAttribute("transform", `translate(${B.x} ${B.y}) rotate(${s.course}) scale(${SCALE})`);
+      keelLine.setAttribute("visibility", s.keel ? "visible" : "hidden");
+      // plachta: od stěžně dozadu, vychýlená na závětrnou stranu; když táhne, je vyboulená
+      const d = rad(s.sheet), len = 62, ex = len * Math.sin(d), ey = -14 + len * Math.cos(d);
+      const belly = o.alpha > 0 ? 12 : 0, mx = ex / 2 + Math.cos(d) * belly, my = (-14 + ey) / 2 - Math.sin(d) * belly;
+      sail.setAttribute("d", o.alpha > 0
+        ? `M0 -14 Q${mx.toFixed(1)} ${my.toFixed(1)} ${ex.toFixed(1)} ${ey.toFixed(1)}`
+        : `M0 -14 l${(ex * 0.25 + 5).toFixed(1)} ${((ey + 14) * 0.25).toFixed(1)} l${(ex * 0.25 - 10).toFixed(1)} ${((ey + 14) * 0.25).toFixed(1)} l${(ex * 0.25 + 10).toFixed(1)} ${((ey + 14) * 0.25).toFixed(1)} l${(ex * 0.25 - 5).toFixed(1)} ${((ey + 14) * 0.25).toFixed(1)}`);
+
+      // brázda ukazuje, kudy loď opravdu jede
+      wakeG.textContent = "";
+      const vx = o.v * o.h[0] + o.vs * o.p[0], vy = o.v * o.h[1] + o.vs * o.p[1], sp = Math.hypot(vx, vy);
+      if (sp > 0.3) [-12, 0, 12].forEach((off) => el("line", { x1: B.x - (vx / sp) * 80 - (vy / sp) * off, y1: B.y - (vy / sp) * 80 + (vx / sp) * off, x2: B.x - (vx / sp) * (80 + sp * 22) - (vy / sp) * off, y2: B.y - (vy / sp) * (80 + sp * 22) + (vx / sp) * off, class: "wake" }, wakeG));
+
+      vecG.textContent = "";
+      const N = 0.1, W = 8;                     // měřítka: síly a vítr
+      // síly kreslíme ze středu plachty
+      const cx = (ex / 2) * SCALE, cy = -((-14 + ey) / 2) * SCALE;
+      const sx = B.x + o.p[0] * cx + o.h[0] * cy, sy = B.y + o.p[1] * cx + o.h[1] * cy;
+      vector("app", B.x - o.a[0] * (o.va * W + 105), B.y - o.a[1] * (o.va * W + 105), o.a[0] * o.va * W, o.a[1] * o.va * W, "");
+      vector("force", sx, sy, o.f[0] * N, o.f[1] * N, "síla na plachtu");
+      vector("drive", sx, sy, o.h[0] * o.drive * N, o.h[1] * o.drive * N, "");
+      vector("push", sx, sy, o.p[0] * o.side * N, o.p[1] * o.side * N, "");
+      if (s.keel) vector("hold", B.x - o.h[0] * 8, B.y - o.h[1] * 8, -o.p[0] * o.side * N, -o.p[1] * o.side * N, "kýl");
+
+      dot.setAttribute("cx", (PC.x + (o.v / top) * PC.r * Math.sin(rad(s.course))).toFixed(1));
+      dot.setAttribute("cy", (PC.y - (o.v / top) * PC.r * Math.cos(rad(s.course))).toFixed(1));
+
+      $("st-speed").textContent = o.v < 0.1 ? "stojí" : knots(o.v);
+      $("st-up").textContent = o.up > 0.05 ? knots(o.up) : s.course >= 90 ? "pluje od větru" : o.up < -0.05 ? "snáší ji zpět" : "žádný";
+      $("st-up").classList.toggle("small", o.up <= 0.05);
+      $("st-app").textContent = `${fmt1.format(o.va)} m/s`;
+
+      let status;
+      if (!s.keel && s.course < 90 && o.up <= 0.05) {
+        status = "<strong>Bez kýlu loď klouže bokem.</strong> Síla na plachtu je stejná, ale nic nebrání tomu, aby loď tlačila tam, kam míří: do boku a po větru. Proti větru se takhle nedostane.";
+      } else if (s.course < 60 && ideal.v < 0.1) {
+        status = "<strong>Mrtvý úhel.</strong> Loď míří příliš ostře proti větru. Ať plachtu nastavíte jakkoli, buď jen plápolá, nebo táhne do boku a dozadu. Loď stojí a vítr ji pomalu snáší zpět. Takhle se plout nedá, musí se křižovat.";
+      } else if (!s.auto && o.v < ideal.v * 0.8 && s.sheet > ideal.sheet) {
+        status = "<strong>Plachta je moc povolená.</strong> Vítr fouká skoro podél ní, nemá se do čeho opřít a plachta se třepe. Přitáhněte ji.";
+      } else if (!s.auto && o.v < ideal.v * 0.8) {
+        status = "<strong>Plachta je moc přitažená.</strong> Stojí větru v cestě, proud vzduchu se od ní odtrhl a místo tahu vpřed zbyl hlavně tlak do boku. Povolte ji.";
+      } else if (s.course >= 150) {
+        status = "<strong>Po větru.</strong> Vítr se do plachty jen opírá. Loď jede pomaleji než vítr a čím rychleji jede, tím slabší vítr na palubě cítí.";
+      } else if (s.course >= 80) {
+        status = "<strong>Boční vítr.</strong> Nejrychlejší kurz. Síla na plachtu míří hodně dopředu a zdánlivý vítr je silný. Kýl drží jen mírný boční tlak.";
+      } else {
+        status = !s.keel ? "<strong>Bez kýlu loď klouže bokem.</strong> Dopředu sice trochu jede, ale do boku ji vítr snáší rychleji." : "<strong>Šikmo proti větru.</strong> Plachta pracuje jako křídlo. Síla na ni míří hlavně do boku, kýl ji opírá o vodu a z celku zbývá malý tah dopředu. Stačí na to, aby loď postupovala proti větru.";
+      }
+      $("status").innerHTML = status;
+    }
+
+    /* ---------- ovládání ---------- */
+    $("course").addEventListener("input", (e) => { s.course = Number(e.target.value); render(); });
+    $("sheet").addEventListener("input", (e) => { s.sheet = Number(e.target.value); render(); });
+    function bindSeg(id, apply) {
+      const seg = $(id);
+      seg.addEventListener("click", (e) => {
+        const b = e.target.closest("button[data-v]");
+        if (!b) return;
+        seg.querySelectorAll("button").forEach((x) => x.setAttribute("aria-checked", String(x === b)));
+        apply(b.dataset.v);
+        render();
+      });
+    }
+    bindSeg("trim-seg", (v) => { s.auto = v === "auto"; });
+    bindSeg("keel-seg", (v) => { s.keel = v === "1"; drawPolar(); });
+    // na úzké obrazovce ukážeme jen střed scény, ať je loď větší
+    const narrow = window.matchMedia("(max-width: 46rem)");
+    const crop = () => svg.setAttribute("viewBox", narrow.matches ? "90 0 460 460" : "0 0 640 460");
+    narrow.addEventListener("change", crop);
+    crop();
+    drawPolar();
+    render();
+  })();
+  </script>
+</body>
+</html>
