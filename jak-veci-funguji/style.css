@@ -489,7 +489,7 @@ input[type="range"] { width: 100%; min-width: 0; accent-color: var(--cat); }
 .hub-sec + .hub-sec { border-top: 1px solid var(--rule); }
 .hub-sec > h2 { margin: 0; }
 
-.featured { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: 1.5rem; }
+.featured { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); gap: 1.5rem; }
 .card {
   display: grid;
   grid-template-rows: auto 1fr;
@@ -595,6 +595,12 @@ input[type="range"] { width: 100%; min-width: 0; accent-color: var(--cat); }
 .t-moon { fill: var(--pin-top); }
 .t-muscle { fill: var(--hot); stroke: var(--metal-line); stroke-width: 1; }
 .t-hairline { stroke: var(--ink); stroke-width: 3; stroke-linecap: round; }
+.t-bubble { fill: var(--surface); stroke: var(--cold); stroke-width: 1.5; }
+.t-steam { fill: none; stroke: var(--metal-line); stroke-width: 2; stroke-linecap: round; opacity: 0.5; }
+.t-touch { fill: var(--cat); }
+.t-cross { fill: none; stroke: var(--ink); stroke-width: 2; }
+.t-sky { fill: #101624; }
+.t-lit { fill: #f1eedd; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }

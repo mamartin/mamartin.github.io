@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Jak fungují fáze Měsíce</title>
+  <meta name="description" content="Proč Měsíc dorůstá a couvá, proč to není stín Země a kdy ho na obloze hledat. S modelem, ve kterém Měsíc oběhnete kolem Země sami.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700&display=swap">
+  <link rel="stylesheet" href="../style.css">
+  <style>
+    .moon-stage { display: grid; gap: 1rem; grid-template-columns: minmax(0, 1fr); align-items: center; }
+    @media (min-width: 60rem) { .moon-stage { grid-template-columns: minmax(0, 1.42fr) minmax(0, 1fr); } }
+    #space { touch-action: pan-y; }
+    #sky { justify-self: center; max-width: 24rem; }
+
+    .sun { fill: #f2b63c; stroke: var(--metal-line); stroke-width: 1.2; }
+    .sunray line { stroke: #d9981a; stroke-width: 2; stroke-linecap: round; }
+    .sunray path { fill: #d9981a; }
+    .orbit { fill: none; stroke: var(--rule); stroke-width: 1.4; stroke-dasharray: 3 6; }
+    .sight { stroke: var(--cat); stroke-width: 1.2; stroke-dasharray: 4 4; opacity: 0.7; }
+    .earth { fill: var(--cold); stroke: var(--metal-line); stroke-width: 1.4; }
+    .night { fill: var(--ink); opacity: 0.38; pointer-events: none; }
+    .moon-dark { fill: var(--ink-3); stroke: var(--metal-line); stroke-width: 1.2; }
+    .moon-lit { fill: var(--surface); stroke: var(--metal-line); stroke-width: 1.2; }
+    .facing { fill: none; stroke: var(--cat); stroke-width: 5; stroke-linecap: round; }
+    .ghost { opacity: 0.55; }
+    .ghost.on { opacity: 1; }
+    .ghost.on .ring { stroke: var(--cat); stroke-width: 2.5; }
+    .ring { fill: none; stroke: none; }
+    #moon-handle { fill: transparent; cursor: grab; touch-action: none; outline: none; }
+    #moon-handle:focus-visible + .focus-ring { opacity: 1; }
+    .focus-ring { fill: none; stroke: var(--cat); stroke-width: 2.5; opacity: 0; pointer-events: none; }
+    .lbl { fill: var(--ink-3); font: 500 12px var(--font-mono); }
+    .lbl.strong { fill: var(--ink-2); font-weight: 600; }
+    .lbl.you { fill: var(--cat); font-weight: 600; text-anchor: middle; }
+
+    /* obloha je tmavá v obou režimech, barvy jsou proto pevné */
+    .sky-bg { fill: #101624; }
+    .star { fill: #cdd6ea; }
+    .disc-dark { fill: #2c3448; }
+    .disc-lit { fill: #f1eedd; }
+    .mare { fill: #101624; opacity: 0.16; }
+    .sky-name { fill: #f1eedd; font: 800 22px var(--font-display); font-stretch: 112%; text-anchor: middle; }
+    .sky-sub { fill: #aab4cc; font: 500 12.5px var(--font-mono); text-anchor: middle; }
+    .sky-cap { fill: #8f9ab5; font: 500 11px var(--font-mono); letter-spacing: 0.08em; }
+
+    .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.4rem; margin: 0; padding: 0; list-style: none; }
+    .stats li { display: grid; gap: 0.1rem; align-content: start; padding: 0.45rem 0.6rem; border: 1px solid var(--rule); border-top: 3px solid var(--cat); background: var(--surface); font-family: var(--font-mono); font-size: 0.78rem; line-height: 1.3; }
+    .stats .n { color: var(--ink-3); }
+    .stats .v { font-family: var(--font-display); font-stretch: 112%; font-weight: 800; font-size: 1.25rem; color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .status { font-size: 1.02rem; }
+    .mn-status { display: grid; gap: 0.9rem; }
+
+    @media (max-width: 46rem) {
+      .lbl { display: none; }
+      .stats .v { font-size: 1.05rem; }
+      .stats li { padding: 0.4rem 0.45rem; }
+    }
+    @media (min-width: 60rem) {
+      .mn-status { grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); align-items: start; gap: 2rem; }
+    }
+  </style>
+</head>
+<body data-cat="vesmir">
+  <header class="topbar">
+    <div class="wrap">
+      <a class="brand" href="../">Jak věci fungují</a>
+      <nav class="crumbs" aria-label="Drobečková navigace"><a href="../#vesmir">Vesmír</a><span aria-hidden="true">/</span><span>Fáze Měsíce</span></nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <header class="art-head">
+      <p class="eyebrow">Vesmír</p>
+      <h1 class="display">Jak fungují fáze Měsíce</h1>
+      <p class="lede">Měsíc nesvítí a nemění tvar. Je to koule, kterou Slunce pořád osvětluje z jedné strany, a my se na ni během měsíce díváme z různých úhlů.</p>
+    </header>
+
+    <section class="tldr" aria-labelledby="h-zkratka">
+      <h2 class="label" id="h-zkratka">Ve zkratce</h2>
+      <ul>
+        <li>Osvětlená je vždycky přesně polovina Měsíce: ta, která je otočená ke Slunci.</li>
+        <li>Měsíc oběhne Zemi jednou za měsíc. Podle toho, kde zrovna je, vidíme z jeho osvětlené poloviny <span class="hl">všechno, kus, nebo nic.</span></li>
+        <li>Stín Země s tím nemá nic společného. Ten na Měsíc padne jen při zatmění.</li>
+      </ul>
+    </section>
+
+    <figure class="fig" id="obr1">
+      <div class="fig-head">
+        <p class="fig-num"><b>Obr. 1</b> Měsíc shora a ze Země</p>
+        <span class="label">Přetáhněte Měsíc po jeho dráze</span>
+      </div>
+      <div class="fig-stage moon-stage">
+        <svg id="space" viewBox="0 0 560 420" role="img" aria-label="Pohled od severního pólu: Slunce vlevo, Země uprostřed a Měsíc na oběžné dráze s osvětlenou polovinou otočenou ke Slunci"></svg>
+        <svg id="sky" viewBox="0 0 380 420" role="img" aria-label="Měsíc, jak je právě vidět ze Země"></svg>
+      </div>
+      <div class="fig-controls">
+        <div class="ctl ctl-grow">
+          <label class="label" for="age">Stáří Měsíce</label>
+          <div class="ctl-row">
+            <input type="range" id="age" min="0" max="29.5" step="0.1" value="3.6">
+            <output class="val" id="age-val" for="age"></output>
+          </div>
+        </div>
+        <div class="ctl">
+          <span class="label" id="lbl-hemi">Díváte se z</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-hemi" id="hemi-seg">
+            <button type="button" role="radio" data-v="n" aria-checked="true">Severní polokoule</button>
+            <button type="button" role="radio" data-v="s" aria-checked="false">Jižní</button>
+          </div>
+        </div>
+        <button type="button" class="btn" id="play" aria-pressed="false">Zastavit</button>
+      </div>
+      <div class="fig-status mn-status">
+        <p class="status" id="status" aria-live="polite"></p>
+        <ul class="stats" aria-label="Stav modelu">
+          <li><span class="n">Osvětleno</span><span class="v" id="st-lit"></span></li>
+          <li><span class="n">Vychází kolem</span><span class="v" id="st-rise"></span></li>
+          <li><span class="n">Zapadá kolem</span><span class="v" id="st-set"></span></li>
+        </ul>
+      </div>
+      <figcaption class="fig-caption">Vlevo pohled shora, vzdálenosti a velikosti nejsou v měřítku. Světlá polovina Měsíce míří vždy ke Slunci. Fialový oblouk označuje polovinu, kterou je vidět ze Země. Co mají společného, to vidíte vpravo na obloze. Malé kotoučky kolem dráhy ukazují, jak Měsíc z daného místa vypadá. Časy východu a západu jsou jen přibližné.</figcaption>
+    </figure>
+
+    <section class="sec" aria-labelledby="h-polovina">
+      <div class="prose">
+        <h2 id="h-polovina">Polovina svítí vždycky</h2>
+        <p>Vezměte si v tmavé místnosti míč a postavte se s ním před lampu. Ať ho držíte kdekoli, lampa osvítí přesně jeho polovinu. Změní se jen to, kolik z té poloviny vidíte vy.</p>
+        <p>Držíte-li míč mezi sebou a lampou, díváte se na jeho tmavou stranu. Držíte-li ho stranou, vidíte půlku osvětlené poloviny, tedy čtvrtinu míče. A když se k lampě otočíte zády a míč zvednete nad hlavu, svítí na vás celá osvětlená polovina.</p>
+        <p>Lampa je Slunce, míč Měsíc a vaše hlava Země. Měsíc kolem nás oběhne jednou za necelý měsíc a cestou projde všemi těmi polohami.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Táhněte Měsíc dokola a sledujte fialový oblouk. Je to polovina, kterou máte na dohled. Kolik z ní leží na světlé straně, tolik Měsíce vpravo svítí.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-kolo">
+      <div class="prose">
+        <h2 id="h-kolo">Jedno kolo za 29 a půl dne</h2>
+        <p>Začíná se novem. Měsíc je na stejné straně jako Slunce, obrací k nám tmavou polovinu a na obloze je ve dne těsně u Slunce, takže ho nevidíme. Za pár dní se vedle Slunce vyhoupne tenký srpek a každý večer je tlustší. Po týdnu je vidět půlka kotouče: první čtvrť. Po dvou týdnech stojí Měsíc naproti Slunci a svítí celý: úplněk. Pak jde všechno pozpátku, přes poslední čtvrť k dalšímu novu.</p>
+        <p>Jestli Měsíc přibývá, nebo ubývá, poznáte podle písmen. <span class="hl">Když vypadá jako D, dorůstá. Když jako C, couvá.</span></p>
+        <p>Slovu čtvrť se nedivte, i když je vidět půlka. Neříká, kolik Měsíce svítí, ale že má za sebou čtvrtinu oběhu.</p>
+      </div>
+      <aside class="note" aria-label="Měsíc v číslech">
+        <span class="label">V číslech</span>
+        <dl class="facts">
+          <div><dt>29,5 dne</dt><dd>od novu k novu</dd></div>
+          <div><dt>27,3 dne</dt><dd>jeden oběh kolem Země vůči hvězdám</dd></div>
+          <div><dt>384 400 km</dt><dd>průměrná vzdálenost od Země</dd></div>
+          <div><dt>50 minut</dt><dd>o tolik později vychází každý další den</dd></div>
+        </dl>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-dva">
+      <div class="prose">
+        <h2 id="h-dva">Proč 29,5 a ne 27,3</h2>
+        <p>Měsíc oběhne Zemi za 27,3 dne. Od novu k novu ale uplyne o dva dny víc. Země totiž mezitím popošla po své dráze kolem Slunce asi o dvanáctinu kruhu, a Slunce je teď z jejího pohledu jinde. Měsíc musí ten kus ještě dojít, aby se zase dostal mezi nás a Slunce.</p>
+        <p>Je to stejné jako s ručičkami hodinek. Velká oběhne ciferník za hodinu, ale malou dožene až za hodinu a pět minut, protože malá mezitím taky popošla.</p>
+      </div>
+    </section>
+
+    <section class="sec" aria-labelledby="h-kdy">
+      <div class="prose">
+        <h2 id="h-kdy">Kdy ho hledat</h2>
+        <p>Fáze prozradí i to, kdy je Měsíc na obloze. Vyplývá to ze stejného obrázku. Úplněk stojí naproti Slunci, a tak vychází, když Slunce zapadá, a svítí celou noc. První čtvrť je od Slunce o čtvrt kruhu pozadu. Vychází v poledne, při západu Slunce je nejvýš a zapadá kolem půlnoci. Poslední čtvrť to má obráceně a vidí ji hlavně ti, kdo vstávají brzy.</p>
+        <p>Tenký dorůstající srpek je vidět jen chvíli po západu Slunce nízko nad západem. Ubývající zase těsně před svítáním na východě.</p>
+        <p>Z toho také plyne, že Měsíc není jen noční věc. Polovinu času je nad obzorem ve dne. Kolem první čtvrti ho najdete odpoledne na modré obloze skoro vždycky, stačí se podívat.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Na okraj</span>
+        <p>Úplněk nad obzorem vypadá obrovský. Je to klam, který se dodnes nepodařilo úplně vysvětlit. Když ho změříte palcem na natažené ruce, je u obzoru stejně velký jako vysoko na nebi.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-stin">
+      <div class="prose">
+        <h2 id="h-stin">Stín Země to není</h2>
+        <p>Nejčastější omyl je, že tmavou část Měsíce zakrývá stín Země. Stačí se podívat na obrázek: při srpku je Měsíc skoro mezi námi a Sluncem, a stín Země míří na opačnou stranu, pryč od něj.</p>
+        <p>Stín Země na Měsíc opravdu někdy padne. Je to zatmění Měsíce a může nastat jen při úplňku, kdy je Země mezi Sluncem a Měsícem. Vypadá jinak než fáze: okraj stínu je rozmazaný a Měsíc v něm nezmizí, ale zčervená.</p>
+        <p>Proč tedy není zatmění každý měsíc? Dráha Měsíce je vůči dráze Země skloněná asi o pět stupňů. Při většině úplňků proto Měsíc projde kousek nad stínem Země nebo pod ním. A při většině novů jeho vlastní stín mine Zemi, takže ani zatmění Slunce není každý měsíc.</p>
+      </div>
+    </section>
+
+    <section class="sec" aria-labelledby="h-popel">
+      <div class="prose">
+        <h2 id="h-popel">Tmavá část není úplně tmavá</h2>
+        <p>U tenkého srpku bývá slabě vidět i zbytek kotouče, šedý a matný. Říká se tomu popelavý svit. Je to světlo, které udělalo okliku: ze Slunce na Zemi, od ní na Měsíc a zpátky k nám do oka.</p>
+        <p>Když je u nás Měsíc v novu, je z Měsíce vidět Země v úplňku. A je to mnohem silnější lampa: je na obloze čtyřikrát širší a odráží světlo lépe. Popelavý svit jako první správně vysvětlil Leonardo da Vinci.</p>
+      </div>
+    </section>
+
+    <section class="sec" aria-labelledby="h-tvar">
+      <div class="prose">
+        <h2 id="h-tvar">Pořád stejná tvář</h2>
+        <p>Ať je fáze jakákoli, skvrny na Měsíci jsou pořád na stejných místech. Měsíc se totiž otočí kolem osy přesně za stejnou dobu, za jakou oběhne Zemi, a ukazuje nám tak stále jednu stranu. Zařídily to <a href="../priliv/">slapové síly</a>, kterými ho Země po miliardy let brzdila.</p>
+        <p>Druhé straně se říká odvrácená, ne temná. Slunce na ni svítí stejně často jako na tu naši. Při novu je dokonce osvětlená celá. Poprvé ji lidé viděli až v roce 1959 na snímcích sovětské sondy Luna 3.</p>
+      </div>
+    </section>
+
+    <section class="sec" aria-labelledby="h-jih">
+      <div class="prose">
+        <h2 id="h-jih">Na jihu naruby</h2>
+        <p>Pomůcka s písmeny D a C platí jen na severní polokouli. V Austrálii nebo v Chile se lidé na Měsíc dívají z opačné strany, vzhůru nohama oproti nám. Dorůstající srpek tam má tvar C a skvrny na úplňku jsou otočené o půl kruhu.</p>
+        <p>Blízko rovníku leží srpek na boku. Večer vypadá jako loďka nebo úsměv, ráno jako obrácená miska.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Přepněte pohled na Jižní polokouli. Fáze je stejná, osvětleno je stejně, jen se celý kotouč otočí.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-kalendar">
+      <div class="prose">
+        <h2 id="h-kalendar">Hodiny na obloze</h2>
+        <p>Fáze Měsíce byly první kalendář. Čeština má pro Měsíc i měsíc stejné slovo a není sama. Dvanáct oběhů je ale jen 354 dní, o jedenáct méně než rok, a tak se kalendář podle Měsíce vůči ročním obdobím posouvá. Islámský kalendář to tak nechává, proto ramadán připadá každý rok na jinou dobu. Židovský a čínský kalendář jednou za čas přidávají třináctý měsíc.</p>
+        <p>I v našem kalendáři jeden svátek podle Měsíce zůstal. Velikonoce jsou první neděli po prvním jarním úplňku.</p>
+      </div>
+    </section>
+
+    <footer class="art-foot">
+      <a class="next" href="../husi-kuze/" data-cat="telo">
+        <span class="label">Další článek · Lidské tělo</span>
+        <span class="t">Jak funguje husí kůže</span>
+        <p>Proč nám v zimě a při hudbě vstávají chlupy, když nám to k ničemu není.</p>
+      </a>
+      <a class="back" href="../">Všechna témata</a>
+    </footer>
+  </main>
+
+  <script>
+  (() => {
+    const NS = "http://www.w3.org/2000/svg";
+    function el(tag, attrs, parent) {
+      const n = document.createElementNS(NS, tag);
+      for (const k in attrs || {}) n.setAttribute(k, attrs[k]);
+      if (parent) parent.appendChild(n);
+      return n;
+    }
+    const space = document.getElementById("space"), sky = document.getElementById("sky");
+
+    /* ---------- model ---------- */
+    const MONTH = 29.53;                 // dní od novu k novu
+    const TAU = 2 * Math.PI;
+    // úhly měříme proti směru hodinových ručiček, Slunce je vlevo (180°)
+    const SUN_DIR = Math.PI;
+    const moonDir = (age) => SUN_DIR + (age / MONTH) * TAU;
+    const litPart = (age) => (1 - Math.cos((age / MONTH) * TAU)) / 2;
+
+    const s = { age: 3.6, south: false, playing: true };
+
+    // obrys osvětlené části kotouče o poloměru r při pohledu ze severní polokoule
+    function phasePath(age, r) {
+      const f = (age / MONTH) * TAU, rx = (Math.abs(Math.cos(f)) * r).toFixed(2);
+      const waxing = f < Math.PI, crescent = Math.cos(f) > 0;
+      return `M0 ${-r} A${r} ${r} 0 0 ${waxing ? 1 : 0} 0 ${r} A${rx} ${r} 0 0 ${waxing === crescent ? 0 : 1} 0 ${-r} Z`;
+    }
+
+    /* ---------- pohled shora ---------- */
+    const E = { x: 300, y: 210 }, R = 30, ORBIT = 138, MOON_R = 21, GHOST = ORBIT + 46;
+    const at = (ang, r) => [E.x + r * Math.cos(ang), E.y - r * Math.sin(ang)];
+
+    el("circle", { cx: -84, cy: E.y, r: 124, class: "sun" }, space);
+    [-110, 110].forEach((dy) => {
+      const g = el("g", { class: "sunray" }, space);
+      el("line", { x1: 44, y1: E.y + dy, x2: 82, y2: E.y + dy }, g);
+      el("path", { d: `M94 ${E.y + dy} L82 ${E.y + dy - 6} L82 ${E.y + dy + 6} Z` }, g);
+    });
+    el("text", { x: 12, y: 34, class: "lbl strong" }, space).textContent = "Slunce";
+    el("circle", { cx: E.x, cy: E.y, r: ORBIT, class: "orbit" }, space);
+
+    const ghosts = Array.from({ length: 8 }, (_, k) => {
+      const age = (k / 8) * MONTH, [x, y] = at(moonDir(age), GHOST);
+      const g = el("g", { class: "ghost", transform: `translate(${x.toFixed(1)} ${y.toFixed(1)})` }, space);
+      el("circle", { r: 12, class: "moon-dark" }, g);
+      if (k) el("path", { d: phasePath(age, 12), class: "moon-lit" }, g);
+      el("circle", { r: 16, class: "ring" }, g);
+      return { g, lit: g.querySelector("path") };
+    });
+
+    const sightA = el("line", { class: "sight" }, space), sightB = el("line", { class: "sight" }, space);
+    el("circle", { cx: E.x, cy: E.y, r: R, class: "earth" }, space);
+    el("path", { d: `M${E.x} ${E.y - R} A${R} ${R} 0 0 1 ${E.x} ${E.y + R} Z`, class: "night" }, space);
+    el("text", { x: E.x, y: E.y + R + 18, class: "lbl you" }, space).textContent = "Země";
+
+    const moon = el("g", {}, space);
+    el("circle", { r: MOON_R, class: "moon-dark" }, moon);
+    el("path", { d: `M0 ${-MOON_R} A${MOON_R} ${MOON_R} 0 0 0 0 ${MOON_R} Z`, class: "moon-lit" }, moon);
+    const facing = el("path", { class: "facing" }, moon);
+    const moonHandle = el("circle", { r: 30, id: "moon-handle", tabindex: "0", role: "slider", "aria-label": "Měsíc. Posuňte ho po dráze šipkami nebo tažením.", "aria-valuemin": 0, "aria-valuemax": 29.5 }, moon);
+    el("circle", { r: 28, class: "focus-ring" }, moon);
+
+    /* ---------- pohled ze Země ---------- */
+    const C = { x: 190, y: 178 }, DISC = 96;
+    el("rect", { x: 0, y: 0, width: 380, height: 420, rx: 6, class: "sky-bg" }, sky);
+    [[38, 52, 1.4], [88, 348, 1.1], [330, 70, 1.6], [352, 262, 1.1], [24, 214, 1.2], [300, 356, 1.3], [142, 28, 1], [246, 30, 1.2], [344, 168, 1]].forEach(([x, y, r]) => el("circle", { cx: x, cy: y, r, class: "star" }, sky));
+    el("text", { x: 18, y: 28, class: "sky-cap" }, sky).textContent = "JAK HO VIDÍTE ZE ZEMĚ";
+    const disc = el("g", {}, sky);
+    el("circle", { r: DISC, class: "disc-dark" }, disc);
+    const discLit = el("path", { class: "disc-lit" }, disc);
+    [[-30, -34, 30, 24], [22, -40, 22, 18], [-44, 14, 20, 26], [12, 6, 18, 14], [40, 32, 14, 11], [-8, 50, 20, 12]].forEach(([x, y, rx, ry]) => el("ellipse", { cx: x, cy: y, rx, ry, class: "mare" }, disc));
+    const skyName = el("text", { x: C.x, y: 336, class: "sky-name" }, sky);
+    const skySub = el("text", { x: C.x, y: 362, class: "sky-sub" }, sky);
+
+    /* ---------- výpis ---------- */
+    const fmt0 = new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 0 });
+    const fmt1 = new Intl.NumberFormat("cs-CZ", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    const $ = (id) => document.getElementById(id);
+    const statusEl = $("status"), ageIn = $("age"), ageVal = $("age-val"), playBtn = $("play");
+    const cache = new WeakMap();
+    function put(node, str, html) {
+      if (cache.get(node) === str) return;
+      cache.set(node, str);
+      if (html) node.innerHTML = str; else node.textContent = str;
+    }
+    const PHASES = ["nov", "dorůstající srpek", "první čtvrť", "dorůstající Měsíc", "úplněk", "couvající Měsíc", "poslední čtvrť", "ubývající srpek"];
+    const TEXT = [
+      "Měsíc je mezi námi a Sluncem. Obrací k Zemi svou tmavou polovinu a na obloze je ve dne těsně vedle Slunce, takže vidět není.",
+      "Z osvětlené poloviny vidíme úzký proužek. Hledejte ho večer nízko nad západem, krátce po západu Slunce.",
+      "Měsíc má za sebou čtvrtinu oběhu. Díváme se na něj z boku a vidíme půlku jeho osvětlené poloviny. Vychází v poledne a večer je vysoko na obloze.",
+      "Do úplňku chybí jen kousek. Měsíc vychází odpoledne a svítí velkou část noci.",
+      "Měsíc je naproti Slunci a vidíme celou jeho osvětlenou polovinu. Vychází při západu Slunce a svítí až do rána.",
+      "Úplněk je pryč a osvětlené části ubývá. Měsíc vychází až večer po setmění a je vidět i ráno.",
+      "Tři čtvrtiny oběhu. Zase vidíme půlku, tentokrát tu druhou. Vychází kolem půlnoci, ráno bývá vidět na denní obloze.",
+      "Zbývá úzký proužek. Je vidět jen ráno před svítáním, nízko nad východem.",
+    ];
+    const phaseIndex = (age) => Math.round((age / MONTH) * 8) % 8;
+    function clock(h) {
+      const q = Math.round(((((h % 24) + 24) % 24) * 60) / 15) * 15 % 1440;
+      return `${Math.floor(q / 60)}:${String(q % 60).padStart(2, "0")}`;
+    }
+
+    function render() {
+      const md = moonDir(s.age), [mx, my] = at(md, ORBIT), idx = phaseIndex(s.age);
+      moon.setAttribute("transform", `translate(${mx.toFixed(1)} ${my.toFixed(1)})`);
+      moonHandle.setAttribute("aria-valuenow", s.age.toFixed(1));
+
+      // polovina Měsíce přivrácená k Zemi: oblouk o 180° se středem ve směru k Zemi
+      const toEarth = md + Math.PI, r = MOON_R + 6;
+      const p = (a) => `${(r * Math.cos(a)).toFixed(1)} ${(-r * Math.sin(a)).toFixed(1)}`;
+      facing.setAttribute("d", `M${p(toEarth - Math.PI / 2 + 0.12)} A${r} ${r} 0 0 0 ${p(toEarth + Math.PI / 2 - 0.12)}`);
+      [[sightA, 1], [sightB, -1]].forEach(([line, side]) => {
+        const ex = mx + MOON_R * Math.cos(md + (side * Math.PI) / 2), ey = my - MOON_R * Math.sin(md + (side * Math.PI) / 2);
+        line.setAttribute("x1", E.x); line.setAttribute("y1", E.y); line.setAttribute("x2", ex.toFixed(1)); line.setAttribute("y2", ey.toFixed(1));
+      });
+      ghosts.forEach((g, k) => g.g.setAttribute("class", k === idx ? "ghost on" : "ghost"));
+
+      disc.setAttribute("transform", `translate(${C.x} ${C.y}) rotate(${s.south ? 180 : 0})`);
+      discLit.setAttribute("d", phasePath(s.age, DISC));
+      const lit = litPart(s.age);
+      put(skyName, PHASES[idx][0].toUpperCase() + PHASES[idx].slice(1));
+      put(skySub, `osvětleno ${fmt0.format(Math.round(lit * 100))} % kotouče`);
+
+      put($("st-lit"), `${fmt0.format(Math.round(lit * 100))} %`);
+      const shift = (s.age / MONTH) * 24;
+      put($("st-rise"), clock(6 + shift));
+      put($("st-set"), clock(18 + shift));
+      put(ageVal, `${fmt1.format(s.age)} dne`);
+      if (document.activeElement !== ageIn) ageIn.value = s.age.toFixed(1);
+
+      put(statusEl, `<strong>${PHASES[idx][0].toUpperCase()}${PHASES[idx].slice(1)}.</strong> ${TEXT[idx]}`, true);
+      put(playBtn, s.playing ? "Zastavit" : "Spustit oběh");
+    }
+
+    /* ---------- ovládání ---------- */
+    const wrapAge = (a) => ((a % MONTH) + MONTH) % MONTH;
+    ageIn.addEventListener("input", () => { s.age = Number(ageIn.value); render(); });
+    const hemi = $("hemi-seg");
+    hemi.addEventListener("click", (e) => {
+      const b = e.target.closest("button[data-v]");
+      if (!b) return;
+      hemi.querySelectorAll("button").forEach((x) => x.setAttribute("aria-checked", String(x === b)));
+      s.south = b.dataset.v === "s";
+      render();
+    });
+    playBtn.addEventListener("click", () => { s.playing = !s.playing; playBtn.setAttribute("aria-pressed", String(!s.playing)); render(); });
+
+    let dragging = false;
+    moonHandle.addEventListener("pointerdown", (e) => { dragging = true; moonHandle.setPointerCapture(e.pointerId); moonHandle.style.cursor = "grabbing"; });
+    moonHandle.addEventListener("pointermove", (e) => {
+      if (!dragging) return;
+      const m = space.getScreenCTM();
+      if (!m) return;
+      const p = new DOMPoint(e.clientX, e.clientY).matrixTransform(m.inverse());
+      s.age = wrapAge(((Math.atan2(-(p.y - E.y), p.x - E.x) - SUN_DIR) / TAU) * MONTH);
+      render();
+    });
+    const stop = () => { dragging = false; moonHandle.style.cursor = ""; };
+    moonHandle.addEventListener("pointerup", stop);
+    moonHandle.addEventListener("pointercancel", stop);
+    moonHandle.addEventListener("keydown", (e) => {
+      const d = { ArrowLeft: -0.5, ArrowDown: -0.5, ArrowRight: 0.5, ArrowUp: 0.5 }[e.key];
+      if (!d) return;
+      e.preventDefault();
+      s.age = wrapAge(s.age + d * (e.shiftKey ? 4 : 1));
+      render();
+    });
+
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) { s.playing = false; playBtn.setAttribute("aria-pressed", "true"); }
+    let prev = performance.now();
+    function frame(now) {
+      const dt = Math.min(0.1, (now - prev) / 1000);
+      prev = now;
+      if (s.playing && !dragging) { s.age = wrapAge(s.age + dt * 1.1); render(); }
+      requestAnimationFrame(frame);
+    }
+    render();
+    requestAnimationFrame(frame);
+  })();
+  </script>
+</body>
+</html>

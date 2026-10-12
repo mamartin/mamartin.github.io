@@ -1,0 +1,632 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Jak se vaří voda</title>
+  <meta name="description" content="Kde se ve vroucí vodě berou bubliny, proč konvice před varem hučí, proč teplota nepřeleze sto stupňů a jak může voda v mikrovlnce vzkypět naráz. S hrncem, který si můžete uvařit.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700&display=swap">
+  <link rel="stylesheet" href="../style.css">
+  <style>
+    .boil-stage { display: grid; gap: 1rem; grid-template-columns: minmax(0, 1fr); align-items: center; }
+    .side { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; }
+    .side figure { display: grid; gap: 0.35rem; margin: 0; }
+    .side svg { border: 1px solid var(--rule); background: var(--surface); }
+    .side .label { text-align: center; }
+    @media (min-width: 60rem) {
+      .boil-stage { grid-template-columns: minmax(0, 1fr) 15rem; }
+      .side { grid-template-columns: minmax(0, 1fr); }
+    }
+
+    .water { fill: var(--cold); opacity: 0.22; }
+    .water-top { stroke: var(--cold); stroke-width: 2; }
+    .pot-wall { fill: none; stroke: var(--pin-top); stroke-width: 10; stroke-linejoin: round; }
+    .pot-edge { fill: none; stroke: var(--metal-line); stroke-width: 1.2; }
+    .pot-handle { fill: var(--ink); }
+    .lid { fill: var(--pin-top); stroke: var(--metal-line); stroke-width: 1.2; }
+    .hob { fill: var(--ink); }
+    .glow { fill: var(--hot); transition: opacity 0.3s; }
+    .mug-wall { fill: none; stroke: var(--cool); stroke-width: 8; stroke-linejoin: round; stroke-linecap: round; opacity: 0.8; }
+    .tray { stroke: var(--ink-3); stroke-width: 3; stroke-linecap: round; }
+    .mw { fill: none; stroke: var(--warm); stroke-width: 2.4; stroke-linecap: round; stroke-dasharray: 9 7; transition: opacity 0.3s; }
+    .bubble { fill: var(--surface); stroke: var(--cold); stroke-width: 1.4; }
+    .airb { fill: var(--surface); stroke: var(--cold); stroke-width: 1; }
+    .pop { fill: none; stroke: var(--cold); stroke-width: 1.6; }
+    .drop { fill: var(--cold); }
+    .grain { fill: var(--ink); }
+    .steam { fill: none; stroke: var(--ink-3); stroke-width: 3; stroke-linecap: round; }
+    .rd-cap { fill: var(--ink-3); font: 500 11px var(--font-mono); letter-spacing: 0.08em; }
+    .rd-val { fill: var(--ink); font: 800 44px var(--font-display); font-stretch: 112%; font-variant-numeric: tabular-nums; }
+    .rd-sub { fill: var(--ink-2); font: 500 13px var(--font-mono); }
+
+    .d-metal { fill: url(#hatch-metal); }
+    .d-metal-bg { fill: var(--steel); }
+    .d-metal-ln { stroke: var(--steel-hatch); stroke-width: 1.2; }
+    .d-glass { fill: var(--cool); opacity: 0.35; }
+    .d-edge { fill: none; stroke: var(--metal-line); stroke-width: 1.4; stroke-linejoin: round; }
+    .d-water { fill: var(--cold); opacity: 0.22; }
+    .d-gas { fill: var(--surface); stroke: var(--cold); stroke-width: 1.6; stroke-linejoin: round; }
+    .d-text { fill: var(--ink-2); font: 500 11.5px var(--font-mono); text-anchor: middle; }
+    .d-text.big { fill: var(--ink); font-weight: 600; font-size: 12.5px; }
+
+    .c-axis { stroke: var(--ink-3); stroke-width: 1; }
+    .c-grid { stroke: var(--grid); stroke-width: 1; }
+    .c-boil { stroke: var(--bad); stroke-width: 1.3; stroke-dasharray: 5 4; }
+    .c-line { fill: none; stroke: var(--cat); stroke-width: 2.6; stroke-linejoin: round; stroke-linecap: round; }
+    .c-dot { fill: var(--cat); stroke: var(--surface); stroke-width: 1.5; }
+    .c-text { fill: var(--ink-2); font: 500 10.5px var(--font-mono); }
+    .c-text.red { fill: var(--bad); }
+
+    .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.4rem; margin: 0; padding: 0; list-style: none; }
+    .stats li { display: grid; gap: 0.1rem; align-content: start; padding: 0.45rem 0.6rem; border: 1px solid var(--rule); border-top: 3px solid var(--cat); background: var(--surface); font-family: var(--font-mono); font-size: 0.78rem; line-height: 1.3; }
+    .stats .n { color: var(--ink-3); }
+    .stats .v { font-family: var(--font-display); font-stretch: 112%; font-weight: 800; font-size: 1.25rem; color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .meter { display: block; height: 0.7rem; margin-top: 0.45rem; background: var(--sunk); border: 1px solid var(--rule); }
+    .meter i { display: block; height: 100%; background: var(--cat); }
+    .status { font-size: 1.02rem; }
+    .bw-status { display: grid; gap: 0.9rem; }
+    .btn.ghost { background: transparent; color: var(--cat); }
+
+    @media (max-width: 46rem) {
+      .rd-cap { font-size: 15px; }
+      .rd-sub { font-size: 18px; }
+      .stats .v { font-size: 1.05rem; }
+      .stats li { padding: 0.4rem 0.45rem; }
+    }
+    @media (min-width: 60rem) {
+      .bw-status { grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); align-items: start; gap: 2rem; }
+    }
+  </style>
+</head>
+<body data-cat="domacnost">
+  <header class="topbar">
+    <div class="wrap">
+      <a class="brand" href="../">Jak věci fungují</a>
+      <nav class="crumbs" aria-label="Drobečková navigace"><a href="../#domacnost">Domácnost</a><span aria-hidden="true">/</span><span>Jak se vaří voda</span></nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <header class="art-head">
+      <p class="eyebrow">Domácnost</p>
+      <h1 class="display">Jak se vaří voda</h1>
+      <p class="lede">Bublina ve vroucí vodě není vzduch. Je to voda, která se uvnitř hrnce proměnila v páru. Vzniknout ale neumí kdekoli. Potřebuje se nejdřív něčeho chytit.</p>
+    </header>
+
+    <section class="tldr" aria-labelledby="h-zkratka">
+      <h2 class="label" id="h-zkratka">Ve zkratce</h2>
+      <ul>
+        <li>Bubliny páry rostou ze <span class="hl">zárodků:</span> z kapsiček vzduchu uvězněných ve škrábancích na dně a stěnách hrnce.</li>
+        <li>Než se voda začne vařit, bubliny cestou nahoru zanikají. Proto konvice před varem hučí a při varu ztichne.</li>
+        <li>Jakmile voda vře, její teplota už nestoupá. Všechno další teplo jde do páry.</li>
+      </ul>
+    </section>
+
+    <figure class="fig" id="obr1">
+      <div class="fig-head">
+        <p class="fig-num"><b>Obr. 1</b> Hrnec vody</p>
+        <span class="label">Zapněte ohřev a sledujte, co se děje u dna</span>
+      </div>
+      <div class="fig-stage boil-stage">
+        <svg id="scene" viewBox="0 0 600 440" role="img" aria-label="Nádoba s vodou při ohřevu: bubliny u dna, pára nad hladinou a teplota vody"></svg>
+        <div class="side">
+          <figure>
+            <svg id="detail" viewBox="0 0 200 170" role="img" aria-label="Zvětšený škrábanec ve dně, ze kterého roste bublina">
+              <defs>
+                <pattern id="hatch-metal" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+                  <rect width="7" height="7" class="d-metal-bg"/>
+                  <line x1="0" y1="0" x2="0" y2="7" class="d-metal-ln"/>
+                </pattern>
+              </defs>
+            </svg>
+            <span class="label" id="detail-label">Detail · škrábanec ve dně</span>
+          </figure>
+          <figure>
+            <svg id="chart" viewBox="0 0 200 170" role="img" aria-label="Graf teploty vody v čase"></svg>
+            <span class="label">Teplota v čase</span>
+          </figure>
+        </div>
+      </div>
+      <div class="fig-controls">
+        <div class="ctl">
+          <span class="label" id="lbl-kind">Nádoba</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-kind" id="kind-seg">
+            <button type="button" role="radio" data-v="pot" aria-checked="true">Hrnec na plotně</button>
+            <button type="button" role="radio" data-v="mug" aria-checked="false">Hladký hrnek v mikrovlnce</button>
+          </div>
+        </div>
+        <div class="ctl">
+          <span class="label" id="lbl-place">Kde vaříte</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-place" id="place-seg">
+            <button type="button" role="radio" data-v="sea" aria-checked="true">U moře</button>
+            <button type="button" role="radio" data-v="snezka" aria-checked="false">Na Sněžce</button>
+            <button type="button" role="radio" data-v="everest" aria-checked="false">Na Everestu</button>
+            <button type="button" role="radio" data-v="cooker" aria-checked="false">V papiňáku</button>
+          </div>
+        </div>
+        <button type="button" class="btn" id="heat" aria-pressed="false">Zapnout ohřev</button>
+        <button type="button" class="btn ghost" id="sugar">Vhodit cukr</button>
+        <button type="button" class="btn ghost" id="fresh">Nová voda</button>
+      </div>
+      <div class="fig-status bw-status">
+        <p class="status" id="status" aria-live="polite"></p>
+        <ul class="stats" aria-label="Stav modelu">
+          <li><span class="n">Čas ohřevu</span><span class="v" id="st-time"></span></li>
+          <li><span class="n">Hluk</span><span class="meter" aria-hidden="true"><i id="st-noise"></i></span></li>
+          <li><span class="n">Vypařilo se</span><span class="v" id="st-evap"></span></li>
+        </ul>
+      </div>
+      <figcaption class="fig-caption">Zjednodušený model. V hrnci je litr a půl vody na plotně s příkonem dva kilowatty, v hrnku čtvrt litru v mikrovlnce. Čas běží zrychleně, hodnota na stopkách je skutečná doba ohřevu. Bubliny jsou zvětšené. Detail ukazuje jeden škrábanec ve dně, široký ve skutečnosti setiny milimetru.</figcaption>
+    </figure>
+
+    <section class="sec" aria-labelledby="h-druhy">
+      <div class="prose">
+        <h2 id="h-druhy">Troje bubliny</h2>
+        <ol class="steps">
+          <li><div><b>Kolem 50 °C: vzduch.</b> Stěny a dno hrnce se pokryjí drobnými perličkami. Není to pára. Ve studené vodě je rozpuštěný vzduch a teplá ho udrží míň, a tak z ní vystupuje. Ryby v teplé vodě lapají po dechu ze stejného důvodu.</div></li>
+          <li><div><b>Kolem 80 až 90 °C: pára, která nepřežije.</b> Dno je už teplejší než sto stupňů a voda těsně u něj se mění v páru. Bublina se odtrhne a stoupá do vody, která je o dvacet stupňů chladnější. Pára se v ní okamžitě srazí zpátky na vodu a bublina se zhroutí. Každé zhroucení je malé lupnutí. Tisíce za sekundu dají dohromady hučení, kterému se říká zpívání konvice.</div></li>
+          <li><div><b>100 °C: var.</b> Voda je horká všude. Bublina už cestou nezanikne, naopak roste, protože se do ní vypařuje další voda a nahoře na ni tlačí menší sloupec vody. Na hladině praskne a páru pustí ven. Hučení ustane a vystřídá ho klidné bublání.</div></li>
+        </ol>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Zapněte ohřev a sledujte ukazatel hluku. Nejhlasitější je těsně před varem, ve chvíli, kdy bubliny zanikají kousek nad dnem. Jakmile začnou doplouvat až na hladinu, hluk spadne.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-zarodek">
+      <div class="prose">
+        <h2 id="h-zarodek">Proč bublina nevznikne jen tak</h2>
+        <p>Dalo by se čekat, že při sto stupních se voda začne měnit v páru všude najednou. Nezačne. V cestě stojí povrchové napětí, stejná síla, která drží pohromadě kapku.</p>
+        <p>Hladina vody se chová jako napnutá blána, která se snaží co nejvíc smrštit. Bublina je kulatá díra ve vodě a její stěna je taková blána. Stahuje se a páru uvnitř mačká. Čím menší bublina, tím je stěna zakřivenější a tím silněji tlačí. U bubliny o průměru milimetru je to zanedbatelné. U bubliny velké tisícinu milimetru už tlak navíc dělá víc než jednu atmosféru. A bublina, která by se teprve rodila z několika molekul, by na sebe tlačila silou stovek atmosfér.</p>
+        <p>Pára o sto stupních takový tlak nemá. Maličkou bublinku proto blána okamžitě rozmáčkne dřív, než stačí vyrůst. <span class="hl">Bublina nemůže začít z ničeho.</span> Musí začít z něčeho, co už je dost velké.</p>
+      </div>
+      <aside class="note" aria-label="Var v číslech">
+        <span class="label">Tlak navíc v bublině</span>
+        <dl class="facts">
+          <div><dt>0,002 atm</dt><dd>při průměru 1 mm</dd></div>
+          <div><dt>2,3 atm</dt><dd>při průměru tisíciny milimetru</dd></div>
+          <div><dt>230 atm</dt><dd>při průměru stotisíciny milimetru</dd></div>
+        </dl>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-skrabanec">
+      <div class="prose">
+        <h2 id="h-skrabanec">Zárodky ve škrábancích</h2>
+        <p>To něco jsou kapsičky plynu. Žádné dno není dokonale hladké. Pod mikroskopem je plné rýh, jamek a pórů. Když do hrnce nalijete vodu, nezateče do všech. V těch nejužších zůstane uvězněná bublinka vzduchu.</p>
+        <p>Každá taková kapsička je hotový zárodek. Má už rozumnou velikost, takže ji blána nerozmáčkne. Voda kolem se do ní vypařuje, kapsička roste, vyboulí se z rýhy ven a nakonec se z ní odtrhne bublina. V rýze ale kousek plynu zůstane a všechno začne znovu.</p>
+        <p>Proto bubliny v hrnci nestoupají odevšad. Stoupají v řetízcích, pořád ze stejných několika míst. Stejně je to se sklenicí limonády nebo šampaňského, jen tam z kapsiček roste oxid uhličitý místo páry. Řetízek bublinek začíná na vlákénku z utěrky nebo na škrábanci ve skle.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Sledujte detail škrábance vpravo. Kapsička plynu v něm roste, odškrtí bublinu a zůstane po ní zbytek, ze kterého vyroste další.</p>
+        <p>Chemici si zárodky do baněk přidávají schválně. Říkají jim varné kamínky: úlomky pórovité keramiky, bez kterých by kapalina v hladkém skle vřela nárazově.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-mikrovlnka">
+      <div class="prose">
+        <h2 id="h-mikrovlnka">Když zárodky chybí</h2>
+        <p>Co se stane, když voda nemá kde začít? Nic. Ohřeje se na sto stupňů a ohřívá se dál, aniž by vřela. Říká se jí přehřátá voda a je to past, protože vypadá úplně klidně.</p>
+        <p>Na plotně se to nestane. Dno hrnce je mnohem teplejší než sto stupňů a je poškrábané, takže zárodků je dost. V <a href="../mikrovlnka/">mikrovlnné troubě</a> se ale sejdou tři věci proti sobě. Mikrovlny ohřívají přímo vodu, takže stěny hrnku jsou chladnější než ona a žádné horké dno není. Nový skleněný nebo glazovaný hrnek je hladký a kapsiček má málo. A voda, která se už jednou vařila, v sobě nemá rozpuštěný vzduch, ze kterého by zárodky vznikly.</p>
+        <p>Taková voda se může dostat o několik stupňů nad bod varu. Pak stačí cokoli, co zárodky přinese: zrnka kávy nebo cukru, lžička, drcnutí při vyndávání. Všechno přebytečné teplo se během okamžiku promění v páru a voda z hrnku vyletí.</p>
+        <p>Obrana je jednoduchá. Neohřívejte vodu v mikrovlnce déle, než je potřeba, a dejte do hrnku něco, na čem bubliny mohou začít, třeba dřevěnou špejli. Po vypnutí nechte hrnek chvilku stát.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Vyberte Hladký hrnek v mikrovlnce a zapněte ohřev. Teplota přeleze bod varu a nic se neděje. V detailu je vidět proč: na hladkém skle není z čeho růst. Pak vhoďte cukr.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-sto">
+      <div class="prose">
+        <h2 id="h-sto">Proč se teplota zastaví</h2>
+        <p>Dokud se voda ohřívá, teplo z plotny zrychluje její molekuly a teploměr stoupá. Při varu se to změní. Každá molekula, která opustí kapalinu a stane se párou, si s sebou odnese pořádnou dávku energie. Čím víc topíte, tím víc jich odchází, a teplota zůstává na místě.</p>
+        <p>Té dávky je překvapivě hodně. Na ohřátí litru vody z nuly na sto stupňů je potřeba asi 420 kilojoulů. Na to, aby se stejný litr při sto stupních celý vypařil, 2 260. <span class="hl">Vypařit vodu stojí pětkrát víc než ji ohřát k varu.</span></p>
+        <p>Plyne z toho praktická rada. Voda, která vře zběsile, není teplejší než voda, která vře mírně. Těstoviny se v ní neuvaří rychleji, jen se jí víc vypaří. Jakmile se začne vařit, můžete plotnu stáhnout.</p>
+        <p>A také varování. Pára o sto stupních má v sobě mnohem víc energie než voda o sto stupních. Když se na kůži srazí, všechnu ji odevzdá. Proto je opaření párou horší než vroucí vodou.</p>
+      </div>
+      <aside class="note" aria-label="Var v číslech">
+        <span class="label">V číslech</span>
+        <dl class="facts">
+          <div><dt>2 260 kJ</dt><dd>stojí vypaření litru vroucí vody</dd></div>
+          <div><dt>1 700×</dt><dd>větší objem má pára než voda, ze které vznikla</dd></div>
+        </dl>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-tlak">
+      <div class="prose">
+        <h2 id="h-tlak">Sto stupňů neplatí všude</h2>
+        <p>Voda vře, když tlak její páry dorovná tlak okolí. Jinak řečeno, když bublina dokáže odtlačit vodu a vzduch nad sebou. Při běžném tlaku vzduchu to pára zvládne při sto stupních.</p>
+        <p>Na horách je vzduchu nad vámi méně a bublina to má snazší. Na Sněžce vře voda při 95 °C, na Mount Everestu jen asi při 71 °C. Vajíčko natvrdo tam trvá věčnost a čaj nestojí za nic, protože voda prostě není dost horká.</p>
+        <p>Tlakový hrnec dělá opak. Páru nepustí ven, tlak uvnitř stoupne zhruba na dvojnásobek a voda vře až kolem 118 °C. Těch osmnáct stupňů navíc zkrátí vaření masa a luštěnin na třetinu.</p>
+        <p>A sůl? Bod varu opravdu zvyšuje, ale lžíce soli na litr vody ho posune asi o čtvrt stupně. Na rychlost vaření to vliv nemá. Solí se kvůli chuti.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Přepněte na Everest a uvařte vodu znovu. Vře dřív, ale při teplotě, při které byste u moře teprve slyšeli první hučení.</p>
+        <p>Když do vroucí vody nasypete sůl a ona zabublá, není to bodem varu. Zrnka soli přinesla nové zárodky.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-kapka">
+      <div class="prose">
+        <h2 id="h-kapka">Kapka, která tančí</h2>
+        <p>Když kápnete vodu na mírně horkou pánev, zasyčí a je pryč. Na opravdu rozpálené pánvi se stane něco jiného. Kapka se sbalí do kuličky, jezdí po pánvi a vydrží dlouhé vteřiny.</p>
+        <p>Spodek kapky se vypaří tak rychle, že pod ní vznikne polštář páry. Kapka se pánve vůbec nedotýká, vznáší se na něm. A protože pára vede teplo špatně, kapka se ohřívá pomaleji, než kdyby na pánvi ležela. Kuchaři tak poznají, že je pánev dost horká na steak.</p>
+      </div>
+    </section>
+
+    <footer class="art-foot">
+      <a class="next" href="../gps/" data-cat="technika">
+        <span class="label">Další článek · Technika</span>
+        <span class="t">Jak funguje GPS</span>
+        <p>Jak telefon zjistí, kde je, když do vesmíru nic neposílá.</p>
+      </a>
+      <a class="back" href="../">Všechna témata</a>
+    </footer>
+  </main>
+
+  <script>
+  (() => {
+    const NS = "http://www.w3.org/2000/svg";
+    function el(tag, attrs, parent) {
+      const n = document.createElementNS(NS, tag);
+      for (const k in attrs || {}) n.setAttribute(k, attrs[k]);
+      if (parent) parent.appendChild(n);
+      return n;
+    }
+    const scene = document.getElementById("scene"), detail = document.getElementById("detail"), chart = document.getElementById("chart");
+
+    /* ---------- model ---------- */
+    const C_WATER = 4186;      // J na kilogram a stupeň
+    const L_VAPOR = 2260;      // J na gram vypařené vody
+    const SING = 22;           // kolik stupňů pod bodem varu začne u dna vznikat pára
+    const KINDS = {
+      pot: { x0: 150, x1: 450, yb: 380, level: 205, mass: 1.5, power: 1500, accel: 14, window: 480, pxPerMl: 0.117 },
+      mug: { x0: 229, x1: 371, yb: 380, level: 205, mass: 0.25, power: 720, accel: 7, window: 240, pxPerMl: 0.7 },
+    };
+    const PLACES = { sea: { tb: 100, name: "u moře" }, snezka: { tb: 95, name: "na Sněžce" }, everest: { tb: 71, name: "na Everestu" }, cooker: { tb: 118, name: "v tlakovém hrnci" } };
+    const SITES = [176, 212, 249, 281, 322, 351, 391, 426].map((x) => ({ x, timer: Math.random() }));
+
+    const s = { kind: "pot", place: "sea", heating: false, T: 20, t: 0, evap: 0, spill: 0, erupted: false, fizz: 0, phase: 0, samples: [[0, 20]] };
+    let bubbles = [], pops = [], drops = [], grains = [];
+    const tb = () => PLACES[s.place].tb;
+    const activity = () => Math.max(0, Math.min(1, (s.T - (tb() - SING)) / SING));
+    const waterY = () => Math.min(KINDS[s.kind].yb - 24, KINDS[s.kind].level + s.evap * KINDS[s.kind].pxPerMl + s.spill);
+
+    function spawn(x, y, r) { if (bubbles.length < 150) bubbles.push({ x, y, r, w: Math.random() * 6 }); }
+
+    function step(dt) {
+      const K = KINDS[s.kind], h = dt * K.accel, boil = tb();
+      const rate = K.power / (K.mass * C_WATER);
+      if (s.heating) {
+        s.t += h;
+        if (s.kind === "pot") {
+          if (s.T < boil) s.T = Math.min(boil, s.T + rate * h);
+          else s.evap += (K.power / L_VAPOR) * h;
+        } else if (s.T < boil) {
+          s.T += rate * h;
+        } else {
+          // bez zárodků voda nevře: přehřívá se a teplo odchází jen vypařováním z hladiny
+          const over = Math.max(0, 1 - (s.T - boil) / 7);
+          s.T += rate * h * over;
+          s.evap += (K.power / L_VAPOR) * h * (1 - over);
+        }
+      } else if (s.T > 22) {
+        s.T -= (s.T - 22) * 0.0007 * h;
+      }
+      if (s.kind === "pot" && s.T > boil) s.T = boil;
+      if (s.t - s.samples[s.samples.length - 1][0] >= 2) s.samples.push([s.t, s.T]);
+
+      // bubliny páry ze zárodků na dně hrnce
+      const a = activity(), wy = waterY();
+      if (s.kind === "pot" && s.heating && a > 0) {
+        SITES.forEach((site) => {
+          site.timer -= dt;
+          if (site.timer > 0) return;
+          site.timer = (0.5 + Math.random()) / (0.5 + 4.5 * a * a);
+          spawn(site.x + (Math.random() - 0.5) * 4, K.yb - 6, 2.4 + 2.2 * a + Math.random());
+        });
+      }
+      if (s.fizz > 0) {
+        s.fizz -= dt;
+        if (Math.random() < dt * 40) spawn((K.x0 + K.x1) / 2 + (Math.random() - 0.5) * 50, K.yb - 6, 2 + Math.random() * 2.5);
+      }
+      bubbles = bubbles.filter((b) => {
+        b.w += dt * 9;
+        b.x += Math.sin(b.w) * 14 * dt;
+        b.y -= (45 + 13 * b.r) * dt;
+        // ve vodě chladnější než bod varu se pára srazí a bublina zanikne, jinak roste
+        b.r += (s.T < boil - 0.3 ? -((boil - s.T) * 0.5 + 1.2) : 3.5) * dt;
+        if (b.r > 13) b.r = 13;
+        if (b.r < 0.8) return false;
+        if (b.y - b.r < wy) { if (pops.length < 24) pops.push({ x: b.x, r: b.r, life: 0 }); return false; }
+        return true;
+      });
+      pops = pops.filter((p) => (p.life += dt * 3.2) < 1);
+      drops = drops.filter((d) => { d.vy += 520 * dt; d.x += d.vx * dt; d.y += d.vy * dt; return d.y < K.yb + 30; });
+      grains = grains.filter((g) => (g.life -= dt) > 0);
+
+      const active = s.kind === "pot" && s.heating && a > 0;
+      if (active) s.phase = (s.phase + dt * (0.14 + 1.05 * a)) % 1;
+    }
+
+    function addSugar() {
+      const K = KINDS[s.kind], mid = (K.x0 + K.x1) / 2, wy = waterY();
+      for (let i = 0; i < 9; i++) grains.push({ x: mid + (Math.random() - 0.5) * 44, life: 2.5 + Math.random() });
+      if (s.kind === "mug" && s.T > tb() + 0.8) {
+        // přehřátá voda dostala zárodky: přebytečné teplo se naráz změní v páru
+        const extra = ((s.T - tb()) * C_WATER * K.mass) / L_VAPOR;
+        for (let i = 0; i < 90; i++) spawn(K.x0 + 10 + Math.random() * (K.x1 - K.x0 - 20), wy + 10 + Math.random() * (K.yb - wy - 20), 4 + Math.random() * 9);
+        for (let i = 0; i < 34; i++) drops.push({ x: mid + (Math.random() - 0.5) * 110, y: wy, vx: (Math.random() - 0.5) * 260, vy: -(180 + Math.random() * 300), r: 2 + Math.random() * 3.5 });
+        s.T = tb();
+        s.evap += extra;
+        s.spill += 26;
+        s.heating = false;
+        s.erupted = true;
+      } else {
+        s.fizz = 1.6;
+      }
+    }
+
+    /* ---------- scéna ---------- */
+    const back = el("g", {}, scene);
+    const water = el("rect", { class: "water" }, scene);
+    const airG = el("g", {}, scene);
+    const grainG = el("g", {}, scene);
+    const bubbleG = el("g", {}, scene);
+    const bubbleNodes = Array.from({ length: 150 }, () => el("circle", { class: "bubble", visibility: "hidden" }, bubbleG));
+    const popNodes = Array.from({ length: 24 }, () => el("circle", { class: "pop", visibility: "hidden" }, bubbleG));
+    const waterTop = el("line", { class: "water-top" }, scene);
+    const steamG = el("g", {}, scene);
+    const steams = [0, 1, 2, 3].map(() => el("path", { class: "steam" }, steamG));
+    const dropNodes = Array.from({ length: 34 }, () => el("circle", { class: "drop", visibility: "hidden" }, scene));
+    const front = el("g", {}, scene);
+    el("text", { x: 22, y: 36, class: "rd-cap" }, scene).textContent = "TEPLOTA VODY";
+    const tVal = el("text", { x: 20, y: 82, class: "rd-val" }, scene);
+    const tSub = el("text", { x: 22, y: 106, class: "rd-sub" }, scene);
+
+    let airSpots = [], glow = null, waves = [], lid = null;
+    function buildVessel() {
+      const K = KINDS[s.kind];
+      back.textContent = ""; front.textContent = ""; airG.textContent = "";
+      waves = []; glow = null; lid = null;
+      if (s.kind === "pot") {
+        el("rect", { x: 112, y: 396, width: 376, height: 14, rx: 4, class: "hob" }, back);
+        glow = el("rect", { x: 160, y: 391, width: 280, height: 6, rx: 3, class: "glow" }, back);
+        el("rect", { x: 112, y: 168, width: 30, height: 12, rx: 4, class: "pot-handle" }, front);
+        el("rect", { x: 458, y: 168, width: 30, height: 12, rx: 4, class: "pot-handle" }, front);
+        el("path", { d: "M145 150 V385 H455 V150", class: "pot-wall" }, front);
+        el("path", { d: "M140 150 V390 H460 V150 M150 150 V380 H450 V150", class: "pot-edge" }, front);
+        lid = el("g", {}, front);
+        el("rect", { x: 132, y: 134, width: 336, height: 16, rx: 6, class: "lid" }, lid);
+        el("rect", { x: 284, y: 116, width: 32, height: 18, rx: 5, class: "pot-handle" }, lid);
+        el("rect", { x: 392, y: 122, width: 12, height: 12, rx: 2, class: "lid" }, lid);
+        airSpots = [160, 196, 230, 266, 300, 338, 372, 408, 440].map((x) => [x, K.yb - 3]).concat([[153, 340], [153, 290], [153, 250], [447, 330], [447, 280], [447, 236]]);
+      } else {
+        el("line", { x1: 150, y1: 398, x2: 450, y2: 398, class: "tray" }, back);
+        [236, 286, 336].forEach((y, i) => {
+          let d = `M40 ${y}`;
+          for (let x = 46; x <= 196; x += 6) d += ` L${x} ${(y + 7 * Math.sin((x - 40) / 11 + i)).toFixed(1)}`;
+          waves.push(el("path", { d, class: "mw", opacity: 0 }, back));
+        });
+        el("path", { d: "M375 216 C420 216 420 304 375 304", class: "mug-wall" }, front);
+        el("path", { d: "M225 165 V376 Q225 384 233 384 H367 Q375 384 375 376 V165", class: "mug-wall" }, front);
+        airSpots = [[262, K.yb - 2], [338, K.yb - 2]];
+      }
+      airSpots = airSpots.map(([x, y]) => ({ x, y, node: el("circle", { cx: x, cy: y, class: "airb" }, airG) }));
+    }
+
+    /* ---------- detail škrábance ---------- */
+    const dWater = el("rect", { x: 0, y: 0, width: 200, height: 170, class: "d-water" }, detail);
+    const dSolid = el("path", {}, detail);
+    const dEdge = el("path", { class: "d-edge" }, detail);
+    const dPocket = el("path", { class: "d-gas" }, detail);
+    const dBubble = el("circle", { cx: 100, class: "d-gas" }, detail);
+    const dNote = el("text", { x: 100, y: 34, class: "d-text big" }, detail);
+    const dNote2 = el("text", { x: 100, y: 52, class: "d-text" }, detail);
+    const dBase = el("text", { x: 100, y: 160, class: "d-text" }, detail);
+    const TOP = 96, APEX = 150, HALF = 23;     // ústí a dno rýhy
+
+    function renderDetail() {
+      const pot = s.kind === "pot";
+      if (pot) {
+        dSolid.setAttribute("class", "d-metal");
+        dSolid.setAttribute("d", `M0 ${TOP} H${100 - HALF} L100 ${APEX} L${100 + HALF} ${TOP} H200 V170 H0 Z`);
+        dEdge.setAttribute("d", `M0 ${TOP} H${100 - HALF} L100 ${APEX} L${100 + HALF} ${TOP} H200`);
+      } else {
+        dSolid.setAttribute("class", "d-glass");
+        dSolid.setAttribute("d", `M0 ${TOP} H200 V170 H0 Z`);
+        dEdge.setAttribute("d", `M0 ${TOP} H200`);
+      }
+      const p = s.phase;
+      // kapsa plynu roste v rýze, vyboulí se nad ústí a odškrtí bublinu
+      const fill = !pot ? 0 : p < 0.45 ? 0.38 + (0.62 * p) / 0.45 : p < 0.75 ? 1 : 0.38;
+      const y = APEX - (APEX - TOP) * fill, half = HALF * fill;
+      dPocket.setAttribute("visibility", pot ? "visible" : "hidden");
+      dPocket.setAttribute("d", `M100 ${APEX} L${(100 - half).toFixed(1)} ${y.toFixed(1)} Q100 ${(y - 9 * fill).toFixed(1)} ${(100 + half).toFixed(1)} ${y.toFixed(1)} Z`);
+      let show = false, cy = 0, r = 0;
+      if (pot && p >= 0.45 && p < 0.75) { const k = (p - 0.45) / 0.3; show = true; r = 10 + 16 * k; cy = TOP - 2 - r * 0.72; }
+      else if (pot && p >= 0.75) { const k = (p - 0.75) / 0.25; show = true; r = 26; cy = TOP - 22 - k * 120; }
+      dBubble.setAttribute("visibility", show ? "visible" : "hidden");
+      dBubble.setAttribute("cy", cy.toFixed(1)); dBubble.setAttribute("r", r.toFixed(1));
+      const idle = !(s.heating && activity() > 0);
+      dNote.textContent = pot ? (idle ? "uvězněný vzduch" : "") : "hladké sklo";
+      dNote2.textContent = pot ? (idle ? "čeká v rýze" : "") : "není z čeho růst";
+      dBase.textContent = pot ? "dno hrnce" : "stěna hrnku";
+    }
+
+    /* ---------- graf teploty ---------- */
+    const G = { x: 28, y: 14, w: 160, h: 126, max: 130 };
+    el("line", { x1: G.x, y1: G.y, x2: G.x, y2: G.y + G.h, class: "c-axis" }, chart);
+    el("line", { x1: G.x, y1: G.y + G.h, x2: G.x + G.w, y2: G.y + G.h, class: "c-axis" }, chart);
+    const gy = (t) => G.y + G.h - (t / G.max) * G.h;
+    [50, 100].forEach((t) => {
+      el("line", { x1: G.x, y1: gy(t), x2: G.x + G.w, y2: gy(t), class: "c-grid" }, chart);
+      el("text", { x: G.x - 4, y: gy(t) + 3.5, "text-anchor": "end", class: "c-text" }, chart).textContent = t;
+    });
+    el("text", { x: G.x - 4, y: G.y + 4, "text-anchor": "end", class: "c-text" }, chart).textContent = "°C";
+    const cBoil = el("line", { x1: G.x, x2: G.x + G.w, class: "c-boil" }, chart);
+    const cBoilText = el("text", { x: G.x + G.w, "text-anchor": "end", class: "c-text red" }, chart);
+    const cLine = el("path", { class: "c-line" }, chart);
+    const cDot = el("circle", { r: 4, class: "c-dot" }, chart);
+    const cEnd = el("text", { x: G.x + G.w, y: G.y + G.h + 14, "text-anchor": "end", class: "c-text" }, chart);
+
+    function renderChart() {
+      const span = Math.max(KINDS[s.kind].window, s.t), gx = (t) => G.x + (t / span) * G.w;
+      const pts = s.samples.concat([[s.t, s.T]]);
+      cLine.setAttribute("d", pts.map(([t, v], i) => `${i ? "L" : "M"}${gx(t).toFixed(1)} ${gy(v).toFixed(1)}`).join(""));
+      cDot.setAttribute("cx", gx(s.t).toFixed(1)); cDot.setAttribute("cy", gy(s.T).toFixed(1));
+      cBoil.setAttribute("y1", gy(tb())); cBoil.setAttribute("y2", gy(tb()));
+      cBoilText.setAttribute("y", gy(tb()) - 4);
+      cBoilText.textContent = `bod varu ${tb()} °C`;
+      cEnd.textContent = `${Math.round(span / 60)} min`;
+    }
+
+    /* ---------- výpis ---------- */
+    const fmt0 = new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 0 });
+    const $ = (id) => document.getElementById(id);
+    const statusEl = $("status"), heatBtn = $("heat");
+    const cache = new WeakMap();
+    function put(node, str, html) {
+      if (cache.get(node) === str) return;
+      cache.set(node, str);
+      if (html) node.innerHTML = str; else node.textContent = str;
+    }
+
+    let steamT = 0;
+    function render() {
+      const K = KINDS[s.kind], wy = waterY(), boil = tb(), a = activity(), pot = s.kind === "pot";
+      water.setAttribute("x", K.x0); water.setAttribute("width", K.x1 - K.x0);
+      water.setAttribute("y", wy.toFixed(1)); water.setAttribute("height", (K.yb - wy).toFixed(1));
+      waterTop.setAttribute("x1", K.x0); waterTop.setAttribute("x2", K.x1);
+      waterTop.setAttribute("y1", wy.toFixed(1)); waterTop.setAttribute("y2", wy.toFixed(1));
+      if (glow) glow.setAttribute("opacity", s.heating ? 1 : 0.12);
+      waves.forEach((w) => { w.setAttribute("opacity", s.heating ? 0.9 : 0); w.setAttribute("stroke-dashoffset", (-steamT * 40).toFixed(1)); });
+      if (lid) lid.setAttribute("visibility", s.place === "cooker" ? "visible" : "hidden");
+
+      // perličky vzduchu: objeví se kolem 45 °C a před varem se utrhnou
+      const air = Math.max(0, Math.min(1, (s.T - 42) / 25)), gone = Math.max(0, Math.min(1, (s.T - (boil - 28)) / 12));
+      airSpots.forEach((spot, i) => {
+        spot.node.setAttribute("r", (air * (1.6 + (i % 3) * 0.5)).toFixed(2));
+        spot.node.setAttribute("opacity", (1 - gone).toFixed(2));
+      });
+
+      bubbleNodes.forEach((n, i) => {
+        const b = bubbles[i];
+        n.setAttribute("visibility", b ? "visible" : "hidden");
+        if (b) { n.setAttribute("cx", b.x.toFixed(1)); n.setAttribute("cy", b.y.toFixed(1)); n.setAttribute("r", b.r.toFixed(1)); }
+      });
+      popNodes.forEach((n, i) => {
+        const p = pops[i];
+        n.setAttribute("visibility", p ? "visible" : "hidden");
+        if (p) { n.setAttribute("cx", p.x.toFixed(1)); n.setAttribute("cy", (wy - 2).toFixed(1)); n.setAttribute("r", (p.r + p.life * 9).toFixed(1)); n.setAttribute("opacity", (1 - p.life).toFixed(2)); }
+      });
+      dropNodes.forEach((n, i) => {
+        const d = drops[i];
+        n.setAttribute("visibility", d ? "visible" : "hidden");
+        if (d) { n.setAttribute("cx", d.x.toFixed(1)); n.setAttribute("cy", d.y.toFixed(1)); n.setAttribute("r", d.r.toFixed(1)); }
+      });
+      grainG.textContent = "";
+      grains.forEach((g) => el("rect", { x: g.x.toFixed(1), y: K.yb - 5, width: 3, height: 3, class: "grain", opacity: Math.min(1, g.life).toFixed(2) }, grainG));
+
+      const mist = Math.max(0, Math.min(1, (s.T - 55) / 40)) * (s.place === "cooker" && pot ? 0.15 : 0.6);
+      steamG.setAttribute("opacity", mist.toFixed(2));
+      steams.forEach((p, i) => {
+        const x = K.x0 + ((i + 0.5) / steams.length) * (K.x1 - K.x0);
+        let d = `M${x} ${(wy - 8).toFixed(1)}`;
+        for (let k = 1; k <= 8; k++) d += ` L${(x + 9 * Math.sin(k * 0.9 + steamT * 2 + i * 1.7)).toFixed(1)} ${(wy - 8 - k * 11).toFixed(1)}`;
+        p.setAttribute("d", d);
+      });
+
+      put(tVal, `${fmt0.format(Math.round(s.T))} °C`);
+      put(tSub, `bod varu ${PLACES[s.place].name}: ${boil} °C`);
+      const sec = Math.floor(s.t);
+      put($("st-time"), `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`);
+      put($("st-evap"), `${fmt0.format(Math.round(s.evap))} ml`);
+      // nejvíc hluku dělají bubliny, které se hroutí těsně nad dnem
+      const loud = pot && s.heating ? (s.T >= boil ? 0.32 : Math.exp(-(((s.T - (boil - 8)) / 9) ** 2))) : 0;
+      $("st-noise").style.width = `${Math.round(loud * 100)}%`;
+
+      let status;
+      if (s.erupted) {
+        status = "<strong>Vzkypěla naráz.</strong> Zrnka cukru přinesla tisíce zárodků a přehřátá voda konečně měla kde začít. Teplo, které měla navíc, se během okamžiku proměnilo v páru a vyhodilo část vody z hrnku.";
+      } else if (!s.heating && s.t === 0) {
+        status = `<strong>Studená voda z kohoutku.</strong> Zapněte ohřev. Bod varu ${PLACES[s.place].name} je ${boil} °C.`;
+      } else if (!s.heating) {
+        status = "<strong>Ohřev je vypnutý.</strong> Bez přísunu tepla bubliny hned ustanou a voda pomalu chladne.";
+      } else if (!pot && s.T > boil + 0.8) {
+        status = "<strong>Přehřátá voda.</strong> Je teplejší než bod varu, a nevře. Na hladkém skle se bublina nemá z čeho vytvořit. Stačí ale cokoli, co zárodky přinese. Vhoďte cukr.";
+      } else if (!pot) {
+        status = "<strong>Mikrovlny ohřívají vodu v celém objemu.</strong> Stěny hrnku jsou chladnější než ona a jsou hladké. Žádné horké poškrábané dno tu není, a tak se neděje vůbec nic.";
+      } else if (s.T >= boil) {
+        status = `<strong>Var.</strong> Voda má všude ${boil} °C. Bubliny už cestou nezanikají, naopak rostou, a na hladině prasknou. Teplota dál nestoupá, všechno teplo z plotny jde do páry.`;
+      } else if (a > 0) {
+        status = "<strong>Konvice zpívá.</strong> U horkého dna vzniká pára, ale bubliny stoupají do chladnější vody. Pára se v nich srazí zpátky a bubliny se hroutí. To je to hučení.";
+      } else if (s.T > 42) {
+        status = "<strong>To ještě není pára.</strong> Perličky na dně a na stěnách jsou vzduch, který byl ve vodě rozpuštěný. Teplá voda ho udrží míň než studená.";
+      } else {
+        status = "<strong>Voda se ohřívá.</strong> Zatím není nic vidět.";
+      }
+      put(statusEl, status, true);
+      put(heatBtn, s.heating ? "Vypnout ohřev" : "Zapnout ohřev");
+      heatBtn.setAttribute("aria-pressed", String(s.heating));
+      renderDetail();
+      renderChart();
+    }
+
+    /* ---------- ovládání ---------- */
+    function fresh() {
+      Object.assign(s, { heating: false, T: 20, t: 0, evap: 0, spill: 0, erupted: false, fizz: 0, phase: 0, samples: [[0, 20]] });
+      bubbles = []; pops = []; drops = []; grains = [];
+    }
+    function bindSeg(id, apply) {
+      const seg = $(id);
+      seg.addEventListener("click", (e) => {
+        const b = e.target.closest("button[data-v]");
+        if (!b || b.disabled) return;
+        seg.querySelectorAll("button").forEach((x) => x.setAttribute("aria-checked", String(x === b)));
+        apply(b.dataset.v);
+        render();
+      });
+      return seg;
+    }
+    const placeSeg = bindSeg("place-seg", (v) => { s.place = v; fresh(); });
+    bindSeg("kind-seg", (v) => {
+      s.kind = v;
+      // tlakový hrnec dává smysl jen na plotně
+      const cooker = placeSeg.querySelector('[data-v="cooker"]');
+      cooker.disabled = v === "mug";
+      if (v === "mug" && s.place === "cooker") {
+        s.place = "sea";
+        placeSeg.querySelectorAll("button").forEach((x) => x.setAttribute("aria-checked", String(x.dataset.v === "sea")));
+      }
+      fresh();
+      buildVessel();
+      $("detail-label").textContent = v === "pot" ? "Detail · škrábanec ve dně" : "Detail · stěna hrnku";
+    });
+    heatBtn.addEventListener("click", () => { s.heating = !s.heating; if (s.heating) s.erupted = false; render(); });
+    $("sugar").addEventListener("click", () => { addSugar(); render(); });
+    $("fresh").addEventListener("click", () => { fresh(); render(); });
+
+    let prev = performance.now();
+    function frame(now) {
+      const dt = Math.min(0.1, (now - prev) / 1000);
+      prev = now;
+      steamT += dt;
+      step(dt);
+      render();
+      requestAnimationFrame(frame);
+    }
+    buildVessel();
+    render();
+    requestAnimationFrame(frame);
+  })();
+  </script>
+</body>
+</html>

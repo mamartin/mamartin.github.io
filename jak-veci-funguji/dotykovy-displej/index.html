@@ -1,0 +1,488 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Jak funguje dotykový displej</title>
+  <meta name="description" content="Jak telefon pozná, kde se ho dotýkáte, proč to nejde v rukavici a jak může být přesnější než mřížka jeho čidel. S displejem, na který si můžete sáhnout.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700&display=swap">
+  <link rel="stylesheet" href="../style.css">
+  <style>
+    #panel { touch-action: pan-y; cursor: crosshair; }
+    .body { fill: var(--ink); }
+    .glass { fill: var(--surface); }
+    .cell { fill: var(--cat); }
+    .wire { stroke: var(--rule); stroke-width: 1; }
+    .wire.scan { stroke: var(--cat); stroke-width: 2.2; }
+    .node { fill: var(--ink-3); opacity: 0.5; }
+    .finger ellipse { fill: var(--ink); fill-opacity: 0.1; stroke: var(--ink); stroke-width: 1.6; stroke-dasharray: 5 4; }
+    .finger .handle { fill: transparent; stroke: none; cursor: grab; touch-action: none; outline: none; }
+    .finger .handle:focus-visible + .focus-ring { opacity: 1; }
+    .focus-ring { fill: none; stroke: var(--cat); stroke-width: 2.5; opacity: 0; pointer-events: none; }
+    .hit line { stroke: var(--ink); stroke-width: 2; }
+    .hit circle { fill: none; stroke: var(--ink); stroke-width: 2; }
+    .hit text { fill: var(--ink); font: 600 12.5px var(--font-mono); paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
+    .bar { fill: var(--cat); }
+    .bar-base { stroke: var(--ink-3); stroke-width: 1; }
+    .thresh { stroke: var(--bad); stroke-width: 1.4; stroke-dasharray: 5 4; }
+    .mark-true { fill: var(--ink-3); }
+    .mark-calc { stroke: var(--ink); stroke-width: 2; }
+    .cap { fill: var(--ink-3); font: 500 11px var(--font-mono); letter-spacing: 0.08em; }
+    .cap.red { fill: var(--bad); letter-spacing: 0; font-size: 12px; }
+
+    .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.4rem; margin: 0; padding: 0; list-style: none; }
+    .stats li { display: grid; gap: 0.1rem; align-content: start; padding: 0.45rem 0.6rem; border: 1px solid var(--rule); border-top: 3px solid var(--cat); background: var(--surface); font-family: var(--font-mono); font-size: 0.78rem; line-height: 1.3; }
+    .stats .n { color: var(--ink-3); }
+    .stats .v { font-family: var(--font-display); font-stretch: 112%; font-weight: 800; font-size: 1.25rem; color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .status { font-size: 1.02rem; }
+    .ts-status { display: grid; gap: 0.9rem; }
+
+    @media (max-width: 46rem) {
+      .hit text, .cap { display: none; }
+      .stats .v { font-size: 1.05rem; }
+      .stats li { padding: 0.4rem 0.45rem; }
+    }
+    @media (min-width: 60rem) {
+      .ts-status { grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); align-items: start; gap: 2rem; }
+    }
+  </style>
+</head>
+<body data-cat="technika">
+  <header class="topbar">
+    <div class="wrap">
+      <a class="brand" href="../">Jak věci fungují</a>
+      <nav class="crumbs" aria-label="Drobečková navigace"><a href="../#technika">Technika</a><span aria-hidden="true">/</span><span>Dotykový displej</span></nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <header class="art-head">
+      <p class="eyebrow">Technika</p>
+      <h1 class="display">Jak funguje dotykový displej</h1>
+      <p class="lede">Displej telefonu necítí tlak. Pod sklem má mřížku průhledných drátků a měří, jak se mezi nimi mění elektrické pole. Váš prst ho mění, protože jste z velké části slaná voda, a ta vede proud.</p>
+    </header>
+
+    <section class="tldr" aria-labelledby="h-zkratka">
+      <h2 class="label" id="h-zkratka">Ve zkratce</h2>
+      <ul>
+        <li>Pod sklem se kříží dvě vrstvy průhledných elektrod. Každé křížení je maličký kondenzátor.</li>
+        <li>Prst část elektrického pole odvede do těla a <span class="hl">kapacita křížení pod ním klesne.</span></li>
+        <li>Čip změří všechna křížení víc než stokrát za sekundu a z mapy poklesů spočítá, kde prsty jsou. Polohu určí přesněji, než jak hustá je mřížka.</li>
+      </ul>
+    </section>
+
+    <figure class="fig" id="obr1">
+      <div class="fig-head">
+        <p class="fig-num"><b>Obr. 1</b> Co displej měří</p>
+        <span class="label">Táhněte prstem po displeji nebo klepněte jinam</span>
+      </div>
+      <div class="fig-stage">
+        <svg id="panel" viewBox="0 0 720 520" role="img" aria-label="Telefon naležato s mřížkou elektrod, mapou signálu pod prstem a grafem signálu v jedné řadě"></svg>
+      </div>
+      <div class="fig-controls">
+        <div class="ctl">
+          <span class="label" id="lbl-tool">Čím se dotýkám</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-tool" id="tool-seg">
+            <button type="button" role="radio" data-v="finger" aria-checked="true">Prst</button>
+            <button type="button" role="radio" data-v="glove" aria-checked="false">Rukavice</button>
+            <button type="button" role="radio" data-v="pen" aria-checked="false">Propiska</button>
+            <button type="button" role="radio" data-v="palm" aria-checked="false">Dlaň</button>
+          </div>
+        </div>
+        <div class="ctl">
+          <span class="label" id="lbl-two">Druhý prst</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-two" id="two-seg">
+            <button type="button" role="radio" data-v="0" aria-checked="true">Ne</button>
+            <button type="button" role="radio" data-v="1" aria-checked="false">Ano</button>
+          </div>
+        </div>
+        <div class="ctl">
+          <span class="label" id="lbl-view">Ukázat</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-view" id="view-seg">
+            <button type="button" role="radio" data-v="chip" aria-checked="true">Co měří čip</button>
+            <button type="button" role="radio" data-v="app" aria-checked="false">Co dostane aplikace</button>
+          </div>
+        </div>
+      </div>
+      <div class="fig-status ts-status">
+        <p class="status" id="status" aria-live="polite"></p>
+        <ul class="stats" aria-label="Stav modelu">
+          <li><span class="n">Nalezené doteky</span><span class="v" id="st-count"></span></li>
+          <li><span class="n">Nejsilnější signál</span><span class="v" id="st-peak"></span></li>
+          <li><span class="n">Chyba polohy</span><span class="v" id="st-err"></span></li>
+        </ul>
+      </div>
+      <figcaption class="fig-caption">Čtverečky ukazují, o kolik klesla kapacita v jednotlivých kříženích. Křížek je poloha, kterou z nich čip vypočítal, přerušovaný ovál skutečná plocha doteku. Elektrody jsou od sebe 5 milimetrů, jako ve skutečném telefonu. Sloupce dole jsou signál v řadě, která prochází pod prstem.</figcaption>
+    </figure>
+
+    <section class="sec" aria-labelledby="h-mrizka">
+      <div class="prose">
+        <h2 id="h-mrizka">Mřížka, která není vidět</h2>
+        <p>Pod krycím sklem jsou dvě vrstvy tenkých proužků z oxidu india a cínu. Je to zvláštní materiál: vede elektřinu jako kov a přitom je průhledný jako sklo. V jedné vrstvě běží proužky vodorovně, ve druhé svisle, a mezi nimi je izolant.</p>
+        <p>Kde se vodorovný proužek kříží se svislým, vzniká kondenzátor, tedy dvě vodivé plošky těsně u sebe, mezi kterými je elektrické pole. V telefonu jich je několik set. Část pole každého z nich vystupuje nad sklo, do míst, kam saháte.</p>
+      </div>
+      <aside class="note" aria-label="Displej v číslech">
+        <span class="label">V číslech</span>
+        <dl class="facts">
+          <div><dt>4–5 mm</dt><dd>rozteč elektrod v telefonu</dd></div>
+          <div><dt>120–240×</dt><dd>za sekundu čip přeměří celou mřížku</dd></div>
+          <div><dt>≈ 1 pF</dt><dd>kapacita jednoho křížení, biliontina faradu</dd></div>
+          <div><dt>&lt; 1 mm</dt><dd>přesnost, s jakou displej určí polohu prstu</dd></div>
+        </dl>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-prst">
+      <div class="prose">
+        <h2 id="h-prst">Co udělá prst</h2>
+        <p>Lidské tělo vede elektřinu. Když přiblížíte prst ke křížení, část pole, které dosud vedlo z jednoho proužku do druhého, skončí místo toho ve vašem prstu. Křížení se tím jako kondenzátor zhorší, jeho kapacita klesne zhruba o desetinu až pětinu.</p>
+        <p>Dotýkat se elektrod k tomu nemusíte, a ani nemůžete, je mezi vámi sklo. <span class="hl">Stačí být dost blízko.</span> Tlak nehraje žádnou roli. Displej reaguje na lehký dotek stejně jako na silný, protože při silnějším se jen o něco zvětší plocha, kterou se bříško prstu skla dotýká.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Přepněte na Propisku. Plast elektřinu nevede, pole si ho nevšimne a mapa zůstane prázdná. Displej o propisce vůbec neví, i když na něj tlačíte.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-sken">
+      <div class="prose">
+        <h2 id="h-sken">Čip, který pořád měří</h2>
+        <p>Křížení se nedají změřit všechna najednou. Řídicí čip proto pustí signál do jednoho vodorovného proužku a poslechne si, kolik ho proteklo do každého svislého. Pak vezme další vodorovný, a tak projde celou mřížku. Celé kolo mu trvá pár tisícin sekundy.</p>
+        <p>Výsledkem je tabulka čísel, mapa displeje, ve které jsou místa s poklesem kapacity vidět jako skvrny. Čip porovná každou hodnotu s prahem. Co je pod ním, bere jako šum a zahodí. Co je nad ním, je dotek.</p>
+        <p>Šumu je kolem dost. Ruší samotný displej, který je hned pod mřížkou, a ruší nabíječka. Proto se telefon s laciným adaptérem někdy chová, jako by na něj sahal někdo neviditelný: šum přelezl práh.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Vyberte Rukavici. Skvrna na mapě je, ale slabá a rozmazaná. Ve sloupcích dole je vidět, že žádný nedosáhne na červenou čáru prahu, a tak čip nehlásí nic.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-presnost">
+      <div class="prose">
+        <h2 id="h-presnost">Přesnější než vlastní mřížka</h2>
+        <p>Elektrody jsou od sebe pět milimetrů. Přesto trefíte písmeno na klávesnici, které je užší. Jak to?</p>
+        <p>Prst je širší než rozteč mřížky, takže ovlivní několik křížení najednou: to přímo pod sebou nejvíc, sousední míň. Čip nevezme jen nejsilnější z nich. Spočítá <span class="hl">těžiště celé skvrny,</span> tedy průměr poloh všech zasažených křížení vážený tím, jak silný signál každé dalo. Když je prst o milimetr vpravo od křížení, dostane pravý soused o kousek víc než levý a těžiště se posune o milimetr vpravo.</p>
+        <p>Ze stejné mapy čip vyčte i víc dotyků naráz. Dva prsty jsou prostě dvě skvrny. Starší dotykové technologie tohle neuměly, a právě proto se gesta jako roztažení dvěma prsty objevila až s telefony.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Táhněte prstem pomalu vodorovně a sledujte sloupce dole. Přelévají se z jednoho do druhého plynule a značka vypočtené polohy jede s prstem, i když je mezi dvěma elektrodami.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-nejde">
+      <div class="prose">
+        <h2 id="h-nejde">Proč to nejde v rukavici a v dešti</h2>
+        <p>Rukavice má dvě vady. Sama je izolant, a navíc drží prst dál od skla, kde je pole slabší. Signál nezmizí úplně, jen je pod prahem. Rukavice „na dotykové displeje“ mají v konečcích prstů vetkaná vodivá vlákna, která pole dovedou až ke kůži. Některé telefony zase umějí práh snížit.</p>
+        <p>Voda vadí opačně. Kapka je vodivá, a když leží přes několik elektrod, propojí je a v mapě se objeví skvrna, která vypadá jako dotek. Mokrý displej proto skáče a píše sám. Pod vodou, kde je vodivé všechno, nefunguje vůbec, a foťáky v telefonech se tam ovládají tlačítky.</p>
+        <p>Dotykové pero s gumovou špičkou funguje, protože špička vede a přes tělo pera je spojená s vaší rukou. Přesná pera ke grafickým tabletům jdou jinou cestou. Mají vlastní vysílač a displej poslouchá jejich signál stejnou mřížkou.</p>
+      </div>
+    </section>
+
+    <section class="sec" aria-labelledby="h-dlan">
+      <div class="prose">
+        <h2 id="h-dlan">Dlaň, tvář a kapsa</h2>
+        <p>Ne každá skvrna je dotek, který jste udělat chtěli. Čip se proto dívá i na její tvar. Bříško prstu dává malou kulatou skvrnu. Opřená dlaň, tvář při telefonování nebo stehno přes kapsu dávají skvrnu velkou a nepravidelnou, a tu čip aplikaci vůbec nepošle.</p>
+        <p>Při hovoru si telefon pomáhá ještě jinak. Vedle sluchátka má čidlo přiblížení, a jakmile ho zakryje hlava, displej zhasne a dotyky vypne.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Vyberte Dlaň a přepněte na Co dostane aplikace. Signál je nejsilnější ze všech možností, a přesto aplikace nedostane nic.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-odpor">
+      <div class="prose">
+        <h2 id="h-odpor">Displeje, na které se muselo tlačit</h2>
+        <p>Starší dotykové obrazovky fungovaly opravdu na tlak. Měly dvě průhledné vodivé fólie s tenkou mezerou, a když jste přitlačili, fólie se v tom místě spojily. Z odporu se dalo spočítat, kde. Říká se jim odporové.</p>
+        <p>Fungují s čímkoli: s nehtem, propiskou i v pracovních rukavicích. Proto je dodnes najdete v továrnách a na některých platebních terminálech. Poznají ale jen jeden dotek, horní fólie se časem prodře a obraz přes dvě vrstvy navíc není tak ostrý.</p>
+      </div>
+    </section>
+
+    <section class="sec" aria-labelledby="h-historie">
+      <div class="prose">
+        <h2 id="h-historie">Od radarů do kapsy</h2>
+        <p>Dotykovou obrazovku na principu kapacity popsal v roce 1965 britský inženýr Eric Johnson, který hledal lepší ovládání pro řídící letového provozu. O pár let později si průhledný dotykový panel postavili v CERNu, aby jím nahradili tisíce knoflíků a přepínačů ve velínu nového urychlovače.</p>
+        <p>Do kapes se technologie dostala až v roce 2007 s prvním iPhonem. Nebyl první dotykový telefon, ale první, který uměl víc prstů najednou a nepotřeboval pero.</p>
+      </div>
+    </section>
+
+    <footer class="art-foot">
+      <a class="next" href="../priliv/" data-cat="vesmir">
+        <span class="label">Další článek · Vesmír</span>
+        <span class="t">Jak funguje příliv a odliv</span>
+        <p>Proč se moře zvedá dvakrát denně, když Měsíc je na obloze jen jeden.</p>
+      </a>
+      <a class="back" href="../">Všechna témata</a>
+    </footer>
+  </main>
+
+  <script>
+  (() => {
+    const NS = "http://www.w3.org/2000/svg";
+    function el(tag, attrs, parent) {
+      const n = document.createElementNS(NS, tag);
+      for (const k in attrs || {}) n.setAttribute(k, attrs[k]);
+      if (parent) parent.appendChild(n);
+      return n;
+    }
+    const svg = document.getElementById("panel");
+
+    /* ---------- model ---------- */
+    const U = 5;                          // jednotek SVG na milimetr
+    const PITCH = 5;                      // rozteč elektrod v mm
+    const COLS = 26, ROWS = 13;           // displej 130 × 65 mm naležato
+    const SX = 35, SY = 37;               // levý horní roh aktivní plochy
+    const W_MM = COLS * PITCH, H_MM = ROWS * PITCH;
+    const THRESH = 0.3;                   // práh: podíl plného signálu, pod kterým čip nic nehlásí
+    const PALM = 34;                      // větší skvrnu (v počtu křížení) bere čip jako dlaň
+    const NOISE = 0.035;
+    const TOOLS = {
+      finger: { amp: 1, sigma: 4.2, rx: 4.6, ry: 5.6 },
+      glove: { amp: 0.17, sigma: 6.5, rx: 7, ry: 8 },
+      pen: { amp: 0, sigma: 1, rx: 1.4, ry: 1.4 },
+      palm: { amp: 1, sigma: 15, rx: 21, ry: 17 },
+    };
+    const X = (mm) => SX + mm * U, Y = (mm) => SY + mm * U;
+
+    const s = { tool: "finger", two: false, view: "chip", fingers: [{ x: 47.5, y: 28.5 }, { x: 96, y: 41 }] };
+    const active = () => (s.two ? s.fingers : s.fingers.slice(0, 1));
+
+    const signal = new Float32Array(COLS * ROWS);
+    const noise = new Float32Array(COLS * ROWS);
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    function measure() {
+      const tool = TOOLS[s.tool], k = 1 / (2 * tool.sigma * tool.sigma);
+      for (let j = 0; j < ROWS; j++) for (let i = 0; i < COLS; i++) {
+        const nx = (i + 0.5) * PITCH, ny = (j + 0.5) * PITCH;
+        let v = 0;
+        for (const f of active()) v += tool.amp * Math.exp(-((nx - f.x) ** 2 + (ny - f.y) ** 2) * k);
+        signal[j * COLS + i] = Math.min(1.15, v) + noise[j * COLS + i];
+      }
+    }
+
+    // skvrny nad prahem; v každé hledáme vrcholy a kolem nich počítáme těžiště
+    function detect() {
+      const seen = new Uint8Array(COLS * ROWS), touches = [];
+      let palm = false;
+      const at = (i, j) => (i < 0 || j < 0 || i >= COLS || j >= ROWS ? 0 : signal[j * COLS + i]);
+      for (let start = 0; start < signal.length; start++) {
+        if (seen[start] || signal[start] < THRESH) continue;
+        const blob = [], stack = [start];
+        seen[start] = 1;
+        while (stack.length) {
+          const c = stack.pop(), i = c % COLS, j = (c - i) / COLS;
+          blob.push([i, j]);
+          [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([di, dj]) => {
+            const a = i + di, b = j + dj, n = b * COLS + a;
+            if (a >= 0 && b >= 0 && a < COLS && b < ROWS && !seen[n] && signal[n] >= THRESH) { seen[n] = 1; stack.push(n); }
+          });
+        }
+        if (blob.length > PALM) { palm = true; continue; }
+        blob.forEach(([i, j]) => {
+          const v = at(i, j);
+          if (v < THRESH * 1.5) return;
+          for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) if ((di || dj) && at(i + di, j + dj) > v) return;
+          let sw = 0, sx = 0, sy = 0;
+          for (let dj = -2; dj <= 2; dj++) for (let di = -2; di <= 2; di++) {
+            const w = Math.max(0, at(i + di, j + dj) - 0.06);
+            sw += w; sx += w * (i + di + 0.5) * PITCH; sy += w * (j + dj + 0.5) * PITCH;
+          }
+          touches.push({ x: sx / sw, y: sy / sw, row: j });
+        });
+      }
+      return { touches, palm };
+    }
+
+    /* ---------- kresba ---------- */
+    el("rect", { x: 14, y: 16, width: 692, height: 367, rx: 30, class: "body" }, svg);
+    el("rect", { x: SX, y: SY, width: W_MM * U, height: H_MM * U, rx: 8, class: "glass" }, svg);
+    const cellsG = el("g", {}, svg);
+    const cells = [];
+    for (let j = 0; j < ROWS; j++) for (let i = 0; i < COLS; i++) {
+      cells.push({ node: el("rect", { x: X(i * PITCH), y: Y(j * PITCH), width: PITCH * U, height: PITCH * U, class: "cell", opacity: 0 }, cellsG), q: -1 });
+    }
+    const wires = el("g", {}, svg);
+    for (let i = 0; i < COLS; i++) el("line", { x1: X((i + 0.5) * PITCH), y1: SY, x2: X((i + 0.5) * PITCH), y2: SY + H_MM * U, class: "wire" }, wires);
+    const rowWires = [];
+    for (let j = 0; j < ROWS; j++) rowWires.push(el("line", { x1: SX, y1: Y((j + 0.5) * PITCH), x2: SX + W_MM * U, y2: Y((j + 0.5) * PITCH), class: "wire" }, wires));
+    for (let j = 0; j < ROWS; j++) for (let i = 0; i < COLS; i++) el("circle", { cx: X((i + 0.5) * PITCH), cy: Y((j + 0.5) * PITCH), r: 1.6, class: "node" }, wires);
+
+    const fingerG = s.fingers.map((f, k) => {
+      const g = el("g", { class: "finger" }, svg);
+      const shape = el("ellipse", {}, g);
+      const handle = el("circle", { r: 34, class: "handle", tabindex: "0", role: "button", "aria-label": `${k ? "Druhý" : "První"} prst. Posuňte ho šipkami nebo tažením.` }, g);
+      el("circle", { r: 32, class: "focus-ring" }, g);
+      return { g, shape, handle };
+    });
+    const hitsG = el("g", {}, svg);
+
+    // graf signálu v jedné řadě, zarovnaný pod sloupce elektrod
+    const BASE = 500, BAR_H = 84;
+    el("text", { x: SX, y: 408, class: "cap" }, svg).textContent = "SIGNÁL V ŘADĚ POD PRSTEM";
+    el("line", { x1: SX, y1: BASE + 0.5, x2: SX + W_MM * U, y2: BASE + 0.5, class: "bar-base" }, svg);
+    const bars = [];
+    for (let i = 0; i < COLS; i++) bars.push(el("rect", { x: X(i * PITCH) + 4, width: PITCH * U - 8, class: "bar" }, svg));
+    el("line", { x1: SX, y1: BASE - BAR_H * THRESH, x2: SX + W_MM * U, y2: BASE - BAR_H * THRESH, class: "thresh" }, svg);
+    el("text", { x: SX + W_MM * U, y: BASE - BAR_H * THRESH - 6, "text-anchor": "end", class: "cap red" }, svg).textContent = "práh";
+    const marksG = el("g", {}, svg);
+
+    /* ---------- výpis ---------- */
+    const fmt1 = new Intl.NumberFormat("cs-CZ", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    const fmt0 = new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 0 });
+    const $ = (id) => document.getElementById(id);
+    const statusEl = $("status");
+    const cache = new WeakMap();
+    function put(node, str, html) {
+      if (cache.get(node) === str) return;
+      cache.set(node, str);
+      if (html) node.innerHTML = str; else node.textContent = str;
+    }
+
+    let scanRow = 0;
+    function render() {
+      measure();
+      const found = detect(), tool = TOOLS[s.tool], chip = s.view === "chip";
+
+      cellsG.setAttribute("visibility", chip ? "visible" : "hidden");
+      if (chip) cells.forEach((c, k) => {
+        const q = Math.round(Math.max(0, Math.min(1, signal[k])) * 24);
+        if (q !== c.q) { c.q = q; c.node.setAttribute("opacity", ((q / 24) * 0.9).toFixed(3)); }
+      });
+      rowWires.forEach((w, j) => w.setAttribute("class", chip && !reduced && j === scanRow ? "wire scan" : "wire"));
+
+      s.fingers.forEach((f, k) => {
+        const fg = fingerG[k], on = k === 0 || s.two;
+        fg.g.setAttribute("visibility", on ? "visible" : "hidden");
+        fg.g.setAttribute("transform", `translate(${X(f.x).toFixed(1)} ${Y(f.y).toFixed(1)})`);
+        fg.shape.setAttribute("rx", tool.rx * U); fg.shape.setAttribute("ry", tool.ry * U);
+        fg.handle.setAttribute("tabindex", on ? "0" : "-1");
+      });
+
+      hitsG.textContent = "";
+      found.touches.forEach((t) => {
+        const g = el("g", { class: "hit", transform: `translate(${X(t.x).toFixed(1)} ${Y(t.y).toFixed(1)})` }, hitsG);
+        el("line", { x1: -15, y1: 0, x2: 15, y2: 0 }, g);
+        el("line", { x1: 0, y1: -15, x2: 0, y2: 15 }, g);
+        el("circle", { r: 8 }, g);
+        const right = t.x < W_MM - 34;
+        el("text", { x: right ? 20 : -20, y: t.y < 12 ? 22 : -14, "text-anchor": right ? "start" : "end" }, g).textContent = `x ${fmt1.format(t.x)} · y ${fmt1.format(t.y)} mm`;
+      });
+
+      // řada s nejsilnějším signálem
+      let peak = 0, peakAt = 0;
+      for (let k = 0; k < signal.length; k++) if (signal[k] > peak) { peak = signal[k]; peakAt = k; }
+      const row = peak > 0.08 ? Math.floor(peakAt / COLS) : Math.max(0, Math.min(ROWS - 1, Math.floor(s.fingers[0].y / PITCH)));
+      bars.forEach((b, i) => {
+        const h = Math.max(0, Math.min(1.1, signal[row * COLS + i])) * BAR_H;
+        b.setAttribute("y", (BASE - h).toFixed(1)); b.setAttribute("height", h.toFixed(1));
+      });
+      marksG.textContent = "";
+      active().forEach((f) => el("path", { d: `M${X(f.x).toFixed(1)} ${BASE + 3} l6 10 h-12 Z`, class: "mark-true" }, marksG));
+      found.touches.filter((t) => Math.abs(t.row - row) <= 2).forEach((t) => el("line", { x1: X(t.x).toFixed(1), y1: BASE - BAR_H - 4, x2: X(t.x).toFixed(1), y2: BASE + 3, class: "mark-calc" }, marksG));
+
+      // čísla a věta o stavu
+      let err = null;
+      found.touches.forEach((t) => {
+        const d = Math.min(...active().map((f) => Math.hypot(f.x - t.x, f.y - t.y)));
+        err = err === null ? d : Math.max(err, d);
+      });
+      put($("st-count"), String(found.touches.length));
+      put($("st-peak"), `${fmt0.format(Math.round(Math.max(0, Math.min(1, peak)) * 100))} %`);
+      put($("st-err"), err === null ? "—" : `${fmt1.format(err)} mm`);
+
+      const n = found.touches.length;
+      let status;
+      if (s.tool === "pen") {
+        status = "<strong>Propiska: displej o ní neví.</strong> Plast nevede elektřinu, pole mezi elektrodami se nezmění a mapa zůstane prázdná.";
+      } else if (s.tool === "glove") {
+        status = "<strong>Rukavice: signál je pod prahem.</strong> Látka drží prst dál od elektrod a sama nevede. Skvrna na mapě je, ale tak slabá, že ji čip bere jako šum.";
+      } else if (s.tool === "palm") {
+        status = "<strong>Dlaň: čip ji zahodí.</strong> Signál je silný, jenže skvrna je moc velká na prst. Čip usoudí, že se o displej někdo opřel, a aplikaci nepošle nic.";
+      } else if (n >= 2) {
+        status = "<strong>Dva doteky.</strong> V mapě jsou dvě oddělené skvrny a čip spočítá těžiště každé zvlášť. Ze vzdálenosti mezi nimi pozná aplikace gesto pro zvětšení.";
+      } else if (n === 1 && s.two) {
+        status = "<strong>Skvrny se slily.</strong> Prsty jsou tak blízko, že dávají jedinou skvrnu s jedním vrcholem, a čip je bere jako jeden dotek.";
+      } else if (n === 1) {
+        status = "<strong>Jeden dotek.</strong> Prst zasáhl několik křížení najednou. Čip z nich spočítal těžiště, a proto ví o poloze víc, než kolik by řekla samotná mřížka.";
+      } else {
+        status = "<strong>Žádný dotek.</strong> Prst je u kraje displeje a signál nestačí.";
+      }
+      put(statusEl, status, true);
+    }
+
+    /* ---------- ovládání ---------- */
+    function bindSeg(id, apply) {
+      const seg = $(id);
+      seg.addEventListener("click", (e) => {
+        const b = e.target.closest("button[data-v]");
+        if (!b) return;
+        seg.querySelectorAll("button").forEach((x) => x.setAttribute("aria-checked", String(x === b)));
+        apply(b.dataset.v);
+        render();
+      });
+    }
+    bindSeg("tool-seg", (v) => { s.tool = v; });
+    bindSeg("two-seg", (v) => { s.two = v === "1"; });
+    bindSeg("view-seg", (v) => { s.view = v; });
+
+    const clamp = (p) => ({ x: Math.max(1, Math.min(W_MM - 1, p.x)), y: Math.max(1, Math.min(H_MM - 1, p.y)) });
+    function toMm(evt) {
+      const m = svg.getScreenCTM();
+      if (!m) return null;
+      const p = new DOMPoint(evt.clientX, evt.clientY).matrixTransform(m.inverse());
+      return { x: (p.x - SX) / U, y: (p.y - SY) / U };
+    }
+    fingerG.forEach((fg, k) => {
+      let dragging = false;
+      fg.handle.addEventListener("pointerdown", (e) => { dragging = true; fg.handle.setPointerCapture(e.pointerId); fg.handle.style.cursor = "grabbing"; e.stopPropagation(); });
+      fg.handle.addEventListener("pointermove", (e) => {
+        if (!dragging) return;
+        const p = toMm(e);
+        if (p) { s.fingers[k] = clamp(p); render(); }
+      });
+      const stop = () => { dragging = false; fg.handle.style.cursor = ""; };
+      fg.handle.addEventListener("pointerup", stop);
+      fg.handle.addEventListener("pointercancel", stop);
+      fg.handle.addEventListener("click", (e) => e.stopPropagation());
+      fg.handle.addEventListener("keydown", (e) => {
+        const d = e.shiftKey ? 5 : 1;
+        const mv = { ArrowLeft: [-d, 0], ArrowRight: [d, 0], ArrowUp: [0, -d], ArrowDown: [0, d] }[e.key];
+        if (!mv) return;
+        e.preventDefault();
+        s.fingers[k] = clamp({ x: s.fingers[k].x + mv[0], y: s.fingers[k].y + mv[1] });
+        render();
+      });
+    });
+    // klepnutí na displej přesune bližší prst
+    svg.addEventListener("click", (e) => {
+      const p = toMm(e);
+      if (!p || p.x < 0 || p.y < 0 || p.x > W_MM || p.y > H_MM) return;
+      const list = active();
+      const k = list.length > 1 && Math.hypot(list[1].x - p.x, list[1].y - p.y) < Math.hypot(list[0].x - p.x, list[0].y - p.y) ? 1 : 0;
+      s.fingers[k] = clamp(p);
+      render();
+    });
+
+    // šum a postup skenování po řadách (zpomaleně)
+    let prev = performance.now(), acc = 0;
+    function frame(now) {
+      acc += Math.min(0.1, (now - prev) / 1000);
+      prev = now;
+      if (!reduced && acc > 0.07) {
+        acc = 0;
+        scanRow = (scanRow + 1) % ROWS;
+        for (let k = 0; k < noise.length; k++) noise[k] = (Math.random() - 0.5) * 2 * NOISE;
+        render();
+      }
+      requestAnimationFrame(frame);
+    }
+    render();
+    requestAnimationFrame(frame);
+  })();
+  </script>
+</body>
+</html>
