@@ -16,7 +16,8 @@
     .src.on { fill-opacity: 0.4; stroke-opacity: 1; stroke-dasharray: none; }
     .src-name { fill: var(--ink-3); font: 500 11px var(--font-mono); text-anchor: middle; }
     .src-name.on { fill: var(--ink); font-weight: 600; }
-    .shade { fill: var(--ink-3); opacity: 0.13; }
+    .shade { fill: var(--ink-3); opacity: 0.06; }
+    .burst { fill: var(--ink-3); }
     .ch { fill: var(--cat); }
     .ch.off { fill: none; stroke: var(--ink-3); stroke-width: 1; }
     .hop { fill: var(--cat); }
@@ -97,6 +98,7 @@
             <li><i style="background:var(--cat)"></i>paket prošel</li>
             <li><i style="background:var(--bad)"></i>paket se ztratil</li>
             <li><i style="background:var(--warm)"></i>druhá sluchátka</li>
+            <li><i style="background:var(--ink-3); opacity:.35; width:1.4rem"></i>vysílá někdo jiný</li>
           </ul>
         </div>
         <ul class="stats" aria-label="Stav modelu">
@@ -105,7 +107,7 @@
           <li><span class="n">Posláno paketů</span><span class="v" id="st-n"></span></li>
         </ul>
       </div>
-      <figcaption class="fig-caption">Každý řádek je jeden skok, nejnovější je nahoře. Čtvereček ukazuje, na kterém ze 79 kanálů zrovna spojení vysílalo. Model je silně zpomalený: skutečný Bluetooth udělá 1 600 skoků za sekundu. Ztráty se počítají z posledních sto paketů.</figcaption>
+      <figcaption class="fig-caption">Každý řádek je jeden skok, nejnovější je nahoře. Čtvereček ukazuje, na kterém ze 79 kanálů zrovna spojení vysílalo. Šedý pruh znamená, že v tu chvíli na těch kanálech vysílala Wi-Fi nebo mikrovlnka. Model je silně zpomalený: skutečný Bluetooth udělá 1 600 skoků za sekundu. Ztráty se počítají z posledních sto paketů.</figcaption>
     </figure>
 
     <section class="sec" aria-labelledby="h-pasmo">
@@ -159,7 +161,7 @@
       </div>
       <aside class="note" aria-label="Poznámka na okraj">
         <span class="label">Zkuste</span>
-        <p>Zapněte Adaptivní a sledujte řadu kanálů nad záznamem. Kanály pod Wi-Fi postupně zhasnou a ztráty spadnou skoro na nulu. Pak Wi-Fi vypněte: spojení si kanály po chvíli vezme zpátky.</p>
+        <p>Zapněte Adaptivní a sledujte řadu kanálů nad záznamem. Kanály pod Wi-Fi postupně zhasnou a ztráty spadnou skoro na nulu. Zhasnuté zůstanou, dokud v nich jsou vidět šedé pruhy cizího vysílání. Pak Wi-Fi vypněte: spojení si kanály po chvíli vezme zpátky.</p>
       </aside>
     </section>
 
@@ -214,7 +216,8 @@
       n: 0, hops: [], recent: [], blocked: new Array(CH).fill(-1),
     };
     const usable = () => s.blocked.map((b, c) => (b < 0 ? c : -1)).filter((c) => c >= 0);
-    const busy = (c) => Object.keys(SOURCES).some((k) => s.on[k] && c >= SOURCES[k].from && c <= SOURCES[k].to && Math.random() < SOURCES[k].duty);
+    // kdo v tomhle okamžiku opravdu vysílá: Wi-Fi nepravidelně, mikrovlnka v pravidelných dávkách
+    const onAir = () => Object.keys(SOURCES).filter((k) => s.on[k] && (k === "mw" ? Math.floor(s.n / 3) % 2 === 0 : Math.random() < SOURCES[k].duty));
 
     const covered = (c) => Object.keys(SOURCES).some((k) => s.on[k] && c >= SOURCES[k].from && c <= SOURCES[k].to);
     function step() {
@@ -226,10 +229,11 @@
       }
       const pool = usable(), a = pool[Math.floor(Math.random() * pool.length)];
       const b = s.on.bt2 ? Math.floor(Math.random() * CH) : -1;
-      const lost = busy(a) || a === b;
+      const air = onAir();
+      const lost = air.some((k) => a >= SOURCES[k].from && a <= SOURCES[k].to) || a === b;
       // rušení bývá široké, proto vyřadí i sousední kanály; aspoň dvacet si jich ale musí nechat
       if (s.afh && lost) for (let c = a - 2; c <= a + 2; c++) if (c >= 0 && c < CH && s.blocked[c] < 0 && usable().length > MIN_CH) s.blocked[c] = s.n;
-      s.hops.unshift({ a, b, lost });
+      s.hops.unshift({ a, b, lost, air });
       if (s.hops.length > ROWS) s.hops.pop();
       s.recent.push(lost ? 1 : 0);
       if (s.recent.length > 100) s.recent.shift();
@@ -270,6 +274,7 @@
       hopG.textContent = "";
       s.hops.forEach((h, i) => {
         const y = TOP + i * RH + 1.5, op = (1 - (i / ROWS) * 0.75).toFixed(2);
+        h.air.forEach((k) => el("rect", { x: cx(SOURCES[k].from).toFixed(1), y: y - 1, width: ((SOURCES[k].to + 1 - SOURCES[k].from) * CW).toFixed(1), height: RH - 1, class: "burst", opacity: (0.3 * (1 - (i / ROWS) * 0.6)).toFixed(2) }, hopG));
         if (h.b >= 0) el("rect", { x: cx(h.b).toFixed(1), y, width: CW.toFixed(1), height: RH - 3, class: "hop b", opacity: op }, hopG);
         el("rect", { x: cx(h.a).toFixed(1), y, width: CW.toFixed(1), height: RH - 3, class: h.lost ? "hop lost" : "hop", opacity: h.lost ? 1 : op }, hopG);
       });
@@ -288,7 +293,7 @@
         two: "<strong>Dvoje sluchátka vedle sebe.</strong> Každý pár skáče podle vlastního pořadí. Na stejném kanálu se sejdou jen náhodou, asi jednou za osmdesát skoků.",
         blind: "<strong>Skáče naslepo.</strong> Spojení střídá všech 79 kanálů bez ohledu na to, co na nich je. Kdykoli se trefí do místa, kde zrovna vysílá někdo silnější, paket se ztratí a musí se poslat znovu.",
         learn: "<strong>Učí se.</strong> Kanály, na kterých se pakety ztrácejí, si spojení jeden po druhém označuje jako špatné a vyřazuje je z pořadí.",
-        avoid: "<strong>Vyhýbá se.</strong> Spojení skáče jen po kanálech, kde je volno, a pakety procházejí. Vyřazené kanály průběžně poslouchá, aby poznalo, až se uvolní.",
+        avoid: "<strong>Vyhýbá se.</strong> Spojení skáče jen po kanálech, kde je volno, a pakety procházejí. Červené čtverečky zmizely, protože do rušeného pásu už neskáče. Šedé pruhy ukazují, že se tam dál vysílá, a proto si ty kanály zatím nebere zpátky.",
         full: "<strong>Není kam uhnout.</strong> Volných kanálů je míň než dvacet, a tolik si jich spojení nechat musí. Skáče proto i do obsazených a část paketů dál ztrácí.",
       }[key];
     }
