@@ -79,7 +79,7 @@
         <span class="label">Táhněte prstem po displeji nebo klepněte jinam</span>
       </div>
       <div class="fig-stage">
-        <svg id="panel" viewBox="0 0 720 520" role="img" aria-label="Telefon naležato s mřížkou elektrod, mapou signálu pod prstem a grafem signálu v jedné řadě"></svg>
+        <svg id="panel" viewBox="0 0 860 520" role="img" aria-label="Telefon naležato s mřížkou elektrod, mapou signálu pod prstem a grafem signálu v jedné řadě"></svg>
       </div>
       <div class="fig-controls">
         <div class="ctl">
@@ -114,7 +114,7 @@
           <li><span class="n">Chyba polohy</span><span class="v" id="st-err"></span></li>
         </ul>
       </div>
-      <figcaption class="fig-caption">Čtverečky ukazují, o kolik klesla kapacita v jednotlivých kříženích. Křížek je poloha, kterou z nich čip vypočítal, přerušovaný ovál skutečná plocha doteku. Elektrody jsou od sebe 5 milimetrů, jako ve skutečném telefonu. Sloupce dole jsou signál v řadě, která prochází pod prstem.</figcaption>
+      <figcaption class="fig-caption">Čtverečky ukazují, o kolik klesla kapacita v jednotlivých kříženích. Křížek je poloha, kterou z nich čip vypočítal, přerušovaný ovál skutečná plocha doteku. Elektrody jsou od sebe 5 milimetrů, jako ve skutečném telefonu. Sloupce dole a vpravo jsou signál v řadě a ve sloupci, které procházejí pod prstem. Z obou směrů dohromady vychází poloha.</figcaption>
     </figure>
 
     <section class="sec" aria-labelledby="h-mrizka">
@@ -168,7 +168,7 @@
       </div>
       <aside class="note" aria-label="Poznámka na okraj">
         <span class="label">Zkuste</span>
-        <p>Táhněte prstem pomalu vodorovně a sledujte sloupce dole. Přelévají se z jednoho do druhého plynule a značka vypočtené polohy jede s prstem, i když je mezi dvěma elektrodami.</p>
+        <p>Táhněte prstem pomalu vodorovně a sledujte sloupce dole. Přelévají se z jednoho do druhého plynule a značka vypočtené polohy jede s prstem, i když je mezi dvěma elektrodami. Při tažení svisle dělají totéž sloupce vpravo.</p>
       </aside>
     </section>
 
@@ -291,7 +291,7 @@
             const w = Math.max(0, at(i + di, j + dj) - 0.06);
             sw += w; sx += w * (i + di + 0.5) * PITCH; sy += w * (j + dj + 0.5) * PITCH;
           }
-          touches.push({ x: sx / sw, y: sy / sw, row: j });
+          touches.push({ x: sx / sw, y: sy / sw, row: j, col: i });
         });
       }
       return { touches, palm };
@@ -318,7 +318,7 @@
       el("circle", { r: 32, class: "focus-ring" }, g);
       return { g, shape, handle };
     });
-    const hitsG = el("g", {}, svg);
+    const hitsG = el("g", { "pointer-events": "none" }, svg);
 
     // graf signálu v jedné řadě, zarovnaný pod sloupce elektrod
     const BASE = 500, BAR_H = 84;
@@ -328,7 +328,15 @@
     for (let i = 0; i < COLS; i++) bars.push(el("rect", { x: X(i * PITCH) + 4, width: PITCH * U - 8, class: "bar" }, svg));
     el("line", { x1: SX, y1: BASE - BAR_H * THRESH, x2: SX + W_MM * U, y2: BASE - BAR_H * THRESH, class: "thresh" }, svg);
     el("text", { x: SX + W_MM * U, y: BASE - BAR_H * THRESH - 6, "text-anchor": "end", class: "cap red" }, svg).textContent = "práh";
-    const marksG = el("g", {}, svg);
+    const marksG = el("g", { "pointer-events": "none" }, svg);
+
+    // totéž z boku: signál ve sloupci, zarovnaný vedle řad elektrod
+    const SIDE = 728, SIDE_W = 84;
+    el("text", { x: SIDE - 2, y: 408, class: "cap" }, svg).textContent = "A VE SLOUPCI";
+    el("line", { x1: SIDE - 0.5, y1: SY, x2: SIDE - 0.5, y2: SY + H_MM * U, class: "bar-base" }, svg);
+    const sideBars = [];
+    for (let j = 0; j < ROWS; j++) sideBars.push(el("rect", { x: SIDE, y: Y(j * PITCH) + 4, height: PITCH * U - 8, class: "bar" }, svg));
+    el("line", { x1: SIDE + SIDE_W * THRESH, y1: SY, x2: SIDE + SIDE_W * THRESH, y2: SY + H_MM * U, class: "thresh" }, svg);
 
     /* ---------- výpis ---------- */
     const fmt1 = new Intl.NumberFormat("cs-CZ", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
@@ -383,6 +391,12 @@
       marksG.textContent = "";
       active().forEach((f) => el("path", { d: `M${X(f.x).toFixed(1)} ${BASE + 3} l6 10 h-12 Z`, class: "mark-true" }, marksG));
       found.touches.filter((t) => Math.abs(t.row - row) <= 2).forEach((t) => el("line", { x1: X(t.x).toFixed(1), y1: BASE - BAR_H - 4, x2: X(t.x).toFixed(1), y2: BASE + 3, class: "mark-calc" }, marksG));
+
+      // sloupec s nejsilnějším signálem
+      const col = peak > 0.08 ? peakAt % COLS : Math.max(0, Math.min(COLS - 1, Math.floor(s.fingers[0].x / PITCH)));
+      sideBars.forEach((b, j) => b.setAttribute("width", (Math.max(0, Math.min(1.1, signal[j * COLS + col])) * SIDE_W).toFixed(1)));
+      active().forEach((f) => el("path", { d: `M${SIDE - 4} ${Y(f.y).toFixed(1)} l-10 -6 v12 Z`, class: "mark-true" }, marksG));
+      found.touches.filter((t) => Math.abs(t.col - col) <= 2).forEach((t) => el("line", { x1: SIDE - 4, y1: Y(t.y).toFixed(1), x2: SIDE + SIDE_W + 4, y2: Y(t.y).toFixed(1), class: "mark-calc" }, marksG));
 
       // čísla a věta o stavu
       let err = null;
