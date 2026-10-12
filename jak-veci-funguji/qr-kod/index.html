@@ -1,0 +1,611 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Jak funguje QR kód</title>
+  <meta name="description" content="Co znamenají tři čtverce v rozích, jak se do čtverečků zapíše text a proč kód přežije škrábanec. S generátorem, ve kterém můžete kód poškodit.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700&display=swap">
+  <link rel="stylesheet" href="../style.css">
+  <style>
+    .qr-stage { display: grid; gap: 1.5rem; grid-template-columns: minmax(0, 1fr); align-items: start; }
+    @media (min-width: 56rem) { .qr-stage { grid-template-columns: minmax(0, 26rem) minmax(0, 1fr); gap: 2rem; } }
+    #qr { width: 100%; max-width: 26rem; justify-self: center; border: 1px solid var(--rule); cursor: crosshair; touch-action: manipulation; }
+    .panel { display: grid; gap: 1.1rem; min-width: 0; }
+    .panel h3 { margin: 0; }
+    .meta { margin: 0; font-family: var(--font-mono); font-size: 0.85rem; color: var(--ink-2); }
+    .meta b { color: var(--ink); font-weight: 600; }
+
+    .comp { display: flex; height: 1.1rem; border: 1px solid var(--rule); }
+    .comp i { display: block; min-width: 2px; }
+    .keys { display: grid; grid-template-columns: repeat(auto-fill, minmax(11.5rem, 1fr)); gap: 0.3rem 1rem; margin: 0; padding: 0; list-style: none; font-family: var(--font-mono); font-size: 0.78rem; color: var(--ink-2); }
+    .keys li { display: flex; align-items: baseline; gap: 0.5rem; }
+    .keys i { flex: none; width: 0.7rem; height: 0.7rem; transform: translateY(0.05rem); }
+    .keys b { margin-left: auto; color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+    .bits { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 0.8rem; font-variant-numeric: tabular-nums; }
+    .bits td { padding: 0.28rem 0.75rem 0.28rem 0; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+    .bits td:first-child { font-weight: 600; letter-spacing: 0.06em; }
+    .bits td:last-child { color: var(--ink-2); white-space: normal; }
+
+    .blocks { display: grid; gap: 0.35rem; margin: 0; padding: 0; list-style: none; font-family: var(--font-mono); font-size: 0.8rem; font-variant-numeric: tabular-nums; }
+    .blocks li { display: grid; grid-template-columns: 4.2rem minmax(0, 1fr) 4.6rem; align-items: center; gap: 0.6rem; }
+    .blocks .bar { position: relative; height: 0.6rem; background: var(--sunk); border: 1px solid var(--rule); }
+    .blocks .bar i { position: absolute; inset: 0 auto 0 0; background: var(--ok); }
+    .blocks .over .bar i { background: var(--bad); }
+    .blocks .v { text-align: right; }
+    .blocks .over .v { color: var(--bad); font-weight: 600; }
+
+    .ctl-text { flex: 1 1 100%; }
+    .txt {
+      width: 100%;
+      min-height: 42px;
+      padding: 0.55rem 0.7rem;
+      border: 1px solid var(--ink);
+      border-radius: 0;
+      background: var(--surface);
+      color: var(--ink);
+      font: 500 0.95rem var(--font-mono);
+    }
+    .btn.ghost { background: transparent; color: var(--cat); }
+    .status { font-size: 1.02rem; }
+    .status.bad strong { color: var(--bad); }
+    .warn { margin: 0; font-family: var(--font-mono); font-size: 0.8rem; color: var(--bad); }
+  </style>
+</head>
+<body data-cat="technika">
+  <header class="topbar">
+    <div class="wrap">
+      <a class="brand" href="../">Jak věci fungují</a>
+      <nav class="crumbs" aria-label="Drobečková navigace"><a href="../#technika">Technika</a><span aria-hidden="true">/</span><span>QR kód</span></nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <header class="art-head">
+      <p class="eyebrow">Technika</p>
+      <h1 class="display">Jak funguje QR kód</h1>
+      <p class="lede">QR kód je text zapsaný černými a bílými čtverečky. Telefon ho přečte nakřivo, vzhůru nohama i s utrženým rohem, protože kód sám říká, kde má hrany, a nese s sebou náhradní data pro případ poškození.</p>
+    </header>
+
+    <section class="tldr" aria-labelledby="h-zkratka">
+      <h2 class="label" id="h-zkratka">Ve zkratce</h2>
+      <ul>
+        <li>Tři velké čtverce v rozích ukazují čtečce, kde kód leží a jak je natočený.</li>
+        <li>Zbytek plochy jsou bity: černý čtvereček je jednička, bílý nula. Dohromady dávají text, nejčastěji adresu webu.</li>
+        <li>Část čtverečků tvoří <span class="hl">opravné bajty.</span> Díky nim jde kód přečíst, i když kus chybí.</li>
+      </ul>
+    </section>
+
+    <figure class="fig" id="obr1">
+      <div class="fig-head">
+        <p class="fig-num"><b>Obr. 1</b> Skutečný QR kód</p>
+        <span class="label">Napište text, načtěte kód telefonem a zkuste ho poškodit</span>
+      </div>
+      <div class="fig-stage qr-stage">
+        <svg id="qr" viewBox="0 0 370 370" role="img" aria-label="QR kód s vaším textem"></svg>
+        <div class="panel">
+          <p class="meta" id="meta"></p>
+          <div style="display:grid; gap:.5rem">
+            <span class="label">Z čeho se kód skládá</span>
+            <div class="comp" id="comp" aria-hidden="true"></div>
+            <ul class="keys" id="keys"></ul>
+          </div>
+          <div style="display:grid; gap:.4rem">
+            <span class="label">Začátek zprávy v bitech</span>
+            <table class="bits"><tbody id="bits"></tbody></table>
+          </div>
+          <div style="display:grid; gap:.4rem">
+            <span class="label">Chybné bajty v blocích</span>
+            <ul class="blocks" id="blocks"></ul>
+          </div>
+        </div>
+      </div>
+      <div class="fig-controls">
+        <div class="ctl ctl-text">
+          <label class="label" for="text">Text v kódu</label>
+          <input class="txt" type="text" id="text" value="mamartin.github.io/jak-veci-funguji" autocomplete="off" autocapitalize="off" spellcheck="false">
+          <p class="warn" id="warn" hidden></p>
+        </div>
+        <div class="ctl">
+          <span class="label" id="lbl-level">Odolnost</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-level" id="level-seg">
+            <button type="button" role="radio" data-v="0" aria-checked="false">L · 7 %</button>
+            <button type="button" role="radio" data-v="1" aria-checked="true">M · 15 %</button>
+            <button type="button" role="radio" data-v="2" aria-checked="false">Q · 25 %</button>
+            <button type="button" role="radio" data-v="3" aria-checked="false">H · 30 %</button>
+          </div>
+        </div>
+        <div class="ctl">
+          <span class="label" id="lbl-view">Zobrazení</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-view" id="view-seg">
+            <button type="button" role="radio" data-v="code" aria-checked="true">Kód</button>
+            <button type="button" role="radio" data-v="parts" aria-checked="false">Co je co</button>
+            <button type="button" role="radio" data-v="raw" aria-checked="false">Bez masky</button>
+          </div>
+        </div>
+        <button type="button" class="btn" id="scratch">Udělat škrábanec</button>
+        <button type="button" class="btn ghost" id="repair">Opravit</button>
+      </div>
+      <div class="fig-status">
+        <p class="status" id="status" aria-live="polite"></p>
+      </div>
+      <figcaption class="fig-caption">Kód je pravý, v zobrazení Kód ho přečte každý telefon. Klepnutím na čtvereček v datové části ho převrátíte, červený rámeček označuje poškození. Model umí verze 1 až 6, tedy nejvýš 134 bajtů textu.</figcaption>
+    </figure>
+
+    <section class="sec" aria-labelledby="h-rohy">
+      <div class="prose">
+        <h2 id="h-rohy">Tři čtverce v rozích</h2>
+        <p>Čtečka nejdřív neví nic: kde v záběru kód je, jak je velký ani jak je natočený. Hledá proto tři stejné obrazce, černý čtverec v bílém rámečku v černém rámečku. Ať je přeříznete vodorovně, svisle nebo šikmo, střídají se v nich černá a bílá vždy v poměru <span class="num">1 : 1 : 3 : 1 : 1.</span> Takový poměr se v běžném obrázku skoro nevyskytuje, a tak ho telefon najde během zlomku sekundy.</p>
+        <p>Čtverce jsou jen tři. Roh, kde chybí, je pravý dolní, a z toho čtečka pozná, jak je kód otočený. Poblíž něj bývá ještě jeden menší čtvereček, který pomáhá srovnat obraz, když kód fotíte ze strany nebo je nalepený na lahvi.</p>
+        <p>Mezi velkými čtverci vedou dvě čáry, na kterých se pravidelně střídá černá a bílá. Čtečka si podle nich odpočítá, kolik čtverečků kód má a kde přesně leží jejich středy.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Přepněte zobrazení na Co je co. Oranžové jsou rohové čtverce, modrozelené odpočítávací čáry, růžový je srovnávací čtvereček a fialový proužek nese formát. Všechno ostatní jsou data a opravné bajty.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-bity">
+      <div class="prose">
+        <h2 id="h-bity">Jak se do čtverečků vejde text</h2>
+        <p>Počítač ukládá každé písmeno jako číslo a každé číslo jako osm bitů, tedy osm nul a jedniček. Malé „m“ je <span class="num">01101101.</span> QR kód tyhle bity prostě nakreslí: jednička je černý čtvereček, nula bílý.</p>
+        <p>Zpráva začíná krátkým záhlavím. První čtyři bity říkají, jakým způsobem je text zapsaný, dalších osm, kolik má bajtů. Pak následuje samotný text, a když nezaplní celý kód, doplní se smluvenou výplní.</p>
+        <p>Bity se do obrazce skládají od pravého dolního rohu. Postupují ve dvojicích sloupců nahoru, pak o dva sloupce vedle zase dolů, a tak pořád dokola. Pevné vzory přitom obcházejí.</p>
+      </div>
+      <aside class="note" aria-label="QR kód v číslech">
+        <span class="label">V číslech</span>
+        <dl class="facts">
+          <div><dt>21 × 21</dt><dd>čtverečků má nejmenší kód (verze 1)</dd></div>
+          <div><dt>177 × 177</dt><dd>má největší (verze 40)</dd></div>
+          <div><dt>2 953</dt><dd>bajtů se vejde do největšího kódu</dd></div>
+          <div><dt>30 %</dt><dd>kódu smí chybět při nejvyšší odolnosti</dd></div>
+        </dl>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-opravy">
+      <div class="prose">
+        <h2 id="h-opravy">Proč kód přežije škrábanec</h2>
+        <p>K datům se přidávají opravné bajty. Nejsou to kopie. Spočítají se z dat tak, aby mezi všemi bajty platily přesné matematické vztahy. Když se pak některý bajt poškodí, vztahy přestanou sedět a čtečka z nich dopočítá, který bajt je špatně a jaký měl být.</p>
+        <p>Metoda se jmenuje <span class="hl">Reedův–Solomonův kód</span> a je z roku 1960. Stejnou používají cédéčka, aby hrála i poškrábaná, a sondy Voyager, když posílají snímky z okraje sluneční soustavy.</p>
+        <p>Platí jednoduché pravidlo: na opravu jednoho chybného bajtu jsou potřeba dva opravné. Tvůrce kódu si vybírá ze čtyř úrovní, při kterých smí být poškozeno zhruba 7, 15, 25 nebo 30 procent kódu. Vyšší odolnost znamená víc čtverečků na stejný text.</p>
+        <p>Proto může být uprostřed kódu logo. Kód pod ním je zničený a čtečka si ho dopočítá.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Klikejte na Udělat škrábanec a sledujte sloupce u bloků. Dokud jsou zelené, telefon kód přečte. Jakmile jeden zčervená, je konec. Pak zvyšte odolnost na H a zkuste to znovu.</p>
+        <p>Rohové čtverce poškodit nejdou. Ty žádnou opravu nemají, a když se jeden ztratí, čtečka kód vůbec nenajde.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-maska">
+      <div class="prose">
+        <h2 id="h-maska">Maska proti velkým flekům</h2>
+        <p>Některé texty by po nakreslení vytvořily velké jednobarevné plochy nebo náhodou něco, co vypadá jako rohový čtverec. Čtečku by to mátlo. Kód se proto před nakreslením přeloží maskou: podle jednoduchého pravidla, třeba „každý druhý řádek“, se část čtverečků převrátí.</p>
+        <p>Masek je osm. Program, který kód vytváří, vyzkouší všechny a vybere tu, po které je obrazec nejpestřejší. Číslo masky a úroveň odolnosti pak zapíše do úzkého proužku kolem rohových čtverců. Čtečka si ho přečte jako první a masku zase sundá.</p>
+        <p>Ten proužek je tak důležitý, že je v kódu dvakrát a má vlastní, ještě silnější opravný kód.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Zobrazení Bez masky ukazuje data tak, jak vypadala před přeložením. Všimněte si pruhů a šachovnic ve výplni. Takový kód telefon nepřečte, protože proužek s formátem tvrdí, že maska nasazená je.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-obsah">
+      <div class="prose">
+        <h2 id="h-obsah">V kódu je jen text</h2>
+        <p>QR kód neumí nic spustit ani nikam poslat. Je to krátký text a teprve telefon se rozhoduje, co s ním. Když text vypadá jako adresa webu, nabídne ji otevřít. Když začíná <span class="num">WIFI:</span>, nabídne připojení k síti.</p>
+        <p>Stejně funguje česká QR platba. V kódu na faktuře je obyčejný řádek textu, například <span class="num">SPD*1.0*ACC:CZ58…*AM:480.50*CC:CZK</span>, a bankovní aplikace z něj vyplní číslo účtu a částku.</p>
+        <p>Z toho plyne i hlavní riziko. Z kódu samotného nepoznáte, kam vede, a přelepit cizí kód vlastní nálepkou je snadné. <span class="hl">Než adresu otevřete, přečtěte si ji.</span> Telefon ji vždycky nejdřív ukáže. U platby zkontrolujte účet a částku.</p>
+      </div>
+    </section>
+
+    <section class="sec" aria-labelledby="h-historie">
+      <div class="prose">
+        <h2 id="h-historie">Kód z automobilky</h2>
+        <p>QR kód vymyslel v roce 1994 Masahiro Hara v japonské firmě Denso Wave, která dodávala díly Toyotě. Na bednách s díly bylo tolik čárových kódů, že je dělníci nestíhali načítat, a do jednoho čárového kódu se vešlo jen asi dvacet znaků. Hara chtěl kód, který pojme stokrát víc a dá se přečíst z libovolného směru. Na rozmístění černých a bílých polí prý přišel nad deskou hry go.</p>
+        <p>Název znamená Quick Response, rychlá odezva. Firma si kód patentovala, ale rozhodla se, že za použití nebude chtít peníze. Díky tomu se rozšířil nejdřív v japonských továrnách, pak v telefonech s fotoaparátem, a za pandemie v letech 2020 a 2021 se dostal na dveře každé restaurace.</p>
+      </div>
+    </section>
+
+    <footer class="art-foot">
+      <a class="next" href="../wifi/" data-cat="technika">
+        <span class="label">Další článek · Technika</span>
+        <span class="t">Jak funguje Wi-Fi</span>
+        <p>Jak se internet dostane vzduchem do telefonu a proč mu vadí zeď.</p>
+      </a>
+      <a class="back" href="../">Všechna témata</a>
+    </footer>
+  </main>
+
+  <script>
+  (() => {
+    const NS = "http://www.w3.org/2000/svg";
+    function el(tag, attrs, parent) {
+      const n = document.createElementNS(NS, tag);
+      for (const k in attrs || {}) n.setAttribute(k, attrs[k]);
+      if (parent) parent.appendChild(n);
+      return n;
+    }
+
+    /* ---------- kodér QR (verze 1–6, bajtový režim) ---------- */
+    const LEVELS = ["L", "M", "Q", "H"];
+    const TOTAL_CW = [0, 26, 44, 70, 100, 134, 172];
+    const EC_CW = [[0, 7, 10, 15, 20, 26, 18], [0, 10, 16, 26, 18, 24, 16], [0, 13, 22, 18, 26, 18, 24], [0, 17, 28, 22, 16, 22, 28]];
+    const BLOCKS = [[0, 1, 1, 1, 1, 1, 2], [0, 1, 1, 1, 2, 2, 4], [0, 1, 1, 2, 2, 4, 4], [0, 1, 1, 2, 4, 4, 4]];
+    const FORMAT_BITS = [1, 0, 3, 2];
+    const MAX_VERSION = 6;
+    const dataCodewords = (v, lv) => TOTAL_CW[v] - EC_CW[lv][v] * BLOCKS[lv][v];
+    const capacity = (v, lv) => dataCodewords(v, lv) - 2;      // 4 bity režim + 8 bitů délka
+
+    // počítání v tělese GF(256), na kterém stojí Reedův–Solomonův kód
+    const EXP = new Uint8Array(512), LOG = new Uint8Array(256);
+    for (let i = 0, x = 1; i < 255; i++) { EXP[i] = x; LOG[x] = i; x <<= 1; if (x & 256) x ^= 0x11d; }
+    for (let i = 255; i < 512; i++) EXP[i] = EXP[i - 255];
+    const gmul = (a, b) => (a && b ? EXP[LOG[a] + LOG[b]] : 0);
+    function rsRemainder(data, n) {
+      let gen = [1];
+      for (let i = 0; i < n; i++) {
+        const next = new Array(gen.length + 1).fill(0);
+        gen.forEach((g, k) => { next[k] ^= g; next[k + 1] ^= gmul(g, EXP[i]); });
+        gen = next;
+      }
+      const rem = new Array(n).fill(0);
+      for (const b of data) {
+        const f = b ^ rem.shift();
+        rem.push(0);
+        for (let k = 0; k < n; k++) rem[k] ^= gmul(gen[k + 1], f);
+      }
+      return rem;
+    }
+
+    const MASKS = [
+      (x, y) => (x + y) % 2 === 0,
+      (x, y) => y % 2 === 0,
+      (x, y) => x % 3 === 0,
+      (x, y) => (x + y) % 3 === 0,
+      (x, y) => (Math.floor(x / 3) + Math.floor(y / 2)) % 2 === 0,
+      (x, y) => ((x * y) % 2) + ((x * y) % 3) === 0,
+      (x, y) => (((x * y) % 2) + ((x * y) % 3)) % 2 === 0,
+      (x, y) => (((x + y) % 2) + ((x * y) % 3)) % 2 === 0,
+    ];
+
+    function penalty(m) {
+      const n = m.length;
+      let score = 0, dark = 0;
+      const line = (get) => {
+        let run = 1, hist = 0;
+        for (let i = 0; i < n; i++) {
+          const v = get(i);
+          hist = ((hist << 1) | (v ? 1 : 0)) & 0x7ff;
+          if (i >= 10 && (hist === 0x5d0 || hist === 0x05d)) score += 40;   // vzor podobný rohovému čtverci
+          if (i > 0 && v === get(i - 1)) { run++; if (run === 5) score += 3; else if (run > 5) score++; } else run = 1;
+        }
+      };
+      for (let a = 0; a < n; a++) { line((i) => m[a][i]); line((i) => m[i][a]); }
+      for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+        if (m[y][x]) dark++;
+        if (x < n - 1 && y < n - 1 && m[y][x] === m[y][x + 1] && m[y][x] === m[y + 1][x] && m[y][x] === m[y + 1][x + 1]) score += 3;
+      }
+      return score + (Math.ceil(Math.abs(dark * 20 - n * n * 10) / (n * n)) - 1) * 10;
+    }
+
+    function qrEncode(bytes, lv) {
+      let v = 1;
+      while (v <= MAX_VERSION && bytes.length > capacity(v, lv)) v++;
+      if (v > MAX_VERSION) return null;
+      const n = 17 + 4 * v, nData = dataCodewords(v, lv), nEc = EC_CW[lv][v], nBlocks = BLOCKS[lv][v];
+
+      // proud bitů: režim, délka, data, ukončení, výplň
+      const bits = [];
+      const push = (val, len) => { for (let i = len - 1; i >= 0; i--) bits.push((val >>> i) & 1); };
+      push(4, 4);
+      push(bytes.length, 8);
+      bytes.forEach((b) => push(b, 8));
+      const used = bits.length;
+      push(0, Math.min(4, nData * 8 - bits.length));
+      while (bits.length % 8) bits.push(0);
+      for (let pad = 0xec; bits.length < nData * 8; pad ^= 0xec ^ 0x11) push(pad, 8);
+      const data = [];
+      for (let i = 0; i < bits.length; i += 8) data.push(bits.slice(i, i + 8).reduce((a, b) => (a << 1) | b, 0));
+
+      // rozdělení do bloků, opravné bajty a prokládání
+      const shortLen = Math.floor(nData / nBlocks), nShort = nBlocks - (nData % nBlocks);
+      const blocks = [];
+      for (let b = 0, at = 0; b < nBlocks; b++) {
+        const len = shortLen + (b < nShort ? 0 : 1);
+        const d = data.slice(at, at + len);
+        blocks.push({ start: at, data: d, ec: rsRemainder(d, nEc) });
+        at += len;
+      }
+      const codewords = [];   // { value, block, ec, src } v pořadí, v jakém jdou do obrazce
+      for (let i = 0; i <= shortLen; i++) blocks.forEach((b, k) => { if (i < b.data.length) codewords.push({ value: b.data[i], block: k, ec: false, src: b.start + i }); });
+      for (let i = 0; i < nEc; i++) blocks.forEach((b, k) => codewords.push({ value: b.ec[i], block: k, ec: true, src: -1 }));
+
+      // pevné vzory
+      const dark = Array.from({ length: n }, () => new Array(n).fill(false));
+      const kind = Array.from({ length: n }, () => new Array(n).fill(""));
+      const set = (x, y, on, what) => { if (x >= 0 && x < n && y >= 0 && y < n) { dark[y][x] = on; kind[y][x] = what; } };
+      for (let i = 0; i < n; i++) { set(6, i, i % 2 === 0, "timing"); set(i, 6, i % 2 === 0, "timing"); }
+      [[3, 3], [n - 4, 3], [3, n - 4]].forEach(([cx, cy]) => {
+        for (let dy = -4; dy <= 4; dy++) for (let dx = -4; dx <= 4; dx++) {
+          const r = Math.max(Math.abs(dx), Math.abs(dy));
+          set(cx + dx, cy + dy, r !== 2 && r !== 4, "finder");
+        }
+      });
+      if (v >= 2) {
+        const c = 4 * v + 10;
+        for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) set(c + dx, c + dy, Math.max(Math.abs(dx), Math.abs(dy)) !== 1, "align");
+      }
+      const drawFormat = (m, mask) => {
+        const d = (FORMAT_BITS[lv] << 3) | mask;
+        let rem = d;
+        for (let i = 0; i < 10; i++) rem = (rem << 1) ^ ((rem >>> 9) * 0x537);
+        const f = ((d << 10) | rem) ^ 0x5412;
+        const bit = (i) => ((f >>> i) & 1) === 1;
+        const put = (x, y, on) => { m[y][x] = on; kind[y][x] = "format"; };
+        for (let i = 0; i <= 5; i++) put(8, i, bit(i));
+        put(8, 7, bit(6)); put(8, 8, bit(7)); put(7, 8, bit(8));
+        for (let i = 9; i < 15; i++) put(14 - i, 8, bit(i));
+        for (let i = 0; i < 8; i++) put(n - 1 - i, 8, bit(i));
+        for (let i = 8; i < 15; i++) put(8, n - 15 + i, bit(i));
+        put(8, n - 8, true);
+      };
+      drawFormat(dark, 0);
+
+      // data: cikcak po dvojicích sloupců od pravého dolního rohu
+      const cwAt = Array.from({ length: n }, () => new Array(n).fill(-1));
+      const bitAt = Array.from({ length: n }, () => new Array(n).fill(-1));
+      let i = 0;
+      for (let right = n - 1; right >= 1; right -= 2) {
+        if (right === 6) right = 5;
+        for (let vert = 0; vert < n; vert++) for (let j = 0; j < 2; j++) {
+          const x = right - j, up = ((right + 1) & 2) === 0, y = up ? n - 1 - vert : vert;
+          if (kind[y][x]) continue;
+          kind[y][x] = "data";
+          if (i < codewords.length * 8) {
+            dark[y][x] = ((codewords[i >> 3].value >>> (7 - (i & 7))) & 1) === 1;
+            cwAt[y][x] = i >> 3;
+            bitAt[y][x] = i & 7;
+          }
+          i++;
+        }
+      }
+
+      // maska: vyzkoušíme všech osm a vezmeme tu s nejmenší pokutou
+      let best = null;
+      for (let mask = 0; mask < 8; mask++) {
+        const m = dark.map((row, y) => row.map((on, x) => (kind[y][x] === "data" ? on !== MASKS[mask](x, y) : on)));
+        drawFormat(m, mask);
+        const p = penalty(m);
+        if (!best || p < best.p) best = { p, mask, m };
+      }
+      drawFormat(dark, best.mask);
+      return { version: v, size: n, level: lv, mask: best.mask, raw: dark, modules: best.m, kind, cwAt, bitAt, codewords, blocks, nData, nEc, usedBits: used, length: bytes.length };
+    }
+
+    /* ---------- stav a kresba ---------- */
+    const QUIET = 4, M = 10;                 // tichá zóna a velikost čtverečku v jednotkách SVG
+    // kolik opravných bajtů si norma u nejmenších kódů nechává jen na odhalení chyb
+    const RESERVED = { "1,0": 3, "1,1": 2, "1,2": 1, "1,3": 1, "2,0": 2, "3,0": 1 };
+    // kód musí zůstat černý na bílé v obou režimech, barvy jsou proto pevné
+    const PARTS = {
+      finder: { color: "#bd3f0b", name: "rohové čtverce" },
+      timing: { color: "#0a6f84", name: "odpočítávací čáry" },
+      align: { color: "#b72155", name: "srovnávací čtvereček" },
+      format: { color: "#673acb", name: "formát: maska a odolnost" },
+      head: { color: "#2442c2", name: "záhlaví a ukončení" },
+      text: { color: "#14181e", name: "text" },
+      pad: { color: "#8a919b", name: "výplň" },
+      ec: { color: "#08754f", name: "opravné bajty" },
+    };
+    const BAD = "#cc3125";
+
+    const svg = document.getElementById("qr");
+    const textIn = document.getElementById("text");
+    const warnEl = document.getElementById("warn");
+    const metaEl = document.getElementById("meta");
+    const compEl = document.getElementById("comp");
+    const keysEl = document.getElementById("keys");
+    const bitsEl = document.getElementById("bits");
+    const blocksEl = document.getElementById("blocks");
+    const statusEl = document.getElementById("status");
+    const fmt = new Intl.NumberFormat("cs-CZ");
+
+    const state = { level: 1, view: "code", q: null, damage: new Set() };
+
+    function partAt(q, x, y) {
+      const k = q.kind[y][x];
+      if (k !== "data") return k;
+      const c = q.cwAt[y][x];
+      if (c < 0) return "pad";
+      const cw = q.codewords[c];
+      if (cw.ec) return "ec";
+      const off = cw.src * 8 + q.bitAt[y][x];
+      if (off < 12) return "head";
+      if (off < q.usedBits) return "text";
+      return off < q.usedBits + 4 ? "head" : "pad";
+    }
+
+    function draw() {
+      const q = state.q, n = q.size, side = (n + 2 * QUIET) * M;
+      svg.setAttribute("viewBox", `0 0 ${side} ${side}`);
+      svg.textContent = "";
+      el("rect", { width: side, height: side, fill: "#fff" }, svg);
+      const base = state.view === "raw" ? q.raw : q.modules;
+      const marks = [];
+      for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+        const hurt = state.damage.has(`${x},${y}`);
+        const on = base[y][x] !== hurt;
+        const px = (x + QUIET) * M, py = (y + QUIET) * M;
+        if (state.view === "parts") {
+          const color = PARTS[partAt(q, x, y)].color;
+          el("rect", { x: px, y: py, width: M, height: M, fill: color, "fill-opacity": on ? 1 : 0.14 }, svg);
+        } else if (on) {
+          el("rect", { x: px, y: py, width: M + 0.3, height: M + 0.3, fill: "#000" }, svg);
+        }
+        if (hurt) marks.push([px, py]);
+      }
+      marks.forEach(([px, py]) => el("rect", { x: px + 1, y: py + 1, width: M - 2, height: M - 2, fill: "none", stroke: BAD, "stroke-width": 2 }, svg));
+    }
+
+    function analyse() {
+      const q = state.q;
+      const hit = q.blocks.map(() => new Set());
+      state.damage.forEach((key) => {
+        const [x, y] = key.split(",").map(Number);
+        const c = q.cwAt[y][x];
+        if (c >= 0) hit[q.codewords[c].block].add(c);
+      });
+      const limit = Math.floor((q.nEc - (RESERVED[`${q.version},${q.level}`] || 0)) / 2);
+      const bad = hit.map((set) => set.size);
+      return { bad, limit, worst: bad.indexOf(Math.max(...bad)) };
+    }
+
+    function describe() {
+      const q = state.q;
+      metaEl.innerHTML = `<b>Verze ${q.version}</b> · ${q.size} × ${q.size} čtverečků · maska ${q.mask}`;
+
+      const nEcAll = q.nEc * q.blocks.length;
+      const sizes = { head: 2, text: q.length, pad: q.nData - 2 - q.length, ec: nEcAll };
+      compEl.textContent = "";
+      keysEl.textContent = "";
+      ["head", "text", "pad", "ec"].forEach((k) => {
+        const seg = document.createElement("i");
+        seg.style.flex = `${sizes[k]} 0 0`;
+        seg.style.background = PARTS[k].color;
+        if (sizes[k] > 0) compEl.appendChild(seg);
+      });
+      Object.keys(PARTS).forEach((k) => {
+        const li = document.createElement("li");
+        const count = k in sizes ? `<b>${fmt.format(sizes[k])} B</b>` : "";
+        li.innerHTML = `<i style="background:${PARTS[k].color}"></i><span>${PARTS[k].name}</span>${count}`;
+        keysEl.appendChild(li);
+      });
+
+      const bytes = new TextEncoder().encode(textIn.value);
+      const bin = (v, len) => v.toString(2).padStart(len, "0");
+      const rowsHtml = [[bin(4, 4), "režim: bajty"], [bin(q.length, 8), `délka: ${q.length} ${q.length === 1 ? "bajt" : q.length < 5 ? "bajty" : "bajtů"}`]];
+      Array.from(bytes.slice(0, 3)).forEach((b) => rowsHtml.push([bin(b, 8), b >= 32 && b < 127 ? `znak „${String.fromCharCode(b)}“` : "část znaku s diakritikou"]));
+      bitsEl.textContent = "";
+      rowsHtml.forEach(([a, b]) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = "<td></td><td></td>";
+        tr.children[0].textContent = a;
+        tr.children[1].textContent = b;
+        bitsEl.appendChild(tr);
+      });
+    }
+
+    function report() {
+      const q = state.q, a = analyse();
+      blocksEl.textContent = "";
+      a.bad.forEach((count, i) => {
+        const li = document.createElement("li");
+        li.className = count > a.limit ? "over" : "";
+        li.innerHTML = `<span>Blok ${i + 1}</span><span class="bar"><i style="width:${Math.min(100, (count / a.limit) * 100)}%"></i></span><span class="v">${count} / ${a.limit}</span>`;
+        blocksEl.appendChild(li);
+      });
+
+      const total = state.damage.size;
+      const dead = a.bad[a.worst] > a.limit;
+      statusEl.classList.toggle("bad", dead);
+      const noun = q.blocks.length === 1 ? "Kód" : `Blok ${a.worst + 1}`;
+      let html;
+      if (state.view === "raw") {
+        html = "<strong>Takhle vypadají data před nasazením masky.</strong> Telefon tenhle obrazec nepřečte, přepněte zpátky na Kód.";
+      } else if (!total) {
+        html = `<strong>Kód je celý.</strong> Namiřte na něj telefon. V každém bloku smí být nejvýš ${a.limit} chybných bajtů, pak už se opravit nedá.`;
+      } else if (!dead) {
+        html = `<strong>Čtečka kód pořád přečte.</strong> Poškozených čtverečků je ${total}, ale žádný blok nemá víc než ${a.limit} chybných bajtů. Zbytek si dopočítá z opravných.`;
+      } else {
+        html = `<strong>Tohle už přečíst nejde.</strong> ${noun} má ${a.bad[a.worst]} chybných bajtů a opravit jich umí nejvýš ${a.limit}.`;
+      }
+      statusEl.innerHTML = html;
+    }
+
+    function rebuild() {
+      const bytes = new TextEncoder().encode(textIn.value);
+      const q = bytes.length ? qrEncode(bytes, state.level) : null;
+      if (!q) {
+        warnEl.hidden = false;
+        warnEl.textContent = bytes.length
+          ? `Text má ${bytes.length} bajtů. Při odolnosti ${LEVELS[state.level]} se do modelu vejde nejvýš ${capacity(MAX_VERSION, state.level)}.`
+          : "Napište aspoň jeden znak.";
+        return;
+      }
+      warnEl.hidden = true;
+      state.q = q;
+      state.damage.clear();
+      svg.setAttribute("aria-label", `QR kód s textem ${textIn.value}`);
+      draw();
+      describe();
+      report();
+    }
+
+    /* ---------- ovládání ---------- */
+    textIn.addEventListener("input", rebuild);
+
+    function bindSeg(id, apply) {
+      const seg = document.getElementById(id);
+      seg.addEventListener("click", (e) => {
+        const b = e.target.closest("button[data-v]");
+        if (!b) return;
+        seg.querySelectorAll("button").forEach((x) => x.setAttribute("aria-checked", String(x === b)));
+        apply(b.dataset.v);
+      });
+    }
+    bindSeg("level-seg", (v) => { state.level = Number(v); rebuild(); });
+    bindSeg("view-seg", (v) => { state.view = v; draw(); report(); });
+
+    const canHurt = (x, y) => {
+      const q = state.q;
+      return x >= 0 && y >= 0 && x < q.size && y < q.size && q.cwAt[y][x] >= 0;
+    };
+    function moduleAt(evt) {
+      const m = svg.getScreenCTM();
+      if (!m) return null;
+      const p = new DOMPoint(evt.clientX, evt.clientY).matrixTransform(m.inverse());
+      return [Math.floor(p.x / M) - QUIET, Math.floor(p.y / M) - QUIET];
+    }
+    let paint = null;
+    function touch(evt) {
+      const at = moduleAt(evt);
+      if (!at || !canHurt(at[0], at[1])) return;
+      const key = at.join(",");
+      if (paint === null) paint = !state.damage.has(key);
+      if (paint === state.damage.has(key)) return;
+      if (paint) state.damage.add(key); else state.damage.delete(key);
+      draw();
+      report();
+    }
+    svg.addEventListener("pointerdown", (e) => {
+      paint = null;
+      touch(e);
+      if (e.pointerType === "mouse") svg.setPointerCapture(e.pointerId); else paint = null;
+    });
+    svg.addEventListener("pointermove", (e) => { if (paint !== null && e.buttons) touch(e); });
+    const stop = () => { paint = null; };
+    svg.addEventListener("pointerup", stop);
+    svg.addEventListener("pointercancel", stop);
+
+    document.getElementById("scratch").addEventListener("click", () => {
+      const q = state.q;
+      let cx, cy;
+      do { cx = Math.floor(Math.random() * q.size); cy = Math.floor(Math.random() * q.size); } while (!canHurt(cx, cy));
+      for (let y = cy - 2; y <= cy + 2; y++) for (let x = cx - 2; x <= cx + 2; x++) {
+        if (Math.hypot(x - cx, y - cy) <= 1.6 && canHurt(x, y)) state.damage.add(`${x},${y}`);
+      }
+      draw();
+      report();
+    });
+    document.getElementById("repair").addEventListener("click", () => { state.damage.clear(); draw(); report(); });
+
+    rebuild();
+  })();
+  </script>
+</body>
+</html>

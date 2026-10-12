@@ -1,0 +1,492 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Jak funguje příliv a odliv</title>
+  <meta name="description" content="Proč se moře zvedá dvakrát denně, když Měsíc je na obloze jen jeden, co s tím má Slunce a proč je v Baltu skoro nic. S modelem Země, Měsíce a Slunce.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700&display=swap">
+  <link rel="stylesheet" href="../style.css">
+  <style>
+    .tide-stage { display: grid; gap: 1rem; grid-template-columns: minmax(0, 1fr); align-items: center; }
+    @media (min-width: 60rem) { .tide-stage { grid-template-columns: minmax(0, 1.42fr) minmax(0, 1fr); } }
+    #space { touch-action: pan-y; }
+
+    .sun { fill: #f2b63c; stroke: var(--metal-line); stroke-width: 1.2; }
+    .sunray line { stroke: #d9981a; stroke-width: 2; stroke-linecap: round; }
+    .sunray path { fill: #d9981a; }
+    .orbit { fill: none; stroke: var(--rule); stroke-width: 1.4; stroke-dasharray: 3 6; }
+    .axis { stroke: var(--ink-3); stroke-width: 1; stroke-dasharray: 2 5; }
+    .ocean { fill: var(--cold); fill-opacity: 0.55; stroke: var(--cold); stroke-width: 1.4; }
+    .earth { fill: var(--plug); stroke: var(--metal-line); stroke-width: 1.4; }
+    .meridian { fill: none; stroke: var(--plug-hatch); stroke-width: 1.2; }
+    .night { fill: var(--ink); opacity: 0.3; pointer-events: none; }
+    .you circle { fill: var(--cat); stroke: var(--surface); stroke-width: 1.5; }
+    .you text { fill: var(--cat); font: 700 13px var(--font-mono); text-anchor: middle; paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
+    .moon-dark { fill: var(--ink-3); stroke: var(--metal-line); stroke-width: 1.2; }
+    .moon-lit { fill: var(--surface); stroke: var(--metal-line); stroke-width: 1.2; }
+    #moon-handle { fill: transparent; cursor: grab; touch-action: none; outline: none; }
+    #moon-handle:focus-visible + .focus-ring { opacity: 1; }
+    .focus-ring { fill: none; stroke: var(--cat); stroke-width: 2.5; opacity: 0; pointer-events: none; }
+    .pull line { stroke-width: 2; stroke-linecap: round; }
+    .pull.moon line { stroke: var(--ink); } .pull.moon path { fill: var(--ink); }
+    .pull.sunp line { stroke: #d9981a; } .pull.sunp path { fill: #d9981a; }
+    .lbl { fill: var(--ink-3); font: 500 12px var(--font-mono); }
+    .lbl.strong { fill: var(--ink-2); font-weight: 600; }
+
+    .plot-bg { fill: var(--surface); stroke: var(--rule); }
+    .plot-night { fill: var(--ink); opacity: 0.07; }
+    .plot-grid { stroke: var(--grid); stroke-width: 1; }
+    .plot-zero { stroke: var(--ink-3); stroke-width: 1; }
+    .plot-curve { fill: none; stroke: var(--cold); stroke-width: 2.6; stroke-linejoin: round; }
+    .plot-fill { fill: var(--cold); opacity: 0.14; }
+    .plot-now { fill: var(--cat); stroke: var(--surface); stroke-width: 2; }
+    .plot-mark { fill: var(--surface); stroke: var(--ink); stroke-width: 1.6; }
+    .plot-text { fill: var(--ink-2); font: 500 12px var(--font-mono); }
+    .plot-text.note { fill: var(--ink); font-weight: 600; paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
+    .plot-title { fill: var(--ink-3); font: 500 11px var(--font-mono); letter-spacing: 0.08em; }
+
+    .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.4rem; margin: 0; padding: 0; list-style: none; }
+    .stats li { display: grid; gap: 0.1rem; align-content: start; padding: 0.45rem 0.6rem; border: 1px solid var(--rule); border-top: 3px solid var(--cat); background: var(--surface); font-family: var(--font-mono); font-size: 0.78rem; line-height: 1.3; }
+    .stats .n { color: var(--ink-3); }
+    .stats .v { font-family: var(--font-display); font-stretch: 112%; font-weight: 800; font-size: 1.25rem; color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .stats .phase { display: flex; align-items: center; gap: 0.5rem; }
+    .stats .phase svg { width: 1.5rem; height: 1.5rem; flex: none; }
+    .stats .phase span { font-family: var(--font-mono); font-size: 0.82rem; font-weight: 600; line-height: 1.2; white-space: normal; }
+    .status { font-size: 1.02rem; }
+    .td-status { display: grid; gap: 0.9rem; }
+
+    @media (max-width: 46rem) {
+      .lbl { display: none; }
+      .you text { font-size: 22px; stroke-width: 6px; }
+      .plot-text { font-size: 17px; }
+      .plot-title { font-size: 15px; }
+      .stats .v { font-size: 1.05rem; }
+      .stats li { padding: 0.4rem 0.45rem; }
+    }
+    @media (min-width: 60rem) {
+      .td-status { grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); align-items: start; gap: 2rem; }
+    }
+  </style>
+</head>
+<body data-cat="vesmir">
+  <header class="topbar">
+    <div class="wrap">
+      <a class="brand" href="../">Jak věci fungují</a>
+      <nav class="crumbs" aria-label="Drobečková navigace"><a href="../#vesmir">Vesmír</a><span aria-hidden="true">/</span><span>Příliv a odliv</span></nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <header class="art-head">
+      <p class="eyebrow">Vesmír</p>
+      <h1 class="display">Jak funguje příliv a odliv</h1>
+      <p class="lede">Moře se u pobřeží zvedne a zase klesne dvakrát za den. Může za to Měsíc, ale ne tak, že by vodu zvedal k sobě. Zemi natahuje, a ta se pod vzniklými boulemi otáčí.</p>
+    </header>
+
+    <section class="tldr" aria-labelledby="h-zkratka">
+      <h2 class="label" id="h-zkratka">Ve zkratce</h2>
+      <ul>
+        <li>Měsíc přitahuje bližší stranu Země silněji než vzdálenější. Rozdíl těch sil oceán <span class="hl">natahuje do dvou boulí:</span> jedné směrem k Měsíci, druhé na opačné straně.</li>
+        <li>Země se pod boulemi otočí jednou za den, takže každé pobřeží potká dva přílivy a dva odlivy.</li>
+        <li>Slunce dělá totéž, jen napůl slaběji. Když táhne stejným směrem jako Měsíc, je příliv největší.</li>
+      </ul>
+    </section>
+
+    <figure class="fig" id="obr1">
+      <div class="fig-head">
+        <p class="fig-num"><b>Obr. 1</b> Země, Měsíc a Slunce shora</p>
+        <span class="label">Přetáhněte Měsíc po jeho dráze</span>
+      </div>
+      <div class="fig-stage tide-stage">
+        <svg id="space" viewBox="0 0 560 420" role="img" aria-label="Pohled od severního pólu: Země s oceánem vytaženým do dvou boulí, Měsíc na oběžné dráze a Slunce vlevo"></svg>
+        <svg id="plot" viewBox="0 0 380 420" role="img" aria-label="Graf výšky hladiny u pozorovatele v příštích 48 hodinách"></svg>
+      </div>
+      <div class="fig-controls">
+        <div class="ctl ctl-grow">
+          <label class="label" for="age">Stáří Měsíce</label>
+          <div class="ctl-row">
+            <input type="range" id="age" min="0" max="29.5" step="0.1" value="0.6">
+            <output class="val" id="age-val" for="age"></output>
+          </div>
+        </div>
+        <div class="ctl">
+          <span class="label" id="lbl-sun">Slunce</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-sun" id="sun-seg">
+            <button type="button" role="radio" data-v="1" aria-checked="true">Započítat</button>
+            <button type="button" role="radio" data-v="0" aria-checked="false">Vynechat</button>
+          </div>
+        </div>
+        <div class="ctl">
+          <span class="label" id="lbl-speed">Čas běží po</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-speed" id="speed-seg">
+            <button type="button" role="radio" data-v="1.5" aria-checked="true">Hodinách</button>
+            <button type="button" role="radio" data-v="18" aria-checked="false">Dnech</button>
+          </div>
+        </div>
+        <button type="button" class="btn" id="play" aria-pressed="false">Zastavit</button>
+      </div>
+      <div class="fig-status td-status">
+        <p class="status" id="status" aria-live="polite"></p>
+        <ul class="stats" aria-label="Stav modelu">
+          <li><span class="n">Fáze Měsíce</span><span class="v phase"><svg id="phase-icon" viewBox="-12 -12 24 24" aria-hidden="true"></svg><span id="st-age"></span></span></li>
+          <li><span class="n">Místní čas</span><span class="v" id="st-clock"></span></li>
+          <li><span class="n">Příliv − odliv</span><span class="v" id="st-range"></span></li>
+        </ul>
+      </div>
+      <figcaption class="fig-caption">Model ideálního oceánu, který pokrývá celou Zemi a stíhá se okamžitě přelévat. Boule jsou zvětšené několikamilionkrát a vzdálenosti nejsou v měřítku. Černé šipky ukazují, kam Měsíc vodu táhne vzhledem ke středu Země, žluté totéž pro Slunce. Skutečné moře se chová složitěji, viz níže.</figcaption>
+    </figure>
+
+    <section class="sec" aria-labelledby="h-sila">
+      <div class="prose">
+        <h2 id="h-sila">Měsíc netáhne všude stejně</h2>
+        <p>Gravitace slábne se vzdáleností. Strana Země přivrácená k Měsíci je mu o šest tisíc kilometrů blíž než střed Země, a tak ji Měsíc přitahuje o něco silněji. Odvrácená strana je o stejný kus dál a přitahuje ji o něco slaběji.</p>
+        <p>Země jako celek padá k Měsíci tak rychle, jak je přitahován její střed. Voda na přivrácené straně je tažena víc, a tak střed předbíhá. Voda na odvrácené straně je tažena míň, a tak za středem zaostává. Z pohledu Země to vypadá, jako by ji někdo chytil za oba konce a <span class="hl">natahoval.</span> Proto jsou boule dvě, a ne jedna.</p>
+        <p>Té rozdílové síle se říká slapová. Je nepatrná, asi desetimilionkrát slabší než zemská tíže. Vodu nezvedá. Po stranách ji ale tlačí vodorovně směrem k boulím, a oceán je tak velký, že i tohle postrkování stačí.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Podívejte se na černé šipky kolem Země. Na straně k Měsíci a na straně od něj míří ven, po bocích dovnitř. Táhněte Měsícem dokola a šipky i boule půjdou s ním.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-dvakrat">
+      <div class="prose">
+        <h2 id="h-dvakrat">Dvakrát denně a pokaždé později</h2>
+        <p>Boule míří pořád k Měsíci a od něj. Země se pod nimi otáčí. Místo na pobřeží proto během jedné otočky projede první boulí, pak sníženinou, druhou boulí a druhou sníženinou. To jsou dva přílivy a dva odlivy.</p>
+        <p>Měsíc mezitím nestojí. Než se Země otočí dokola, popojde po své dráze o kus dál a Země ho musí ještě chvíli dohánět. Trvá jí to 50 minut. Od jednoho přílivu k dalšímu proto neuplyne přesně 12 hodin, ale <span class="num">12 hodin a 25 minut,</span> a příliv přichází každý den skoro o hodinu později.</p>
+      </div>
+      <aside class="note" aria-label="Příliv v číslech">
+        <span class="label">V číslech</span>
+        <dl class="facts">
+          <div><dt>12 h 25 min</dt><dd>od jednoho přílivu k dalšímu</dd></div>
+          <div><dt>46 %</dt><dd>síly Měsíce má na příliv Slunce</dd></div>
+          <div><dt>16 m</dt><dd>rozdíl hladin v kanadské zátoce Fundy</dd></div>
+          <div><dt>3,8 cm</dt><dd>se Měsíc každý rok vzdálí od Země</dd></div>
+        </dl>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-slunce">
+      <div class="prose">
+        <h2 id="h-slunce">Slunce pomáhá i překáží</h2>
+        <p>Slunce přitahuje Zemi skoro dvěstěkrát silněji než Měsíc. Na příliv má přesto menší vliv. Nezáleží totiž na síle samotné, ale na tom, jak moc se liší na jedné a druhé straně Země. Slunce je čtyřistakrát dál, takže průměr Země je pro něj skoro nic a rozdíl vychází malý: necelá polovina toho, co udělá Měsíc.</p>
+        <p>Obě dvojice boulí se sčítají. Při novu a úplňku leží Slunce, Země a Měsíc v jedné přímce, boule se kryjí a příliv je nejvyšší a odliv nejnižší. Říká se tomu <span class="hl">skočné dmutí.</span> Při první a poslední čtvrti táhne Slunce kolmo na Měsíc, jeho boule vyplňují měsíční sníženiny a rozdíl mezi přílivem a odlivem je nejmenší. To je hluché dmutí.</p>
+        <p>Celé se to opakuje dvakrát za lunární měsíc, tedy zhruba po čtrnácti dnech.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Posuňte stáří Měsíce na 7,4 dne, tedy na první čtvrť, a pak na 14,8 dne, úplněk. Graf vpravo se zploští a zase vytáhne. Pak Slunce vynechte: všechny přílivy budou stejné.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-more">
+      <div class="prose">
+        <h2 id="h-more">Skutečné moře se neřídí obrázkem</h2>
+        <p>Na otevřeném oceánu by podle modelu měl být rozdíl mezi přílivem a odlivem kolem půl metru, a zhruba tolik tam opravdu je. U pobřeží je všechno jinak. Bouli stojí v cestě kontinenty, takže nemůže Zemi prostě obíhat. Voda se místo toho přelévá v oceánských pánvích sem a tam, podobně jako ve vaně, se kterou někdo pohnul.</p>
+        <p>Kde má záliv tvar a hloubku, které se s rytmem přílivu trefí, se voda rozhoupe. V zátoce Fundy v Kanadě dělá rozdíl hladin až 16 metrů, u Mont-Saint-Michel ve Francii kolem 14. Uzavřená moře jsou naopak příliš malá, aby se v nich boule stačila vytvořit. Ve Středozemním moři jde o desítky centimetrů, v Baltu o centimetry.</p>
+        <p>Příliv také nepřichází přesně ve chvíli, kdy je Měsíc nejvýš. Voda má setrvačnost a tře se o dno, a tak se v každém přístavu opožďuje o jinou dobu. Tabulky přílivu se proto nepočítají z polohy Měsíce, ale pro každý přístav zvlášť z dlouhodobých měření.</p>
+      </div>
+    </section>
+
+    <section class="sec" aria-labelledby="h-zeme">
+      <div class="prose">
+        <h2 id="h-zeme">Vzdouvá se i pevnina</h2>
+        <p>Slapová síla nepůsobí jen na vodu. Natahuje celou Zemi, a pevná zem pod vámi se dvakrát denně zvedne a klesne asi o třicet centimetrů. Necítíte to, protože se s vámi zvedá všechno kolem.</p>
+        <p>Měřit se to ale dá. V devadesátých letech si fyzici v ženevském CERNu všimli, že energie částic v jejich urychlovači kolísá podle polohy Měsíce. Sedmadvacetikilometrový prstenec se při každém slapu protáhl asi o milimetr.</p>
+      </div>
+    </section>
+
+    <section class="sec" aria-labelledby="h-brzda">
+      <div class="prose">
+        <h2 id="h-brzda">Měsíc brzdí Zemi</h2>
+        <p>Země se otáčí rychleji, než Měsíc obíhá, a třením strhává boule kousek před něj. Měsíc tahá za bližší bouli zpátky, a tím otáčení Země nepatrně brzdí. Den se prodlužuje asi o dvě tisíciny sekundy za století.</p>
+        <p>Energie se neztrácí, dostává ji Měsíc. Boule ho táhne dopředu, a on se proto vzdaluje, každý rok o 3,8 centimetru. Víme to přesně díky odražečům, které na něm nechali astronauti z Apolla a na které se dodnes střílí laserem.</p>
+        <p>Před čtyřmi sty miliony let měl den jen asi 22 hodin a do roku se jich vešlo přes čtyři sta. Je to vidět na přírůstcích zkamenělých korálů. Měsíc sám už má brzdění za sebou. Země ho zpomalila natolik, že se otočí přesně jednou za oběh, a proto z něj vidíme pořád stejnou stranu.</p>
+      </div>
+    </section>
+
+    <footer class="art-foot">
+      <a class="next" href="../husi-kuze/" data-cat="telo">
+        <span class="label">Další článek · Lidské tělo</span>
+        <span class="t">Jak funguje husí kůže</span>
+        <p>Proč nám v zimě a při hudbě vstávají chlupy, když nám to k ničemu není.</p>
+      </a>
+      <a class="back" href="../">Všechna témata</a>
+    </footer>
+  </main>
+
+  <script>
+  (() => {
+    const NS = "http://www.w3.org/2000/svg";
+    function el(tag, attrs, parent) {
+      const n = document.createElementNS(NS, tag);
+      for (const k in attrs || {}) n.setAttribute(k, attrs[k]);
+      if (parent) parent.appendChild(n);
+      return n;
+    }
+    const space = document.getElementById("space"), plot = document.getElementById("plot");
+
+    /* ---------- model ---------- */
+    const MONTH = 29.53;                 // dní od novu k novu
+    const H_MOON = 35.8, H_SUN = 16.4;   // výška rovnovážného slapu v cm
+    const TAU = 2 * Math.PI, RAD = Math.PI / 180;
+    // úhly měříme proti směru hodinových ručiček, Slunce je vlevo (180°)
+    const SUN_DIR = Math.PI;
+    const moonDir = (age) => SUN_DIR + (age / MONTH) * TAU;
+    const youDir = (clock) => SUN_DIR + ((clock - 12) / 24) * TAU;   // v poledne míříte ke Slunci
+    const bulge = (ang, dir, amp) => (amp * (3 * Math.cos(ang - dir) ** 2 - 1)) / 2;
+
+    const s = { age: 0.6, clock: 8, sun: true, speed: 1.5, playing: true };
+    const level = (ang, age) => bulge(ang, moonDir(age), H_MOON) + (s.sun ? bulge(ang, SUN_DIR, H_SUN) : 0);
+    const levelAhead = (h) => level(youDir(s.clock + h), s.age + h / 24);   // hladina u vás za h hodin
+
+    /* ---------- pohled shora ---------- */
+    const E = { x: 300, y: 210 }, R = 62, ORBIT = 150, SHELL = 14, PX_PER_CM = 0.42;
+    const at = (ang, r) => [E.x + r * Math.cos(ang), E.y - r * Math.sin(ang)];
+
+    el("circle", { cx: -78, cy: E.y, r: 124, class: "sun" }, space);
+    [-70, 0, 70].forEach((dy) => {
+      const g = el("g", { class: "sunray" }, space);
+      el("line", { x1: 58, y1: E.y + dy, x2: 96, y2: E.y + dy }, g);
+      el("path", { d: `M108 ${E.y + dy} L96 ${E.y + dy - 6} L96 ${E.y + dy + 6} Z` }, g);
+    });
+    el("text", { x: 12, y: 34, class: "lbl strong" }, space).textContent = "Slunce";
+    el("circle", { cx: E.x, cy: E.y, r: ORBIT, class: "orbit" }, space);
+    [["nov", 180, 4, 36, "end"], ["úplněk", 0, 12, 4, "start"], ["první čtvrť", 270, 0, 34, "middle"], ["poslední čtvrť", 90, 0, -26, "middle"]].forEach(([name, deg, dx, dy, anchor]) => {
+      const [x, y] = at(deg * RAD, ORBIT + 18);
+      el("text", { x: x + dx, y: y + dy, "text-anchor": anchor, class: "lbl" }, space).textContent = name;
+    });
+    const axis = el("line", { class: "axis" }, space);
+
+    const ocean = el("path", { class: "ocean" }, space);
+    el("circle", { cx: E.x, cy: E.y, r: R, class: "earth" }, space);
+    const globe = el("g", {}, space);
+    el("ellipse", { cx: E.x, cy: E.y, rx: R * 0.36, ry: R, class: "meridian" }, globe);
+    el("ellipse", { cx: E.x, cy: E.y, rx: R * 0.78, ry: R, class: "meridian" }, globe);
+    el("line", { x1: E.x, y1: E.y - R, x2: E.x, y2: E.y + R, class: "meridian" }, globe);
+    el("path", { d: `M${E.x} ${E.y - R} A${R} ${R} 0 0 1 ${E.x} ${E.y + R} Z`, class: "night" }, space);
+
+    function arrowSet(cls) {
+      return Array.from({ length: 12 }, () => {
+        const g = el("g", { class: `pull ${cls}` }, space);
+        return { line: el("line", {}, g), head: el("path", {}, g) };
+      });
+    }
+    const moonPulls = arrowSet("moon"), sunPulls = arrowSet("sunp");
+    function drawPulls(set, dir, scale, visible) {
+      set.forEach((a, i) => {
+        const ang = (i / set.length) * TAU, rel = ang - dir;
+        // slapová síla v osách „k tělesu“ a „kolmo“: (2·cos, −sin)
+        const along = 2 * Math.cos(rel) * scale, across = -Math.sin(rel) * scale;
+        const vx = along * Math.cos(dir) - across * Math.sin(dir), vy = along * Math.sin(dir) + across * Math.cos(dir);
+        const [x, y] = at(ang, R + 44), len = Math.hypot(vx, vy);
+        const x2 = x + vx, y2 = y - vy, ux = vx / len, uy = -vy / len;
+        a.line.parentNode.setAttribute("visibility", visible ? "visible" : "hidden");
+        a.line.setAttribute("x1", x.toFixed(1)); a.line.setAttribute("y1", y.toFixed(1));
+        a.line.setAttribute("x2", (x2 - ux * 4).toFixed(1)); a.line.setAttribute("y2", (y2 - uy * 4).toFixed(1));
+        a.head.setAttribute("d", `M${x2.toFixed(1)} ${y2.toFixed(1)} L${(x2 - ux * 7 - uy * 3.5).toFixed(1)} ${(y2 - uy * 7 + ux * 3.5).toFixed(1)} L${(x2 - ux * 7 + uy * 3.5).toFixed(1)} ${(y2 - uy * 7 - ux * 3.5).toFixed(1)} Z`);
+      });
+    }
+
+    const you = el("g", { class: "you" }, space);
+    const youDot = el("circle", { r: 6 }, you);
+    const youText = el("text", {}, you);
+    youText.textContent = "vy";
+
+    const moon = el("g", {}, space);
+    el("circle", { r: 15, class: "moon-dark" }, moon);
+    el("path", { d: "M0 -15 A15 15 0 0 0 0 15 Z", class: "moon-lit" }, moon);
+    const moonHandle = el("circle", { r: 28, id: "moon-handle", tabindex: "0", role: "slider", "aria-label": "Měsíc. Posuňte ho po dráze šipkami nebo tažením.", "aria-valuemin": 0, "aria-valuemax": 29.5 }, moon);
+    el("circle", { r: 22, class: "focus-ring" }, moon);
+
+    /* ---------- graf ---------- */
+    const P = { x: 46, y: 44, w: 318, h: 300, hours: 48, min: -40, max: 62 };
+    const plotX = (h) => P.x + (h / P.hours) * P.w;
+    const plotY = (cm) => P.y + ((P.max - cm) / (P.max - P.min)) * P.h;
+    el("text", { x: P.x, y: 26, class: "plot-title" }, plot).textContent = "HLADINA U VÁS · PŘÍŠTÍCH 48 HODIN";
+    el("rect", { x: P.x, y: P.y, width: P.w, height: P.h, class: "plot-bg" }, plot);
+    const nights = el("g", {}, plot);
+    [-25, 0, 25, 50].forEach((cm) => {
+      el("line", { x1: P.x, y1: plotY(cm), x2: P.x + P.w, y2: plotY(cm), class: cm ? "plot-grid" : "plot-zero" }, plot);
+      el("text", { x: P.x - 6, y: plotY(cm) + 4, "text-anchor": "end", class: "plot-text" }, plot).textContent = (cm > 0 ? "+" : cm < 0 ? "−" : "") + Math.abs(cm);
+    });
+    el("text", { x: P.x - 6, y: P.y - 6, "text-anchor": "end", class: "plot-text" }, plot).textContent = "cm";
+    const ticks = el("g", {}, plot);
+    const fillPath = el("path", { class: "plot-fill" }, plot);
+    const curve = el("path", { class: "plot-curve" }, plot);
+    const marks = el("g", {}, plot);
+    const nowDot = el("circle", { r: 6, class: "plot-now" }, plot);
+
+    /* ---------- výpis ---------- */
+    const fmt0 = new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 0 });
+    const fmt1 = new Intl.NumberFormat("cs-CZ", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    const $ = (id) => document.getElementById(id);
+    const statusEl = $("status"), ageIn = $("age"), ageVal = $("age-val"), playBtn = $("play");
+    const cache = new WeakMap();
+    function put(node, str, html) {
+      if (cache.get(node) === str) return;
+      cache.set(node, str);
+      if (html) node.innerHTML = str; else node.textContent = str;
+    }
+    const PHASES = ["nov", "dorůstající srpek", "první čtvrť", "dorůstající Měsíc", "úplněk", "couvající Měsíc", "poslední čtvrť", "ubývající srpek"];
+    const phaseIndex = (age) => Math.round((age / MONTH) * 8) % 8;
+    const clockText = (c) => { const m = Math.floor((((c % 24) + 24) % 24) * 60); return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, "0")}`; };
+
+    function phaseIcon(age) {
+      const f = (age / MONTH) * TAU, r = 10, rx = (Math.abs(Math.cos(f)) * r).toFixed(2);
+      const waxing = f < Math.PI, crescent = Math.cos(f) > 0;
+      const limb = `M0 ${-r} A${r} ${r} 0 0 ${waxing ? 1 : 0} 0 ${r}`;
+      const term = `A${rx} ${r} 0 0 ${waxing === crescent ? 0 : 1} 0 ${-r} Z`;
+      return `<circle r="${r}" class="moon-dark"/><path d="${limb} ${term}" class="moon-lit"/>`;
+    }
+
+    function render() {
+      const md = moonDir(s.age), yd = youDir(s.clock);
+
+      // oceán: obrys vytažený podle slapu
+      let d = "";
+      for (let i = 0; i <= 120; i++) {
+        const ang = (i / 120) * TAU;
+        const [x, y] = at(ang, R + SHELL + level(ang, s.age) * PX_PER_CM);
+        d += `${i ? "L" : "M"}${x.toFixed(1)} ${y.toFixed(1)}`;
+      }
+      ocean.setAttribute("d", d + "Z");
+      globe.setAttribute("transform", `rotate(${(-yd / RAD).toFixed(1)} ${E.x} ${E.y})`);
+      const [yx, yy] = at(yd, R + SHELL + level(yd, s.age) * PX_PER_CM);
+      youDot.setAttribute("cx", yx.toFixed(1)); youDot.setAttribute("cy", yy.toFixed(1));
+      const [tx, ty] = at(yd, R - 20);
+      youText.setAttribute("x", tx.toFixed(1)); youText.setAttribute("y", (ty + 4.5).toFixed(1));
+
+      const [mx, my] = at(md, ORBIT);
+      moon.setAttribute("transform", `translate(${mx.toFixed(1)} ${my.toFixed(1)})`);
+      moonHandle.setAttribute("aria-valuenow", s.age.toFixed(1));
+      const [ax, ay] = at(md, ORBIT - 20), [bx, by] = at(md + Math.PI, R + 46);
+      axis.setAttribute("x1", ax); axis.setAttribute("y1", ay); axis.setAttribute("x2", bx); axis.setAttribute("y2", by);
+      drawPulls(moonPulls, md, 11, true);
+      drawPulls(sunPulls, SUN_DIR, 11 * (H_SUN / H_MOON), s.sun);
+
+      // graf: hladina u vás v příštích 48 hodinách
+      const pts = [];
+      for (let h = 0; h <= P.hours + 1e-9; h += 0.25) pts.push([h, levelAhead(h)]);
+      const line = pts.map(([h, v], i) => `${i ? "L" : "M"}${plotX(h).toFixed(1)} ${plotY(v).toFixed(1)}`).join("");
+      curve.setAttribute("d", line);
+      fillPath.setAttribute("d", `${line}L${plotX(P.hours)} ${plotY(P.min)}L${plotX(0)} ${plotY(P.min)}Z`);
+      nowDot.setAttribute("cx", plotX(0)); nowDot.setAttribute("cy", plotY(pts[0][1]).toFixed(1));
+
+      nights.textContent = "";
+      ticks.textContent = "";
+      for (let k = Math.ceil(s.clock / 6); k * 6 - s.clock <= P.hours; k++) {
+        const h = k * 6 - s.clock, hour = ((k * 6) % 24 + 24) % 24;
+        if (h >= 1.5 && h <= P.hours - 1.5) {
+          el("line", { x1: plotX(h), y1: P.y + P.h, x2: plotX(h), y2: P.y + P.h + 5, class: "plot-zero" }, ticks);
+          if (hour % 12 === 0) el("text", { x: plotX(h), y: P.y + P.h + 20, "text-anchor": "middle", class: "plot-text" }, ticks).textContent = hour === 0 ? "půlnoc" : "poledne";
+        }
+      }
+      for (let day = Math.floor((s.clock - 6) / 24); day * 24 + 18 - s.clock < P.hours; day++) {
+        const a = Math.max(0, day * 24 + 18 - s.clock), b = Math.min(P.hours, day * 24 + 30 - s.clock);
+        if (b > a) el("rect", { x: plotX(a), y: P.y, width: plotX(b) - plotX(a), height: P.h, class: "plot-night" }, nights);
+      }
+
+      // nejbližší příliv a odliv
+      marks.textContent = "";
+      let lo = Infinity, hi = -Infinity;
+      const found = { hi: null, lo: null };
+      pts.forEach(([h, v], i) => {
+        if (h <= 24.9) { lo = Math.min(lo, v); hi = Math.max(hi, v); }
+        if (i === 0 || i === pts.length - 1) return;
+        const kind = v >= pts[i - 1][1] && v > pts[i + 1][1] ? "hi" : v <= pts[i - 1][1] && v < pts[i + 1][1] ? "lo" : null;
+        if (kind && !found[kind]) found[kind] = [h, v];
+      });
+      [["hi", "příliv", -12], ["lo", "odliv", 22]].forEach(([k, name, dy]) => {
+        if (!found[k]) return;
+        const [h, v] = found[k], x = plotX(h), y = plotY(v);
+        el("circle", { cx: x.toFixed(1), cy: y.toFixed(1), r: 4.5, class: "plot-mark" }, marks);
+        const hh = Math.floor(h), mm = Math.round((h - hh) * 60 / 5) * 5;
+        const t = el("text", { x: Math.max(P.x + 4, Math.min(P.x + P.w - 4, x)).toFixed(1), y: (y + dy).toFixed(1), "text-anchor": x < P.x + 70 ? "start" : x > P.x + P.w - 70 ? "end" : "middle", class: "plot-text note" }, marks);
+        t.textContent = `${name} za ${hh} h ${mm} min`;
+      });
+
+      // čísla a věta o stavu
+      const idx = phaseIndex(s.age);
+      put($("st-age"), PHASES[idx]);
+      put($("phase-icon"), phaseIcon(s.age), true);
+      put($("st-clock"), clockText(s.clock));
+      put($("st-range"), `${fmt0.format(Math.round(hi - lo))} cm`);
+      put(ageVal, `${fmt1.format(s.age)} dne`);
+      if (document.activeElement !== ageIn) ageIn.value = s.age.toFixed(1);
+
+      let status;
+      if (!s.sun) {
+        status = "<strong>Jen Měsíc.</strong> Bez Slunce by byly všechny přílivy stejně vysoké, po celý měsíc. Rozdíl mezi přílivem a odlivem by dělal 54 centimetrů.";
+      } else if (idx === 0 || idx === 4) {
+        status = `<strong>${idx === 0 ? "Nov" : "Úplněk"}: skočné dmutí.</strong> Slunce, Země a Měsíc leží v jedné přímce. Boule od Měsíce a od Slunce se kryjí a sčítají, příliv je nejvyšší a odliv nejnižší.`;
+      } else if (idx === 2 || idx === 6) {
+        status = `<strong>${idx === 2 ? "První" : "Poslední"} čtvrť: hluché dmutí.</strong> Slunce táhne kolmo na Měsíc. Jeho boule zaplňují místa, kde má Měsíc sníženiny, a rozdíl mezi přílivem a odlivem je nejmenší.`;
+      } else {
+        status = `<strong>${PHASES[idx][0].toUpperCase()}${PHASES[idx].slice(1)}.</strong> Slunce táhne šikmo vůči Měsíci. Dmutí je někde mezi skočným a hluchým a ${idx === 1 || idx === 5 ? "slábne" : "sílí"}.`;
+      }
+      put(statusEl, status, true);
+      put(playBtn, s.playing ? "Zastavit" : "Spustit čas");
+    }
+
+    /* ---------- ovládání ---------- */
+    const wrapAge = (a) => ((a % MONTH) + MONTH) % MONTH;
+    ageIn.addEventListener("input", () => { s.age = Number(ageIn.value); render(); });
+    function bindSeg(id, apply) {
+      const seg = $(id);
+      seg.addEventListener("click", (e) => {
+        const b = e.target.closest("button[data-v]");
+        if (!b) return;
+        seg.querySelectorAll("button").forEach((x) => x.setAttribute("aria-checked", String(x === b)));
+        apply(Number(b.dataset.v));
+        render();
+      });
+    }
+    bindSeg("sun-seg", (v) => { s.sun = v === 1; });
+    bindSeg("speed-seg", (v) => { s.speed = v; });
+    playBtn.addEventListener("click", () => { s.playing = !s.playing; playBtn.setAttribute("aria-pressed", String(!s.playing)); render(); });
+
+    let dragging = false;
+    moonHandle.addEventListener("pointerdown", (e) => { dragging = true; moonHandle.setPointerCapture(e.pointerId); moonHandle.style.cursor = "grabbing"; });
+    moonHandle.addEventListener("pointermove", (e) => {
+      if (!dragging) return;
+      const m = space.getScreenCTM();
+      if (!m) return;
+      const p = new DOMPoint(e.clientX, e.clientY).matrixTransform(m.inverse());
+      const ang = Math.atan2(-(p.y - E.y), p.x - E.x);
+      s.age = wrapAge(((ang - SUN_DIR) / TAU) * MONTH);
+      render();
+    });
+    const stop = () => { dragging = false; moonHandle.style.cursor = ""; };
+    moonHandle.addEventListener("pointerup", stop);
+    moonHandle.addEventListener("pointercancel", stop);
+    moonHandle.addEventListener("keydown", (e) => {
+      const d = { ArrowLeft: -0.5, ArrowDown: -0.5, ArrowRight: 0.5, ArrowUp: 0.5 }[e.key];
+      if (!d) return;
+      e.preventDefault();
+      s.age = wrapAge(s.age + d * (e.shiftKey ? 4 : 1));
+      render();
+    });
+
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) { s.playing = false; playBtn.setAttribute("aria-pressed", "true"); }
+    let prev = performance.now();
+    function frame(now) {
+      const dt = Math.min(0.1, (now - prev) / 1000);
+      prev = now;
+      if (s.playing && !dragging) {
+        const h = dt * s.speed;
+        s.clock = (s.clock + h) % 24;
+        s.age = wrapAge(s.age + h / 24);
+        render();
+      }
+      requestAnimationFrame(frame);
+    }
+    render();
+    requestAnimationFrame(frame);
+  })();
+  </script>
+</body>
+</html>

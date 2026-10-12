@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Jak funguje Wi-Fi</title>
+  <meta name="description" content="Jak se internet dostane vzduchem do telefonu, proč mu vadí zeď a kam postavit router. S půdorysem bytu, ve kterém si signál můžete vyzkoušet.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700&display=swap">
+  <link rel="stylesheet" href="../style.css">
+  <style>
+    #plan { touch-action: pan-y; cursor: crosshair; }
+    .floor { fill: var(--surface); }
+    .cell { fill: var(--cat); }
+    .wall { stroke: var(--ink); stroke-linecap: butt; }
+    .wall.beton { stroke-width: 10; }
+    .wall.pricka { stroke-width: 4.5; }
+    .room { fill: var(--ink-2); font: 500 12.5px var(--font-mono); text-anchor: middle; paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
+    .ray { stroke: var(--ink); stroke-width: 1.6; stroke-dasharray: 5 4; }
+    .hit circle { fill: var(--surface); stroke: var(--ink); stroke-width: 1.6; }
+    .hit text { fill: var(--ink); font: 600 12px var(--font-mono); paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
+    .scalebar line { stroke: var(--ink-2); stroke-width: 2; }
+    .scalebar text { fill: var(--ink-2); font: 500 12px var(--font-mono); }
+
+    .router-body { fill: var(--ink); }
+    .router-led { fill: var(--ok); }
+    .router-ant { stroke: var(--ink); stroke-width: 3; stroke-linecap: round; }
+    .router-wave { fill: none; stroke: var(--ink); stroke-width: 1.6; opacity: 0.55; }
+    .phone-body { fill: var(--ink); }
+    .phone-screen { fill: var(--surface); }
+    .handle { fill: transparent; cursor: grab; touch-action: none; outline: none; }
+    .handle:focus-visible + .focus-ring { opacity: 1; }
+    .focus-ring { fill: none; stroke: var(--cat); stroke-width: 2.5; opacity: 0; pointer-events: none; }
+    .tag { fill: var(--ink); font: 700 12.5px var(--font-mono); text-anchor: middle; paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
+
+    .readout { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+    .readout th, .readout td { padding: 0.4rem 0.6rem 0.4rem 0; border-bottom: 1px solid var(--rule); text-align: right; white-space: nowrap; }
+    .readout th { font-weight: 500; font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); }
+    .readout th:first-child, .readout td:first-child { text-align: left; color: var(--ink-2); }
+    .readout td.sel { font-weight: 600; color: var(--ink); }
+    .readout td.dead { color: var(--ink-3); }
+    .table-wrap { overflow-x: auto; }
+    .readout .short { display: none; }
+    .formula { font-family: var(--font-mono); font-size: 0.85rem; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+    .formula b { color: var(--ink); font-weight: 600; }
+    .status { font-size: 1.02rem; }
+    .wf-status { display: grid; gap: 0.9rem; }
+    .legend { display: flex; flex-wrap: wrap; gap: 0.3rem 1rem; margin: 0; padding: 0; list-style: none; font-family: var(--font-mono); font-size: 0.75rem; color: var(--ink-2); }
+    .legend li { display: inline-flex; align-items: center; gap: 0.4rem; }
+    .legend i { width: 0.85rem; height: 0.85rem; border: 1px solid var(--rule); background: var(--cat); }
+    .walls-key { display: flex; flex-wrap: wrap; gap: 0.3rem 1.25rem; margin: 0; font-family: var(--font-mono); font-size: 0.75rem; color: var(--ink-2); }
+    .walls-key span { display: inline-flex; align-items: center; gap: 0.5rem; }
+    .walls-key i { display: block; width: 1.6rem; background: var(--ink); }
+
+    @media (max-width: 46rem) {
+      .room, .hit text, .scalebar { display: none; }
+      .tag { font-size: 22px; stroke-width: 6px; }
+      .readout .wide { display: none; }
+      .readout .short { display: inline; }
+      .readout { font-size: 0.8rem; }
+    }
+    @media (min-width: 60rem) {
+      .wf-status { grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); align-items: start; gap: 2rem; }
+    }
+  </style>
+</head>
+<body data-cat="technika">
+  <header class="topbar">
+    <div class="wrap">
+      <a class="brand" href="../">Jak věci fungují</a>
+      <nav class="crumbs" aria-label="Drobečková navigace"><a href="../#technika">Technika</a><span aria-hidden="true">/</span><span>Wi-Fi</span></nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <header class="art-head">
+      <p class="eyebrow">Technika</p>
+      <h1 class="display">Jak funguje Wi-Fi</h1>
+      <p class="lede">Wi-Fi je rádio. Router i telefon jsou malé vysílačky, které si navzájem posílají data na vlnách dlouhých pár centimetrů. A jako každé rádio slábne se vzdáleností a špatně prochází zdmi.</p>
+    </header>
+
+    <section class="tldr" aria-labelledby="h-zkratka">
+      <h2 class="label" id="h-zkratka">Ve zkratce</h2>
+      <ul>
+        <li>Data se zapisují do drobných změn rádiové vlny. Čím čistší signál, tím jemnější změny rozliší přijímač a tím víc bitů se přenese.</li>
+        <li>Všichni v dosahu sdílejí stejný vzduch. Vysílat smí v jednu chvíli jen jeden, ostatní čekají.</li>
+        <li>Pásmo <span class="hl">2,4 GHz dosáhne dál, 5 GHz je rychlejší.</span> Zdmi ale prochází hůř.</li>
+      </ul>
+    </section>
+
+    <figure class="fig" id="obr1">
+      <div class="fig-head">
+        <p class="fig-num"><b>Obr. 1</b> Signál v bytě</p>
+        <span class="label">Přesuňte router nebo telefon</span>
+      </div>
+      <div class="fig-stage">
+        <svg id="plan" viewBox="0 0 720 450" role="img" aria-label="Půdorys bytu se sílou signálu Wi-Fi, routerem a telefonem"></svg>
+      </div>
+      <div class="fig-controls">
+        <div class="ctl">
+          <span class="label" id="lbl-band">Pásmo na mapě</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-band" id="band-seg">
+            <button type="button" role="radio" data-v="0" aria-checked="true">2,4 GHz</button>
+            <button type="button" role="radio" data-v="1" aria-checked="false">5 GHz</button>
+          </div>
+        </div>
+        <div class="ctl">
+          <span class="label" id="lbl-place">Router</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-place" id="place-seg">
+            <button type="button" role="radio" data-v="corner" aria-checked="true">V rohu u zásuvky</button>
+            <button type="button" role="radio" data-v="center" aria-checked="false">Uprostřed bytu</button>
+          </div>
+        </div>
+        <div class="ctl ctl-grow" style="gap:.5rem">
+          <ul class="legend" id="legend" aria-label="Síla signálu"></ul>
+          <p class="walls-key"><span><i style="height:6px"></i>nosná betonová zeď</span><span><i style="height:3px"></i>cihlová příčka</span></p>
+        </div>
+      </div>
+      <div class="fig-status wf-status">
+        <div style="display:grid; gap:.6rem; min-width:0">
+          <p class="status" id="status" aria-live="polite"></p>
+          <p class="formula" id="path"></p>
+        </div>
+        <div class="table-wrap">
+          <table class="readout">
+            <thead><tr><th scope="col">U telefonu</th><th scope="col">2,4 GHz</th><th scope="col">5 GHz</th></tr></thead>
+            <tbody>
+              <tr><td><span class="wide">útlum vzdáleností</span><span class="short">vzdálenost</span></td><td id="r-d0"></td><td id="r-d1"></td></tr>
+              <tr><td><span class="wide">útlum zdmi</span><span class="short">zdi</span></td><td id="r-w0"></td><td id="r-w1"></td></tr>
+              <tr><td><span class="wide">síla signálu</span><span class="short">signál</span></td><td id="r-s0"></td><td id="r-s1"></td></tr>
+              <tr><td><span class="wide">rychlost spojení</span><span class="short">rychlost</span></td><td id="r-v0"></td><td id="r-v1"></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <figcaption class="fig-caption">Model počítá jen přímou cestu od routeru: útlum vzdáleností a každou zdí, kterou spojnice protne. Odrazy a ohyb vln kolem rohů zanedbává, takže skutečný signál bývá za rohem o něco lepší. Rychlosti jsou orientační, pro telefon se dvěma anténami.</figcaption>
+    </figure>
+
+    <section class="sec" aria-labelledby="h-radio">
+      <div class="prose">
+        <h2 id="h-radio">Dvě vysílačky</h2>
+        <p>Router není vysílač a telefon přijímač. Oba dělají obojí. Když si pouštíte video, telefon pořád něco odesílá: žádosti o další kus videa a potvrzení, že ten předchozí dorazil v pořádku.</p>
+        <p>Vysílají na frekvencích kolem 2,4 a 5 gigahertzů, nejnovější zařízení i na 6. Jsou to mikrovlny, stejné jako v mikrovlnné troubě, jen asi osmtisíckrát slabší. Router smí v Evropě v pásmu 2,4 GHz vysílat výkonem nejvýš desetiny wattu.</p>
+        <p>Do internetu přitom Wi-Fi nevede. Je to jen posledních pár metrů. Router je kabelem nebo optikou připojený k poskytovateli a vzduchem si data předává jen s vašimi zařízeními.</p>
+      </div>
+      <aside class="note" aria-label="Wi-Fi v číslech">
+        <span class="label">V číslech</span>
+        <dl class="facts">
+          <div><dt>12,5 cm</dt><dd>vlnová délka v pásmu 2,4 GHz</dd></div>
+          <div><dt>≈ 6 cm</dt><dd>vlnová délka v pásmu 5 GHz</dd></div>
+          <div><dt>100 mW</dt><dd>nejvyšší povolený výkon na 2,4 GHz v Evropě</dd></div>
+          <div><dt>13</dt><dd>kanálů v pásmu 2,4 GHz, jen tři se nepřekrývají</dd></div>
+        </dl>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-bity">
+      <div class="prose">
+        <h2 id="h-bity">Jak se na vlnu vejdou data</h2>
+        <p>Samotná rádiová vlna je jen pravidelné vlnění a nic neříká. Informaci do ní vysílač zapisuje tak, že ji v krátkých okamžicích mění: jednou je silnější, jindy slabší, jednou o kousek předběhne, jindy se opozdí. Každá taková kombinace síly a posunu je jeden znak z domluvené abecedy.</p>
+        <p>Když je signál čistý, může být abeceda velká. Dnešní Wi-Fi rozlišuje až 1 024 různých stavů vlny, takže jedním znakem přenese deset bitů najednou. Když je signál slabý a zašuměný, sousední stavy splývají a zařízení se domluví na menší abecedě: třeba jen se čtyřmi stavy, tedy dvěma bity. <span class="hl">Proto se slabším signálem klesá rychlost,</span> a ne jen spolehlivost.</p>
+        <p>Kanál navíc není jedna vlna. Je rozdělený na stovky úzkých pásem vedle sebe a každé nese vlastní proud znaků. Širší kanál znamená víc pásem a vyšší rychlost. V pásmu 5 GHz je na široké kanály místo, v pásmu 2,4 GHz skoro ne.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Položte telefon těsně k routeru a pak ho táhněte pryč. Na 5 GHz spadne rychlost z více než gigabitu na desítky megabitů, a nakonec spojení vypadne úplně. Na 2,4 GHz začíná níž, ale vydrží mnohem dál.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-zed">
+      <div class="prose">
+        <h2 id="h-zed">Proč vadí zeď</h2>
+        <p>Signál slábne už jen tím, že se rozbíhá do prostoru. V dvojnásobné vzdálenosti dopadá na anténu telefonu čtvrtina výkonu. Ve volném prostoru by to ale stačilo na stovky metrů.</p>
+        <p>V bytě rozhodují překážky. Část vlny se od zdi odrazí, část se v ní pohltí a jen zbytek projde. Sádrokarton skoro nevadí, cihlová příčka ubere zhruba dvě třetiny výkonu, železobetonová stěna i devadesát pět procent. Hodně pohlcuje voda, takže vadí akvárium, plná vana i lidé.</p>
+        <p>Kratší vlny jsou na tom hůř. Signál na 5 GHz ztrácí víc už vzduchem a každá zeď mu ubere víc než signálu na 2,4 GHz. Proto je za třetí zdí často jen to pomalejší pásmo, a telefon se na něj sám přepne.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Co jsou decibely</span>
+        <p>Síla signálu se udává v dBm. Je to logaritmická stupnice: každých 10 dB dolů znamená desetkrát slabší signál, 3 dB polovinu.</p>
+        <p>−40 dBm je výborný signál, −70 dBm slabý. To je tisíckrát méně, a pořád to funguje.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-router">
+      <div class="prose">
+        <h2 id="h-router">Kam s routerem</h2>
+        <p>Router obvykle skončí tam, kde technik vyvrtal díru: v rohu obýváku za televizí. Je to nejhorší možné místo. Polovina signálu míří ven z bytu a do vzdálených pokojů musí přes všechny zdi šikmo.</p>
+        <p>Pomáhá pár jednoduchých věcí. Dát router co nejblíž středu bytu. Postavit ho výš, na skříň nebo polici, ne na zem. Nezavírat ho do skříňky a nestavět za televizi, kovové plochy signál odrážejí.</p>
+        <p>Když byt jedním routerem pokrýt nejde, řešením je víc vysílačů propojených mezi sebou, takzvaná mesh síť. Nejlíp fungují, když jsou mezi sebou spojené kabelem. A co se nehýbe, tedy televizi nebo stolní počítač, se vyplatí připojit kabelem rovnou.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Přepněte router na Uprostřed bytu a sledujte dětský pokoj vpravo dole. Stejný router, stejný výkon, a místo jedné nosné zdi a dvou příček stojí v cestě jediná příčka.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-sousede">
+      <div class="prose">
+        <h2 id="h-sousede">Jeden mluví, ostatní čekají</h2>
+        <p>Na jednom kanálu může v jednu chvíli vysílat jen jedno zařízení, jinak by se signály slily. Wi-Fi to řeší zdvořilostí. Každé zařízení před vysíláním poslouchá. Když slyší někoho jiného, počká, až domluví, pak ještě náhodně dlouhou chvilku, a teprve potom začne. Příjemce každý paket potvrdí. Když potvrzení nepřijde, vysílá se znovu.</p>
+        <p>Ve vzduchu ale nejsou jen vaše zařízení. Na stejném kanálu čekají ve frontě i sítě sousedů. V paneláku, kde telefon vidí třicet cizích sítí, se o vysílací čas dělí celý vchod. Proto bývá Wi-Fi večer pomalejší, i když signál je plný.</p>
+        <p>V pásmu 2,4 GHz se nepřekrývají jen tři kanály, 1, 6 a 11. V pásmu 5 GHz je jich přes dvacet a signál hůř prochází ke stropu sousedům, což je tady výhoda.</p>
+      </div>
+    </section>
+
+    <section class="sec" aria-labelledby="h-heslo">
+      <div class="prose">
+        <h2 id="h-heslo">Kdo všechno poslouchá</h2>
+        <p>Rádiové vlny se u dveří bytu nezastaví. Kdokoli v dosahu může zachytit všechno, co vaše zařízení vysílají. Proto je provoz šifrovaný. Z hesla k síti se při připojení odvodí klíč a bez něj je zachycený provoz jen šum. Dnešní standardy se jmenují WPA2 a WPA3.</p>
+        <p>V otevřené síti bez hesla tahle vrstva chybí. Většinu toho, na čem záleží, naštěstí chrání ještě šifrování samotných webů a aplikací, to je ten zámeček u adresy. Heslo k domácí Wi-Fi je i tak dobré mít dlouhé a nenechávat to, které je vytištěné na routeru.</p>
+      </div>
+    </section>
+
+    <section class="sec" aria-labelledby="h-historie">
+      <div class="prose">
+        <h2 id="h-historie">Pásmo, o které nikdo nestál</h2>
+        <p>Pásmo kolem 2,4 GHz bylo dlouho považované za odpad. Ruší v něm mikrovlnné trouby, a tak ho úřady nepřidělovaly rozhlasu ani armádě. V roce 1985 ho americký regulátor uvolnil: vysílat tam smí kdokoli bez licence, pokud dodrží nízký výkon. O dvanáct let později vznikl první standard bezdrátové sítě, 802.11, s rychlostí 2 megabity za sekundu.</p>
+        <p>Jméno Wi-Fi přišlo v roce 1999 a nic neznamená. Vymyslela ho reklamní agentura, aby se technologie s názvem „IEEE 802.11b“ dala prodávat, a zní schválně podobně jako hi-fi. Dnešní generace se číslují: Wi-Fi 4, 5, 6 a 7. Od první jsou zhruba deset tisíckrát rychlejší.</p>
+      </div>
+    </section>
+
+    <footer class="art-foot">
+      <a class="next" href="../priliv/" data-cat="vesmir">
+        <span class="label">Další článek · Vesmír</span>
+        <span class="t">Jak funguje příliv a odliv</span>
+        <p>Proč se moře zvedá dvakrát denně, když Měsíc je na obloze jen jeden.</p>
+      </a>
+      <a class="back" href="../">Všechna témata</a>
+    </footer>
+  </main>
+
+  <script>
+  (() => {
+    const NS = "http://www.w3.org/2000/svg";
+    function el(tag, attrs, parent) {
+      const n = document.createElementNS(NS, tag);
+      for (const k in attrs || {}) n.setAttribute(k, attrs[k]);
+      if (parent) parent.appendChild(n);
+      return n;
+    }
+    const svg = document.getElementById("plan");
+
+    /* ---------- byt a fyzika ---------- */
+    const S = 58, OX = 12, OY = 13;               // metry -> jednotky SVG
+    const W = 12, H = 7.3;                        // rozměry bytu v metrech
+    const px = (m) => OX + m * S, py = (m) => OY + m * S;
+
+    const BANDS = [
+      { name: "2,4 GHz", loss1m: 40, wall: { beton: 13, pricka: 5 }, rates: [[-55, 230], [-60, 170], [-65, 115], [-70, 70], [-75, 40], [-80, 20], [-85, 7], [-88, 1]] },
+      { name: "5 GHz", loss1m: 47, wall: { beton: 22, pricka: 8 }, rates: [[-50, 1200], [-55, 960], [-60, 720], [-65, 430], [-70, 240], [-75, 120], [-80, 50], [-85, 15], [-88, 2]] },
+    ];
+    const TX = 20;          // vysílací výkon, dBm (100 mW)
+    const EXPONENT = 3;     // v zařízeném bytě slábne signál rychleji než ve volném prostoru (tam by to bylo 2)
+    const DEAD = -88;       // pod touhle hodnotou se telefon nepřipojí
+
+    // zdi: [x1, y1, x2, y2, materiál]; dveře jsou prostě mezery
+    const WALLS = [
+      [0, 0, W, 0, "beton"], [W, 0, W, H, "beton"], [W, H, 0, H, "beton"], [0, H, 0, 0, "beton"],
+      [7, 0, 7, 3.2, "beton"], [7, 4.1, 7, H, "beton"],
+      [0, 4.2, 2.6, 4.2, "pricka"], [3.5, 4.2, 5.6, 4.2, "pricka"], [6.4, 4.2, 7, 4.2, "pricka"],
+      [4, 4.2, 4, 5.0, "pricka"], [4, 5.9, 4, H, "pricka"],
+      [7, 3.4, 7.4, 3.4, "pricka"], [8.3, 3.4, W, 3.4, "pricka"],
+      [9.4, 3.4, 9.4, 3.8, "pricka"], [9.4, 4.7, 9.4, H, "pricka"],
+    ];
+    const ROOMS = [["obývák", 3.5, 2.1], ["kuchyň", 2, 5.9], ["předsíň", 5.5, 5.9], ["ložnice", 9.5, 1.7], ["koupelna", 8.2, 5.6], ["dětský pokoj", 10.7, 5.6]];
+    const PLACES = { corner: { x: 0.6, y: 0.6 }, center: { x: 6.3, y: 3.65 } };
+
+    const state = { band: 0, router: { ...PLACES.corner }, phone: { x: 10.9, y: 6.4 } };
+
+    // kde úsečka a–b protne zeď (nebo null)
+    function crossing(a, b, w) {
+      const rx = b.x - a.x, ry = b.y - a.y, sx = w[2] - w[0], sy = w[3] - w[1];
+      const den = rx * sy - ry * sx;
+      if (Math.abs(den) < 1e-9) return null;
+      const t = ((w[0] - a.x) * sy - (w[1] - a.y) * sx) / den;
+      const u = ((w[0] - a.x) * ry - (w[1] - a.y) * rx) / den;
+      return t > 0 && t < 1 && u >= 0 && u <= 1 ? { x: a.x + t * rx, y: a.y + t * ry, kind: w[4] } : null;
+    }
+    function link(a, b, band) {
+      const d = Math.max(0.3, Math.hypot(b.x - a.x, b.y - a.y));
+      const dist = band.loss1m + 10 * EXPONENT * Math.log10(d);
+      const hits = [];
+      let walls = 0;
+      for (const w of WALLS) {
+        const c = crossing(a, b, w);
+        if (c) { hits.push(c); walls += band.wall[c.kind]; }
+      }
+      return { d, dist, walls, hits, rssi: TX - dist - walls };
+    }
+    function rate(rssi, band) {
+      const t = band.rates;
+      if (rssi < DEAD) return 0;
+      if (rssi >= t[0][0]) return t[0][1];
+      for (let i = 1; i < t.length; i++) {
+        if (rssi >= t[i][0]) return t[i][1] + ((t[i - 1][1] - t[i][1]) * (rssi - t[i][0])) / (t[i - 1][0] - t[i][0]);
+      }
+      return 0;
+    }
+
+    const LEVELS = [
+      { min: -50, name: "výborný", o: 0.8 },
+      { min: -60, name: "dobrý", o: 0.6 },
+      { min: -70, name: "slušný", o: 0.42 },
+      { min: -80, name: "slabý", o: 0.26 },
+      { min: DEAD, name: "mizerný", o: 0.12 },
+      { min: -Infinity, name: "žádný", o: 0 },
+    ];
+    const levelOf = (rssi) => LEVELS.findIndex((l) => rssi >= l.min);
+
+    /* ---------- kresba ---------- */
+    el("rect", { x: px(0), y: py(0), width: W * S, height: H * S, class: "floor" }, svg);
+    const STEP = 0.25, COLS = Math.round(W / STEP), ROWS = Math.ceil(H / STEP);
+    const cells = [];
+    const grid = el("g", {}, svg);
+    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+      const h = Math.min(STEP, H - r * STEP);
+      cells.push({
+        x: (c + 0.5) * STEP, y: r * STEP + h / 2, level: -1,
+        node: el("rect", { x: px(c * STEP).toFixed(1), y: py(r * STEP).toFixed(1), width: (STEP * S + 0.4).toFixed(1), height: (h * S + 0.4).toFixed(1), class: "cell", opacity: 0 }, grid),
+      });
+    }
+    WALLS.forEach((w) => el("line", { x1: px(w[0]), y1: py(w[1]), x2: px(w[2]), y2: py(w[3]), class: `wall ${w[4]}` }, svg));
+    ROOMS.forEach(([name, x, y]) => { el("text", { x: px(x), y: py(y), class: "room" }, svg).textContent = name; });
+    const bar = el("g", { class: "scalebar", transform: `translate(${px(0.4)} ${py(H) - 16})` }, svg);
+    el("line", { x1: 0, y1: 0, x2: 2 * S, y2: 0 }, bar);
+    el("line", { x1: 0, y1: -5, x2: 0, y2: 5 }, bar);
+    el("line", { x1: 2 * S, y1: -5, x2: 2 * S, y2: 5 }, bar);
+    el("text", { x: 2 * S + 8, y: 4 }, bar).textContent = "2 m";
+
+    const ray = el("line", { class: "ray" }, svg);
+    const hitsG = el("g", {}, svg);
+
+    function device(label, build) {
+      const g = el("g", {}, svg);
+      build(g);
+      el("text", { x: 0, y: -30, class: "tag" }, g).textContent = label;
+      const handle = el("circle", { r: 28, class: "handle", tabindex: "0", role: "button", "aria-label": `${label}. Posuňte šipkami nebo tažením.` }, g);
+      el("circle", { r: 26, class: "focus-ring" }, g);
+      return { g, handle };
+    }
+    const routerDev = device("router", (g) => {
+      el("path", { d: "M-22 -14 A26 26 0 0 1 22 -14", class: "router-wave" }, g);
+      el("line", { x1: -10, y1: -4, x2: -14, y2: -18, class: "router-ant" }, g);
+      el("line", { x1: 10, y1: -4, x2: 14, y2: -18, class: "router-ant" }, g);
+      el("rect", { x: -17, y: -5, width: 34, height: 14, rx: 3, class: "router-body" }, g);
+      el("circle", { cx: -9, cy: 2, r: 2.2, class: "router-led" }, g);
+    });
+    const phoneDev = device("telefon", (g) => {
+      el("rect", { x: -9, y: -16, width: 18, height: 32, rx: 4, class: "phone-body" }, g);
+      el("rect", { x: -6.5, y: -11.5, width: 13, height: 21, rx: 1, class: "phone-screen" }, g);
+    });
+
+    const legendEl = document.getElementById("legend");
+    LEVELS.slice(0, 5).forEach((l, i) => {
+      const li = document.createElement("li");
+      li.innerHTML = `<i style="opacity:${l.o}"></i>${l.name}${i === 0 ? " signál" : ""}`;
+      legendEl.appendChild(li);
+    });
+
+    /* ---------- výpis ---------- */
+    const fmt0 = new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 0 });
+    const fmt1 = new Intl.NumberFormat("cs-CZ", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    const dbm = (v) => `${fmt0.format(Math.round(v)).replace("-", "−")} dBm`;
+    const db = (v) => `${fmt0.format(Math.round(v))} dB`;
+    const speed = (v) => (v <= 0 ? "bez spojení" : v >= 1000 ? `${fmt1.format(v / 1000)} Gb/s` : `${fmt0.format(v >= 10 ? Math.round(v / 5) * 5 : Math.round(v))} Mb/s`);
+    const $ = (id) => document.getElementById(id);
+    const statusEl = $("status"), pathEl = $("path");
+    const cache = new WeakMap();
+    function put(node, str, html) {
+      if (cache.get(node) === str) return;
+      cache.set(node, str);
+      if (html) node.innerHTML = str; else node.textContent = str;
+    }
+    function count(n, one, few, many) { return `${n} ${n === 1 ? one : n < 5 ? few : many}`; }
+
+    function renderMap() {
+      const band = BANDS[state.band];
+      for (const c of cells) {
+        const lv = levelOf(link(state.router, c, band).rssi);
+        if (lv !== c.level) { c.level = lv; c.node.setAttribute("opacity", LEVELS[lv].o); }
+      }
+    }
+
+    function render() {
+      const links = BANDS.map((b) => link(state.router, state.phone, b));
+      const rates = links.map((l, i) => rate(l.rssi, BANDS[i]));
+
+      routerDev.g.setAttribute("transform", `translate(${px(state.router.x).toFixed(1)} ${py(state.router.y).toFixed(1)})`);
+      phoneDev.g.setAttribute("transform", `translate(${px(state.phone.x).toFixed(1)} ${py(state.phone.y).toFixed(1)})`);
+      ray.setAttribute("x1", px(state.router.x)); ray.setAttribute("y1", py(state.router.y));
+      ray.setAttribute("x2", px(state.phone.x)); ray.setAttribute("y2", py(state.phone.y));
+
+      const sel = links[state.band];
+      hitsG.textContent = "";
+      sel.hits.forEach((h, i) => {
+        const g = el("g", { class: "hit", transform: `translate(${px(h.x).toFixed(1)} ${py(h.y).toFixed(1)})` }, hitsG);
+        el("circle", { r: 5 }, g);
+        // popisky střídavě nad a pod spojnicí, ať se u rohů nepřekrývají
+        el("text", { x: 9, y: i % 2 ? 19 : -9 }, g).textContent = `−${BANDS[state.band].wall[h.kind]} dB`;
+      });
+
+      links.forEach((l, i) => {
+        put($(`r-d${i}`), db(l.dist));
+        put($(`r-w${i}`), db(l.walls));
+        put($(`r-s${i}`), `${dbm(l.rssi)}<span class="wide"> · ${l.rssi < DEAD ? "žádný" : LEVELS[levelOf(l.rssi)].name}</span>`, true);
+        put($(`r-v${i}`), speed(rates[i]));
+        ["d", "w", "s", "v"].forEach((k) => {
+          const td = $(`r-${k}${i}`);
+          td.classList.toggle("sel", i === state.band);
+          td.classList.toggle("dead", l.rssi < DEAD);
+        });
+      });
+
+      const nb = sel.hits.filter((h) => h.kind === "beton").length, np = sel.hits.length - nb;
+      const parts = [];
+      if (nb) parts.push(count(nb, "nosná zeď", "nosné zdi", "nosných zdí"));
+      if (np) parts.push(count(np, "příčka", "příčky", "příček"));
+      put(pathEl, `vzdálenost <b>${fmt1.format(sel.d)} m</b> · v cestě ${parts.length ? `<b>${parts.join(" a ")}</b>` : "<b>žádná zeď</b>"}`, true);
+
+      let status;
+      if (rates[0] <= 0 && rates[1] <= 0) {
+        status = "<strong>Tady telefon nechytí nic.</strong> Signál je pod hranicí, kdy se ještě dá připojit. Pomůže jen posunout router nebo přidat druhý vysílač.";
+      } else if (rates[1] <= 0) {
+        status = "<strong>Sem dosáhne jen pásmo 2,4 GHz.</strong> Kratší vlny pásma 5 GHz cestou pohltily zdi. Telefon se sám přepne na pomalejší, ale vytrvalejší pásmo.";
+      } else if (rates[1] > rates[0]) {
+        status = "<strong>Tady vyhrává pásmo 5 GHz.</strong> Signál je dost silný na široký kanál a velkou abecedu, takže je spojení několikrát rychlejší než na 2,4 GHz.";
+      } else {
+        status = "<strong>Pásmo 5 GHz tu ještě funguje, ale sotva.</strong> Signál je tak slabý, že pomalejší pásmo 2,4 GHz přenese víc.";
+      }
+      put(statusEl, status, true);
+    }
+
+    /* ---------- ovládání ---------- */
+    function bindSeg(id, apply) {
+      const seg = $(id);
+      seg.addEventListener("click", (e) => {
+        const b = e.target.closest("button[data-v]");
+        if (!b) return;
+        seg.querySelectorAll("button").forEach((x) => x.setAttribute("aria-checked", String(x === b)));
+        apply(b.dataset.v);
+      });
+      return seg;
+    }
+    bindSeg("band-seg", (v) => { state.band = Number(v); renderMap(); render(); });
+    const placeSeg = bindSeg("place-seg", (v) => { state.router = { ...PLACES[v] }; renderMap(); render(); });
+
+    const clamp = (p) => ({ x: Math.max(0.3, Math.min(W - 0.3, p.x)), y: Math.max(0.3, Math.min(H - 0.3, p.y)) });
+    function toMetres(evt) {
+      const m = svg.getScreenCTM();
+      if (!m) return null;
+      const p = new DOMPoint(evt.clientX, evt.clientY).matrixTransform(m.inverse());
+      return clamp({ x: (p.x - OX) / S, y: (p.y - OY) / S });
+    }
+    function moved(key) {
+      if (key === "router") {
+        placeSeg.querySelectorAll("button").forEach((b) => b.setAttribute("aria-checked", "false"));
+        renderMap();
+      }
+      render();
+    }
+    function draggable(dev, key) {
+      let dragging = false;
+      dev.handle.addEventListener("pointerdown", (e) => {
+        dragging = true;
+        dev.handle.setPointerCapture(e.pointerId);
+        dev.handle.style.cursor = "grabbing";
+        e.stopPropagation();
+      });
+      dev.handle.addEventListener("pointermove", (e) => {
+        if (!dragging) return;
+        const p = toMetres(e);
+        if (p) { state[key] = p; moved(key); }
+      });
+      const stop = () => { dragging = false; dev.handle.style.cursor = ""; };
+      dev.handle.addEventListener("pointerup", stop);
+      dev.handle.addEventListener("pointercancel", stop);
+      dev.handle.addEventListener("click", (e) => e.stopPropagation());
+      dev.handle.addEventListener("keydown", (e) => {
+        const d = e.shiftKey ? 1 : 0.25;
+        const mv = { ArrowLeft: [-d, 0], ArrowRight: [d, 0], ArrowUp: [0, -d], ArrowDown: [0, d] }[e.key];
+        if (!mv) return;
+        e.preventDefault();
+        state[key] = clamp({ x: state[key].x + mv[0], y: state[key].y + mv[1] });
+        moved(key);
+      });
+    }
+    draggable(routerDev, "router");
+    draggable(phoneDev, "phone");
+    // klepnutí do půdorysu přenese telefon
+    svg.addEventListener("click", (e) => {
+      const p = toMetres(e);
+      if (p) { state.phone = p; render(); }
+    });
+
+    renderMap();
+    render();
+  })();
+  </script>
+</body>
+</html>

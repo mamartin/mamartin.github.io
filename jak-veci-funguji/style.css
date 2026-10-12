@@ -585,6 +585,16 @@ input[type="range"] { width: 100%; min-width: 0; accent-color: var(--cat); }
 .t-spot { fill: var(--hot); opacity: 0.3; }
 .t-plate { fill: none; stroke: var(--metal-line); stroke-width: 1.5; }
 .t-food { fill: var(--warm); opacity: 0.6; }
+.t-paper { fill: #fff; }
+.t-module { fill: #14181e; }
+.t-wave { fill: none; stroke: var(--cat); stroke-width: 2.5; }
+.t-room { fill: none; stroke: var(--ink); stroke-width: 4; }
+.t-orbit { fill: none; stroke: var(--metal-line); stroke-width: 1.2; stroke-dasharray: 3 6; opacity: 0.6; }
+.t-ocean { fill: var(--cold); fill-opacity: 0.5; stroke: var(--cold); stroke-width: 1.5; }
+.t-night { fill: var(--ink); opacity: 0.28; }
+.t-moon { fill: var(--pin-top); }
+.t-muscle { fill: var(--hot); stroke: var(--metal-line); stroke-width: 1; }
+.t-hairline { stroke: var(--ink); stroke-width: 3; stroke-linecap: round; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
