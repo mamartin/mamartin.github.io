@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Proč letadlo letí</title>
+  <meta name="description" content="Jak křídlo drží letadlo ve vzduchu, co je úhel náběhu, proč může letadlo spadnout, i když mu běží motory, a co je špatně na vysvětlení z učebnic. S křídlem v proudu vzduchu.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700&display=swap">
+  <link rel="stylesheet" href="../style.css">
+  <style>
+    .wing-stage { display: grid; gap: 1rem; grid-template-columns: minmax(0, 1fr); align-items: center; }
+    .side { display: grid; gap: 0.35rem; margin: 0; justify-self: center; width: min(15rem, 70%); }
+    .side svg { border: 1px solid var(--rule); background: var(--surface); }
+    .side .label { text-align: center; }
+    @media (min-width: 60rem) {
+      .wing-stage { grid-template-columns: minmax(0, 1fr) 15rem; }
+      .side { width: 100%; }
+    }
+    #flow { background: var(--surface); border: 1px solid var(--rule); }
+    .streak { fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .streak.fast { stroke: var(--cold); }
+    .streak.mid { stroke: var(--ink-3); opacity: 0.7; }
+    .streak.slow { stroke: var(--hot); }
+    .foil { fill: var(--steel); stroke: var(--metal-line); stroke-width: 1.6; stroke-linejoin: round; }
+    .smoke { fill: var(--ink); }
+    .force line { stroke-width: 4; stroke-linecap: round; }
+    .force.lift line { stroke: var(--ok); } .force.lift path { fill: var(--ok); }
+    .force.weight line { stroke: var(--ink); } .force.weight path { fill: var(--ink); }
+    .force text { font: 600 13px var(--font-mono); paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
+    .force.lift text { fill: var(--ok); } .force.weight text { fill: var(--ink); }
+    .legend { display: flex; flex-wrap: wrap; gap: 0.3rem 1.25rem; margin: 0; font-family: var(--font-mono); font-size: 0.78rem; color: var(--ink-2); }
+    .legend span { display: inline-flex; align-items: center; gap: 0.45rem; }
+    .legend i { width: 1.6rem; height: 3px; }
+    .c-axis { stroke: var(--ink-3); stroke-width: 1; }
+    .c-line { fill: none; stroke: var(--ink); stroke-width: 2.4; stroke-linejoin: round; }
+    .c-zone { fill: var(--bad); opacity: 0.12; }
+    .c-dot { fill: var(--cat); stroke: var(--surface); stroke-width: 1.5; }
+    .c-text { fill: var(--ink-2); font: 500 10.5px var(--font-mono); }
+    .c-text.red { fill: var(--bad); }
+    @media (max-width: 46rem) { .force text { font-size: 20px; stroke-width: 6px; } }
+  </style>
+</head>
+<body data-cat="doprava">
+  <header class="topbar">
+    <div class="wrap">
+      <a class="brand" href="../">Jak věci fungují</a>
+      <nav class="crumbs" aria-label="Drobečková navigace"><a href="../#doprava">Doprava</a><span aria-hidden="true">/</span><span>Proč letadlo letí</span></nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <header class="art-head">
+      <p class="eyebrow">Doprava</p>
+      <h1 class="display">Proč letadlo letí</h1>
+      <p class="lede">Křídlo je nakloněná deska, která se řítí vzduchem a sráží ho dolů. Vzduch jí to vrací a tlačí ji nahoru. Všechno ostatní, tvar, klapky i zakřivení, jen pomáhá, aby to šlo hladce a s malým odporem.</p>
+    </header>
+
+    <section class="tldr" aria-labelledby="h-zkratka">
+      <h2 class="label" id="h-zkratka">Ve zkratce</h2>
+      <ul>
+        <li>Křídlo stáčí proud vzduchu dolů. Síla, kterou k tomu potřebuje, ho podle zákona akce a reakce <span class="hl">zvedá nahoru.</span></li>
+        <li>Nad křídlem přitom vzduch zrychlí a jeho tlak klesne, pod křídlem zpomalí a tlak stoupne. Je to tentýž děj popsaný jinak.</li>
+        <li>Vztlak roste s rychlostí a s náklonem křídla. Když se křídlo nakloní moc, proud se od něj utrhne a vztlak zmizí.</li>
+      </ul>
+    </section>
+
+    <figure class="fig" id="obr1">
+      <div class="fig-head">
+        <p class="fig-num"><b>Obr. 1</b> Křídlo v proudu vzduchu</p>
+        <span class="label">Naklánějte křídlo a měňte rychlost</span>
+      </div>
+      <div class="fig-stage wing-stage">
+        <svg id="flow" viewBox="0 0 760 420" role="img" aria-label="Řez křídlem, kolem kterého proudí vzduch zleva doprava"></svg>
+        <figure class="side">
+          <svg id="curve" viewBox="0 0 200 150" role="img" aria-label="Graf vztlaku podle náklonu křídla"></svg>
+          <span class="label">Vztlak podle úhlu náběhu</span>
+        </figure>
+      </div>
+      <div class="fig-controls">
+        <div class="ctl ctl-grow">
+          <label class="label" for="alpha">Úhel náběhu</label>
+          <div class="ctl-row">
+            <input type="range" id="alpha" min="-4" max="20" step="1" value="2">
+            <output class="val" id="alpha-val" for="alpha">2°</output>
+          </div>
+        </div>
+        <div class="ctl ctl-grow">
+          <label class="label" for="speed">Rychlost letu</label>
+          <div class="ctl-row">
+            <input type="range" id="speed" min="60" max="260" step="10" value="160">
+            <output class="val" id="speed-val" for="speed">160 km/h</output>
+          </div>
+        </div>
+        <button type="button" class="btn" id="smoke">Vypustit kouř</button>
+      </div>
+      <div class="fig-status split">
+        <div style="display:grid; gap:.6rem; min-width:0">
+          <p class="status" id="status" aria-live="polite"></p>
+          <p class="legend" aria-hidden="true">
+            <span><i style="background:var(--cold)"></i>rychlejší vzduch, nižší tlak</span>
+            <span><i style="background:var(--hot)"></i>pomalejší vzduch, vyšší tlak</span>
+          </p>
+        </div>
+        <ul class="stats" aria-label="Stav modelu">
+          <li><span class="n">Vztlak</span><span class="v" id="st-lift"></span></li>
+          <li><span class="n">Z tíhy letadla</span><span class="v" id="st-share"></span></li>
+          <li><span class="n">Letadlo</span><span class="v small" id="st-state"></span></li>
+        </ul>
+      </div>
+      <figcaption class="fig-caption">Proudění je spočítané pro ideální vzduch bez tření, takže odtržení při velkém náklonu je v modelu jen naznačené. Síly platí pro malé čtyřmístné letadlo o hmotnosti jedné tuny s křídlem o ploše 16 m². Tlačítko Vypustit kouř pošle do proudu svislou řadu teček.</figcaption>
+    </figure>
+
+    <section class="sec" aria-labelledby="h-dolu">
+      <div class="prose">
+        <h2 id="h-dolu">Křídlo hází vzduch dolů</h2>
+        <p>Vystrčte ruku z okna jedoucího auta, dlaní dolů, a pak ji vpředu trochu nadzvedněte. Vítr vám ji vyhodí nahoru. Dlaň sráží proud vzduchu šikmo dolů, a vzduch na oplátku tlačí dlaň nahoru. Akce a reakce.</p>
+        <p>Křídlo dělá totéž, jen o hodně líp. Vzduch, který se k němu blíží vodorovně, od něj odchází mírně dolů. Aby křídlo vzduch takhle stočilo, musí na něj tlačit, a vzduch tlačí zpátky. Té síle se říká vztlak.</p>
+        <p>Důležité je, že dolů nejde jen vzduch, který do křídla narazí zespodu. Proud se přimkne i k horní, vypouklé straně a sklouzne po ní dolů. Horní strana křídla dělá dokonce větší díl práce.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Sledujte čáry za křídlem. Vlevo přitékají vodorovně, vpravo odcházejí skloněné dolů. Čím víc křídlo nakloníte, tím je sklon větší a tím větší je zelená šipka vztlaku.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-tlak">
+      <div class="prose">
+        <h2 id="h-tlak">A vzduch ho nese tlakem</h2>
+        <p>Na křídlo nesahá nic jiného než vzduch, takže vztlak nemůže být nic jiného než rozdíl tlaků. Pod křídlem musí být tlak vyšší než nad ním. A je.</p>
+        <p>Nad křídlem se proud zužuje a zrychluje a zrychlený vzduch má nižší tlak. Pod křídlem se přibrzdí a tlak stoupne. Na každý čtvereční metr křídla dopravního letadla tak zespodu tlačí o několik set kilogramů víc než shora.</p>
+        <p>Spor o to, jestli letadlo drží „Newton“, nebo „Bernoulli“, je zbytečný. <span class="hl">Jsou to dva popisy téhož.</span> Rozdíl tlaků je síla, kterou vzduch působí na křídlo. Stočení proudu dolů je to, co stejná síla udělá se vzduchem.</p>
+      </div>
+      <aside class="note" aria-label="Let v číslech">
+        <span class="label">V číslech</span>
+        <dl class="facts">
+          <div><dt>575 t</dt><dd>váží při startu Airbus A380</dd></div>
+          <div><dt>≈ 15°</dt><dd>náklon, při kterém se proud od křídla utrhne</dd></div>
+          <div><dt>4×</dt><dd>větší je vztlak při dvojnásobné rychlosti</dd></div>
+        </dl>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-uhel">
+      <div class="prose">
+        <h2 id="h-uhel">Dvě páky: rychlost a náklon</h2>
+        <p>Pilot má na vztlak dva ovladače. První je rychlost. Vztlak roste s její druhou mocninou, takže při dvojnásobné rychlosti nese stejné křídlo čtyřikrát víc.</p>
+        <p>Druhý je úhel náběhu, tedy náklon křídla vůči proudu vzduchu. Čím větší, tím víc křídlo vzduch stáčí a tím víc nese.</p>
+        <p>Letadlo ve vodorovném letu potřebuje přesně tolik vztlaku, kolik váží. Když letí rychle, stačí mu skoro nulový náklon. Když zpomalí, musí zvednout nos, aby křídlo neslo stejně. Proto přistávající letadla letí s nosem nahoru. A proto mají klapky: vysunou se z křídla, zvětší ho a víc ho prohnou, aby udrželo letadlo i při rychlosti, při které by jinak spadlo.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Stáhněte rychlost na 100 km/h. Vztlak spadne hluboko pod tíhu letadla. Pak přidávejte úhel náběhu, dokud se zase nevyrovnají. Kolem 11 stupňů to vyjde.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-pretazeni">
+      <div class="prose">
+        <h2 id="h-pretazeni">Když se proud utrhne</h2>
+        <p>Náklon nejde přidávat donekonečna. Vzduch musí horní stranu křídla obtéct, a čím je křídlo strmější, tím ostřejší zatáčku po něm chce. Zhruba při patnácti stupních to přestane zvládat. Proud se od horní strany odlepí a místo hladkého toku za křídlem zůstane vír.</p>
+        <p>Vztlak v tu chvíli nespadne na nulu, ale spadne prudce, a zároveň vyskočí odpor. Říká se tomu přetažení. S motory to nemá nic společného: přetáhnout jde i letadlo s motory na plný výkon a nepřetáhne se větroň, který žádné nemá.</p>
+        <p>Náprava jde proti instinktu. Letadlo padá a pilot musí potlačit, tedy sklopit nos ještě víc dolů, aby se úhel náběhu zmenšil a proud se ke křídlu zase přimkl. Kdo táhne k sobě, drží křídlo v přetažení.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Vytáhněte úhel náběhu nad 15°. Čáry nad křídlem se rozpadnou, tečka v grafu přejede vrchol a vztlak začne klesat, i když náklon dál roste.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-omyl">
+      <div class="prose">
+        <h2 id="h-omyl">Co se píše v učebnicích špatně</h2>
+        <p>Rozšířené vysvětlení zní takhle: horní strana křídla je vypouklá, a tedy delší. Vzduch, který jde horem, musí dorazit na konec křídla ve stejnou chvíli jako ten, který jde spodem, a tak musí letět rychleji.</p>
+        <p>Nic takového vzduch nemusí. Dvě částice, které se před křídlem rozdělí, se za ním už nesejdou. Ta horní dorazí na konec křídla dřív, o dost dřív. Vzduch nad křídlem je rychlejší, to sedí, ale ne proto, že by někam spěchal.</p>
+        <p>To vysvětlení navíc neumí říct, proč letadla létají i na zádech a proč nesou i křídla úplně plochá nebo souměrná, jaká mají akrobatické speciály. Odpověď je pokaždé stejná: nese náklon vůči proudu, ne tvar.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Zmáčkněte Vypustit kouř. Do proudu se vydá svislá řada teček. Ty, které jdou nad křídlem, ho minou dřív než ty pod ním a už na ně nepočkají.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-tvar">
+      <div class="prose">
+        <h2 id="h-tvar">Tak k čemu je ten tvar</h2>
+        <p>Když by stačila nakloněná deska, proč mají křídla složitý profil s oblým nosem, vypouklým hřbetem a ostrou zadní hranou?</p>
+        <p>Kvůli odporu a kvůli přetažení. Rovná deska nese, ale proud se od ní utrhne už při pár stupních a brzdí jako vrata. Oblý nos dovolí vzduchu obtéct křídlo hladce i při větším náklonu. Vypouklý hřbet dá vztlak už při nulovém náklonu, takže letadlo může letět rovně a s malým odporem. Ostrá zadní hrana zařídí, aby proud opouštěl křídlo čistě a jedním směrem.</p>
+        <p>Dobré křídlo dopravního letadla dá osmnáctkrát víc vztlaku než odporu. Letadlo, kterému ve výšce deseti kilometrů vysadí všechny motory, tak doplachtí skoro dvě stě kilometrů daleko.</p>
+      </div>
+    </section>
+
+    <footer class="art-foot">
+      <a class="next" href="../modre-nebe/" data-cat="priroda">
+        <span class="label">Další článek · Příroda</span>
+        <span class="t">Proč je nebe modré</span>
+        <p>Proč je obloha modrá, západ slunce červený a mraky bílé, když je to pořád stejné světlo.</p>
+      </a>
+      <a class="back" href="../">Všechna témata</a>
+    </footer>
+  </main>
+
+  <script>
+  (() => {
+    const NS = "http://www.w3.org/2000/svg";
+    function el(tag, attrs, parent) {
+      const n = document.createElementNS(NS, tag);
+      for (const k in attrs || {}) n.setAttribute(k, attrs[k]);
+      if (parent) parent.appendChild(n);
+      return n;
+    }
+    const svg = document.getElementById("flow"), curve = document.getElementById("curve");
+
+    /* ---------- obtékání profilu: válec převedený Žukovského transformací na křídlo ---------- */
+    const MX = -0.1, MY = 0.08;                       // střed kružnice; posun dává profilu tloušťku a prohnutí
+    const RAD = Math.hypot(1 - MX, MY);               // kružnice prochází bodem 1, tam vznikne zadní hrana
+    const BETA = Math.asin(MY / RAD);
+    const STALL = 15;                                 // stupňů
+    const s = { alpha: 2, speed: 160, smoke: [] };
+    const rad = (d) => (d * Math.PI) / 180;
+    const stallFactor = (deg) => (deg <= STALL ? 1 : Math.max(0.5, 1 - (deg - STALL) * 0.085));
+    const liftCoef = (deg) => 0.8 * 2 * Math.PI * Math.sin(rad(deg) + BETA) * stallFactor(deg);
+
+    // rychlost v rovině kružnice; vrací derivaci polohy částice (dζ/dt) a velikost rychlosti u křídla
+    function velocity(x, y, a, gamma) {
+      const px = x - MX, py = y - MY, r2 = px * px + py * py;
+      const ca = Math.cos(a), sa = Math.sin(a);
+      // U·(e^{-ia} − R²·e^{ia}/ζ'²) + iΓ/(2πζ')
+      const i2x = (px * px - py * py) / (r2 * r2), i2y = (-2 * px * py) / (r2 * r2);
+      let wx = ca - RAD * RAD * (ca * i2x - sa * i2y);
+      let wy = -sa - RAD * RAD * (ca * i2y + sa * i2x);
+      const g = gamma / (2 * Math.PI);
+      wx += (g * py) / r2; wy += (g * px) / r2;
+      // dz/dζ = 1 − 1/ζ²
+      const z2 = x * x + y * y, dx = 1 - (x * x - y * y) / (z2 * z2), dy = (2 * x * y) / (z2 * z2);
+      const den = Math.max(0.03, dx * dx + dy * dy);
+      return { vx: wx / den, vy: -wy / den, speed: Math.hypot(wx, wy) / Math.sqrt(den) };
+    }
+    const toWing = (x, y) => { const d = x * x + y * y; return [x + x / d, y - y / d]; };
+    // zpět z roviny křídla do roviny kružnice: ζ = (z + √(z² − 4)) / 2
+    function fromWing(x, y) {
+      const re = x * x - y * y - 4, im = 2 * x * y, m = Math.hypot(re, im);
+      let sx = Math.sqrt((m + re) / 2), sy = Math.sign(im || 1) * Math.sqrt((m - re) / 2);
+      if (sx * x + sy * y < 0) { sx = -sx; sy = -sy; }
+      return [(x + sx) / 2, (y + sy) / 2];
+    }
+
+    const W = 760, H = 420, SCALE = 78, CX = 388, CY = 214;
+    // obrazovka je natočená podle proudu: vzduch teče vodorovně a naklání se křídlo
+    function toScreen(zx, zy, a) {
+      const c = Math.cos(a), sn = Math.sin(a);
+      return [CX + SCALE * (zx * c + zy * sn), CY - SCALE * (-zx * sn + zy * c)];
+    }
+    function fromScreen(X, Y, a) {
+      const u = (X - CX) / SCALE, v = -(Y - CY) / SCALE, c = Math.cos(a), sn = Math.sin(a);
+      return fromWing(u * c - v * sn, u * sn + v * c);
+    }
+
+    const N = 150, TAIL = 5;
+    const streaks = Array.from({ length: N }, () => ({ node: el("path", { class: "streak mid" }, svg), pts: [], x: 0, y: 0 }));
+    const foil = el("path", { class: "foil" }, svg);
+    const smokeG = el("g", {}, svg);
+    const liftG = el("g", { class: "force lift" }, svg), weightG = el("g", { class: "force weight" }, svg);
+    const liftLine = el("line", { x1: CX - 10, x2: CX - 10, y1: CY }, liftG), liftHead = el("path", {}, liftG), liftText = el("text", { x: CX + 4 }, liftG);
+    el("line", { x1: CX - 10, x2: CX - 10, y1: CY, y2: CY + 92 }, weightG);
+    el("path", { d: `M${CX - 10} ${CY + 106} l-9 -16 h18 Z` }, weightG);
+    el("text", { x: CX + 4, y: CY + 104 }, weightG).textContent = "tíha";
+    liftText.textContent = "vztlak";
+
+    function seed(p, anywhere) {
+      const a = rad(s.alpha);
+      const X = anywhere ? Math.random() * W : -10, Y = 6 + Math.random() * (H - 12);
+      [p.x, p.y] = fromScreen(X, Y, a);
+      p.pts = [];
+    }
+    streaks.forEach((p) => seed(p, true));
+
+    function advect(p, dt, a, gamma, turb) {
+      // dvoukrokový výpočet, ať částice nevjíždějí do křídla
+      const k1 = velocity(p.x, p.y, a, gamma);
+      const k2 = velocity(p.x + k1.vx * dt * 0.5, p.y + k1.vy * dt * 0.5, a, gamma);
+      p.x += k2.vx * dt; p.y += k2.vy * dt;
+      if (turb > 0) {
+        // odtržený proud: nad zadní částí křídla a za ním se vzduch víří
+        const px = p.x - MX, py = p.y - MY, ang = Math.atan2(py, px) - a;
+        if (Math.hypot(px, py) < RAD * 2.2 && Math.cos(ang) > -0.15 && Math.sin(ang) > -0.2) {
+          p.x += (Math.random() - 0.5) * turb * dt * 5; p.y += (Math.random() - 0.5) * turb * dt * 5;
+        }
+      }
+      const px = p.x - MX, py = p.y - MY, r = Math.hypot(px, py);
+      if (r < RAD * 1.004) { p.x = MX + (px / r) * RAD * 1.004; p.y = MY + (py / r) * RAD * 1.004; }
+      return k2.speed;
+    }
+
+    /* ---------- graf vztlaku ---------- */
+    const G = { x: 26, y: 12, w: 162, h: 112 };
+    const gx = (deg) => G.x + ((deg + 4) / 24) * G.w, gy = (cl) => G.y + G.h - ((cl + 0.1) / 2.0) * G.h;
+    el("rect", { x: gx(STALL), y: G.y, width: gx(20) - gx(STALL), height: G.h, class: "c-zone" }, curve);
+    el("line", { x1: G.x, y1: G.y, x2: G.x, y2: G.y + G.h, class: "c-axis" }, curve);
+    el("line", { x1: G.x, y1: gy(0), x2: G.x + G.w, y2: gy(0), class: "c-axis" }, curve);
+    let d = "";
+    for (let deg = -4; deg <= 20; deg += 0.5) d += `${deg > -4 ? "L" : "M"}${gx(deg).toFixed(1)} ${gy(liftCoef(deg)).toFixed(1)}`;
+    el("path", { d, class: "c-line" }, curve);
+    el("text", { x: gx(17.5), y: G.y + 10, "text-anchor": "middle", class: "c-text red" }, curve).textContent = "přetažení";
+    el("text", { x: G.x, y: G.y + G.h + 14, class: "c-text" }, curve).textContent = "−4°";
+    el("text", { x: G.x + G.w, y: G.y + G.h + 14, "text-anchor": "end", class: "c-text" }, curve).textContent = "20°";
+    el("text", { x: G.x + 5, y: G.y + 9, class: "c-text" }, curve).textContent = "vztlak";
+    const dot = el("circle", { r: 5, class: "c-dot" }, curve);
+
+    /* ---------- výpis ---------- */
+    const fmt0 = new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 0 });
+    const $ = (id) => document.getElementById(id);
+    const cache = new WeakMap();
+    function put(node, str, html) {
+      if (cache.get(node) === str) return;
+      cache.set(node, str);
+      if (html) node.innerHTML = str; else node.textContent = str;
+    }
+    const MASS = 1000, AREA = 16, RHO = 1.2, WEIGHT = MASS * 9.81;
+
+    function renderStatic() {
+      const a = rad(s.alpha);
+      let path = "";
+      for (let k = 0; k <= 120; k++) {
+        const t = (k / 120) * 2 * Math.PI;
+        const [zx, zy] = toWing(MX + RAD * Math.cos(t), MY + RAD * Math.sin(t));
+        const [X, Y] = toScreen(zx, zy, a);
+        path += `${k ? "L" : "M"}${X.toFixed(1)} ${Y.toFixed(1)}`;
+      }
+      foil.setAttribute("d", path + "Z");
+
+      const v = s.speed / 3.6, lift = 0.5 * RHO * v * v * AREA * liftCoef(s.alpha), share = lift / WEIGHT;
+      const len = Math.max(-60, Math.min(170, 92 * share)), tip = CY - len;
+      liftG.setAttribute("visibility", Math.abs(len) > 6 ? "visible" : "hidden");
+      liftLine.setAttribute("y2", (tip + Math.sign(len) * 12).toFixed(1));
+      liftHead.setAttribute("d", `M${CX - 10} ${tip.toFixed(1)} l-9 ${16 * Math.sign(len)} h18 Z`);
+      liftText.setAttribute("y", (tip + (len > 0 ? 4 : 12)).toFixed(1));
+      dot.setAttribute("cx", gx(s.alpha).toFixed(1)); dot.setAttribute("cy", gy(liftCoef(s.alpha)).toFixed(1));
+
+      put($("st-lift"), `${fmt0.format(Math.round(lift / 100) * 100)} N`);
+      put($("st-share"), `${fmt0.format(Math.round(share * 100))} %`);
+      const stalled = s.alpha > STALL;
+      put($("st-state"), stalled ? "přetažené" : share > 1.06 ? "stoupá" : share < 0.94 ? "klesá" : "drží výšku");
+      let status;
+      if (stalled) {
+        status = "<strong>Přetažení.</strong> Křídlo je tak strmé, že ho vzduch nahoře nestíhá obtékat. Proud se utrhl, za křídlem je vír a vztlak padá, i když náklon roste. Pomůže jen sklopit nos.";
+      } else if (share > 1.06) {
+        status = "<strong>Vztlak je větší než tíha.</strong> Křídlo stáčí dolů víc vzduchu, než je potřeba, a letadlo stoupá.";
+      } else if (share < 0.94 && s.alpha <= 0 && liftCoef(s.alpha) < 0.25) {
+        status = "<strong>Křídlo skoro nenese.</strong> Je v proudu naplocho a vzduch za ním odchází skoro stejným směrem, jakým přišel.";
+      } else if (share < 0.94) {
+        status = "<strong>Vztlak nestačí.</strong> Při téhle rychlosti a náklonu křídlo letadlo neunese a to klesá. Pomůže přidat rychlost, nebo zvednout nos.";
+      } else {
+        status = "<strong>Vodorovný let.</strong> Vztlak se právě vyrovnal s tíhou. Křídlo stáčí proud vzduchu mírně dolů a vzduch ho stejnou silou drží nahoře.";
+      }
+      put($("status"), status, true);
+    }
+
+    function frame(dt) {
+      const a = rad(s.alpha), gamma = 4 * Math.PI * RAD * Math.sin(a + BETA) * stallFactor(s.alpha);
+      const turb = Math.max(0, Math.min(1, (s.alpha - STALL + 1) / 4));
+      const h = dt * (0.8 + s.speed / 100);
+      streaks.forEach((p) => {
+        const speed = advect(p, h, a, gamma, turb);
+        const [zx, zy] = toWing(p.x, p.y), [X, Y] = toScreen(zx, zy, a);
+        if (X > W + 12 || Y < -30 || Y > H + 30 || Number.isNaN(X)) { seed(p, false); p.node.setAttribute("d", ""); return; }
+        p.pts.push([X, Y]);
+        if (p.pts.length > TAIL) p.pts.shift();
+        p.node.setAttribute("d", p.pts.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(1)} ${y.toFixed(1)}`).join(""));
+        p.node.setAttribute("class", `streak ${speed > 1.12 ? "fast" : speed < 0.9 ? "slow" : "mid"}`);
+      });
+      smokeG.textContent = "";
+      s.smoke = s.smoke.filter((p) => {
+        advect(p, h, a, gamma, 0);
+        const [zx, zy] = toWing(p.x, p.y), [X, Y] = toScreen(zx, zy, a);
+        if (X > W + 10) return false;
+        el("circle", { cx: X.toFixed(1), cy: Y.toFixed(1), r: 3.6, class: "smoke" }, smokeG);
+        return true;
+      });
+    }
+
+    /* ---------- ovládání ---------- */
+    $("alpha").addEventListener("input", (e) => { s.alpha = Number(e.target.value); $("alpha-val").textContent = `${String(s.alpha).replace("-", "−")}°`; s.smoke = []; renderStatic(); });
+    $("speed").addEventListener("input", (e) => { s.speed = Number(e.target.value); $("speed-val").textContent = `${s.speed} km/h`; renderStatic(); });
+    $("smoke").addEventListener("click", () => {
+      const a = rad(s.alpha);
+      s.smoke = Array.from({ length: 21 }, (_, k) => { const [x, y] = fromScreen(70, 74 + k * 14, a); return { x, y }; });
+    });
+
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let prev = performance.now();
+    function loop(now) {
+      const dt = Math.min(0.05, (now - prev) / 1000);
+      prev = now;
+      frame(dt);
+      requestAnimationFrame(loop);
+    }
+    renderStatic();
+    if (reduced) { for (let i = 0; i < 60; i++) frame(0.03); } else requestAnimationFrame(loop);
+  })();
+  </script>
+</body>
+</html>

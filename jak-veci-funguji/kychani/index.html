@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Proč kýcháme</title>
+  <meta name="description" content="Co se v těle stane za tu vteřinu mezi lechtáním v nose a hepčí, jak daleko doletí kapénky a proč někdo kýchá, když se podívá do slunce. S kýchnutím, které si můžete pustit.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700&display=swap">
+  <link rel="stylesheet" href="../style.css">
+  <style>
+    .floor { stroke: var(--ink-3); stroke-width: 1.5; }
+    .tick line { stroke: var(--ink-3); stroke-width: 1.5; }
+    .tick text { fill: var(--ink-3); font: 500 12px var(--font-mono); text-anchor: middle; }
+    .body { fill: var(--sunk); stroke: var(--metal-line); stroke-width: 1.6; stroke-linejoin: round; }
+    .face { fill: none; stroke: var(--metal-line); stroke-width: 2; stroke-linecap: round; }
+    .cover { fill: var(--pin-top); stroke: var(--metal-line); stroke-width: 1.4; }
+    .drop { fill: var(--cold); }
+    .puff { fill: var(--cold); opacity: 0.08; }
+    .reach line { stroke: var(--cat); stroke-width: 1.6; stroke-dasharray: 4 4; }
+    .reach text { fill: var(--cat); font: 600 13px var(--font-mono); text-anchor: middle; paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
+    .arc { display: grid; gap: 0.3rem; margin: 0; padding: 0; list-style: none; counter-reset: a; font-family: var(--font-mono); font-size: 0.8rem; }
+    .arc li { display: grid; grid-template-columns: 1.4rem minmax(0, 1fr); gap: 0.5rem; padding: 0.35rem 0.55rem; border: 1px solid var(--rule); background: var(--surface); color: var(--ink-2); counter-increment: a; transition: background 0.15s, color 0.15s; }
+    .arc li::before { content: counter(a); font-weight: 600; color: var(--ink-3); }
+    .arc li.on { background: var(--cat); border-color: var(--cat); color: var(--paper); }
+    .arc li.on::before { color: var(--paper); }
+    @media (max-width: 46rem) { .tick text { font-size: 20px; } .reach text { font-size: 20px; stroke-width: 6px; } }
+  </style>
+</head>
+<body data-cat="telo">
+  <header class="topbar">
+    <div class="wrap">
+      <a class="brand" href="../">Jak věci fungují</a>
+      <nav class="crumbs" aria-label="Drobečková navigace"><a href="../#telo">Lidské tělo</a><span aria-hidden="true">/</span><span>Proč kýcháme</span></nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <header class="art-head">
+      <p class="eyebrow">Lidské tělo</p>
+      <h1 class="display">Proč kýcháme</h1>
+      <p class="lede">Kýchnutí je úklid. Nos zjistí, že v něm je něco, co tam nepatří, a tělo to vyfoukne ven nejprudším výdechem, jaký umí. Rozhodnout o tom nemůžete a zastavit ho skoro taky ne.</p>
+    </header>
+
+    <section class="tldr" aria-labelledby="h-zkratka">
+      <h2 class="label" id="h-zkratka">Ve zkratce</h2>
+      <ul>
+        <li>Čidla v nosní sliznici ohlásí podráždění do mozkového kmene. Ten spustí pevně daný sled pohybů.</li>
+        <li>Nejdřív hluboký nádech, pak se zavře hrdlo a svaly stlačí vzduch v plicích. <span class="hl">Když se hrdlo otevře, vzduch vyletí ven</span> a vezme s sebou hlen i to, co dráždilo.</li>
+        <li>S ním vyletí desetitisíce kapének. Ty nejmenší doletí několik metrů daleko.</li>
+      </ul>
+    </section>
+
+    <figure class="fig" id="obr1">
+      <div class="fig-head">
+        <p class="fig-num"><b>Obr. 1</b> Jedno kýchnutí</p>
+        <span class="label">Dráždi nos, dokud to nepřijde</span>
+      </div>
+      <div class="fig-stage">
+        <svg id="scene" viewBox="0 0 940 380" role="img" aria-label="Postava z profilu, která kýchne, a kapénky letící do vzdálenosti několika metrů"></svg>
+      </div>
+      <div class="fig-controls">
+        <button type="button" class="btn" id="tickle">Podráždit nos</button>
+        <button type="button" class="btn ghost" id="sun">Podívat se do slunce</button>
+        <div class="ctl">
+          <span class="label" id="lbl-cover">Zakrýt ústa</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-cover" id="cover-seg">
+            <button type="button" role="radio" data-v="none" aria-checked="true">Ničím</button>
+            <button type="button" role="radio" data-v="hand" aria-checked="false">Dlaní</button>
+            <button type="button" role="radio" data-v="elbow" aria-checked="false">Loktem</button>
+          </div>
+        </div>
+      </div>
+      <div class="fig-status split">
+        <div style="display:grid; gap:.7rem; min-width:0">
+          <p class="status" id="status" aria-live="polite"></p>
+          <ol class="arc" id="arc" aria-label="Cesta reflexu">
+            <li>čidla v nosní sliznici</li>
+            <li>trojklanný nerv</li>
+            <li>centrum kýchání v mozkovém kmeni</li>
+            <li>bránice, hrudník, hrdlo, víčka</li>
+          </ol>
+        </div>
+        <ul class="stats" aria-label="Stav modelu">
+          <li><span class="n">Podráždění</span><span class="meter" aria-hidden="true"><i id="st-itch"></i></span></li>
+          <li><span class="n">Nejdál doletělo</span><span class="v" id="st-far"></span></li>
+          <li><span class="n">Kapének uniklo</span><span class="v" id="st-out"></span></li>
+        </ul>
+      </div>
+      <figcaption class="fig-caption">Zjednodušený model. Velké kapky letí jako hozený kamínek a spadnou do dvou metrů. Drobné kapénky nese oblak teplého vlhkého vzduchu, který se zpomaluje, ale doputuje mnohem dál. Každá tečka zastupuje stovky skutečných kapének.</figcaption>
+    </figure>
+
+    <section class="sec" aria-labelledby="h-poplach">
+      <div class="prose">
+        <h2 id="h-poplach">Poplach v nose</h2>
+        <p>Nos je vstupní filtr dýchacích cest. Jeho sliznice je vlhká, lepkavá a plná nervových zakončení, která hlídají, co se na ní zachytí. Prach, pyl, pepř, štiplavý kouř, studený vzduch nebo otok při rýmě, to všechno je dráždí.</p>
+        <p>Signál od nich vede trojklanným nervem, který má na starosti cit v celém obličeji, do mozkového kmene. Tam, v místě, kterému se říká centrum kýchání, se podněty sčítají. Jedno zrnko prachu nestačí. Když jich přibývá, lechtání sílí, a jakmile překročí práh, centrum spustí kýchnutí. Od té chvíle už běží samo.</p>
+        <p>Odtud ten známý pocit „už už“. Podráždění je těsně pod prahem a stačí maličkost, aby ho překročilo, nebo aby zase opadlo.</p>
+      </div>
+      <aside class="note" aria-label="Kýchnutí v číslech">
+        <span class="label">V číslech</span>
+        <dl class="facts">
+          <div><dt>až 40 000</dt><dd>kapének v jednom kýchnutí</dd></div>
+          <div><dt>7–8 m</dt><dd>doletí oblak nejmenších kapének</dd></div>
+          <div><dt>asi čtvrtina</dt><dd>lidí kýchá, když vyjde na ostré slunce</dd></div>
+        </dl>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-doby">
+      <div class="prose">
+        <h2 id="h-doby">Tři doby</h2>
+        <ol class="steps">
+          <li><div><b>Nádech.</b> Bránice se stáhne a hrudník se roztáhne víc než při běžném dýchání. Do plic se dostane přes dva litry vzduchu. To je to „hááá“.</div></li>
+          <li><div><b>Stlačení.</b> Hlasivky se sevřou a uzavřou cestu ven. Břišní a mezižeberní svaly se prudce stáhnou a mačkají plný hrudník proti zavřenému hrdlu. Tlak v plicích vyskočí. Oči se zavřou, jazyk se přitiskne k patru.</div></li>
+          <li><div><b>Výbuch.</b> Hlasivky povolí a stlačený vzduch vyletí nosem i ústy. Strhne s sebou hlen ze sliznice a v něm to, co poplach spustilo. To je „pčí“.</div></li>
+        </ol>
+        <p>Celé to trvá kolem sekundy a zapojí se svaly od břicha po víčka. Proto po pořádném kýchnutí někoho píchne v zádech.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Podrážděte nos jednou a počkejte. Lechtání opadne a nic se nestane. Když ale zmáčknete tlačítko třikrát rychle po sobě, podněty se sečtou a reflex se spustí.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-daleko">
+      <div class="prose">
+        <h2 id="h-daleko">Jak rychle a jak daleko</h2>
+        <p>Často se píše, že vzduch při kýchnutí letí rychlostí 160 kilometrů v hodině. Měření rychlými kamerami to nepotvrzují, vycházejí spíš desítky kilometrů v hodině, zhruba jako při prudkém kašli.</p>
+        <p>Zajímavější je, co se děje potom. Z úst nevyletí jen sprška kapek. Vyletí oblak teplého, vlhkého vzduchu, a v něm se drobné kapénky vezou. Velké kapky z něj vypadnou a do dvou metrů jsou na zemi. Ty nejmenší oblak unese mnohem dál, <span class="hl">podle měření až na sedm nebo osm metrů,</span> a ve vzduchu vydrží minuty.</p>
+        <p>Právě tak se šíří rýma, chřipka a další nemoci, které se usadily v nose a krku. Kýchnutí je pro tělo úklid a pro virus doprava.</p>
+      </div>
+    </section>
+
+    <section class="sec" aria-labelledby="h-loket">
+      <div class="prose">
+        <h2 id="h-loket">Proč do lokte</h2>
+        <p>Dlaň před ústy zachytí většinu kapek, ale jen je přestěhuje. Touhle rukou pak berete za kliku, držíte se v tramvaji a podáváte ji ostatním. Kolem prstů navíc část oblaku uteče do stran.</p>
+        <p>Loket nebo papírový kapesník zachytí víc a nikam dál to neroznesou. Rukávem na kliku nesaháte.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Kýchněte třikrát: bez zakrytí, do dlaně a do lokte. Sledujte, kolik kapének unikne a jak daleko doletí.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-slunce">
+      <div class="prose">
+        <h2 id="h-slunce">Kýchání na slunci</h2>
+        <p>Zhruba každý čtvrtý člověk kýchne, když vyjde ze tmy na ostré světlo. Je to vrozené a dědí se: stačí, aby tu vlohu měl jeden z rodičů.</p>
+        <p>Proč se to děje, se neví jistě. Nejčastější vysvětlení je, že se v mozkovém kmeni kříží dráhy. Zrakový nerv při oslnění vyšle silný signál, aby se zúžily zornice, a ten přeskočí na sousední trojklanný nerv. Mozek si to vyloží jako lechtání v nose.</p>
+        <p>Lékaři tomu jevu dali jméno s dlouhým názvem, jehož zkratka je anglicky ACHOO, tedy hepčí.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Tlačítko Podívat se do slunce přidá podráždění, aniž by v nose cokoli bylo.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-myty">
+      <div class="prose">
+        <h2 id="h-myty">Co se o kýchání traduje</h2>
+        <p>Srdce se při kýchnutí nezastaví. Změna tlaku v hrudníku na okamžik pozmění jeho rytmus, ale bije dál.</p>
+        <p>Oči vám nevypadnou, když je necháte otevřené. Zavírají se reflexně, ne z nutnosti, a s trochou vůle to jde překonat.</p>
+        <p>Ve spánku se nekýchá. Při spaní jsou reflexy utlumené, a když je podráždění dost silné, nejdřív vás probudí.</p>
+        <p>Zadržet kýchnutí stisknutím nosu a zavřením úst není dobrý nápad. Tlak, který měl ven, se opře do uší a dutin. Vážná zranění jsou vzácná, ale popsaná.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Na okraj</span>
+        <p>Rekord drží Britka Donna Griffithsová. Začala kýchat v lednu 1981 a přestala po 976 dnech.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-zdravi">
+      <div class="prose">
+        <h2 id="h-zdravi">Proč říkáme „na zdraví“</h2>
+        <p>Přát zdraví tomu, kdo kýchl, je zvyk starší než křesťanství. Kýchnutí se bralo jako znamení, dobré nebo zlé, a také jako první příznak nemoci. Podle legendy nařídil papež Řehoř I. při morové epidemii v roce 590 odpovídat na každé kýchnutí požehnáním. Odtud „pozdrav Pánbůh“.</p>
+      </div>
+    </section>
+
+    <footer class="art-foot">
+      <a class="next" href="../oko/" data-cat="telo">
+        <span class="label">Další článek · Lidské tělo</span>
+        <span class="t">Jak oko zaostřuje</span>
+        <p>Jak oko přeostří z knihy na obzor a proč to po čtyřicítce přestává jít.</p>
+      </a>
+      <a class="back" href="../">Všechna témata</a>
+    </footer>
+  </main>
+
+  <script>
+  (() => {
+    const NS = "http://www.w3.org/2000/svg";
+    function el(tag, attrs, parent) {
+      const n = document.createElementNS(NS, tag);
+      for (const k in attrs || {}) n.setAttribute(k, attrs[k]);
+      if (parent) parent.appendChild(n);
+      return n;
+    }
+    const svg = document.getElementById("scene");
+
+    /* ---------- scéna ---------- */
+    const FLOOR = 330, M = 100, X0 = 130;                 // 100 jednotek = 1 metr, ústa jsou v x = 130
+    const MOUTH = { x: X0, y: FLOOR - 152 };
+    el("line", { x1: 20, y1: FLOOR, x2: 930, y2: FLOOR, class: "floor" }, svg);
+    for (let m = 1; m <= 7; m++) {
+      const g = el("g", { class: "tick" }, svg);
+      el("line", { x1: X0 + m * M, y1: FLOOR, x2: X0 + m * M, y2: FLOOR + 8 }, g);
+      el("text", { x: X0 + m * M, y: FLOOR + 26 }, g).textContent = `${m} m`;
+    }
+    const puff = el("ellipse", { cy: MOUTH.y, ry: 40, class: "puff", visibility: "hidden" }, svg);
+    const dropsG = el("g", {}, svg);
+    const nodes = Array.from({ length: 170 }, () => el("circle", { class: "drop", visibility: "hidden" }, dropsG));
+    const reach = el("g", { class: "reach", visibility: "hidden" }, svg);
+    const reachLine = el("line", { y1: 40, y2: FLOOR }, reach), reachText = el("text", { y: 32 }, reach);
+
+    const person = el("g", {}, svg);
+    el("path", { d: `M52 ${FLOOR} V236 Q52 198 84 198 Q116 198 116 236 V${FLOOR} Z`, class: "body" }, person);
+    const chest = el("ellipse", { cx: 84, cy: 244, rx: 30, ry: 40, class: "body" }, person);
+    const head = el("g", {}, person);
+    el("circle", { cx: 88, cy: 166, r: 34, class: "body" }, head);
+    el("path", { d: "M118 160 l14 8 l-12 6", class: "face" }, head);
+    const eye = el("path", { class: "face" }, head), mouth = el("path", { class: "face" }, head);
+    const cover = el("rect", { rx: 8, class: "cover", visibility: "hidden" }, svg);
+
+    /* ---------- model ---------- */
+    const COVERS = { none: { pass: 1, range: 1 }, hand: { pass: 0.42, range: 0.4 }, elbow: { pass: 0.08, range: 0.22 } };
+    const s = { itch: 0, phase: "rest", t: 0, cover: "none", drops: [], far: 0, out: 0, done: false, photic: false };
+
+    function burst() {
+      const c = COVERS[s.cover];
+      s.drops = []; s.far = 0; s.out = 0;
+      for (let i = 0; i < 170; i++) {
+        if (Math.random() > c.pass) continue;
+        const big = Math.random() < 0.32;
+        const a = (Math.random() - 0.55) * 0.5;
+        if (big) {
+          const v = (2.6 + Math.random() * 3.6) * c.range;
+          s.drops.push({ big, x: 0, y: 1.52, vx: v * Math.cos(a), vy: v * Math.sin(a) + 0.6, r: 2.4 + Math.random() * 1.6, t: 0 });
+        } else {
+          // drobné kapénky nese oblak: rychle zpomalí, ale daleko doputují
+          const range = (1.2 + Math.random() ** 1.6 * 6.4) * c.range;
+          s.drops.push({ big, x: 0, y: 1.52 + (Math.random() - 0.5) * 0.12, range, lift: (Math.random() - 0.5) * 0.5, r: 1.2 + Math.random() * 0.9, t: 0, ph: Math.random() * 6 });
+        }
+      }
+      s.out = s.drops.length;
+    }
+
+    function step(dt) {
+      s.t += dt;
+      if (s.phase === "rest") {
+        s.itch = Math.max(0, s.itch - dt * 0.09);
+        if (s.itch >= 1) { s.phase = "inhale"; s.t = 0; }
+      } else if (s.phase === "inhale" && s.t > 0.8) { s.phase = "squeeze"; s.t = 0; }
+      else if (s.phase === "squeeze" && s.t > 0.4) { s.phase = "blast"; s.t = 0; burst(); }
+      else if (s.phase === "blast" && s.t > 0.5) { s.phase = "after"; s.t = 0; s.itch = 0; s.done = true; }
+      else if (s.phase === "after" && s.t > 9) { s.phase = "rest"; s.t = 0; }
+
+      s.drops.forEach((d) => {
+        d.t += dt;
+        if (d.big) {
+          if (d.y <= 0) return;
+          d.vx *= Math.exp(-1.5 * dt); d.vy -= 9.81 * dt;
+          d.x += d.vx * dt; d.y = Math.max(0, d.y + d.vy * dt);
+        } else {
+          d.x = d.range * (1 - Math.exp(-d.t / 1.5));
+          d.y = 1.52 + d.lift * (1 - Math.exp(-d.t / 2)) + 0.05 * Math.sin(d.t * 1.7 + d.ph) - 0.02 * d.t;
+        }
+        if (d.x > s.far) s.far = d.x;
+      });
+    }
+
+    /* ---------- výpis ---------- */
+    const fmt1 = new Intl.NumberFormat("cs-CZ", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    const $ = (id) => document.getElementById(id);
+    const arcItems = [...$("arc").children];
+    const cache = new WeakMap();
+    function put(node, str, html) {
+      if (cache.get(node) === str) return;
+      cache.set(node, str);
+      if (html) node.innerHTML = str; else node.textContent = str;
+    }
+
+    function render() {
+      // postava: při nádechu se zakloní a nadme, při výbuchu se předkloní
+      const p = s.phase, k = p === "inhale" ? Math.min(1, s.t / 0.8) : p === "squeeze" ? 1 : p === "blast" ? Math.max(0, 1 - s.t / 0.2) : 0;
+      const lean = p === "blast" ? 16 * Math.min(1, s.t / 0.12) * Math.max(0, 1 - (s.t - 0.2) / 0.3) : -12 * k;
+      head.setAttribute("transform", `rotate(${lean.toFixed(1)} 84 200)`);
+      chest.setAttribute("rx", (30 + 9 * k).toFixed(1)); chest.setAttribute("ry", (40 + 5 * k).toFixed(1));
+      const shut = p === "squeeze" || p === "blast";
+      eye.setAttribute("d", shut ? "M100 152 h12" : "M104 148 v8");
+      mouth.setAttribute("d", p === "blast" ? "M112 180 q8 6 0 12" : p === "inhale" ? "M110 184 q6 4 0 8" : "M106 186 h12");
+      const covering = s.cover !== "none" && (p === "squeeze" || p === "blast" || (p === "after" && s.t < 1.2));
+      cover.setAttribute("visibility", covering ? "visible" : "hidden");
+      if (s.cover === "hand") { cover.setAttribute("x", 128); cover.setAttribute("y", 158); cover.setAttribute("width", 12); cover.setAttribute("height", 44); }
+      else { cover.setAttribute("x", 122); cover.setAttribute("y", 140); cover.setAttribute("width", 30); cover.setAttribute("height", 74); }
+
+      nodes.forEach((n, i) => {
+        const d = s.drops[i];
+        const life = d ? (d.big ? 1 : Math.max(0, 1 - Math.max(0, d.t - 4) / 5)) : 0;
+        n.setAttribute("visibility", d && life > 0.02 ? "visible" : "hidden");
+        if (!d) return;
+        n.setAttribute("cx", (X0 + d.x * M).toFixed(1)); n.setAttribute("cy", (FLOOR - d.y * M).toFixed(1));
+        n.setAttribute("r", d.r); n.setAttribute("opacity", (d.big ? 0.9 : 0.75 * life).toFixed(2));
+      });
+      const cloud = s.drops.length && (p === "blast" || p === "after") && s.t < 6;
+      puff.setAttribute("visibility", cloud ? "visible" : "hidden");
+      if (cloud) { const w = Math.max(0.2, s.far) * M; puff.setAttribute("cx", X0 + w / 2); puff.setAttribute("rx", w / 2 + 14); puff.setAttribute("ry", 28 + w * 0.06); }
+      const showReach = s.done && s.far > 0.3 && (p === "after" || p === "rest");
+      reach.setAttribute("visibility", showReach ? "visible" : "hidden");
+      if (showReach) { const x = X0 + s.far * M; reachLine.setAttribute("x1", x); reachLine.setAttribute("x2", x); reachText.setAttribute("x", Math.max(170, Math.min(880, x))); reachText.textContent = `${fmt1.format(s.far)} m`; }
+
+      $("st-itch").style.width = `${Math.round(Math.min(1, s.itch) * 100)}%`;
+      put($("st-far"), s.done ? `${fmt1.format(s.far)} m` : "—");
+      put($("st-out"), s.done ? `${Math.round((s.out / 170) * 100)} %` : "—");
+      const stage = p === "rest" ? (s.itch > 0.05 ? 1 : -1) : p === "inhale" ? 2 : 3;
+      arcItems.forEach((li, i) => li.classList.toggle("on", p === "rest" ? s.itch > 0.05 && i <= 1 : i <= stage));
+
+      let status;
+      if (p === "inhale") status = "<strong>Nádech.</strong> Práh je překročen a reflex už se nedá odvolat. Bránice se stahuje, hrudník se roztahuje a do plic proudí přes dva litry vzduchu.";
+      else if (p === "squeeze") status = "<strong>Stlačení.</strong> Hlasivky se zavřely, svaly břicha a hrudníku mačkají vzduch proti nim. Oči jsou zavřené.";
+      else if (p === "blast") status = "<strong>Výbuch.</strong> Hlasivky povolily a stlačený vzduch vyletěl nosem i ústy. Strhává s sebou hlen a kapénky.";
+      else if (p === "after") {
+        status = s.cover === "none"
+          ? "<strong>Po kýchnutí.</strong> Velké kapky už leží na zemi do dvou metrů. Oblak drobných kapének letí dál a ve vzduchu vydrží minuty."
+          : s.cover === "hand"
+            ? "<strong>Do dlaně.</strong> Většina kapek skončila na ruce, kterou teď budete sahat na všechno kolem. Zbytek unikl mezi prsty do stran."
+            : "<strong>Do lokte.</strong> Skoro všechno zůstalo v rukávu. Ven se dostal jen zlomek kapének a daleko nedoletěl.";
+      } else if (s.itch > 0.05) status = s.photic ? "<strong>Oslnění.</strong> Silný signál ze zrakového nervu přeskočil na nerv, který hlídá nos. Mozek ho bere jako lechtání. Ještě kousek a kýchnete." : "<strong>Lechtá to.</strong> Čidla v nose hlásí podráždění, ale práh ještě není překročen. Když nepřidáte, pocit sám odezní.";
+      else status = "<strong>Klid.</strong> Na nosní sliznici není nic, co by tam nepatřilo. Zkuste nos podráždit.";
+      put($("status"), status, true);
+    }
+
+    /* ---------- ovládání ---------- */
+    function irritate(amount, photic) { if (s.phase !== "rest") return; s.itch += amount; s.photic = photic; }
+    $("tickle").addEventListener("click", () => irritate(0.38, false));
+    $("sun").addEventListener("click", () => irritate(0.55, true));
+    const seg = $("cover-seg");
+    seg.addEventListener("click", (e) => {
+      const b = e.target.closest("button[data-v]");
+      if (!b) return;
+      seg.querySelectorAll("button").forEach((x) => x.setAttribute("aria-checked", String(x === b)));
+      s.cover = b.dataset.v;
+    });
+
+    let prev = performance.now();
+    function frame(now) {
+      const dt = Math.min(0.05, (now - prev) / 1000);
+      prev = now;
+      step(dt);
+      render();
+      requestAnimationFrame(frame);
+    }
+    render();
+    requestAnimationFrame(frame);
+  })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Jak vzniká duha</title>
+  <meta name="description" content="Co se děje se světlem v kapce deště, proč je duha oblouk, proč má vždy 42 stupňů a proč k ní nejde dojít. S kapkou, do které si můžete posvítit.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700&display=swap">
+  <link rel="stylesheet" href="../style.css">
+  <style>
+    .bow-stage { display: grid; gap: 1rem; grid-template-columns: minmax(0, 1fr); align-items: center; }
+    .side { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; }
+    .side figure { display: grid; gap: 0.35rem; margin: 0; }
+    .side svg { border: 1px solid var(--rule); }
+    .side .label { text-align: center; }
+    @media (min-width: 60rem) {
+      .bow-stage { grid-template-columns: minmax(0, 1fr) 15rem; }
+      .side { grid-template-columns: minmax(0, 1fr); }
+    }
+    /* paprsky jsou vidět jen na tmavém pozadí, scéna je proto tmavá v obou režimech */
+    #drop { border: 1px solid var(--rule); }
+    .dark { fill: #141a26; }
+    .drop { fill: #5b8fd0; fill-opacity: 0.2; stroke: #9cc3f2; stroke-width: 1.6; }
+    .ray { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+    .white { stroke: #f4f1e6; stroke-width: 2.4; }
+    .ref { stroke: #8f9ab5; stroke-width: 1.2; stroke-dasharray: 5 5; }
+    .ang { fill: none; stroke: #f4f1e6; stroke-width: 1.4; }
+    .lab { fill: #f4f1e6; font: 600 14px var(--font-mono); }
+    .lab.dim { fill: #aab4cc; font-weight: 500; font-size: 12.5px; }
+    .c-axis { stroke: #6b727d; stroke-width: 1; }
+    .c-text { fill: #aab4cc; font: 500 10.5px var(--font-mono); }
+    .c-line { fill: none; stroke-width: 2.2; }
+    .c-dot { stroke: #141a26; stroke-width: 1.5; }
+    .ground { fill: #0d1017; }
+    .me { stroke: #f4f1e6; stroke-width: 1.6; fill: none; stroke-linecap: round; }
+    @media (max-width: 46rem) { .lab { font-size: 22px; } .lab.dim { display: none; } }
+  </style>
+</head>
+<body data-cat="priroda">
+  <header class="topbar">
+    <div class="wrap">
+      <a class="brand" href="../">Jak věci fungují</a>
+      <nav class="crumbs" aria-label="Drobečková navigace"><a href="../#priroda">Příroda</a><span aria-hidden="true">/</span><span>Duha</span></nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <header class="art-head">
+      <p class="eyebrow">Příroda</p>
+      <h1 class="display">Jak vzniká duha</h1>
+      <p class="lede">Duha není na žádném místě. Je to směr. Každá kapka deště posílá sluneční světlo zpátky pod úhlem 42 stupňů, a vy vidíte barevně ty kapky, které jsou zrovna v tomhle úhlu od vás.</p>
+    </header>
+
+    <section class="tldr" aria-labelledby="h-zkratka">
+      <h2 class="label" id="h-zkratka">Ve zkratce</h2>
+      <ul>
+        <li>Světlo do kapky vnikne, na zadní stěně se odrazí a zase vyjde ven. Při vstupu i výstupu se láme.</li>
+        <li>Většina paprsků vyjde z kapky <span class="hl">pod úhlem kolem 42°</span> od směru, kterým přišly. Proto je duha oblouk.</li>
+        <li>Každá barva se láme trochu jinak, a tak má každá svůj úhel. Červená je na vnějším okraji, fialová na vnitřním.</li>
+      </ul>
+    </section>
+
+    <figure class="fig" id="obr1">
+      <div class="fig-head">
+        <p class="fig-num"><b>Obr. 1</b> Paprsek v kapce</p>
+        <span class="label">Posouvejte místo, kde paprsek do kapky vstoupí</span>
+      </div>
+      <div class="fig-stage bow-stage">
+        <svg id="drop" viewBox="0 0 640 420" role="img" aria-label="Kapka vody, do které zleva vstupuje sluneční paprsek, uvnitř se odráží a vychází rozložený na barvy"></svg>
+        <div class="side">
+          <figure>
+            <svg id="chart" viewBox="0 0 200 150" role="img" aria-label="Graf: pod jakým úhlem paprsek z kapky vyjde podle toho, kde do ní vstoupil"></svg>
+            <span class="label">Úhel výstupu podle místa vstupu</span>
+          </figure>
+          <figure>
+            <svg id="land" viewBox="0 0 200 150" role="img" aria-label="Krajina s duhou podle výšky Slunce"></svg>
+            <span class="label">Kde duhu uvidíte</span>
+          </figure>
+        </div>
+      </div>
+      <div class="fig-controls">
+        <div class="ctl ctl-grow">
+          <label class="label" for="entry">Místo vstupu paprsku</label>
+          <div class="ctl-row">
+            <input type="range" id="entry" min="2" max="99" step="1" value="86">
+            <output class="val" id="entry-val" for="entry"></output>
+          </div>
+        </div>
+        <div class="ctl">
+          <span class="label" id="lbl-k">Odrazů v kapce</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-k" id="k-seg">
+            <button type="button" role="radio" data-v="1" aria-checked="true">Jeden</button>
+            <button type="button" role="radio" data-v="2" aria-checked="false">Dva</button>
+          </div>
+        </div>
+        <div class="ctl">
+          <span class="label" id="lbl-all">Paprsky</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-all" id="all-seg">
+            <button type="button" role="radio" data-v="0" aria-checked="true">Jeden</button>
+            <button type="button" role="radio" data-v="1" aria-checked="false">Všechny</button>
+          </div>
+        </div>
+        <div class="ctl ctl-grow">
+          <label class="label" for="sun">Výška Slunce</label>
+          <div class="ctl-row">
+            <input type="range" id="sun" min="0" max="60" step="1" value="15">
+            <output class="val" id="sun-val" for="sun">15°</output>
+          </div>
+        </div>
+      </div>
+      <div class="fig-status split">
+        <p class="status" id="status" aria-live="polite"></p>
+        <ul class="stats" aria-label="Stav modelu">
+          <li><span class="n">Červená vyjde pod</span><span class="v" id="st-red"></span></li>
+          <li><span class="n">Fialová pod</span><span class="v" id="st-violet"></span></li>
+          <li><span class="n">Duhový úhel</span><span class="v" id="st-bow"></span></li>
+        </ul>
+      </div>
+      <figcaption class="fig-caption">Paprsky se lámou podle skutečného indexu lomu vody: 1,331 pro červené světlo a 1,343 pro fialové. Rozdíl mezi barvami je v obrázku ve správné velikosti, proto je tak malý. Na každém rozhraní se ve skutečnosti část světla odrazí a část projde. Kreslí se jen cesta, která dělá duhu.</figcaption>
+    </figure>
+
+    <section class="sec" aria-labelledby="h-kapka">
+      <div class="prose">
+        <h2 id="h-kapka">Hranol a zrcátko v jednom</h2>
+        <p>Kapka deště je skoro dokonalá kulička vody. Když na ni dopadne sluneční paprsek, většina světla proletí skrz. Malá část ale udělá něco zajímavějšího.</p>
+        <p>Při vstupu do vody se paprsek zlomí, protože světlo je ve vodě pomalejší než ve vzduchu. Doletí na zadní stěnu kapky a tam se kousek světla odrazí zpátky dovnitř, jako od zrcátka. Na cestě ven se zlomí podruhé. Výsledkem je paprsek, který se z kapky vrací skoro tam, odkud přišel, jen o něco stranou.</p>
+        <p>Duhu proto vidíte vždycky se Sluncem v zádech. Díváte se na světlo, které se od kapek vrátilo.</p>
+      </div>
+      <aside class="note" aria-label="Duha v číslech">
+        <span class="label">V číslech</span>
+        <dl class="facts">
+          <div><dt>42°</dt><dd>poloměr hlavní duhy</dd></div>
+          <div><dt>51°</dt><dd>poloměr vedlejší duhy</dd></div>
+          <div><dt>1,333</dt><dd>index lomu vody: světlo je v ní o čtvrtinu pomalejší</dd></div>
+        </dl>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-uhel">
+      <div class="prose">
+        <h2 id="h-uhel">Proč zrovna 42 stupňů</h2>
+        <p>Na kapku dopadá světlo po celé ploše. Paprsek, který ji trefí přesně doprostřed, se vrátí rovně zpátky. Čím dál od středu vstoupí, tím víc se cestou stočí do strany. Ale jen do určité míry. Kolem 42 stupňů se to zastaví a paprsky, které vstoupí ještě blíž k okraji, se zase stáčejí míň.</p>
+        <p>V tom je celý trik. Tam, kde se úhel obrací, se skoro nemění. Spousta paprsků, které do kapky vstoupily na různých místech, z ní vyjde <span class="hl">téměř stejným směrem,</span> natěsnaná k sobě. V tom směru kapka svítí mnohem silněji než ve všech ostatních.</p>
+        <p>Kapka tedy neposílá světlo všude stejně. Vyzařuje ho hlavně do kužele o úhlu 42 stupňů. Když jste zrovna na plášti toho kužele, kapka se vám rozsvítí.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Přepněte paprsky na Všechny. Většina jich vychází rozházeně, ale u dolního okraje se k sobě nahrnou. To je duha. Pak jezděte posuvníkem a sledujte v grafu, jak úhel roste, zastaví se na vrcholu a klesá.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-barvy">
+      <div class="prose">
+        <h2 id="h-barvy">Odkud jsou barvy</h2>
+        <p>Voda neláme všechny barvy stejně. Fialové světlo se v ní zlomí o něco víc než červené. Rozdíl je nepatrný, ale stačí: červená vychází z kapky nejhustěji pod úhlem 42,4 stupně, fialová pod 40,6. Ostatní barvy jsou mezi nimi.</p>
+        <p>Každá barva tak má svůj vlastní oblouk o trochu jiném poloměru a duha je jejich řada. Červená je venku, protože její úhel je největší. Pořadí je vždycky stejné, protože je dané vodou, ne počasím.</p>
+        <p>Duha přitom není sedm pruhů. Barvy v ní přecházejí plynule a překrývají se. Sedmičku jí přisoudil Isaac Newton, kterému se líbila shoda se sedmi tóny stupnice.</p>
+      </div>
+    </section>
+
+    <section class="sec" aria-labelledby="h-oblouk">
+      <div class="prose">
+        <h2 id="h-oblouk">Proč je to oblouk</h2>
+        <p>Představte si přímku, která vede od Slunce přes vaši hlavu dál, do místa, kam padá stín vaší hlavy. Všechny kapky, které jsou od téhle přímky odkloněné o 42 stupňů, vám svítí červeně. A všechna taková místa dohromady tvoří kruh. Jeho střed je ve stínu vaší hlavy.</p>
+        <p>Celý kruh obvykle nevidíte, protože jeho spodní polovinu zakrývá země. Z letadla nebo z vysoké hory, kde jsou kapky i pod vámi, je duha opravdu kulatá.</p>
+        <p>Z toho plyne pár zvláštních věcí. Duha jde s vámi: když uděláte krok, svítí vám jiné kapky. Dva lidé vedle sebe nevidí tutéž duhu, každý má svou. A k jejímu konci se dojít nedá. Není tam, je jen ve směru, kterým se díváte.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Posouvejte výšku Slunce a sledujte malou krajinu. Čím je Slunce výš, tím níž leží střed kruhu a tím menší kus duhy vyčnívá nad obzor. Nad 42 stupni zmizí celá.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-kdy">
+      <div class="prose">
+        <h2 id="h-kdy">Kdy ji hledat</h2>
+        <p>Potřebujete tři věci najednou: Slunce za zády, déšť před sebou a Slunce nízko, níž než 42 stupňů nad obzorem. Proto jsou duhy hlavně ráno a k večeru, po přeháňce, která odchází na opačnou stranu, než kde je Slunce. V létě v poledne duhu neuvidíte, i kdyby lilo a svítilo zároveň.</p>
+        <p>Vlastní duhu si uděláte zahradní hadicí. Postavte se zády ke Slunci a rozprašte vodu před sebe.</p>
+      </div>
+    </section>
+
+    <section class="sec" aria-labelledby="h-druha">
+      <div class="prose">
+        <h2 id="h-druha">Druhá duha a tmavý pás</h2>
+        <p>Část světla se v kapce odrazí dvakrát. Vyjde pak pod větším úhlem, kolem 51 stupňů, a vytvoří druhou, vnější duhu. Je slabší, protože při každém odrazu většina světla z kapky unikne, a má barvy v opačném pořadí, s červenou uvnitř.</p>
+        <p>Mezi oběma duhami je obloha znatelně tmavší než jinde. Do toho pruhu žádná kapka světlo neposílá: po jednom odrazu ho vrací jen do úhlů menších než 42 stupňů, po dvou jen do větších než 51. Uvnitř hlavní duhy je naopak nebe světlejší, tam míří všechny ty rozházené paprsky.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Přepněte na dva odrazy. Paprsek vstupuje do spodní poloviny kapky, oběhne ji skoro celou a fialová s červenou si na výstupu vymění místa.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-historie">
+      <div class="prose">
+        <h2 id="h-historie">Sedm set let hledání</h2>
+        <p>Že duha vzniká v jednotlivých kapkách lomem a odrazem, zjistil kolem roku 1310 dominikán Dětřich z Freibergu. Naplnil vodou skleněnou kouli a díval se, kudy v ní světlo chodí. Úhel 42 stupňů spočítal v roce 1637 René Descartes, když propočítal dráhy tisíců paprsků jeden po druhém.</p>
+        <p>Barvy mu ale vysvětlit nešly. To, že hranol bílé světlo nebarví, ale rozkládá, popsal už v roce 1648 pražský lékař a fyzik Jan Marek Marci z Lanškrouna. Jeho knihu o duze skoro nikdo nečetl a sláva připadla o dvacet let později Newtonovi.</p>
+      </div>
+    </section>
+
+    <footer class="art-foot">
+      <a class="next" href="../kychani/" data-cat="telo">
+        <span class="label">Další článek · Lidské tělo</span>
+        <span class="t">Proč kýcháme</span>
+        <p>Co se v těle stane za tu vteřinu mezi lechtáním v nose a hepčí.</p>
+      </a>
+      <a class="back" href="../">Všechna témata</a>
+    </footer>
+  </main>
+
+  <script>
+  (() => {
+    const NS = "http://www.w3.org/2000/svg";
+    function el(tag, attrs, parent) {
+      const n = document.createElementNS(NS, tag);
+      for (const k in attrs || {}) n.setAttribute(k, attrs[k]);
+      if (parent) parent.appendChild(n);
+      return n;
+    }
+    const svg = document.getElementById("drop"), chart = document.getElementById("chart"), land = document.getElementById("land");
+
+    /* ---------- lom a odraz v kapce ---------- */
+    const COLORS = [{ n: 1.331, css: "#ff4a3d", name: "red" }, { n: 1.335, css: "#4bd16f", name: "green" }, { n: 1.343, css: "#a678ff", name: "violet" }];
+    const DEG = 180 / Math.PI;
+    const s = { b: 0.86, k: 1, all: false, sun: 15 };
+    // úhel mezi vycházejícím paprskem a směrem zpátky ke Slunci, ve stupních
+    function bowAngle(b, n, k) {
+      const i = Math.asin(b), r = Math.asin(b / n);
+      return (k === 1 ? 4 * r - 2 * i : Math.PI + 2 * i - 6 * r) * DEG;
+    }
+    function peak(n, k) {
+      const cos = Math.sqrt((n * n - 1) / (k === 1 ? 3 : 8)), b = Math.sqrt(1 - cos * cos);
+      return { b, angle: bowAngle(b, n, k) };
+    }
+
+    const C = { x: 372, y: 204 }, R = 132;
+    // dráha paprsku: vstup, k odrazů, výstup. Při dvou odrazech vstupuje do spodní poloviny kapky.
+    function trace(b, n, k) {
+      const flip = k === 1 ? 1 : -1, i = Math.asin(b), r = Math.asin(b / n);
+      const at = (t) => [C.x + R * Math.cos(t), C.y - flip * R * Math.sin(t)];
+      let t = Math.PI - i;
+      const pts = [at(t)];
+      for (let j = 0; j <= k; j++) { t -= Math.PI - 2 * r; pts.push(at(t)); }
+      const dir = -(2 * (i - r) + k * (Math.PI - 2 * r));
+      const last = pts[pts.length - 1];
+      pts.push([last[0] + 520 * Math.cos(dir), last[1] - flip * 520 * Math.sin(dir)]);
+      return { pts, entry: pts[0], exit: last, dir: [Math.cos(dir), -flip * Math.sin(dir)] };
+    }
+    const d = (pts) => pts.map((p, i) => `${i ? "L" : "M"}${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join("");
+
+    el("rect", { x: 0, y: 0, width: 640, height: 420, class: "dark" }, svg);
+    el("circle", { cx: C.x, cy: C.y, r: R, class: "drop" }, svg);
+    el("text", { x: 16, y: 28, class: "lab dim" }, svg).textContent = "světlo ze Slunce →";
+    const fanG = el("g", {}, svg), rayG = el("g", {}, svg);
+    const inRay = el("line", { x1: 0, class: "ray white" }, svg);
+    const refLine = el("line", { class: "ref" }, svg), arcPath = el("path", { class: "ang" }, svg), arcText = el("text", { class: "lab" }, svg);
+
+    /* ---------- graf ---------- */
+    el("rect", { x: 0, y: 0, width: 200, height: 150, class: "dark" }, chart);
+    const G = { x: 28, y: 12, w: 160, h: 112 };
+    const gx = (b) => G.x + b * G.w;
+    let gy = () => 0;
+    el("line", { x1: G.x, y1: G.y, x2: G.x, y2: G.y + G.h, class: "c-axis" }, chart);
+    el("line", { x1: G.x, y1: G.y + G.h, x2: G.x + G.w, y2: G.y + G.h, class: "c-axis" }, chart);
+    el("text", { x: G.x, y: G.y + G.h + 14, class: "c-text" }, chart).textContent = "střed";
+    el("text", { x: G.x + G.w, y: G.y + G.h + 14, "text-anchor": "end", class: "c-text" }, chart).textContent = "okraj kapky";
+    const axisTop = el("text", { x: G.x - 4, y: G.y + 6, "text-anchor": "end", class: "c-text" }, chart);
+    const axisBot = el("text", { x: G.x - 4, y: G.y + G.h, "text-anchor": "end", class: "c-text" }, chart);
+    const curves = COLORS.filter((c) => c.name !== "green").map((c) => ({ c, line: el("path", { class: "c-line", stroke: c.css }, chart), dot: el("circle", { r: 4.5, class: "c-dot", fill: c.css }, chart) }));
+
+    /* ---------- krajina ---------- */
+    const HOR = 112, PX = 1.55;
+    el("rect", { x: 0, y: 0, width: 200, height: 150, fill: "#3b5d8a" }, land);
+    el("clipPath", { id: "above" }, land).appendChild(el("rect", { x: 0, y: 0, width: 200, height: HOR }));
+    const bowG = el("g", { "clip-path": "url(#above)" }, land);
+    el("rect", { x: 0, y: HOR, width: 200, height: 38, class: "ground" }, land);
+    el("path", { d: `M100 ${HOR + 20} v-12 m-5 5 h10 M100 ${HOR + 5} a3.5 3.5 0 1 0 0.1 0`, class: "me" }, land);
+    const landNote = el("text", { x: 100, y: 24, "text-anchor": "middle", class: "c-text", fill: "#f4f1e6" }, land);
+
+    /* ---------- výpis ---------- */
+    const fmt1 = new Intl.NumberFormat("cs-CZ", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    const $ = (id) => document.getElementById(id);
+
+    function render() {
+      const { b, k } = s;
+      rayG.textContent = ""; fanG.textContent = "";
+      if (s.all) {
+        for (let x = 0.04; x < 0.995; x += 0.03) el("path", { d: d(trace(x, COLORS[0].n, k).pts), class: "ray", stroke: "#f4f1e6", "stroke-width": 1, opacity: 0.3 }, fanG);
+      }
+      const traces = COLORS.map((c) => ({ c, t: trace(b, c.n, k) }));
+      traces.forEach(({ c, t }) => el("path", { d: d(t.pts), class: "ray", stroke: c.css, "stroke-width": 2.2 }, rayG));
+      const red = traces[0].t;
+      inRay.setAttribute("y1", red.entry[1]); inRay.setAttribute("x2", red.entry[0]); inRay.setAttribute("y2", red.entry[1]);
+
+      // úhel mezi vycházejícím paprskem a směrem zpátky ke Slunci
+      const [ex, ey] = red.exit, L = 150;
+      refLine.setAttribute("x1", ex); refLine.setAttribute("y1", ey); refLine.setAttribute("x2", ex - L); refLine.setAttribute("y2", ey);
+      const a = Math.atan2(red.dir[1], red.dir[0]), r = 62, down = red.dir[1] > 0;
+      arcPath.setAttribute("d", `M${(ex - r).toFixed(1)} ${ey.toFixed(1)} A${r} ${r} 0 0 ${down ? 0 : 1} ${(ex + r * Math.cos(a)).toFixed(1)} ${(ey + r * Math.sin(a)).toFixed(1)}`);
+      const redA = bowAngle(b, COLORS[0].n, k), vioA = bowAngle(b, COLORS[2].n, k);
+      const mid = (Math.PI + a) / 2 + (down ? 0 : Math.PI);
+      arcText.setAttribute("x", (ex + (r + 34) * Math.cos(mid) - 26).toFixed(1)); arcText.setAttribute("y", (ey + (r + 22) * Math.sin(mid) + 5).toFixed(1));
+      arcText.textContent = `${fmt1.format(redA)}°`;
+      const far = Math.abs(redA) < 6;
+      [refLine, arcPath, arcText].forEach((n) => n.setAttribute("visibility", far ? "hidden" : "visible"));
+
+      // graf: úhel podle místa vstupu
+      const lo = k === 1 ? 0 : 45, hi = k === 1 ? 46 : 185;
+      gy = (deg) => G.y + G.h - ((deg - lo) / (hi - lo)) * G.h;
+      axisTop.textContent = `${hi}°`; axisBot.textContent = `${lo}°`;
+      curves.forEach(({ c, line, dot }) => {
+        let p = "";
+        for (let x = 0; x <= 0.995; x += 0.01) p += `${x ? "L" : "M"}${gx(x).toFixed(1)} ${gy(bowAngle(x, c.n, k)).toFixed(1)}`;
+        line.setAttribute("d", p);
+        dot.setAttribute("cx", gx(b).toFixed(1)); dot.setAttribute("cy", gy(bowAngle(b, c.n, k)).toFixed(1));
+      });
+
+      // krajina: duha je kruh kolem místa přesně naproti Slunci, tedy pod obzorem
+      bowG.textContent = "";
+      const cy = HOR + s.sun * PX;
+      const bands = [[peak(1.331, 1).angle, "#ff4a3d"], [41.7, "#ffd23d"], [41.1, "#4bd16f"], [peak(1.343, 1).angle, "#a678ff"]];
+      bands.forEach(([deg, color]) => el("circle", { cx: 100, cy, r: deg * PX, fill: "none", stroke: color, "stroke-width": 1.6 }, bowG));
+      if (k === 2) [[peak(1.331, 2).angle, "#ff4a3d"], [51.8, "#4bd16f"], [peak(1.343, 2).angle, "#a678ff"]].forEach(([deg, color]) => el("circle", { cx: 100, cy, r: deg * PX, fill: "none", stroke: color, "stroke-width": 1, opacity: 0.7 }, bowG));
+      landNote.textContent = s.sun >= 42 ? "Slunce je moc vysoko" : "";
+
+      const pk = peak(COLORS[0].n, k);
+      $("entry-val").textContent = `${Math.round(b * 100)} %`;
+      $("st-red").textContent = `${fmt1.format(redA)}°`;
+      $("st-violet").textContent = `${fmt1.format(vioA)}°`;
+      $("st-bow").textContent = `${fmt1.format(pk.angle)}°`;
+      const near = Math.abs(b - pk.b) < 0.045;
+      let status;
+      if (k === 2 && near) {
+        status = "<strong>Vedlejší duha.</strong> Po dvou odrazech se paprsky hromadí kolem 51 stupňů. Červená teď vychází pod menším úhlem než fialová, a tak má druhá duha barvy obráceně.";
+      } else if (k === 2) {
+        status = "<strong>Dva odrazy.</strong> Paprsek oběhne kapku skoro dokola. Většina takových paprsků vyjde pod úhlem větším než 51 stupňů a rozplyne se vně druhé duhy.";
+      } else if (near) {
+        status = "<strong>Tady vzniká duha.</strong> Paprsky, které do kapky vstoupí kolem tohohle místa, vyjdou skoro přesně stejným směrem, pod 42 stupni. Světlo se v tom směru nahromadí.";
+      } else if (b < pk.b) {
+        status = "<strong>Blíž ke středu.</strong> Paprsek se vrací pod menším úhlem. Takových směrů je spousta a světlo se do nich rozptýlí. Dělá jen slabý jas uvnitř duhy.";
+      } else {
+        status = "<strong>Těsně u okraje.</strong> Paprsek se láme tak prudce, že se úhel zase zmenšuje. Nikdy nepřekročí 42 stupňů, a proto je vně duhy tma.";
+      }
+      $("status").innerHTML = status;
+    }
+
+    /* ---------- ovládání ---------- */
+    $("entry").addEventListener("input", (e) => { s.b = Number(e.target.value) / 100; render(); });
+    $("sun").addEventListener("input", (e) => { s.sun = Number(e.target.value); $("sun-val").textContent = `${s.sun}°`; render(); });
+    function bindSeg(id, apply) {
+      const seg = $(id);
+      seg.addEventListener("click", (e) => {
+        const b = e.target.closest("button[data-v]");
+        if (!b) return;
+        seg.querySelectorAll("button").forEach((x) => x.setAttribute("aria-checked", String(x === b)));
+        apply(b.dataset.v);
+        render();
+      });
+    }
+    bindSeg("k-seg", (v) => {
+      s.k = Number(v);
+      s.b = Math.round(peak(COLORS[0].n, s.k).b * 100) / 100;
+      $("entry").value = Math.round(s.b * 100);
+    });
+    bindSeg("all-seg", (v) => { s.all = v === "1"; });
+    render();
+  })();
+  </script>
+</body>
+</html>

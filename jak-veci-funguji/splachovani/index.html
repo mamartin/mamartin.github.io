@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Jak funguje splachovací nádržka</title>
+  <meta name="description" content="Co se děje v nádržce, když zmáčknete tlačítko, proč se sama zase napustí a jak mísu vyprázdní obyčejné koleno v trubce. S řezem záchodem, který si můžete spláchnout.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700&display=swap">
+  <link rel="stylesheet" href="../style.css">
+  <style>
+    .wall { fill: none; stroke: var(--pin-top); stroke-width: 8; stroke-linejoin: round; stroke-linecap: round; }
+    .porcelain { fill: none; stroke: var(--metal-line); stroke-width: 8; stroke-linejoin: round; stroke-linecap: round; }
+    .water { fill: var(--cold); opacity: 0.3; }
+    .stream { stroke: var(--cold); stroke-width: 5; stroke-linecap: round; opacity: 0.75; }
+    .pipe { fill: none; stroke: var(--metal-line); stroke-width: 5; stroke-linecap: round; }
+    .tube { fill: var(--surface); stroke: var(--metal-line); stroke-width: 2; }
+    .float { fill: var(--pin-key); stroke: var(--metal-line); stroke-width: 1.4; }
+    .valve { fill: var(--ink); }
+    .flap { fill: var(--hot); stroke: var(--metal-line); stroke-width: 1.2; }
+    .chain { stroke: var(--ink-3); stroke-width: 1.4; stroke-dasharray: 3 3; }
+    .knob { fill: var(--steel); stroke: var(--metal-line); stroke-width: 1.4; }
+  </style>
+</head>
+<body data-cat="domacnost">
+  <header class="topbar">
+    <div class="wrap">
+      <a class="brand" href="../">Jak věci fungují</a>
+      <nav class="crumbs" aria-label="Drobečková navigace"><a href="../#domacnost">Domácnost</a><span aria-hidden="true">/</span><span>Splachovací nádržka</span></nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <header class="art-head">
+      <p class="eyebrow">Domácnost</p>
+      <h1 class="display">Jak funguje splachovací nádržka</h1>
+      <p class="lede">Záchod nemá motor, čidla ani elektřinu. Vystačí si s plovákem, dvěma ventily a ohnutou trubkou. Všechno ostatní udělá gravitace.</p>
+    </header>
+
+    <section class="tldr" aria-labelledby="h-zkratka">
+      <h2 class="label" id="h-zkratka">Ve zkratce</h2>
+      <ul>
+        <li>Nádržka je zásobník. Pomalu nastřádá šest litrů vody a pak je do mísy pustí během pár sekund.</li>
+        <li>Napouštění hlídá <span class="hl">plovák.</span> Stoupá s hladinou, a když je nádržka plná, zavře přívod vody.</li>
+        <li>Mísu nevyprázdní proud vody, ale koleno v odpadu. Jakmile se zaplní, začne vodu z mísy samo sát.</li>
+      </ul>
+    </section>
+
+    <figure class="fig" id="obr1">
+      <div class="fig-head">
+        <p class="fig-num"><b>Obr. 1</b> Řez nádržkou a mísou</p>
+        <span class="label">Spláchněte a sledujte hladiny</span>
+      </div>
+      <div class="fig-stage">
+        <svg id="wc" viewBox="-100 0 830 480" role="img" aria-label="Řez splachovací nádržkou s plovákem a ventily a mísou se sifonem"></svg>
+      </div>
+      <div class="fig-controls">
+        <button type="button" class="btn" id="big">Spláchnout naplno</button>
+        <button type="button" class="btn ghost" id="small">Malé spláchnutí</button>
+        <div class="ctl">
+          <span class="label" id="lbl-leak">Vypouštěcí ventil</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-leak" id="leak-seg">
+            <button type="button" role="radio" data-v="0" aria-checked="true">Těsní</button>
+            <button type="button" role="radio" data-v="1" aria-checked="false">Protéká</button>
+          </div>
+        </div>
+      </div>
+      <div class="fig-status split">
+        <p class="status" id="status" aria-live="polite"></p>
+        <ul class="stats" aria-label="Stav modelu">
+          <li><span class="n">V nádržce</span><span class="v" id="st-tank"></span></li>
+          <li><span class="n">V míse</span><span class="v" id="st-bowl"></span></li>
+          <li><span class="n" id="st-used-n">Spotřebováno</span><span class="v" id="st-used"></span></li>
+        </ul>
+      </div>
+      <figcaption class="fig-caption">Schematický řez, ne v měřítku. Napouštění je oproti skutečnosti zrychlené, opravdová nádržka se plní asi minutu. Červená klapka je vypouštěcí ventil, žlutá koule plovák.</figcaption>
+    </figure>
+
+    <section class="sec" aria-labelledby="h-zasobnik">
+      <div class="prose">
+        <h2 id="h-zasobnik">Proč vůbec nádržka</h2>
+        <p>Aby se mísa pořádně spláchla, musí do ní voda vtrhnout: šest litrů za tři sekundy. Běžná přípojka v bytě dá sotva čtvrt litru za sekundu. Trubka, která by to zvládla přímo, by musela být tlustá jako zápěstí.</p>
+        <p>Nádržka to řeší oklikou. Minutu si vodu tenkou trubičkou střádá a pak ji širokým otvorem pustí naráz. Je to stejný trik jako blesk u fotoaparátu, který se chvíli nabíjí, aby mohl vydat všechno v jediném záblesku.</p>
+      </div>
+      <aside class="note" aria-label="Nádržka v číslech">
+        <span class="label">V číslech</span>
+        <dl class="facts">
+          <div><dt>6 / 3 l</dt><dd>velké a malé spláchnutí dnešního záchodu</dd></div>
+          <div><dt>9–12 l</dt><dd>spotřebovaly staré nádržky na jedno spláchnutí</dd></div>
+          <div><dt>≈ čtvrtina</dt><dd>vody v domácnosti proteče záchodem</dd></div>
+        </dl>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-plovak">
+      <div class="prose">
+        <h2 id="h-plovak">Plovák, který zavírá vodu</h2>
+        <p>Voda do nádržky teče napouštěcím ventilem. Na ventilu je páka a na jejím konci dutá koule nebo válec, plovák. Když je nádržka prázdná, plovák visí dole a páka drží ventil otevřený. Jak hladina stoupá, voda plovák nadnáší, páka se zvedá a ventil přivírá. Ve chvíli, kdy je hladina tam, kde má být, je ventil zavřený úplně.</p>
+        <p>Je to nejjednodušší regulátor, jaký existuje. Nepotřebuje energii ani nastavování a sám se přizpůsobí: když voda teče pomalu, čeká déle, když rychle, zavře dřív. <span class="hl">Hlídá přímo to, o co jde, tedy výšku hladiny.</span></p>
+        <p>Pro případ, že by ventil selhal a nezavřel, je v nádržce přepad: svislá trubka otevřená těsně nad správnou hladinou. Voda, která by jinak přetekla na podlahu, jí odteče do mísy.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Spláchněte a dívejte se na žlutý plovák. Klesne s hladinou, otevře přívod vody a pak s ní zase pomalu stoupá, dokud ho páka nezavře.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-ventil">
+      <div class="prose">
+        <h2 id="h-ventil">Co udělá tlačítko</h2>
+        <p>Na dně nádržky je velký otvor, který ucpává vypouštěcí ventil, gumová klapka nebo zvon. Drží ho tam váha vody nad ním. Tlačítkem ho přes táhlo nadzvednete.</p>
+        <p>Jakmile se klapka odlepí, voda pod ni vteče a klapka je sama lehčí než voda. Zůstane proto plavat nahoře, i když tlačítko pustíte, a klesne zpátky teprve s hladinou. Držet tlačítko tedy nemusíte, stačí ťuknout.</p>
+        <p>Malé spláchnutí funguje stejně, jen se ventil zavře dřív, když odteče polovina vody. Na většinu návštěv to stačí.</p>
+      </div>
+    </section>
+
+    <section class="sec" aria-labelledby="h-sifon">
+      <div class="prose">
+        <h2 id="h-sifon">Koleno, které saje</h2>
+        <p>Odpad z mísy nevede rovně dolů. Nejdřív stoupá, přehoupne se přes hrb a teprve pak padá do kanalizace. V prohlubni před hrbem proto stojí voda. Říká se jí vodní uzávěr a je to zátka: nepustí do koupelny zápach ze stoky.</p>
+        <p>Stejné koleno mísu i vyprazdňuje. Když do mísy vtrhne voda z nádržky, hladina stoupne a voda začne přetékat přes hrb. Je jí tolik, že zaplní celou trubku za ním. Sloupec vody, který v ní padá dolů, za sebou táhne další vodu, a ta další. Z mísy se stane <span class="hl">násoska.</span> Vysaje se skoro do dna i se vším, co v ní bylo.</p>
+        <p>Sání skončí, až hladina klesne k ústí odpadu a do trubky se dostane vzduch. To je to zachrčení na konci. Zbytek vody z nádržky pak mísu dopustí zpátky po hrb.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Při spláchnutí sledujte mísu. Hladina nejdřív stoupne, a jakmile se trubka za hrbem zaplní, spadne skoro ke dnu, přestože voda z nádržky pořád přitéká.</p>
+        <p>Stejně funguje kbelík vody vylitý do mísy. Spláchne ji i bez nádržky.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-proteka">
+      <div class="prose">
+        <h2 id="h-proteka">Když záchod protéká</h2>
+        <p>Klapka vypouštěcího ventilu časem ztvrdne nebo se na ni usadí vodní kámen a přestane těsnit. Voda pak tenkým pramínkem teče do mísy, hladina v nádržce pomalu klesá, plovák to pozná a čas od času ji dopustí. Slyšet je jen občasné zasyčení.</p>
+        <p>Vypadá to nevinně, ale teče to dnem i nocí. Protékající záchod spotřebuje klidně několik set litrů denně, tedy víc než celá domácnost dohromady.</p>
+        <p>Poznáte to snadno. Kápněte do nádržky trochu potravinářského barviva a čtvrt hodiny nesplachujte. Když se barva objeví v míse, ventil netěsní. Nová klapka stojí pár desítek korun.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Přepněte ventil na Protéká. Pramínek do mísy skoro není vidět, ale počítadlo ukáže, kolik vody by tak uteklo za den.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-historie">
+      <div class="prose">
+        <h2 id="h-historie">Čtyři sta let starý nápad</h2>
+        <p>Splachovací záchod s nádržkou navrhl už v roce 1596 anglický dvořan John Harington pro královnu Alžbětu I. Neujal se, protože neměl koleno a z odpadu páchl. To přidal až v roce 1775 hodinář Alexander Cumming, když si dal patentovat esovitě prohnutou trubku s vodním uzávěrem.</p>
+        <p>Thomas Crapper, kterému se vynález často připisuje, záchod nevymyslel. Byl to londýnský instalatér, který je v 19. století úspěšně vyráběl a prodával a měl jméno, které se dobře pamatuje.</p>
+      </div>
+    </section>
+
+    <footer class="art-foot">
+      <a class="next" href="../gps/" data-cat="technika">
+        <span class="label">Další článek · Technika</span>
+        <span class="t">Jak funguje GPS</span>
+        <p>Jak telefon zjistí, kde je, když do vesmíru nic neposílá.</p>
+      </a>
+      <a class="back" href="../">Všechna témata</a>
+    </footer>
+  </main>
+
+  <script>
+  (() => {
+    const NS = "http://www.w3.org/2000/svg";
+    function el(tag, attrs, parent) {
+      const n = document.createElementNS(NS, tag);
+      for (const k in attrs || {}) n.setAttribute(k, attrs[k]);
+      if (parent) parent.appendChild(n);
+      return n;
+    }
+    const svg = document.getElementById("wc");
+
+    /* ---------- model ---------- */
+    const FULL = 6;                 // litrů v plné nádržce
+    const REST = 1.5;               // litrů v míse, když hladina stojí u hrbu
+    const PRIME = 1.85;             // při tomhle množství se koleno zaplní a začne sát
+    const BREAK = 0.6;              // hladina u ústí odpadu: do trubky se dostane vzduch
+    const LEAK = 0.004;             // l/s netěsnou klapkou
+    const s = { tank: FULL, bowl: REST, open: false, stopAt: 0, siphon: false, filling: false, leak: false, used: 0, flow: 0 };
+
+    function flush(litres) {
+      if (s.open || s.tank < 1) return;
+      s.open = true;
+      s.stopAt = Math.max(0.4, s.tank - litres);
+    }
+
+    function step(dt) {
+      // vypouštěcí ventil: klapka plave, dokud hladina neklesne
+      s.flow = 0;
+      if (s.open) {
+        s.flow = 0.35 + 1.75 * Math.sqrt(s.tank / FULL);
+        s.tank -= s.flow * dt;
+        if (s.tank <= s.stopAt) { s.tank = Math.max(s.tank, 0); s.open = false; }
+      } else if (s.leak && s.tank > 0.2) {
+        s.flow = LEAK;
+        s.tank -= LEAK * dt;
+      }
+      // plovák: otevře, když hladina klesne, a zavře, když je plno
+      if (!s.filling && s.tank < FULL - 0.12) s.filling = true;
+      let refill = 0;
+      if (s.filling && !s.open) {
+        const q = 0.32 * Math.min(1, (FULL - s.tank) / 0.4 + 0.08);
+        s.tank += q * dt; s.used += q * dt;
+        if (s.tank >= FULL) { s.tank = FULL; s.filling = false; }
+        if (s.bowl < REST) { refill = 0.09; s.used += refill * dt; }   // část vody jde přepadem dopustit mísu
+      }
+      // mísa a koleno
+      const inflow = s.flow + refill;
+      let out;
+      if (s.siphon) {
+        out = s.bowl > BREAK ? Math.max(2.7, inflow + 0.7) : inflow;
+        if (s.bowl <= BREAK && s.flow < 0.3) s.siphon = false;
+      } else {
+        out = 3.2 * Math.max(0, s.bowl - REST) ** 1.5;                // voda přepadá přes hrb
+        if (s.bowl >= PRIME) s.siphon = true;
+      }
+      s.bowl = Math.max(0.2, s.bowl + (inflow - out) * dt);
+      s.out = out;
+    }
+
+    /* ---------- kresba ---------- */
+    const T = { x0: 78, x1: 322, top: 90, bottom: 242 };              // hladiny v nádržce
+    const tankY = () => T.bottom - (s.tank / FULL) * (T.bottom - T.top);
+    const bowlY = () => 400 - ((s.bowl - 0) / REST) * 70 * 0.999;      // 1,5 l = hladina u hrbu (y 330)
+
+    const tankWater = el("rect", { x: T.x0, width: T.x1 - T.x0, class: "water" }, svg);
+    const bowlWater = el("path", { class: "water" }, svg);
+    const legWater = el("rect", { x: 504, width: 36, class: "water" }, svg);
+    const fallWater = el("path", { class: "water" }, svg);
+    const linkWater = el("rect", { x: 228, y: 250, width: 24, height: 40, class: "water" }, svg);
+    const linkWater2 = el("rect", { x: 228, y: 266, width: 124, height: 24, class: "water" }, svg);
+
+    // nádržka
+    el("path", { d: "M74 34 V246 H326 V34", class: "wall" }, svg);
+    el("rect", { x: 66, y: 22, width: 268, height: 12, rx: 4, class: "knob" }, svg);
+    el("rect", { x: 222, y: 12, width: 36, height: 12, rx: 4, class: "knob" }, svg);
+    // spojení s mísou
+    el("path", { d: "M228 250 V290 H350 M252 250 V266 H350", class: "pipe" }, svg);
+    // přepad
+    el("rect", { x: 284, y: 82, width: 14, height: 164, class: "tube" }, svg);
+    // napouštěcí ventil a plovák
+    el("rect", { x: 94, y: 66, width: 12, height: 180, class: "tube" }, svg);
+    el("rect", { x: 88, y: 58, width: 28, height: 16, rx: 3, class: "valve" }, svg);
+    const inStream = el("line", { x1: 122, x2: 122, y1: 76, class: "stream" }, svg);
+    const arm = el("line", { x1: 114, y1: 66, class: "pipe" }, svg);
+    const floatBall = el("ellipse", { cx: 200, rx: 26, ry: 16, class: "float" }, svg);
+    // vypouštěcí ventil
+    const chain = el("line", { x1: 240, y1: 24, x2: 240, class: "chain" }, svg);
+    const flap = el("rect", { x: 218, y: 232, width: 44, height: 10, rx: 4, class: "flap" }, svg);
+    // mísa a koleno
+    el("path", { d: "M346 262 V330 Q346 404 420 404 H500 M500 262 V368 M504 306 H580 V476 M540 476 V330", class: "porcelain" }, svg);
+    const drain = el("line", { x1: 560, x2: 560, y1: 440, y2: 476, class: "stream" }, svg);
+
+    function callout(label, tx, ty, anchor, x, y) {
+      const g = el("g", { class: "callout" }, svg);
+      el("line", { x1: anchor === "end" ? tx + 6 : tx - 6, y1: ty, x2: x, y2: y }, g);
+      el("circle", { cx: x, cy: y, r: 2.2 }, g);
+      el("text", { x: tx, y: ty + 4, "text-anchor": anchor }, g).textContent = label;
+    }
+    callout("napouštěcí ventil", 60, 110, "end", 92, 66);
+    callout("přívod vody", 60, 220, "end", 96, 220);
+    callout("plovák", 392, 60, "start", 226, 84);
+    callout("přepad", 392, 100, "start", 298, 100);
+    callout("vypouštěcí ventil", 392, 200, "start", 262, 238);
+    callout("vodní uzávěr", 330, 452, "end", 420, 380);
+    callout("hrb kolena", 620, 300, "start", 542, 328);
+    callout("do kanalizace", 620, 450, "start", 582, 450);
+
+    /* ---------- výpis ---------- */
+    const fmt1 = new Intl.NumberFormat("cs-CZ", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    const fmt0 = new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 0 });
+    const $ = (id) => document.getElementById(id);
+    const cache = new WeakMap();
+    function put(node, str, html) {
+      if (cache.get(node) === str) return;
+      cache.set(node, str);
+      if (html) node.innerHTML = str; else node.textContent = str;
+    }
+
+    function render() {
+      const ty = tankY(), by = bowlY();
+      tankWater.setAttribute("y", ty.toFixed(1)); tankWater.setAttribute("height", (T.bottom - ty).toFixed(1));
+      // mísa má zaoblené dno, voda ho kopíruje
+      bowlWater.setAttribute("d", `M350 ${by.toFixed(1)} H500 V400 H420 Q350 400 350 ${Math.max(by, 330).toFixed(1)} Z`);
+      legWater.setAttribute("y", Math.max(by, 310).toFixed(1)); legWater.setAttribute("height", (400 - Math.max(by, 310) - 0).toFixed(1));
+      legWater.setAttribute("visibility", by < 372 ? "visible" : "hidden");
+      const falling = s.siphon || s.out > 0.02;
+      fallWater.setAttribute("d", s.siphon ? "M504 310 H576 V476 H544 V330 H504 Z" : "M536 326 H548 V476 H544 V330 H536 Z");
+      fallWater.setAttribute("visibility", falling ? "visible" : "hidden");
+      drain.setAttribute("visibility", falling ? "visible" : "hidden");
+      const pouring = s.flow > 0.02;
+      linkWater.setAttribute("visibility", pouring ? "visible" : "hidden");
+      linkWater2.setAttribute("visibility", pouring ? "visible" : "hidden");
+
+      const fy = Math.min(228, ty - 2);
+      floatBall.setAttribute("cy", fy.toFixed(1));
+      arm.setAttribute("x2", 178); arm.setAttribute("y2", fy.toFixed(1));
+      inStream.setAttribute("visibility", s.filling && !s.open ? "visible" : "hidden");
+      inStream.setAttribute("y2", Math.max(80, ty).toFixed(1));
+      const lift = s.open ? 34 : 0;
+      flap.setAttribute("transform", `translate(0 ${-lift}) rotate(${s.open ? -18 : 0} 262 237)`);
+      chain.setAttribute("y2", 234 - lift);
+
+      put($("st-tank"), `${fmt1.format(s.tank)} l`);
+      put($("st-bowl"), s.siphon ? "saje" : s.bowl < REST - 0.05 ? "dopouští se" : "po hrb");
+      if (s.leak) {
+        put($("st-used-n"), "Uteče za den");
+        put($("st-used"), `${fmt0.format(LEAK * 86400)} l`);
+      } else {
+        put($("st-used-n"), "Spotřebováno");
+        put($("st-used"), `${fmt1.format(s.used)} l`);
+      }
+
+      let status;
+      if (s.open && s.siphon) {
+        status = "<strong>Koleno saje.</strong> Trubka za hrbem je plná vody. Padající sloupec za sebou táhne vodu z mísy rychleji, než z nádržky přitéká, a hladina v míse proto klesá.";
+      } else if (s.open) {
+        status = "<strong>Klapka je nahoře.</strong> Voda se z nádržky valí do mísy a hladina v ní stoupá k hrbu kolena.";
+      } else if (s.siphon) {
+        status = "<strong>Nádržka je prázdná, koleno dosává.</strong> Jakmile se do trubky dostane vzduch, sání se přeruší.";
+      } else if (s.filling && s.tank < FULL - 0.3) {
+        status = "<strong>Napouští se.</strong> Plovák klesl s hladinou a otevřel přívod vody. Jak hladina stoupá, zvedá ho a ventil se přivírá. Mísa se mezitím dopouští po hrb.";
+      } else if (s.leak) {
+        status = "<strong>Protéká.</strong> Netěsnou klapkou teče do mísy tenký pramínek. Plovák každou chvíli pozná pokles a nádržku dopustí. Není to skoro vidět ani slyšet.";
+      } else {
+        status = "<strong>Připraveno.</strong> Nádržka je plná, plovák drží přívod zavřený a klapku na dně tiskne váha vody. V koleni stojí voda a nepustí zápach z kanalizace.";
+      }
+      put($("status"), status, true);
+    }
+
+    /* ---------- ovládání ---------- */
+    $("big").addEventListener("click", () => flush(FULL));
+    $("small").addEventListener("click", () => flush(FULL / 2));
+    const seg = $("leak-seg");
+    seg.addEventListener("click", (e) => {
+      const b = e.target.closest("button[data-v]");
+      if (!b) return;
+      seg.querySelectorAll("button").forEach((x) => x.setAttribute("aria-checked", String(x === b)));
+      s.leak = b.dataset.v === "1";
+    });
+
+    // na úzkém displeji ořízneme okraje s popisky
+    const narrow = window.matchMedia("(max-width: 46rem)");
+    const fitView = () => svg.setAttribute("viewBox", narrow.matches ? "50 0 560 480" : "-100 0 830 480");
+    narrow.addEventListener("change", fitView);
+    fitView();
+
+    let prev = performance.now();
+    function frame(now) {
+      let dt = Math.min(0.1, (now - prev) / 1000);
+      prev = now;
+      for (; dt > 0; dt -= 0.02) step(Math.min(0.02, dt));
+      render();
+      requestAnimationFrame(frame);
+    }
+    render();
+    requestAnimationFrame(frame);
+  })();
+  </script>
+</body>
+</html>

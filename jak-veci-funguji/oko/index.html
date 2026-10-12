@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Jak oko zaostřuje</title>
+  <meta name="description" content="Jak oko přeostří z knihy na obzor, proč to po čtyřicítce přestává jít, co je krátkozrakost a proč pod vodou vidíme rozmazaně. S okem, kterému můžete nasadit brýle.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700&display=swap">
+  <link rel="stylesheet" href="../style.css">
+  <style>
+    .eye-stage { display: grid; gap: 1rem; grid-template-columns: minmax(0, 1fr); align-items: center; }
+    .view { display: grid; gap: 0.35rem; margin: 0; justify-self: center; width: min(15rem, 70%); }
+    .view .label { text-align: center; }
+    @media (min-width: 60rem) {
+      .eye-stage { grid-template-columns: minmax(0, 1fr) 15rem; }
+      .view { width: 100%; }
+    }
+    .chart { display: grid; place-items: center; gap: 0.15rem; padding: 1rem 0.5rem; border: 1px solid var(--rule); background: #fff; color: #111; font-family: var(--font-display); font-weight: 800; line-height: 1.05; overflow: hidden; }
+    .chart span:nth-child(1) { font-size: 3.4rem; }
+    .chart span:nth-child(2) { font-size: 2rem; letter-spacing: 0.2em; }
+    .chart span:nth-child(3) { font-size: 1.2rem; letter-spacing: 0.3em; }
+    .chart span:nth-child(4) { font-size: 0.75rem; letter-spacing: 0.35em; }
+
+    .ball { fill: var(--surface); stroke: var(--metal-line); stroke-width: 2; }
+    .retina { fill: none; stroke: var(--hot); stroke-width: 5; stroke-linecap: round; }
+    .cornea { fill: var(--cool); fill-opacity: 0.25; stroke: var(--metal-line); stroke-width: 2; }
+    .iris { stroke: var(--cat); stroke-width: 7; stroke-linecap: round; }
+    .lens { fill: var(--cool); fill-opacity: 0.55; stroke: var(--metal-line); stroke-width: 1.6; }
+    .muscle { fill: var(--hot); stroke: var(--metal-line); stroke-width: 1.2; }
+    .fibre { stroke: var(--ink-3); stroke-width: 1.2; fill: none; }
+    .ray { stroke: var(--warm); stroke-width: 2; fill: none; }
+    .ray.ghost { stroke-dasharray: 4 4; opacity: 0.7; }
+    .axis { stroke: var(--rule); stroke-width: 1; stroke-dasharray: 2 5; }
+    .focus { fill: var(--warm); stroke: var(--surface); stroke-width: 1.5; }
+    .thing { stroke: var(--ink); stroke-width: 3; stroke-linecap: round; fill: none; }
+    .glass { fill: var(--cool); fill-opacity: 0.4; stroke: var(--metal-line); stroke-width: 1.6; }
+    .tag { fill: var(--ink); font: 600 13px var(--font-mono); text-anchor: middle; }
+    @media (max-width: 46rem) { .tag { font-size: 22px; } }
+  </style>
+</head>
+<body data-cat="telo">
+  <header class="topbar">
+    <div class="wrap">
+      <a class="brand" href="../">Jak věci fungují</a>
+      <nav class="crumbs" aria-label="Drobečková navigace"><a href="../#telo">Lidské tělo</a><span aria-hidden="true">/</span><span>Jak oko zaostřuje</span></nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <header class="art-head">
+      <p class="eyebrow">Lidské tělo</p>
+      <h1 class="display">Jak oko zaostřuje</h1>
+      <p class="lede">Foťák ostří tak, že posouvá objektiv. Oko to dělá jinak: má uvnitř pružnou čočku a malý sval, který jí mění tvar. Když zvednete hlavu od knihy k oknu, čočka se za zlomek sekundy zploští.</p>
+    </header>
+
+    <section class="tldr" aria-labelledby="h-zkratka">
+      <h2 class="label" id="h-zkratka">Ve zkratce</h2>
+      <ul>
+        <li>Světlo láme hlavně rohovka, průhledná kopule vpředu. Čočka za ní jen dolaďuje.</li>
+        <li>Při pohledu do dálky je čočka plochá a sval odpočívá. Při pohledu nablízko se sval stáhne a <span class="hl">čočka se vyboulí.</span></li>
+        <li>Když je oko na svou optiku moc dlouhé nebo krátké, padne ostrý obraz před sítnici nebo za ni. To spraví brýle.</li>
+      </ul>
+    </section>
+
+    <figure class="fig" id="obr1">
+      <div class="fig-head">
+        <p class="fig-num"><b>Obr. 1</b> Řez okem</p>
+        <span class="label">Přibližujte předmět a sledujte čočku</span>
+      </div>
+      <div class="fig-stage eye-stage">
+        <svg id="eye" viewBox="0 0 940 400" role="img" aria-label="Vodorovný řez okem: paprsky z předmětu procházejí rohovkou a čočkou a sbíhají se u sítnice"></svg>
+        <figure class="view">
+          <div class="chart" id="chart" aria-hidden="true"><span>E</span><span>FP</span><span>TOZ</span><span>LPED</span></div>
+          <span class="label">Co oko vidí</span>
+        </figure>
+      </div>
+      <div class="fig-controls">
+        <div class="ctl ctl-grow">
+          <label class="label" for="dist">Vzdálenost předmětu</label>
+          <div class="ctl-row">
+            <input type="range" id="dist" min="0" max="100" step="1" value="100">
+            <output class="val" id="dist-val" for="dist"></output>
+          </div>
+        </div>
+        <div class="ctl">
+          <span class="label" id="lbl-eye">Oko</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-eye" id="eye-seg">
+            <button type="button" role="radio" data-v="normal" aria-checked="true">Zdravé</button>
+            <button type="button" role="radio" data-v="myopic" aria-checked="false">Krátkozraké</button>
+            <button type="button" role="radio" data-v="hyper" aria-checked="false">Dalekozraké</button>
+            <button type="button" role="radio" data-v="old" aria-checked="false">Po padesátce</button>
+          </div>
+        </div>
+        <div class="ctl">
+          <span class="label" id="lbl-glass">Brýle</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-glass" id="glass-seg">
+            <button type="button" role="radio" data-v="0" aria-checked="true">Bez</button>
+            <button type="button" role="radio" data-v="1" aria-checked="false">Nasadit</button>
+          </div>
+        </div>
+      </div>
+      <div class="fig-status split">
+        <p class="status" id="status" aria-live="polite"></p>
+        <ul class="stats" aria-label="Stav modelu">
+          <li><span class="n">Čočka přidala</span><span class="v" id="st-acc"></span></li>
+          <li><span class="n">Obraz</span><span class="v small" id="st-sharp"></span></li>
+          <li><span class="n">Nejblíž zaostří na</span><span class="v" id="st-near"></span></li>
+        </ul>
+      </div>
+      <figcaption class="fig-caption">Zjednodušené oko s jednou lámavou plochou o síle 60 dioptrií. Vnitřek oka je v měřítku, vzdálenost předmětu ne. Oko v modelu zaostřuje samo, jak nejlíp umí. Dioptrie říkají, jak silně čočka láme: čím víc, tím blíž za ní se paprsky sejdou.</figcaption>
+    </figure>
+
+    <section class="sec" aria-labelledby="h-dve">
+      <div class="prose">
+        <h2 id="h-dve">Dvě čočky za sebou</h2>
+        <p>Aby oko vidělo ostře, musí světlo z jednoho bodu před okem svést do jednoho bodu na sítnici, která je asi dva a půl centimetru za ním. Na tak krátkou vzdálenost je potřeba paprsky ohnout hodně.</p>
+        <p>Většinu práce překvapivě neudělá čočka, ale rohovka. Paprsky se nejvíc lámou tam, kde přecházejí ze vzduchu do něčeho hustšího, a to je právě její vypouklý povrch. Rohovka má asi dvě třetiny lámavé síly celého oka. Je ale pevná a ostřit neumí.</p>
+        <p>Čočka uvnitř oka přidává zbylou třetinu. Na rozdíl od rohovky je pružná, a právě ona se stará o doladění.</p>
+      </div>
+      <aside class="note" aria-label="Oko v číslech">
+        <span class="label">V číslech</span>
+        <dl class="facts">
+          <div><dt>60 D</dt><dd>lámavá síla celého oka v klidu</dd></div>
+          <div><dt>≈ 40 D</dt><dd>z toho dělá rohovka</dd></div>
+          <div><dt>24 mm</dt><dd>délka oka od rohovky k sítnici</dd></div>
+          <div><dt>10 cm</dt><dd>nejbližší bod, na který zaostří dvacetiletý</dd></div>
+        </dl>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-sval">
+      <div class="prose">
+        <h2 id="h-sval">Sval, který povoluje, aby zabral</h2>
+        <p>Čočka visí v oku na jemných vláknech, která ji ze všech stran natahují jako plachtu trampolíny. Vlákna drží kruhový sval kolem dokola. A funguje to obráceně, než by člověk čekal.</p>
+        <p>Když je sval uvolněný, je jeho kruh široký, vlákna jsou napnutá a čočku roztahují do placky. Plochá čočka láme málo: oko je zaostřené do dálky.</p>
+        <p>Když se sval stáhne, kruh se zúží a vlákna povolí. Čočka, která je sama od sebe pružná, se smrští do kulatějšího tvaru. Kulatější čočka láme víc: oko je zaostřené nablízko.</p>
+        <p>Plyne z toho, že <span class="hl">pohled do dálky je pro oko odpočinek a čtení práce.</span> Po hodinách u obrazovky bolí oči právě ten sval. Stačí mu občas dopřát pohled z okna.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Posouvejte předmět blíž. Červený sval nad čočkou a pod ní zesílí, vlákna povolí a čočka ztloustne. Paprsky, které by se jinak sešly až za sítnicí, se zase potkají přesně na ní.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-vek">
+      <div class="prose">
+        <h2 id="h-vek">Proč jsou ruce jednoho dne krátké</h2>
+        <p>Čočka roste celý život a postupně tuhne. Sval pracuje stejně jako dřív, jenže čočka se po uvolnění vláken už tak ochotně nevyboulí.</p>
+        <p>Desetileté dítě zaostří na sedm centimetrů před nosem. Ve dvaceti je to deset centimetrů, ve čtyřiceti dvacet. Někdy mezi čtyřicítkou a padesátkou se nejbližší ostrý bod odsune dál, než kam dosáhnou ruce s novinami. V šedesáti čočka nepřidá skoro nic.</p>
+        <p>Není to nemoc a nevyhne se jí nikdo. Řeší se brýlemi na čtení, tedy spojkou, která udělá kus práce za čočku. Do dálky s nimi ale vidět není, a tak se sundávají nebo mají skla dvojí.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Vyberte oko Po padesátce a přibližte předmět na čtecí vzdálenost. Sval zabírá naplno, čočka se skoro nehne a písmena jsou rozmazaná. Pak nasaďte brýle. A zkuste se s nimi podívat do dálky.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-vady">
+      <div class="prose">
+        <h2 id="h-vady">Moc dlouhé a moc krátké oko</h2>
+        <p>Optika oka a jeho délka si musejí odpovídat s přesností na zlomky milimetru. U většiny lidí si aspoň trochu neodpovídají.</p>
+        <p>Krátkozraké oko je na svou optiku moc dlouhé. Paprsky z dálky se sejdou už před sítnicí a na ni dopadnou zase rozběhnuté. Nablízko takové oko vidí dobře, do dálky rozmazaně. Pomáhá rozptylka, která paprsky před okem trochu rozevře. Jeden milimetr délky navíc znamená asi tři dioptrie.</p>
+        <p>Dalekozraké oko je naopak krátké a obraz by vznikl až za sítnicí. Mladý člověk to dožene tím, že čočku napíná i při pohledu do dálky, takže vidí ostře, jen se dřív unaví a nablízko mu síla dojde. Pomáhá spojka.</p>
+        <p>Krátkozrakých rychle přibývá, v některých asijských městech je to už většina mladých. Zdá se, že nejlíp chrání obyčejná věc: děti, které tráví víc času venku na denním světle, mají krátkozrakost méně často.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Vyberte Krátkozraké oko a dejte předmět daleko. Paprsky se zkříží před sítnicí. Čočka s tím nic neudělá, umí jen přidávat, ne ubírat. Nasaďte brýle.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-voda">
+      <div class="prose">
+        <h2 id="h-voda">Proč pod vodou vidíme rozmazaně</h2>
+        <p>Rohovka láme světlo tak silně proto, že je před ní vzduch. Voda má skoro stejné optické vlastnosti jako rohovka sama, a když je před okem voda, paprsky projdou rohovkou téměř rovně. Oko naráz přijde o dvě třetiny své síly a čočka to dohnat nemůže.</p>
+        <p>Potápěčské brýle nedělají nic jiného, než že před okem udrží vrstvu vzduchu. Ryby to řeší jinak: mají čočku kulatou jako kulička a ostří tím, že ji posouvají dopředu a dozadu. Jako foťák.</p>
+      </div>
+    </section>
+
+    <section class="sec" aria-labelledby="h-dirka">
+      <div class="prose">
+        <h2 id="h-dirka">Proč pomáhá mhouřit</h2>
+        <p>Kdo zapomněl brýle, přimhouří oči. Funguje to, a ne náhodou. Rozmazání vzniká tím, že paprsky procházející okrajem zornice dopadnou na sítnici jinam než ty prostředkem. Když okraj zakryjete, zbudou jen paprsky blízko středu a skvrnka na sítnici se zmenší.</p>
+        <p>Stejně funguje dírka propíchnutá špendlíkem do papíru: podívejte se skrz ni bez brýlí. A ze stejného důvodu vidí lidé líp na ostrém slunci, kdy je zornice stažená, než za šera.</p>
+      </div>
+    </section>
+
+    <footer class="art-foot">
+      <a class="next" href="../husi-kuze/" data-cat="telo">
+        <span class="label">Další článek · Lidské tělo</span>
+        <span class="t">Jak funguje husí kůže</span>
+        <p>Proč nám v zimě a při hudbě vstávají chlupy, když nám to k ničemu není.</p>
+      </a>
+      <a class="back" href="../">Všechna témata</a>
+    </footer>
+  </main>
+
+  <script>
+  (() => {
+    const NS = "http://www.w3.org/2000/svg";
+    function el(tag, attrs, parent) {
+      const n = document.createElementNS(NS, tag);
+      for (const k in attrs || {}) n.setAttribute(k, attrs[k]);
+      if (parent) parent.appendChild(n);
+      return n;
+    }
+    const svg = document.getElementById("eye");
+
+    /* ---------- optika ---------- */
+    const N_EYE = 1.336;            // index lomu vnitřku oka
+    const P_REST = 60;              // dioptrií v klidu
+    const MM = 12;                  // jednotek SVG na milimetr uvnitř oka
+    const EYES = {
+      normal: { axial: 22.27, max: 10, glasses: 0, name: "zdravé oko" },
+      myopic: { axial: 23.4, max: 10, glasses: -2.9, name: "krátkozraké oko" },
+      hyper: { axial: 21.3, max: 10, glasses: 2.7, name: "dalekozraké oko" },
+      old: { axial: 22.27, max: 1, glasses: 2, name: "oko po padesátce" },
+    };
+    const s = { eye: "normal", glasses: false, t: 100 };
+    // posuvník: 10 cm až 6 m logaritmicky, úplně vpravo je „v dálce“
+    const distance = (t) => (t >= 100 ? Infinity : 0.1 * 60 ** (t / 99));
+
+    function solve() {
+      const E = EYES[s.eye], u = distance(s.t), G = s.glasses ? E.glasses : 0;
+      const vergence = (u === Infinity ? 0 : -1 / u) + G;          // jak moc se paprsky před okem rozbíhají
+      const need = N_EYE / (E.axial / 1000) - vergence;            // síla, kterou oko potřebuje, aby obraz padl na sítnici
+      const acc = Math.max(0, Math.min(E.max, need - P_REST));     // čočka umí jen přidat, a jen do svého maxima
+      const power = P_REST + acc;
+      const image = (N_EYE / (power + vergence)) * 1000;           // kde se paprsky sejdou, v mm za čočkou
+      const nearV = P_REST + E.max - N_EYE / (E.axial / 1000);     // nejbližší ostrý bod
+      const near = nearV - G > 0 ? 1 / (nearV + G) : Infinity;
+      return { E, u, G, acc, error: power - need, image, near: nearV + G > 0 ? 1 / (nearV + G) : Infinity };
+    }
+
+    /* ---------- kresba ---------- */
+    const CY = 200, LX = 560, PUPIL = 30;
+    el("line", { x1: 10, y1: CY, x2: 930, y2: CY, class: "axis" }, svg);
+    const ball = el("ellipse", { cy: CY, ry: 132, class: "ball" }, svg);
+    const retina = el("path", { class: "retina" }, svg);
+    el("path", { d: `M${LX - 30} ${CY - 74} Q${LX - 84} ${CY} ${LX - 30} ${CY + 74}`, class: "cornea" }, svg);
+    const rays = [0, 1].map(() => el("path", { class: "ray" }, svg));
+    const ghosts = [0, 1].map(() => el("path", { class: "ray ghost" }, svg));
+    el("line", { x1: LX - 16, y1: CY - 86, x2: LX - 16, y2: CY - PUPIL - 4, class: "iris" }, svg);
+    el("line", { x1: LX - 16, y1: CY + PUPIL + 4, x2: LX - 16, y2: CY + 86, class: "iris" }, svg);
+    const fibres = [0, 1].map(() => el("path", { class: "fibre" }, svg));
+    const muscles = [0, 1].map(() => el("rect", { rx: 5, class: "muscle" }, svg));
+    const lens = el("ellipse", { cx: LX, cy: CY, class: "lens" }, svg);
+    const focus = el("circle", { cy: CY, r: 5, class: "focus" }, svg);
+    const glass = el("path", { class: "glass" }, svg);
+    const thing = el("g", {}, svg);
+    el("path", { d: "M0 -34 V34 M-8 -24 L0 -34 L8 -24", class: "thing" }, thing);
+    const thingTag = el("text", { y: 58, class: "tag" }, thing);
+    const glassTag = el("text", { x: 452, y: CY + 122, class: "tag" }, svg);
+
+    function callout(label, tx, ty, anchor, x, y) {
+      const g = el("g", { class: "callout" }, svg);
+      el("line", { x1: anchor === "end" ? tx + 6 : tx - 6, y1: ty, x2: x, y2: y }, g);
+      el("circle", { cx: x, cy: y, r: 2.2 }, g);
+      el("text", { x: tx, y: ty + 4, "text-anchor": anchor }, g).textContent = label;
+    }
+    callout("rohovka", 470, 44, "end", LX - 56, CY - 30);
+    callout("čočka", 640, 30, "start", LX + 4, CY - 22);
+    callout("řasnatý sval", 640, 56, "start", LX + 8, CY - 66);
+    callout("sítnice", 900, 44, "end", 822, CY - 60);
+
+    /* ---------- výpis ---------- */
+    const fmt1 = new Intl.NumberFormat("cs-CZ", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    const fmt0 = new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 0 });
+    const $ = (id) => document.getElementById(id);
+    const length = (m) => (m === Infinity ? "v dálce" : m < 1 ? `${fmt0.format(Math.round(m * 100))} cm` : `${fmt1.format(m)} m`);
+
+    function render() {
+      const o = solve(), E = o.E, a = o.acc / 10;
+      const rx = LX + E.axial * MM;                                 // sítnice
+      const front = LX - 34;
+      ball.setAttribute("cx", (front + rx) / 2 + 4); ball.setAttribute("rx", (rx - front) / 2 + 4);
+      retina.setAttribute("d", `M${rx - 30} ${CY - 92} Q${rx + 12} ${CY} ${rx - 30} ${CY + 92}`);
+      // čočka: při zaostření nablízko tlustší a užší
+      const lr = 46 - 6 * a;
+      lens.setAttribute("rx", (9 + 10 * a).toFixed(1)); lens.setAttribute("ry", lr.toFixed(1));
+      [-1, 1].forEach((side, i) => {
+        const my = CY + side * (lr + 26 - 8 * a), h = 12 + 10 * a;
+        muscles[i].setAttribute("x", LX - 9); muscles[i].setAttribute("width", 18);
+        muscles[i].setAttribute("y", (my - h / 2).toFixed(1)); muscles[i].setAttribute("height", h.toFixed(1));
+        // vlákna jsou napnutá, když sval odpočívá, a povolená, když se stáhne
+        const y1 = CY + side * lr, y2 = my - (side * h) / 2, bend = 9 * a;
+        fibres[i].setAttribute("d", `M${LX - 5} ${y1.toFixed(1)} Q${LX - 5 - bend} ${((y1 + y2) / 2).toFixed(1)} ${LX - 5} ${y2.toFixed(1)} M${LX + 5} ${y1.toFixed(1)} Q${LX + 5 + bend} ${((y1 + y2) / 2).toFixed(1)} ${LX + 5} ${y2.toFixed(1)}`);
+      });
+
+      // předmět a paprsky: z předmětu k okrajům zornice a odtud do místa, kde se sejdou
+      const far = o.u === Infinity, ox = far ? 40 : 300 - (Math.log(o.u / 0.1) / Math.log(60)) * 240;
+      thing.setAttribute("transform", `translate(${ox.toFixed(1)} ${CY})`);
+      thingTag.textContent = length(o.u);
+      const fx = LX + o.image * MM, hit = (y) => CY + y * (1 - (rx - LX) / (fx - LX));
+      [-1, 1].forEach((side, i) => {
+        const py = CY + side * PUPIL, start = far ? `M10 ${py}` : `M${ox.toFixed(1)} ${CY}`;
+        rays[i].setAttribute("d", `${start} L${LX} ${py} L${Math.min(fx, rx).toFixed(1)} ${(fx <= rx ? CY : hit(side * PUPIL)).toFixed(1)}${fx < rx ? ` L${rx} ${hit(side * PUPIL).toFixed(1)}` : ""}`);
+        ghosts[i].setAttribute("d", fx > rx + 2 ? `M${rx} ${hit(side * PUPIL).toFixed(1)} L${Math.min(fx, 925).toFixed(1)} ${(CY + side * PUPIL * (1 - (Math.min(fx, 925) - LX) / (fx - LX))).toFixed(1)}` : "");
+      });
+      focus.setAttribute("cx", Math.min(fx, 925).toFixed(1));
+
+      const G = o.G;
+      glass.setAttribute("visibility", G ? "visible" : "hidden");
+      glassTag.textContent = G ? `${G > 0 ? "+" : "−"}${fmt1.format(Math.abs(G))} D` : "";
+      if (G) {
+        const w = G > 0 ? 9 : -5;       // spojka je uprostřed tlustší, rozptylka tenčí
+        glass.setAttribute("d", `M446 ${CY - 96} Q${452 - 6 - w} ${CY} 446 ${CY + 96} H458 Q${452 + 6 + w} ${CY} 458 ${CY - 96} Z`);
+      }
+
+      const blur = Math.abs(o.error);
+      $("chart").style.filter = `blur(${(blur * 2.4).toFixed(2)}px)`;
+      $("dist-val").textContent = length(o.u);
+      $("st-acc").textContent = `+${fmt1.format(o.acc)} D`;
+      $("st-sharp").textContent = blur < 0.2 ? "ostrý" : o.error > 0 ? "před sítnicí" : "za sítnicí";
+      $("st-near").textContent = length(o.near);
+
+      let status;
+      if (blur < 0.2 && o.acc < 0.2) {
+        status = `<strong>Ostré, sval odpočívá.</strong> Paprsky z dálky přicházejí rovnoběžně a ${E.name}${G ? " s brýlemi" : ""} je svede přesně na sítnici, aniž by čočka musela cokoli přidat.`;
+      } else if (blur < 0.2 && o.u === Infinity) {
+        status = `<strong>Ostré, ale sval pracuje i do dálky.</strong> Oko je na svou optiku krátké. Čočka musí přidat ${fmt1.format(o.acc)} dioptrie už jen na to, aby viděla obzor, a nablízko jí pak síla chybí.`;
+      } else if (blur < 0.2) {
+        status = `<strong>Ostré, sval pracuje.</strong> Paprsky z blízkého předmětu se rozbíhají. Sval se stáhl, čočka se vyboulila a přidala ${fmt1.format(o.acc)} dioptrie, aby se sešly na sítnici.`;
+      } else if (o.error > 0) {
+        status = `<strong>Rozmazané: obraz je před sítnicí.</strong> Oko láme víc, než odpovídá jeho délce. Čočka je už úplně plochá a ubrat neumí. ${G ? "S těmihle brýlemi je to na dálku moc." : "Pomůže rozptylka."}`;
+      } else {
+        status = `<strong>Rozmazané: obraz by vznikl až za sítnicí.</strong> Sval zabírá naplno, ale čočka už víc nepřidá. Na tuhle vzdálenost ${E.name} nedosáhne. ${G ? "" : "Pomůže spojka."}`;
+      }
+      $("status").innerHTML = status;
+    }
+
+    /* ---------- ovládání ---------- */
+    $("dist").addEventListener("input", (e) => { s.t = Number(e.target.value); render(); });
+    function bindSeg(id, apply) {
+      const seg = $(id);
+      seg.addEventListener("click", (e) => {
+        const b = e.target.closest("button[data-v]");
+        if (!b || b.disabled) return;
+        seg.querySelectorAll("button").forEach((x) => x.setAttribute("aria-checked", String(x === b)));
+        apply(b.dataset.v);
+        render();
+      });
+      return seg;
+    }
+    const glassSeg = bindSeg("glass-seg", (v) => { s.glasses = v === "1"; });
+    bindSeg("eye-seg", (v) => {
+      s.eye = v;
+      // zdravé oko brýle nepotřebuje
+      const on = glassSeg.querySelector('[data-v="1"]');
+      on.disabled = v === "normal";
+      if (v === "normal") { s.glasses = false; glassSeg.querySelectorAll("button").forEach((x) => x.setAttribute("aria-checked", String(x.dataset.v === "0"))); }
+    });
+    glassSeg.querySelector('[data-v="1"]').disabled = true;
+    render();
+  })();
+  </script>
+</body>
+</html>

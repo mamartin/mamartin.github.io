@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Proč je nebe modré</title>
+  <meta name="description" content="Proč je obloha modrá, západ slunce červený, mraky bílé a vesmír černý, když je to pořád stejné sluneční světlo. S oblohou, na které si můžete posouvat Slunce.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700&display=swap">
+  <link rel="stylesheet" href="../style.css">
+  <style>
+    .sky-stage { display: grid; gap: 1rem; grid-template-columns: minmax(0, 1fr); align-items: center; }
+    .side { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; }
+    .side figure { display: grid; gap: 0.35rem; margin: 0; }
+    .side svg { border: 1px solid var(--rule); background: #14181e; }
+    .side .label { text-align: center; }
+    @media (min-width: 60rem) {
+      .sky-stage { grid-template-columns: minmax(0, 1fr) 15rem; }
+      .side { grid-template-columns: minmax(0, 1fr); }
+    }
+    #sky { border: 1px solid var(--rule); }
+    .hill { fill: #14181e; }
+    .hill.far { fill: #232a33; }
+    .star { fill: #dfe6f5; }
+    .sp-axis { stroke: #6b727d; stroke-width: 1; }
+    .sp-text { fill: #aab1bb; font: 500 10.5px var(--font-mono); }
+    .swatch { display: inline-block; width: 1.5rem; height: 1.5rem; border: 1px solid var(--rule); vertical-align: middle; }
+  </style>
+</head>
+<body data-cat="priroda">
+  <header class="topbar">
+    <div class="wrap">
+      <a class="brand" href="../">Jak věci fungují</a>
+      <nav class="crumbs" aria-label="Drobečková navigace"><a href="../#priroda">Příroda</a><span aria-hidden="true">/</span><span>Proč je nebe modré</span></nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <header class="art-head">
+      <p class="eyebrow">Příroda</p>
+      <h1 class="display">Proč je nebe modré</h1>
+      <p class="lede">Sluneční světlo je bílé a vzduch průhledný. Přesto je obloha modrá a večer červená. Barva nevzniká ve Slunci ani ve vzduchu, ale cestou: vzduch rozhazuje modré světlo do stran mnohem ochotněji než červené.</p>
+    </header>
+
+    <section class="tldr" aria-labelledby="h-zkratka">
+      <h2 class="label" id="h-zkratka">Ve zkratce</h2>
+      <ul>
+        <li>Bílé světlo je směs všech barev duhy.</li>
+        <li>Molekuly vzduchu <span class="hl">rozptylují modré světlo asi čtyřikrát silněji než červené.</span> Modrá se tak rozlétne po celé obloze a přichází k nám ze všech stran.</li>
+        <li>Při západu Slunce jde světlo vzduchem mnohem delší cestou. Modrou cestou ztratí a zbude červená.</li>
+      </ul>
+    </section>
+
+    <figure class="fig" id="obr1">
+      <div class="fig-head">
+        <p class="fig-num"><b>Obr. 1</b> Obloha podle výšky Slunce</p>
+        <span class="label">Posouvejte Slunce k obzoru</span>
+      </div>
+      <div class="fig-stage sky-stage">
+        <svg id="sky" viewBox="0 0 640 400" role="img" aria-label="Krajina s oblohou a Sluncem, jejichž barvy se počítají podle výšky Slunce nad obzorem">
+          <defs><linearGradient id="grad" x1="0" y1="0" x2="0" y2="1"></linearGradient></defs>
+        </svg>
+        <div class="side">
+          <figure>
+            <svg id="sp-sky" viewBox="0 0 200 130" role="img" aria-label="Kolik které barvy je ve světle oblohy"></svg>
+            <span class="label">Světlo z oblohy</span>
+          </figure>
+          <figure>
+            <svg id="sp-sun" viewBox="0 0 200 130" role="img" aria-label="Kolik které barvy zbylo ve světle přímo ze Slunce"></svg>
+            <span class="label">Světlo přímo ze Slunce</span>
+          </figure>
+        </div>
+      </div>
+      <div class="fig-controls">
+        <div class="ctl ctl-grow">
+          <label class="label" for="height">Výška Slunce nad obzorem</label>
+          <div class="ctl-row">
+            <input type="range" id="height" min="-8" max="90" step="1" value="50">
+            <output class="val" id="height-val" for="height">50°</output>
+          </div>
+        </div>
+        <div class="ctl">
+          <span class="label" id="lbl-air">Vzduch</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-air" id="air-seg">
+            <button type="button" role="radio" data-v="1" aria-checked="true">Jako na Zemi</button>
+            <button type="button" role="radio" data-v="0" aria-checked="false">Žádný</button>
+          </div>
+        </div>
+        <button type="button" class="btn" id="sunset">Nechat zapadnout</button>
+      </div>
+      <div class="fig-status split">
+        <p class="status" id="status" aria-live="polite"></p>
+        <ul class="stats" aria-label="Stav modelu">
+          <li><span class="n">Vzduchu v cestě</span><span class="v" id="st-mass"></span></li>
+          <li><span class="n">Barva oblohy</span><span class="v"><i class="swatch" id="sw-sky"></i></span></li>
+          <li><span class="n">Barva Slunce</span><span class="v"><i class="swatch" id="sw-sun"></i></span></li>
+        </ul>
+      </div>
+      <figcaption class="fig-caption">Barvy nejsou namalované, ale spočítané: sluneční světlo se v modelu rozptyluje a pohlcuje podle vlnové délky a výsledek se převádí na barvu obrazovky. Model počítá jen s jedním rozptylem v čistém vzduchu, skutečné červánky bývají díky prachu a mrakům pestřejší. Sloupce vpravo ukazují, kolik které barvy ve světle je, vždy v poměru k té nejsilnější.</figcaption>
+    </figure>
+
+    <section class="sec" aria-labelledby="h-smes">
+      <div class="prose">
+        <h2 id="h-smes">Bílé světlo je směs</h2>
+        <p>Slunce svítí všemi barvami najednou. Když jeho světlo pustíte skleněným hranolem nebo se na něj podíváte přes kapky deště, rozloží se na pruh od fialové přes modrou, zelenou a žlutou po červenou. Dohromady je vidíme jako bílou.</p>
+        <p>Barvy se od sebe liší vlnovou délkou. Světlo je vlnění a modré má vlny kratší, asi 450 miliontin milimetru, červené delší, kolem 650. Právě na téhle délce záleží, co se světlu ve vzduchu stane.</p>
+      </div>
+      <aside class="note" aria-label="Obloha v číslech">
+        <span class="label">V číslech</span>
+        <dl class="facts">
+          <div><dt>4×</dt><dd>silněji rozptyluje vzduch modrou než červenou</dd></div>
+          <div><dt>38×</dt><dd>víc vzduchu má v cestě světlo zapadajícího Slunce</dd></div>
+          <div><dt>450 / 650 nm</dt><dd>vlnová délka modrého a červeného světla</dd></div>
+        </dl>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-rozptyl">
+      <div class="prose">
+        <h2 id="h-rozptyl">Vzduch rozhazuje modrou</h2>
+        <p>Vzduch je z molekul dusíku a kyslíku. Jsou asi tisíckrát menší než vlnová délka světla, a světlo je proto většinou mine. Občas ale některá molekula kousek světla zachytí a hned ho zase vyšle, jenže náhodným směrem. Tomu se říká rozptyl.</p>
+        <p>Takhle malé částice nerozptylují všechny barvy stejně. Čím kratší vlna, tím větší šance, a ta závislost je prudká: s čtvrtou mocninou. Modré světlo se rozptýlí zhruba čtyřikrát snáz než červené.</p>
+        <p>Červená a žlutá proto letí vzduchem skoro rovně. Modrá se cestou odráží od molekuly k molekule, rozlétne se po celé obloze a do oka vám nakonec přiletí odkudkoli. <span class="hl">Když se díváte na oblohu mimo Slunce, vidíte právě tohle zbloudilé modré světlo.</span></p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Přepněte vzduch na Žádný. Světlo nemá co rozptylovat, a tak z oblohy nepřichází nic. Je černá i ve dne a jsou vidět hvězdy. Tak vypadá nebe z Měsíce.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-fialova">
+      <div class="prose">
+        <h2 id="h-fialova">Proč tedy ne fialové</h2>
+        <p>Fialové světlo má vlnu ještě kratší než modré a rozptyluje se ještě víc. Nebe by mělo být fialové.</p>
+        <p>Jsou tři důvody, proč není. Slunce fialové svítí míň než modré. Část jí pohltí vysoké vrstvy atmosféry. A hlavně: lidské oko je na fialovou málo citlivé. Ze směsi, která z oblohy přichází, tedy hodně fialové, hodně modré a trocha všeho ostatního, si mozek poskládá modrou.</p>
+      </div>
+    </section>
+
+    <section class="sec" aria-labelledby="h-zapad">
+      <div class="prose">
+        <h2 id="h-zapad">Kam se modrá ztratí večer</h2>
+        <p>Co se rozptýlí, to v původním paprsku chybí. V poledne jde sluneční světlo vzduchem nejkratší cestou, kolmo dolů, a přijde jen o trochu modré. Slunce proto vypadá lehce nažloutle místo čistě bíle.</p>
+        <p>Když Slunce klesá k obzoru, prochází jeho světlo vzduchem šikmo a cesta se prodlužuje. Těsně nad obzorem je skoro čtyřicetkrát delší než v poledne. Modrá se cestou rozptýlí skoro všechna, po ní zelená, a k vám dorazí jen to, co vzduch nechá být: oranžová a červená.</p>
+        <p>Červánky jsou tedy stejný jev jako modrá obloha, jen z druhé strany. V poledne vidíte světlo, které se rozptýlilo. Večer to, které zbylo. A modrá, která vám večer chybí, zrovna dělá modré nebe lidem o tisíc kilometrů dál na západ.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Zmáčkněte Nechat zapadnout a sledujte sloupce vpravo dole. Ze světla Slunce mizí nejdřív fialová a modrá, pak zelená. Nakonec stojí jen sloupce vpravo, červené.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-mraky">
+      <div class="prose">
+        <h2 id="h-mraky">Proč jsou mraky bílé a obzor bledý</h2>
+        <p>Kapky v mracích jsou proti molekulám obrovské, větší než vlnová délka světla. Tak velké částice rozptylují všechny barvy stejně. Světlo, které z mraku vyjde, je proto stejná směs, jaká do něj vešla: bílá. Ze stejného důvodu je bílá mlha, mléko i pára nad hrncem.</p>
+        <p>Nad obzorem je obloha bledší než nad hlavou. Díváte se tam skrz tlustou vrstvu vzduchu a světlo se cestou k vám rozptýlí mnohokrát. Při mnohonásobném rozptylu se barvy zase promíchají a modrá se vytratí do bělavé.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Na okraj</span>
+        <p>Moře není modré kvůli odrazu oblohy. Voda sama slabě pohlcuje červené světlo. Po pár metrech v ní zbude hlavně modrá.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-jinde">
+      <div class="prose">
+        <h2 id="h-jinde">Jinde je to jinak</h2>
+        <p>Na Měsíci není vzduch, a tak je tam nebe černé i v pravé poledne. Astronauti stáli na oslnivě osvětlené pláni pod černou oblohou.</p>
+        <p>Mars má atmosféru řídkou, ale plnou jemného rezavého prachu. Prachová zrna jsou větší než molekuly a rozptylují jinak: denní obloha je tam žlutohnědá a kolem zapadajícího Slunce se dělá modrá záře. Přesně naopak než u nás.</p>
+      </div>
+    </section>
+
+    <section class="sec" aria-labelledby="h-historie">
+      <div class="prose">
+        <h2 id="h-historie">Kdo na to přišel</h2>
+        <p>Že jemné částice rozptylují modré světlo víc než červené, ukázal v roce 1859 irský fyzik John Tyndall, když svítil do skleněné trubice s kouřem. O dvanáct let později spočítal Angličan lord Rayleigh, jak přesně rozptyl závisí na vlnové délce. Dodnes se mu říká Rayleighův.</p>
+        <p>Jedna věc ale zůstávala nejasná: jsou těmi částicemi prach a kapičky, nebo samotný vzduch? Že stačí molekuly vzduchu a že rozptyl způsobuje jejich neustálé náhodné hemžení, dopočítal v roce 1910 Albert Einstein.</p>
+      </div>
+    </section>
+
+    <footer class="art-foot">
+      <a class="next" href="../blesk/" data-cat="priroda">
+        <span class="label">Další článek · Příroda</span>
+        <span class="t">Jak vzniká blesk</span>
+        <p>Jak se v mraku nastřádá napětí milionů voltů a proč si blesk hledá cestu po kouskách.</p>
+      </a>
+      <a class="back" href="../">Všechna témata</a>
+    </footer>
+  </main>
+
+  <script>
+  (() => {
+    const NS = "http://www.w3.org/2000/svg";
+    function el(tag, attrs, parent) {
+      const n = document.createElementNS(NS, tag);
+      for (const k in attrs || {}) n.setAttribute(k, attrs[k]);
+      if (parent) parent.appendChild(n);
+      return n;
+    }
+    const sky = document.getElementById("sky");
+
+    /* ---------- světlo a atmosféra ---------- */
+    const LAMBDA = [];
+    for (let nm = 400; nm <= 700; nm += 20) LAMBDA.push(nm);
+    // záření Slunce (černé těleso 5778 K), vztažené k 550 nm
+    const planck = (nm) => 1 / (nm ** 5 * (Math.exp(14387770 / (nm * 5778)) - 1));
+    const SUN = LAMBDA.map((nm) => planck(nm) / planck(550));
+    // optická tloušťka atmosféry při pohledu kolmo vzhůru
+    const rayleigh = (nm) => 0.008735 * (nm / 1000) ** -4.08;         // rozptyl na molekulách
+    const haze = (nm) => 0.05 * (nm / 550) ** -1.3;                    // jemný prach
+    const ozone = (nm) => 0.04 * Math.exp(-(((nm - 600) / 62) ** 2));  // ozon pohlcuje oranžovou
+    const TAU = LAMBDA.map((nm) => rayleigh(nm) + haze(nm) + ozone(nm));
+    const ALBEDO = LAMBDA.map((nm, i) => rayleigh(nm) / TAU[i]);
+    // kolikrát víc vzduchu má světlo v cestě než při pohledu kolmo vzhůru
+    function airMass(h) {
+      if (h < 0) return 38 + -h * 45;
+      const z = 90 - h;
+      return 1 / (Math.cos((z * Math.PI) / 180) + 0.50572 * (96.07995 - z) ** -1.6364);
+    }
+    const direct = (ms) => LAMBDA.map((_, i) => SUN[i] * Math.exp(-TAU[i] * ms));
+    // světlo jednou rozptýlené směrem k pozorovateli
+    function scattered(ms, mv) {
+      return LAMBDA.map((_, i) => {
+        const t = TAU[i];
+        const f = Math.abs(mv - ms) < 0.01 ? t * mv * Math.exp(-t * ms) : (mv * (Math.exp(-t * ms) - Math.exp(-t * mv))) / (mv - ms);
+        return SUN[i] * ALBEDO[i] * f;
+      });
+    }
+
+    // spektrum -> barva: křivky citlivosti oka (přibližné vzorce) a převod do sRGB
+    const lobe = (x, mu, s1, s2) => Math.exp(-0.5 * ((x - mu) / (x < mu ? s1 : s2)) ** 2);
+    const cmf = (nm) => [
+      1.056 * lobe(nm, 599.8, 37.9, 31.0) + 0.362 * lobe(nm, 442.0, 16.0, 26.7) - 0.065 * lobe(nm, 501.1, 20.4, 26.2),
+      0.821 * lobe(nm, 568.8, 46.9, 40.5) + 0.286 * lobe(nm, 530.9, 16.3, 31.1),
+      1.217 * lobe(nm, 437.0, 11.8, 36.0) + 0.681 * lobe(nm, 459.0, 26.0, 13.8),
+    ];
+    const CMF = LAMBDA.map(cmf);
+    function toXYZ(spec) {
+      const out = [0, 0, 0];
+      spec.forEach((v, i) => { out[0] += v * CMF[i][0]; out[1] += v * CMF[i][1]; out[2] += v * CMF[i][2]; });
+      return out;
+    }
+    const WHITE = toXYZ(SUN);
+    // lineární RGB; vyvážení bílé na sluneční světlo, ať polední Slunce vychází bílé
+    function linear(xyz) {
+      const X = (xyz[0] / WHITE[0]) * 0.9505, Y = xyz[1] / WHITE[1], Z = (xyz[2] / WHITE[2]) * 1.089;
+      return [3.2406 * X - 1.5372 * Y - 0.4986 * Z, -0.9689 * X + 1.8758 * Y + 0.0415 * Z, 0.0557 * X - 0.204 * Y + 1.057 * Z].map((v) => Math.max(0, v));
+    }
+    function toRGB(xyz, gain) {
+      let rgb = linear(xyz).map((v) => v * gain);
+      const peak = Math.max(...rgb);
+      if (peak > 1) rgb = rgb.map((v) => v / peak);
+      return rgb.map((v) => Math.round(255 * (v <= 0.0031308 ? 12.92 * v : 1.055 * v ** (1 / 2.4) - 0.055)));
+    }
+    const css = (rgb) => `rgb(${rgb.join(",")})`;
+    const mix = (a, b, k) => a.map((v, i) => Math.round(v + (b[i] - v) * k));
+    const NIGHT = [9, 13, 24];
+    const BAR_COLORS = LAMBDA.map((nm) => { const x = cmf(nm); const m = Math.max(...x); return css(toRGB([x[0] / m * WHITE[0], x[1] / m * WHITE[1], x[2] / m * WHITE[2]], 0.9)); });
+
+    /* ---------- scéna ---------- */
+    const HORIZON = 300;
+    const grad = document.getElementById("grad");
+    const VIEW = [[90, 0], [30, 0.55], [10, 0.8], [3, 0.93], [0.3, 1]];      // výška pohledu a poloha v přechodu
+    const stops = VIEW.map(([, off]) => el("stop", { offset: off }, grad));
+    el("rect", { x: 0, y: 0, width: 640, height: HORIZON, fill: "url(#grad)" }, sky);
+    const starsG = el("g", {}, sky);
+    for (let i = 0; i < 46; i++) el("circle", { cx: (i * 137.5) % 640, cy: (i * 61.3) % (HORIZON - 20), r: 0.6 + (i % 3) * 0.45, class: "star" }, starsG);
+    const glow = el("circle", { r: 46 }, sky), sun = el("circle", { r: 17 }, sky);
+    el("path", { d: `M0 ${HORIZON - 8} Q90 ${HORIZON - 44} 200 ${HORIZON - 14} T420 ${HORIZON - 22} T640 ${HORIZON - 6} V400 H0 Z`, class: "hill far" }, sky);
+    el("path", { d: `M0 ${HORIZON + 14} Q140 ${HORIZON - 16} 300 ${HORIZON + 10} T640 ${HORIZON + 4} V400 H0 Z`, class: "hill" }, sky);
+
+    function spectrumChart(id) {
+      const svg = document.getElementById(id), B = { x: 14, y: 12, w: 172, h: 92 };
+      el("line", { x1: B.x, y1: B.y + B.h, x2: B.x + B.w, y2: B.y + B.h, class: "sp-axis" }, svg);
+      el("text", { x: B.x, y: B.y + B.h + 14, class: "sp-text" }, svg).textContent = "fialová";
+      el("text", { x: B.x + B.w, y: B.y + B.h + 14, "text-anchor": "end", class: "sp-text" }, svg).textContent = "červená";
+      const bw = B.w / LAMBDA.length;
+      const bars = LAMBDA.map((_, i) => el("rect", { x: (B.x + i * bw + 1).toFixed(1), width: (bw - 2).toFixed(1), fill: BAR_COLORS[i] }, svg));
+      return (spec) => {
+        const peak = Math.max(...spec, 1e-9);
+        bars.forEach((b, i) => { const h = (spec[i] / peak) * B.h; b.setAttribute("y", (B.y + B.h - h).toFixed(1)); b.setAttribute("height", h.toFixed(1)); });
+      };
+    }
+    const drawSky = spectrumChart("sp-sky"), drawSun = spectrumChart("sp-sun");
+
+    /* ---------- výpis ---------- */
+    const fmt1 = new Intl.NumberFormat("cs-CZ", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    const fmt0 = new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 0 });
+    const $ = (id) => document.getElementById(id);
+    const cache = new WeakMap();
+    function put(node, str, html) {
+      if (cache.get(node) === str) return;
+      cache.set(node, str);
+      if (html) node.innerHTML = str; else node.textContent = str;
+    }
+    const s = { h: 50, air: true, setting: false };
+
+    function render() {
+      const ms = airMass(s.h), dark = Math.max(0, Math.min(1, -s.h / 7));
+      // expozice jako u oka nebo foťáku: řídí se jasem oblohy nad hlavou, k večeru se stmívá
+      const zenith = linear(toXYZ(scattered(ms, 1)));
+      const dusk = Math.max(0.2, Math.min(1, 0.5 + (s.h / 12) * 0.5));
+      const gain = (0.86 / Math.max(...zenith, 1e-9)) * dusk;
+      let skyColors = VIEW.map(([view]) => mix(toRGB(toXYZ(scattered(ms, airMass(view))), gain), NIGHT, dark));
+      const sunLin = linear(toXYZ(direct(ms)));
+      let sunColor = toRGB(toXYZ(direct(ms)), 1 / Math.max(...sunLin, 1e-9));
+      const zenithSpec = scattered(ms, 1), sunSpec = direct(ms);
+      if (!s.air) { skyColors = VIEW.map(() => [4, 5, 8]); sunColor = [255, 255, 255]; }
+      stops.forEach((st, i) => st.setAttribute("stop-color", css(skyColors[i])));
+      starsG.setAttribute("opacity", s.air ? dark.toFixed(2) : "1");
+
+      const sx = 96 + (Math.max(0, s.h) / 90) * 224, sy = HORIZON - (s.h / 90) * 262 + 4;
+      sun.setAttribute("cx", sx.toFixed(1)); sun.setAttribute("cy", sy.toFixed(1)); sun.setAttribute("fill", css(sunColor));
+      glow.setAttribute("cx", sx.toFixed(1)); glow.setAttribute("cy", sy.toFixed(1)); glow.setAttribute("fill", css(sunColor));
+      glow.setAttribute("opacity", s.air ? 0.28 : 0);
+
+      drawSky(s.air ? zenithSpec : zenithSpec.map(() => 0));
+      drawSun(s.air ? sunSpec : SUN);
+      $("sw-sky").style.background = css(skyColors[0]);
+      $("sw-sun").style.background = css(sunColor);
+      put($("st-mass"), !s.air ? "0×" : s.h < 0 ? "za obzorem" : `${ms < 10 ? fmt1.format(ms) : fmt0.format(ms)}×`);
+      put($("height-val"), `${String(s.h).replace("-", "−")}°`);
+
+      let status;
+      if (!s.air) {
+        status = "<strong>Bez vzduchu.</strong> Světlo letí rovně a nic ho nerozptýlí do stran. Slunce je čistě bílé a všude kolem něj je černo, i ve dne.";
+      } else if (s.h < -1) {
+        status = "<strong>Slunce je pod obzorem.</strong> Přímé světlo k vám už nedojde. Obloha ještě chvíli svítí tím, které se rozptýlilo vysoko nad vámi, kam Slunce pořád dosvítí.";
+      } else if (s.h < 7) {
+        status = "<strong>Západ Slunce.</strong> Světlo k vám letí šikmo skrz desítky vrstev vzduchu. Modrá a zelená se cestou rozptýlily pryč, a ze Slunce i z oblohy kolem něj zbyla oranžová a červená.";
+      } else if (s.h < 25) {
+        status = "<strong>Slunce je nízko.</strong> Cesta vzduchem se prodlužuje a Slunce žloutne, protože přichází o čím dál víc modré. Obloha nad hlavou je pořád modrá.";
+      } else {
+        status = "<strong>Den.</strong> Sluneční světlo jde vzduchem krátkou cestou a ztratí jen trochu modré. Ta se rozlétne po obloze a přichází ze všech stran. Slunce samo je skoro bílé.";
+      }
+      put($("status"), status, true);
+    }
+
+    /* ---------- ovládání ---------- */
+    const slider = $("height");
+    slider.addEventListener("input", () => { s.h = Number(slider.value); s.setting = false; render(); });
+    const seg = $("air-seg");
+    seg.addEventListener("click", (e) => {
+      const b = e.target.closest("button[data-v]");
+      if (!b) return;
+      seg.querySelectorAll("button").forEach((x) => x.setAttribute("aria-checked", String(x === b)));
+      s.air = b.dataset.v === "1";
+      render();
+    });
+    const btn = $("sunset");
+    btn.addEventListener("click", () => {
+      if (s.h <= -7) { s.h = 50; slider.value = 50; render(); return; }
+      s.setting = !s.setting;
+    });
+
+    let prev = performance.now(), exact = 50;
+    function frame(now) {
+      const dt = Math.min(0.1, (now - prev) / 1000);
+      prev = now;
+      if (s.setting) {
+        if (Math.abs(exact - s.h) > 1) exact = s.h;
+        // u obzoru zpomalíme, tam se děje nejvíc
+        exact -= dt * (exact > 15 ? 14 : 3.2);
+        s.h = Math.max(-8, Math.round(exact));
+        slider.value = s.h;
+        if (s.h <= -8) s.setting = false;
+        render();
+      }
+      put(btn, s.setting ? "Zastavit" : s.h <= -7 ? "Zpátky na den" : "Nechat zapadnout");
+      requestAnimationFrame(frame);
+    }
+    render();
+    requestAnimationFrame(frame);
+  })();
+  </script>
+</body>
+</html>

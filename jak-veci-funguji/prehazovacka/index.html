@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Jak funguje přehazovačka na kole</title>
+  <meta name="description" content="Proč jde s lehkým převodem do kopce snáz, jak řetěz přeskočí na jiné kolečko a k čemu jsou dvě malé kladky vzadu. S pohonem kola, na kterém si můžete řadit.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700&display=swap">
+  <link rel="stylesheet" href="../style.css">
+  <style>
+    .tyre { fill: none; stroke: var(--ink); stroke-width: 12; }
+    .rim { fill: none; stroke: var(--steel-hatch); stroke-width: 4; }
+    .wspoke { stroke: var(--steel-hatch); stroke-width: 1.4; }
+    .stay { stroke: var(--pin-top); stroke-width: 9; stroke-linecap: round; }
+    .cog { fill: none; stroke: var(--rule); stroke-width: 2; }
+    .cog.on { stroke: var(--metal-line); stroke-width: 7; }
+    .cog-fill { fill: var(--steel); stroke: var(--metal-line); stroke-width: 1.2; }
+    .chain { fill: none; stroke: var(--cat); stroke-width: 4.5; stroke-dasharray: 8 4.7; stroke-linejoin: round; }
+    .crank { stroke: var(--ink); stroke-width: 9; stroke-linecap: round; }
+    .pedal { fill: var(--ink); }
+    .cage { stroke: var(--ink); stroke-width: 6; stroke-linecap: round; }
+    .arm { stroke: var(--ink-3); stroke-width: 7; stroke-linecap: round; }
+    .pulley { fill: var(--surface); stroke: var(--ink); stroke-width: 4; stroke-dasharray: 4 4; }
+    .hub { fill: var(--ink); }
+    .ground { stroke: var(--ink-3); stroke-width: 1.5; }
+    .formula { margin: 0; font-family: var(--font-mono); font-size: 0.85rem; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+    .formula b { color: var(--ink); font-weight: 600; }
+    .gears { display: flex; gap: 0.35rem; align-items: center; }
+    .gears .btn { min-width: 42px; padding-inline: 0.8rem; }
+    .gears output { min-width: 5.5ch; text-align: center; font: 600 0.95rem var(--font-mono); }
+  </style>
+</head>
+<body data-cat="doprava">
+  <header class="topbar">
+    <div class="wrap">
+      <a class="brand" href="../">Jak věci fungují</a>
+      <nav class="crumbs" aria-label="Drobečková navigace"><a href="../#doprava">Doprava</a><span aria-hidden="true">/</span><span>Přehazovačka na kole</span></nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <header class="art-head">
+      <p class="eyebrow">Doprava</p>
+      <h1 class="display">Jak funguje přehazovačka na kole</h1>
+      <p class="lede">Nohy mají rády stálé tempo, kopce a roviny ale chtějí pokaždé něco jiného. Převody mezi nimi překládají. A přehazovačka je jen šikovný způsob, jak za jízdy shodit řetěz z jednoho kolečka na druhé.</p>
+    </header>
+
+    <section class="tldr" aria-labelledby="h-zkratka">
+      <h2 class="label" id="h-zkratka">Ve zkratce</h2>
+      <ul>
+        <li>Převod je poměr zubů vpředu a vzadu. Říká, kolikrát se zadní kolo otočí na jedno šlápnutí.</li>
+        <li>Lehký převod znamená <span class="hl">míň síly, ale víc šlapání.</span> Těžký naopak. Práce je stejná.</li>
+        <li>Přehazovačka řetěz jen postrčí do strany. Přelézt na sousední kolečko mu pomůže to, že se točí.</li>
+      </ul>
+    </section>
+
+    <figure class="fig" id="obr1">
+      <div class="fig-head">
+        <p class="fig-num"><b>Obr. 1</b> Pohon kola z pravé strany</p>
+        <span class="label">Řaďte a sledujte řetěz a kladky</span>
+      </div>
+      <div class="fig-stage">
+        <svg id="bike" viewBox="0 0 940 440" role="img" aria-label="Zadní kolo s kazetou a přehazovačkou, řetěz a převodník s klikou"></svg>
+      </div>
+      <div class="fig-controls">
+        <div class="ctl">
+          <span class="label" id="lbl-front">Vpředu</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-front" id="front-seg">
+            <button type="button" role="radio" data-v="0" aria-checked="false">Malý · 34 zubů</button>
+            <button type="button" role="radio" data-v="1" aria-checked="true">Velký · 50 zubů</button>
+          </div>
+        </div>
+        <div class="ctl">
+          <span class="label" id="lbl-rear">Vzadu</span>
+          <div class="gears" role="group" aria-labelledby="lbl-rear">
+            <button type="button" class="btn ghost" id="easier" aria-label="Lehčí převod, větší kolečko">−</button>
+            <output id="rear-val"></output>
+            <button type="button" class="btn ghost" id="harder" aria-label="Těžší převod, menší kolečko">+</button>
+          </div>
+        </div>
+        <div class="ctl ctl-grow">
+          <label class="label" for="cadence">Šlapání</label>
+          <div class="ctl-row">
+            <input type="range" id="cadence" min="40" max="120" step="5" value="80">
+            <output class="val" id="cadence-val" for="cadence">80 za min</output>
+          </div>
+        </div>
+      </div>
+      <div class="fig-status split">
+        <div style="display:grid; gap:.6rem; min-width:0">
+          <p class="status" id="status" aria-live="polite"></p>
+          <p class="formula" id="force"></p>
+        </div>
+        <ul class="stats" aria-label="Stav modelu">
+          <li><span class="n">Převod</span><span class="v" id="st-ratio"></span></li>
+          <li><span class="n">Jedno šlápnutí</span><span class="v" id="st-dev"></span></li>
+          <li><span class="n">Rychlost</span><span class="v" id="st-speed"></span></li>
+        </ul>
+      </div>
+      <figcaption class="fig-caption">Kolečka a řetěz jsou ve správném poměru, zadní kolo je kvůli místu nakreslené menší. Skutečná kazeta má koleček víc a leží vedle sebe, tady jsou vidět jako soustředné kruhy. Rychlost platí pro silniční kolo s obvodem kola 2,1 metru.</figcaption>
+    </figure>
+
+    <section class="sec" aria-labelledby="h-proc">
+      <div class="prose">
+        <h2 id="h-proc">Proč nestačí jeden převod</h2>
+        <p>Nohy jsou motor s úzkým rozsahem. Nejlíp jim to jde, když se točí zhruba osmdesátkrát za minutu a netlačí přitom naplno. Pomaleji a silou se rychle unaví svaly, rychleji a naprázdno se zadýcháte a nic z toho není.</p>
+        <p>Silnice na to nebere ohled. Do kopce potřebujete na zadním kole velkou sílu a jedete pomalu. Z kopce stačí síla malá, ale kolo se točí rychle. S jedním převodem by nohy musely jednou dřít a podruhé zběsile kmitat.</p>
+        <p>Převody to srovnají. Vy šlapete pořád stejně a měníte jen to, jak se váš pohyb přenáší na kolo.</p>
+      </div>
+      <aside class="note" aria-label="Pohon v číslech">
+        <span class="label">V číslech</span>
+        <dl class="facts">
+          <div><dt>12,7 mm</dt><dd>rozteč článků řetězu, půl palce</dd></div>
+          <div><dt>≈ 98 %</dt><dd>síly z pedálů přenese čistý řetěz na kolo</dd></div>
+          <div><dt>80–90</dt><dd>otáček za minutu točí nohama trénovaní cyklisté</dd></div>
+        </dl>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-zuby">
+      <div class="prose">
+        <h2 id="h-zuby">Stačí počítat zuby</h2>
+        <p>Řetěz je ozubený převod natažený do délky. Každý zub převodníku vpředu posune řetěz o jeden článek a každý článek pootočí kolečko vzadu o jeden zub. Když má převodník 50 zubů a kolečko 25, otočí se zadní kolo na jedno šlápnutí dvakrát.</p>
+        <p>Menší kolečko vzadu znamená víc otáček kola na šlápnutí, tedy těžší převod. Ujedete dál, ale musíte víc tlačit. Větší kolečko je lehčí převod: tlačíte míň a ujedete míň.</p>
+        <p>Zadarmo to není ani jedním směrem. <span class="hl">Co ušetříte na síle, zaplatíte počtem šlápnutí.</span> Na kopec vyvezete stejnou váhu do stejné výšky a práce je to pořád stejná. Lehký převod ji jen rozdělí na víc menších kousků, které nohy zvládnou.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Dejte vpředu malý převodník a vzadu největší kolečko. Kolo se sotva hýbe, ale zadní kolo se do silnice opírá skoro polovinou síly, kterou tlačíte do pedálu. Na opačném konci, s velkým převodníkem a nejmenším kolečkem, je to jen devítina.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-skok">
+      <div class="prose">
+        <h2 id="h-skok">Jak řetěz přeskočí</h2>
+        <p>Přehazovačka se francouzsky a anglicky jmenuje dérailleur, doslova vykolejovač. Přesně to dělá. Malé vodítko pod kazetou se pohne do strany a řetěz tam, kde na kolečko teprve nabíhá, vychýlí k sousednímu.</p>
+        <p>Zbytek udělá otáčení. Kolečka mají na bocích vyfrézované rampy a některé zuby jsou zkosené. Vychýlený řetěz se o rampu zachytí, ta ho nadzvedne a během půl otáčky kolečka leží celý na sousedním.</p>
+        <p>Proto se dá řadit jen při šlapání, a proto to jde hladce, když zrovna netlačíte naplno. Napnutý řetěz se nerad ohýbá do strany. Zkušený cyklista při řazení na okamžik povolí.</p>
+      </div>
+    </section>
+
+    <section class="sec" aria-labelledby="h-kladky">
+      <div class="prose">
+        <h2 id="h-kladky">K čemu jsou dvě kladky</h2>
+        <p>Řetěz má pořád stejnou délku. Na velkých kolečkách ho je potřeba hodně, na malých málo, a přebytek musí někam zmizet. O to se stará spodní část přehazovačky.</p>
+        <p>Horní kladka je vodítko, o kterém byla řeč. Spodní je napínák. Obě sedí v klícce, kterou pružina tlačí dozadu. Řetěz jimi prochází do esíčka, a když je ho moc, klícka se otočí dozadu a esíčko se protáhne. Když ho je málo, řetěz klícku přetáhne dopředu.</p>
+        <p>Díky pružině je spodní větev řetězu vždycky lehce napnutá, ať je zařazeno cokoli. Horní větev napínají vaše nohy.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Řaďte vzadu od největšího kolečka k nejmenšímu a sledujte spodní kladku. S každým menším kolečkem se odkloní o kus dozadu a schová uvolněný řetěz.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-cvak">
+      <div class="prose">
+        <h2 id="h-cvak">Cvaknutí v řadičce</h2>
+        <p>Přehazovačka sama nic neví. Je to kloubový rovnoběžník s pružinou, který se chce sklopit k nejmenšímu kolečku, a lanko ho drží. Řadička na řídítkách lanko povoluje a přitahuje.</p>
+        <p>Každé cvaknutí posune lanko přesně o tolik, aby se vodítko přesunulo o jedno kolečko. Když se lanko časem vytáhne nebo se do bovdenu dostane špína, kroky přestanou sedět a řetěz na kolečkách drnčí. Většinou stačí pootočit šroubkem na konci bovdenu o čtvrt otáčky.</p>
+        <p>Dražší kola dnes lanko nemají. V přehazovačce je motorek a řadička mu posílá povel po drátě nebo rádiem.</p>
+      </div>
+    </section>
+
+    <section class="sec" aria-labelledby="h-krizeni">
+      <div class="prose">
+        <h2 id="h-krizeni">Co řetězu nesvědčí</h2>
+        <p>Velký převodník a zároveň největší kolečko vzadu, nebo naopak malý vpředu a nejmenší vzadu. Řetěz pak běží šikmo, dře se o boky zubů a rychle se opotřebuje. Stejný převod jde skoro vždycky zařadit i rovněji.</p>
+        <p>Řazení ve stoje do kopce pod plnou silou. Řetěz přeskakuje s ranou a jednou za čas se přetrhne.</p>
+        <p>Řazení na místě. Řetěz se nehýbe, a tak nemá jak přelézt. Když přijíždíte ke křižovatce, podřaďte ještě za jízdy, ať se vám dobře rozjíždí.</p>
+      </div>
+    </section>
+
+    <section class="sec" aria-labelledby="h-historie">
+      <div class="prose">
+        <h2 id="h-historie">Sto let zákazů a vylepšení</h2>
+        <p>První závodníci měli dva převody: na každé straně zadního kola jedno kolečko. Pod kopcem slezli, povolili matky, kolo otočili a jeli dál. Přehazovačky už tehdy existovaly, ale pořadatel Tour de France je považoval za změkčilost a povolil je až v roce 1937.</p>
+        <p>Dnešní podobu s rovnoběžníkem a dvěma kladkami dal přehazovačce po válce Ital Tullio Campagnolo. V osmdesátých letech přidali Japonci řadičky, které cvakají, a kolečka s rampami. Do té doby se řadilo po citu páčkou na rámu a každý přehoz bylo slyšet.</p>
+      </div>
+    </section>
+
+    <footer class="art-foot">
+      <a class="next" href="../letadlo/" data-cat="doprava">
+        <span class="label">Další článek · Doprava</span>
+        <span class="t">Proč letadlo letí</span>
+        <p>Jak křídlo drží ve vzduchu stovky tun a co je špatně na vysvětlení z učebnic.</p>
+      </a>
+      <a class="back" href="../">Všechna témata</a>
+    </footer>
+  </main>
+
+  <script>
+  (() => {
+    const NS = "http://www.w3.org/2000/svg";
+    function el(tag, attrs, parent) {
+      const n = document.createElementNS(NS, tag);
+      for (const k in attrs || {}) n.setAttribute(k, attrs[k]);
+      if (parent) parent.appendChild(n);
+      return n;
+    }
+    const svg = document.getElementById("bike");
+
+    /* ---------- model ---------- */
+    const TOOTH = 12.7 / (2 * Math.PI);      // poloměr na jeden zub; 1 jednotka SVG = 1 mm
+    const FRONT = [34, 50], REAR = [30, 26, 23, 20, 17, 15, 13, 11];
+    const WHEEL_M = 2.1;                     // obvod kola v metrech
+    const CRANK_MM = 170, WHEEL_R_MM = 335;
+    const A = { x: 250, y: 208 };            // osa zadního kola
+    const B = { x: 660, y: 228 };            // osa klik
+    const PULLEY = 15, CAGE = 66;
+    const s = { front: 1, rear: 4, cadence: 80, crank: 0, wheel: 0, chain: 0 };
+
+    // všechny čtyři společné tečny dvou kružnic
+    function tangents(c1, r1, c2, r2) {
+      const dx = c2.x - c1.x, dy = c2.y - c1.y, D = Math.hypot(dx, dy), ux = dx / D, uy = dy / D, out = [];
+      [1, -1].forEach((s2) => {
+        const k = (s2 * r2 - r1) / D;
+        if (Math.abs(k) > 1) return;
+        const cos = k, sin = Math.sqrt(1 - k * k);
+        [1, -1].forEach((sg) => {
+          const nx = ux * cos - sg * uy * sin, ny = uy * cos + sg * ux * sin;
+          out.push({ p1: { x: c1.x - r1 * nx, y: c1.y - r1 * ny }, p2: { x: c2.x - s2 * r2 * nx, y: c2.y - s2 * r2 * ny }, inner: s2 === -1 });
+        });
+      });
+      return out;
+    }
+    const pick = (list, score) => list.reduce((best, t) => (score(t) > score(best) ? t : best));
+    // oblouk po kružnici od bodu k bodu, po směru nebo proti směru hodinových ručiček
+    function arc(c, r, from, to, cw) {
+      const a0 = Math.atan2(from.y - c.y, from.x - c.x), a1 = Math.atan2(to.y - c.y, to.x - c.x);
+      let d = cw ? a1 - a0 : a0 - a1;
+      d = ((d % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+      return `A${r.toFixed(1)} ${r.toFixed(1)} 0 ${d > Math.PI ? 1 : 0} ${cw ? 1 : 0} ${to.x.toFixed(1)} ${to.y.toFixed(1)}`;
+    }
+
+    function layout() {
+      const rf = FRONT[s.front] * TOOTH, rr = REAR[s.rear] * TOOTH;
+      // čím míň zubů je v záběru, tím víc řetězu přebývá a klícka se otáčí dozadu
+      const teeth = FRONT[s.front] + REAR[s.rear];
+      const slack = 1 - (teeth - 45) / 35;
+      const ang = ((28 + 96 * slack) * Math.PI) / 180;
+      const P1 = { x: A.x + 8, y: A.y + rr + 30 };
+      const P2 = { x: P1.x + CAGE * Math.cos(ang), y: P1.y + CAGE * Math.sin(ang) };
+      const top = pick(tangents(A, rr, B, rf).filter((t) => !t.inner), (t) => -t.p1.y);
+      const low = pick(tangents(B, rf, P2, PULLEY).filter((t) => !t.inner), (t) => t.p1.y);
+      const ess = pick(tangents(P2, PULLEY, P1, PULLEY).filter((t) => t.inner), (t) => t.p2.x - t.p1.x);
+      const feed = pick(tangents(P1, PULLEY, A, rr).filter((t) => t.inner), (t) => t.p1.x - t.p2.x);
+      const pt = (p) => `${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
+      const d = `M${pt(top.p1)} L${pt(top.p2)} ${arc(B, rf, top.p2, low.p1, true)} L${pt(low.p2)} ${arc(P2, PULLEY, low.p2, ess.p1, true)} L${pt(ess.p2)} ${arc(P1, PULLEY, ess.p2, feed.p1, false)} L${pt(feed.p2)} ${arc(A, rr, feed.p2, top.p1, true)} Z`;
+      return { rf, rr, P1, P2, d };
+    }
+
+    /* ---------- kresba ---------- */
+    const WHEEL_R = 186;
+    el("line", { x1: 30, y1: A.y + WHEEL_R + 8, x2: 910, y2: A.y + WHEEL_R + 8, class: "ground" }, svg);
+    const wheelG = el("g", {}, svg);
+    el("circle", { cx: A.x, cy: A.y, r: WHEEL_R, class: "tyre" }, wheelG);
+    el("circle", { cx: A.x, cy: A.y, r: WHEEL_R - 12, class: "rim" }, wheelG);
+    for (let k = 0; k < 16; k++) {
+      const a = (k / 16) * 2 * Math.PI;
+      el("line", { x1: A.x, y1: A.y, x2: A.x + (WHEEL_R - 12) * Math.cos(a), y2: A.y + (WHEEL_R - 12) * Math.sin(a), class: "wspoke" }, wheelG);
+    }
+    el("line", { x1: A.x, y1: A.y, x2: B.x, y2: B.y, class: "stay" }, svg);
+    const dash = (TOOTH * Math.PI).toFixed(3);       // půl rozteče: zub a mezera
+    const rearCogs = REAR.map((n) => el("circle", { cx: A.x, cy: A.y, r: n * TOOTH, class: "cog", "stroke-dasharray": `${dash} ${dash}` }, svg));
+    const frontCogs = FRONT.map((n) => el("circle", { cx: B.x, cy: B.y, r: n * TOOTH, class: "cog", "stroke-dasharray": `${dash} ${dash}` }, svg));
+    const arm = el("line", { x1: A.x + 4, y1: A.y + 14, class: "arm" }, svg);
+    const chain = el("path", { class: "chain" }, svg);
+    const cage = el("line", { class: "cage" }, svg);
+    const pulleys = [0, 1].map(() => el("circle", { r: PULLEY - 3, class: "pulley" }, svg));
+    el("circle", { cx: A.x, cy: A.y, r: 10, class: "hub" }, svg);
+    const crankG = el("g", {}, svg);
+    el("line", { x1: B.x, y1: B.y, x2: B.x + 150, y2: B.y, class: "crank" }, crankG);
+    el("rect", { x: B.x + 132, y: B.y - 9, width: 44, height: 18, rx: 4, class: "pedal" }, crankG);
+    el("circle", { cx: B.x, cy: B.y, r: 13, class: "hub" }, crankG);
+
+    function callout(label, tx, ty, anchor) {
+      const g = el("g", { class: "callout" }, svg);
+      const line = el("line", {}, g), dot = el("circle", { r: 2.2 }, g);
+      el("text", { x: tx, y: ty + 4, "text-anchor": anchor }, g).textContent = label;
+      return (x, y) => {
+        line.setAttribute("x1", anchor === "end" ? tx + 6 : tx - 6); line.setAttribute("y1", ty);
+        line.setAttribute("x2", x.toFixed(1)); line.setAttribute("y2", y.toFixed(1));
+        dot.setAttribute("cx", x.toFixed(1)); dot.setAttribute("cy", y.toFixed(1));
+      };
+    }
+    const cCass = callout("kazeta", 480, 60, "start");
+    const cGuide = callout("vodicí kladka", 480, 356, "start");
+    const cTens = callout("napínací kladka", 480, 396, "start");
+    const cRing = callout("převodník", 870, 80, "end");
+
+    /* ---------- výpis ---------- */
+    const fmt0 = new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 0 });
+    const fmt1 = new Intl.NumberFormat("cs-CZ", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    const fmt2 = new Intl.NumberFormat("cs-CZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const $ = (id) => document.getElementById(id);
+    const cache = new WeakMap();
+    function put(node, str, html) {
+      if (cache.get(node) === str) return;
+      cache.set(node, str);
+      if (html) node.innerHTML = str; else node.textContent = str;
+    }
+
+    let L = layout();
+    function render() {
+      const nf = FRONT[s.front], nr = REAR[s.rear], ratio = nf / nr;
+      rearCogs.forEach((c, i) => c.setAttribute("class", i === s.rear ? "cog on" : "cog"));
+      frontCogs.forEach((c, i) => c.setAttribute("class", i === s.front ? "cog on" : "cog"));
+      rearCogs[s.rear].setAttribute("stroke-dashoffset", (-s.chain).toFixed(1));
+      frontCogs[s.front].setAttribute("stroke-dashoffset", (-s.chain).toFixed(1));
+      chain.setAttribute("d", L.d);
+      chain.setAttribute("stroke-dashoffset", (-s.chain).toFixed(1));
+      cage.setAttribute("x1", L.P1.x); cage.setAttribute("y1", L.P1.y); cage.setAttribute("x2", L.P2.x.toFixed(1)); cage.setAttribute("y2", L.P2.y.toFixed(1));
+      arm.setAttribute("x2", L.P1.x); arm.setAttribute("y2", L.P1.y);
+      [L.P1, L.P2].forEach((p, i) => { pulleys[i].setAttribute("cx", p.x.toFixed(1)); pulleys[i].setAttribute("cy", p.y.toFixed(1)); });
+      crankG.setAttribute("transform", `rotate(${(((s.crank * 180) / Math.PI) % 360).toFixed(1)} ${B.x} ${B.y})`);
+      wheelG.setAttribute("transform", `rotate(${(((s.wheel * 180) / Math.PI) % 360).toFixed(1)} ${A.x} ${A.y})`);
+      cCass(A.x + L.rr * 0.7, A.y - L.rr * 0.7);
+      cGuide(L.P1.x + PULLEY, L.P1.y);
+      cTens(L.P2.x + PULLEY * 0.7, L.P2.y + PULLEY * 0.7);
+      cRing(B.x + L.rf * 0.7, B.y - L.rf * 0.7);
+
+      const dev = ratio * WHEEL_M, speed = (dev * s.cadence * 60) / 1000;
+      put($("st-ratio"), `${nf} : ${nr}`);
+      put($("st-dev"), `${fmt1.format(dev)} m`);
+      put($("st-speed"), `${fmt0.format(Math.round(speed))} km/h`);
+      put($("rear-val"), `${nr} z.`);
+      const push = (20 * CRANK_MM) / WHEEL_R_MM / ratio;
+      put($("force"), `kolo se na jedno šlápnutí otočí <b>${fmt2.format(ratio)}×</b> · když na pedál tlačíte vahou 20 kg, zadní kolo se do silnice opírá silou <b>${fmt1.format(push)} kg</b>`, true);
+
+      let status;
+      if ((s.front === 1 && s.rear <= 1) || (s.front === 0 && s.rear >= 6)) {
+        status = "<strong>Řetěz se kříží.</strong> Vpředu běží po jedné straně, vzadu po opačné. Ve skutečnosti by šel šikmo, dřel o boky zubů a drnčel. Stejný převod jde zařadit i s druhým převodníkem.";
+      } else if (ratio < 1.6) {
+        status = "<strong>Lehký převod do kopce.</strong> Zadní kolo se na jedno šlápnutí sotva otočí, zato se do silnice opírá velkou silou. Nohy se točí, i když kolo skoro stojí.";
+      } else if (ratio > 3.2) {
+        status = "<strong>Těžký převod z kopce.</strong> Na jedno šlápnutí ujedete hodně metrů, ale síla na zadním kole je malá. Do kopce byste s ním nohy neprotočili.";
+      } else {
+        status = "<strong>Střední převod na rovinu.</strong> Nohy se točí pohodlným tempem a kolo jede cestovní rychlostí.";
+      }
+      put($("status"), status, true);
+    }
+
+    /* ---------- ovládání ---------- */
+    const seg = $("front-seg");
+    seg.addEventListener("click", (e) => {
+      const b = e.target.closest("button[data-v]");
+      if (!b) return;
+      seg.querySelectorAll("button").forEach((x) => x.setAttribute("aria-checked", String(x === b)));
+      s.front = Number(b.dataset.v);
+      L = layout();
+      render();
+    });
+    function shift(d) { s.rear = Math.max(0, Math.min(REAR.length - 1, s.rear + d)); L = layout(); render(); }
+    $("easier").addEventListener("click", () => shift(-1));
+    $("harder").addEventListener("click", () => shift(1));
+    $("cadence").addEventListener("input", (e) => { s.cadence = Number(e.target.value); $("cadence-val").textContent = `${s.cadence} za min`; render(); });
+
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let prev = performance.now();
+    function frame(now) {
+      const dt = Math.min(0.1, (now - prev) / 1000);
+      prev = now;
+      if (!reduced) {
+        const turn = (s.cadence / 60) * 2 * Math.PI * dt;
+        s.crank += turn;
+        s.wheel += turn * (FRONT[s.front] / REAR[s.rear]);
+        s.chain = (s.chain + turn * L.rf) % 12.7;
+        render();
+      }
+      requestAnimationFrame(frame);
+    }
+    render();
+    requestAnimationFrame(frame);
+  })();
+  </script>
+</body>
+</html>

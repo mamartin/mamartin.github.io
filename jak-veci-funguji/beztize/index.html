@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Proč je na ISS stav beztíže</title>
+  <meta name="description" content="Proč se kosmonauti na vesmírné stanici vznášejí, i když je tam gravitace skoro stejná jako na Zemi. S dělem, ze kterého můžete vystřelit na oběžnou dráhu.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700&display=swap">
+  <link rel="stylesheet" href="../style.css">
+  <style>
+    .orbit-stage { display: grid; gap: 1rem; grid-template-columns: minmax(0, 1fr); align-items: center; }
+    .cabin { display: grid; gap: 0.35rem; margin: 0; justify-self: center; width: min(15rem, 70%); }
+    .cabin svg { border: 1px solid var(--rule); background: var(--surface); }
+    .cabin .label { text-align: center; }
+    @media (min-width: 60rem) {
+      .orbit-stage { grid-template-columns: minmax(0, 1fr) 15rem; }
+      .cabin { width: 100%; }
+    }
+    /* vesmír je tmavý v obou režimech, barvy jsou proto pevné */
+    #space { border: 1px solid var(--rule); }
+    .void { fill: #0d1220; }
+    .star { fill: #cdd6ea; }
+    .earth { fill: #2a63b8; stroke: #8fb8ff; stroke-width: 1.2; }
+    .land { fill: #3f8f5a; opacity: 0.85; }
+    .air { fill: none; stroke: #8fb8ff; stroke-width: 3; opacity: 0.25; }
+    .iss { fill: none; stroke: #f4f1e6; stroke-width: 1; stroke-dasharray: 2 4; opacity: 0.7; }
+    .trail { fill: none; stroke: #ffb65a; stroke-width: 2.2; stroke-linejoin: round; stroke-linecap: round; }
+    .trail.old { stroke: #8f9ab5; stroke-width: 1.4; opacity: 0.7; }
+    .ball { fill: #ffffff; stroke: #0d1220; stroke-width: 1.5; }
+    .gun { fill: #f4f1e6; }
+    .lab { fill: #cdd6ea; font: 500 12.5px var(--font-mono); }
+    .boom { fill: #ff7461; }
+    .box { fill: none; stroke: var(--metal-line); stroke-width: 2; }
+    .scale { fill: var(--steel); stroke: var(--metal-line); stroke-width: 1.4; }
+    .who { fill: var(--cat); stroke: var(--metal-line); stroke-width: 1.2; }
+    .readout { fill: var(--ink); font: 800 26px var(--font-display); font-stretch: 112%; text-anchor: middle; font-variant-numeric: tabular-nums; }
+    .cap { fill: var(--ink-3); font: 500 11px var(--font-mono); text-anchor: middle; }
+    .pull line { stroke: var(--ink-3); stroke-width: 2; }
+    .pull path { fill: var(--ink-3); }
+    @media (max-width: 46rem) { .lab { display: none; } }
+  </style>
+</head>
+<body data-cat="vesmir">
+  <header class="topbar">
+    <div class="wrap">
+      <a class="brand" href="../">Jak věci fungují</a>
+      <nav class="crumbs" aria-label="Drobečková navigace"><a href="../#vesmir">Vesmír</a><span aria-hidden="true">/</span><span>Stav beztíže na ISS</span></nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <header class="art-head">
+      <p class="eyebrow">Vesmír</p>
+      <h1 class="display">Proč je na ISS stav beztíže</h1>
+      <p class="lede">Na vesmírné stanici není gravitace vypnutá. Je tam skoro stejně silná jako na Zemi. Kosmonauti se nevznášejí proto, že by je nic netáhlo dolů, ale proto, že padají. Celou dobu, spolu se stanicí.</p>
+    </header>
+
+    <section class="tldr" aria-labelledby="h-zkratka">
+      <h2 class="label" id="h-zkratka">Ve zkratce</h2>
+      <ul>
+        <li>Stanice létá jen 400 kilometrů nad zemí. Gravitace je tam o pouhou desetinu slabší než u vás doma.</li>
+        <li>Stanice padá k Zemi, ale letí přitom do strany tak rychle, že ji <span class="hl">pořád míjí.</span> Tomu se říká oběžná dráha.</li>
+        <li>Váhu cítíme jako tlak podlahy do chodidel. Když padá podlaha stejně rychle jako vy, netlačí nic.</li>
+      </ul>
+    </section>
+
+    <figure class="fig" id="obr1">
+      <div class="fig-head">
+        <p class="fig-num"><b>Obr. 1</b> Dělo na věži vysoké 400 km</p>
+        <span class="label">Nastavte rychlost a vystřelte</span>
+      </div>
+      <div class="fig-stage orbit-stage">
+        <svg id="space" viewBox="0 0 640 460" role="img" aria-label="Země ve správném měřítku s dráhou stanice 400 km nad povrchem a dělem, které střílí vodorovně"></svg>
+        <figure class="cabin">
+          <svg id="cabin" viewBox="0 0 200 190" role="img" aria-label="Kosmonaut v kabině na osobní váze"></svg>
+          <span class="label">Uvnitř střely</span>
+        </figure>
+      </div>
+      <div class="fig-controls">
+        <div class="ctl ctl-grow">
+          <label class="label" for="speed">Rychlost výstřelu</label>
+          <div class="ctl-row">
+            <input type="range" id="speed" min="0" max="11.5" step="0.1" value="5">
+            <output class="val" id="speed-val" for="speed"></output>
+          </div>
+        </div>
+        <button type="button" class="btn" id="fire">Vystřelit</button>
+        <button type="button" class="btn ghost" id="clear">Smazat dráhy</button>
+      </div>
+      <div class="fig-status split">
+        <p class="status" id="status" aria-live="polite"></p>
+        <ul class="stats" aria-label="Stav modelu">
+          <li><span class="n">Výška</span><span class="v" id="st-alt"></span></li>
+          <li><span class="n">Gravitace tam</span><span class="v" id="st-g"></span></li>
+          <li><span class="n">Doba letu</span><span class="v" id="st-time"></span></li>
+        </ul>
+      </div>
+      <figcaption class="fig-caption">Země a výška dráhy jsou ve správném měřítku: 400 kilometrů je ten tenký proužek nad povrchem. Dělo střílí vodorovně z výšky, ve které létá Mezinárodní vesmírná stanice. Odpor vzduchu model nepočítá a čas běží několiksetkrát rychleji.</figcaption>
+    </figure>
+
+    <section class="sec" aria-labelledby="h-je">
+      <div class="prose">
+        <h2 id="h-je">Gravitace tam je</h2>
+        <p>Slovo beztíže svádí k představě, že ve vesmíru gravitace nepůsobí. Stačí se ale podívat na měřítko. Země má poloměr 6 371 kilometrů. Stanice krouží 400 kilometrů nad ní. Kdyby byla Země velká jako fotbalový míč, létala by stanice centimetr nad jeho povrchem.</p>
+        <p>Gravitace slábne se vzdáleností od středu Země, a ta se tu změnila o pár procent. Ve výšce stanice je přitažlivost pořád zhruba devět desetin toho, co na zemi. Kdybyste tam stáli na vrcholu hodně vysoké věže, vážili byste místo sedmdesáti kil asi dvaašedesát. O vznášení by nemohla být řeč.</p>
+        <p>Ostatně kdyby tam gravitace nebyla, stanice by nekroužila. Odletěla by rovně pryč.</p>
+      </div>
+      <aside class="note" aria-label="Stanice v číslech">
+        <span class="label">V číslech</span>
+        <dl class="facts">
+          <div><dt>400 km</dt><dd>výška dráhy stanice</dd></div>
+          <div><dt>89 %</dt><dd>zemské přitažlivosti tam pořád působí</dd></div>
+          <div><dt>7,7 km/s</dt><dd>rychlost stanice, skoro 28 000 km/h</dd></div>
+          <div><dt>92 minut</dt><dd>jeden oběh kolem Země</dd></div>
+        </dl>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-delo">
+      <div class="prose">
+        <h2 id="h-delo">Padat a pořád míjet</h2>
+        <p>Isaac Newton to vysvětlil myšlenkovým pokusem. Postavte na hodně vysokou horu dělo a vystřelte vodorovně. Koule poletí obloukem a spadne na zem. Když přidáte prachu, doletí dál. Když přidáte ještě, dopadne tak daleko, že se pod ní mezitím stihne zakřivit povrch Země, a místo dopadu se posune ještě o kus.</p>
+        <p>Při jedné určité rychlosti se stane zvláštní věc. Koule padá přesně tak rychle, jak rychle pod ní zem uhýbá. Padá a padá a k zemi se nepřiblíží ani o metr. Obletí Zemi a vrátí se k dělu zezadu.</p>
+        <p>To je oběžná dráha. <span class="hl">Družice není věc, která nepadá. Je to věc, která padá pořád a nikdy nedopadne.</span> Těsně nad Zemí k tomu potřebuje letět skoro osm kilometrů za sekundu.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Vystřelte postupně rychlostí 3, 6 a 7 km/s. Střela pokaždé doletí dál. Pak nastavte 7,7 a obletí Zemi dokola. S 9 km/s vyletí po protáhlé elipse, s 11 už se nevrátí.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-vaha">
+      <div class="prose">
+        <h2 id="h-vaha">Co vlastně cítíme jako váhu</h2>
+        <p>Gravitaci samotnou necítíte. Táhne každý kousek vašeho těla stejně a nic se o nic neopírá. To, čemu říkáte váha, je podlaha, která se vám tlačí do chodidel, a židle, která vás tlačí zespodu. Brání vám padat.</p>
+        <p>Když podlaha zmizí, zmizí i ten tlak. Znáte to z první vteřiny na skokanském můstku, z houpačky v horním bodě nebo z výtahu, který se rozjede dolů. Kdyby se výtah utrhl, padali byste stejně rychle jako on a mohli byste se v kabině vznášet. Osobní váha pod vašima nohama by ukázala nulu, i když vás Země táhne pořád stejně.</p>
+        <p>Stanice je takový utržený výtah, který nikdy nedopadne. Padá ona, padají kosmonauti, padá jejich jídlo i kapky vody. Všechno stejně rychle, a proto vůči sobě nic nepadá.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Sledujte váhu pod kosmonautem v malém obrázku. Na věži ukazuje 62 kil. V okamžiku výstřelu spadne na nulu a je jedno, jestli střela míří na oběžnou dráhu, nebo rovnou k zemi.</p>
+        <p>Na Zemi se stav beztíže trénuje v letadle, které letí po oblouku jako hozený kámen. Vydrží to asi 25 sekund.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-rychlost">
+      <div class="prose">
+        <h2 id="h-rychlost">Těžké není vyletět nahoru</h2>
+        <p>Do výšky 400 kilometrů se dostane i poměrně malá raketa. Vyletí, na chvíli se zastaví a spadne zpátky. Těžké je to druhé: nabrat ve vodorovném směru rychlost skoro 28 000 kilometrů v hodině. Na ni padne drtivá většina paliva.</p>
+        <p>Při téhle rychlosti stanice obletí Zemi za hodinu a půl. Posádka vidí východ Slunce šestnáctkrát denně.</p>
+        <p>Úplně zadarmo to není ani potom. Ve výšce stanice ještě zbývá nepatrný zbytek atmosféry, který ji brzdí. Každý měsíc klesne asi o dva kilometry a čas od času ji musí motory nákladní lodi postrčit zpátky.</p>
+      </div>
+    </section>
+
+    <section class="sec" aria-labelledby="h-telo">
+      <div class="prose">
+        <h2 id="h-telo">Co na to tělo</h2>
+        <p>Tělo je stavěné na to, že ho něco táhne dolů, a když to přestane, začne se měnit. Krev a tekutiny, které gravitace držela v nohou, se přelijí k hlavě. Kosmonauti mají první dny opuchlý obličej, ucpaný nos a hubené nohy.</p>
+        <p>Kosti a svaly, které nemusejí nic nést, slábnou. Bez cvičení ubývá z nosných kostí víc než procento hmoty za měsíc. Posádka proto cvičí dvě hodiny denně na strojích s gumovými lany a pružinami, protože činky by tam nic nevážily.</p>
+        <p>Páteř, kterou nic nestlačuje, se natáhne. Kosmonauti jsou na stanici o několik centimetrů vyšší. Po návratu se zase smrsknou.</p>
+      </div>
+    </section>
+
+    <section class="sec" aria-labelledby="h-veci">
+      <div class="prose">
+        <h2 id="h-veci">Věci, které přestanou fungovat</h2>
+        <p>Plamen svíčky má na Zemi tvar slzy, protože horký vzduch stoupá a táhne ho nahoru. Na stanici nestoupá nic. Plamen je modrá kulička a brzy se udusí vlastními zplodinami.</p>
+        <p>Ze stejného důvodu musejí na stanici pořád běžet ventilátory. Vydechnutý vzduch by jinak zůstal viset kolem hlavy spícího kosmonauta a ten by se probudil s bolestí hlavy.</p>
+        <p>Voda neteče. Drží pohromadě povrchovým napětím a dělá koule, které se dají chytat ústy. Pot nestéká a slzy zůstanou na oku jako bublina. Pije se brčkem z pytlíku a drobky jsou nepřítel, protože nespadnou na zem, ale do přístrojů a do očí.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Na okraj</span>
+        <p>Odborně se místo beztíže říká mikrogravitace. Úplná nula to není: stanici lehce brzdí zbytek atmosféry a chvějí s ní čerpadla i cvičící posádka. Jde ale o miliontiny pozemské tíhy.</p>
+      </aside>
+    </section>
+
+    <footer class="art-foot">
+      <a class="next" href="../zamek/" data-cat="domacnost">
+        <span class="label">Další článek · Domácnost</span>
+        <span class="t">Jak funguje zámek ve dveřích</span>
+        <p>Proč dveře otevře jen jeden klíč a co přesně dělají zuby na něm.</p>
+      </a>
+      <a class="back" href="../">Všechna témata</a>
+    </footer>
+  </main>
+
+  <script>
+  (() => {
+    const NS = "http://www.w3.org/2000/svg";
+    function el(tag, attrs, parent) {
+      const n = document.createElementNS(NS, tag);
+      for (const k in attrs || {}) n.setAttribute(k, attrs[k]);
+      if (parent) parent.appendChild(n);
+      return n;
+    }
+    const svg = document.getElementById("space"), cabin = document.getElementById("cabin");
+
+    /* ---------- model ---------- */
+    const GM = 398600;                 // km³/s²
+    const RE = 6371, ALT = 400, R0 = RE + ALT;
+    const G0 = (GM / (RE * RE)) * 1000; // m/s² na povrchu
+    const C = { x: 300, y: 262 }, PX = 128 / RE;   // střed Země a měřítko: poloměr Země je 128 jednotek
+    const s = { v0: 5, flying: false, x: 0, y: R0, vx: 0, vy: 0, t: 0, swept: 0, trail: [], old: [], result: "" };
+    const toScreen = (x, y) => [C.x + x * PX, C.y - y * PX];
+
+    function fire() {
+      if (s.trail.length > 1) { s.old.push(s.trail); if (s.old.length > 5) s.old.shift(); }
+      Object.assign(s, { flying: true, x: 0, y: R0, vx: s.v0, vy: 0, t: 0, swept: 0, trail: [[0, R0]], result: "" });
+    }
+
+    function step(dt) {
+      if (!s.flying) return;
+      const r0 = Math.hypot(s.x, s.y);
+      // daleko od Země běží čas rychleji, ať dlouhé elipsy netrvají věčně
+      let left = dt * 320 * Math.min(25, (r0 / R0) ** 1.5);
+      while (left > 0 && s.flying) {
+        const h = Math.min(4, left);
+        left -= h;
+        const r = Math.hypot(s.x, s.y), a = -GM / (r * r * r);
+        s.vx += a * s.x * h; s.vy += a * s.y * h;
+        const nx = s.x + s.vx * h, ny = s.y + s.vy * h;
+        s.swept += Math.atan2(s.x * ny - s.y * nx, s.x * nx + s.y * ny) * -1;
+        s.x = nx; s.y = ny; s.t += h;
+        const rn = Math.hypot(nx, ny);
+        if (rn <= RE) { s.flying = false; s.result = "hit"; }
+        else if (s.swept >= 2 * Math.PI) { s.flying = false; s.result = "orbit"; }
+        else if (rn > 120000 && 0.5 * (s.vx ** 2 + s.vy ** 2) - GM / rn >= 0) { s.flying = false; s.result = "escape"; }
+      }
+      const last = s.trail[s.trail.length - 1];
+      if (Math.hypot(s.x - last[0], s.y - last[1]) * PX > 2.5 || !s.flying) s.trail.push([s.x, s.y]);
+    }
+
+    /* ---------- kresba ---------- */
+    el("rect", { x: 0, y: 0, width: 640, height: 460, class: "void" }, svg);
+    for (let i = 0; i < 60; i++) el("circle", { cx: (i * 149.3) % 640, cy: (i * 83.7) % 460, r: 0.5 + (i % 3) * 0.4, class: "star" }, svg);
+    el("circle", { cx: C.x, cy: C.y, r: RE * PX + 2.5, class: "air" }, svg);
+    el("circle", { cx: C.x, cy: C.y, r: RE * PX, class: "earth" }, svg);
+    el("path", { d: `M${C.x - 60} ${C.y - 70} q30 -30 62 -12 q22 26 -6 44 q-10 34 -40 22 q-34 -14 -16 -54 Z M${C.x + 20} ${C.y + 10} q40 -8 52 26 q-4 40 -34 44 q-28 -18 -18 -70 Z`, class: "land" }, svg);
+    el("circle", { cx: C.x, cy: C.y, r: R0 * PX, class: "iss" }, svg);
+    const oldG = el("g", {}, svg);
+    const trail = el("path", { class: "trail" }, svg);
+    const [gx, gy] = toScreen(0, R0);
+    el("rect", { x: gx - 2, y: gy - 1, width: 4, height: ALT * PX + 1, class: "gun" }, svg);
+    el("rect", { x: gx - 3, y: gy - 3, width: 12, height: 4, rx: 1, class: "gun" }, svg);
+    el("text", { x: gx + 14, y: gy - 12, class: "lab" }, svg).textContent = "dělo ve výšce 400 km";
+    el("text", { x: C.x, y: C.y + 4, "text-anchor": "middle", class: "lab" }, svg).textContent = "Země";
+    const boom = el("circle", { r: 6, class: "boom", visibility: "hidden" }, svg);
+    const ball = el("circle", { r: 4.5, class: "ball" }, svg);
+    const d = (pts) => pts.map(([x, y], i) => { const [X, Y] = toScreen(x, y); return `${i ? "L" : "M"}${X.toFixed(1)} ${Y.toFixed(1)}`; }).join("");
+
+    // kabina s váhou
+    el("rect", { x: 30, y: 14, width: 140, height: 150, rx: 10, class: "box" }, cabin);
+    el("rect", { x: 66, y: 146, width: 68, height: 12, rx: 3, class: "scale" }, cabin);
+    const who = el("g", {}, cabin);
+    el("circle", { cx: 100, cy: 62, r: 15, class: "who" }, who);
+    el("rect", { x: 84, y: 78, width: 32, height: 46, rx: 9, class: "who" }, who);
+    el("rect", { x: 87, y: 122, width: 11, height: 24, rx: 4, class: "who" }, who);
+    el("rect", { x: 102, y: 122, width: 11, height: 24, rx: 4, class: "who" }, who);
+    const pull = el("g", { class: "pull" }, cabin);
+    el("line", { x1: 150, y1: 60, x2: 150, y2: 104 }, pull);
+    el("path", { d: "M150 116 l-6 -13 h12 Z" }, pull);
+    const pullText = el("text", { x: 150, y: 134, class: "cap" }, cabin);
+    const kg = el("text", { x: 100, y: 184, class: "readout" }, cabin);
+
+    /* ---------- výpis ---------- */
+    const fmt0 = new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 0 });
+    const fmt1 = new Intl.NumberFormat("cs-CZ", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    const $ = (id) => document.getElementById(id);
+    const cache = new WeakMap();
+    function put(node, str, html) {
+      if (cache.get(node) === str) return;
+      cache.set(node, str);
+      if (html) node.innerHTML = str; else node.textContent = str;
+    }
+    const clock = (sec) => (sec < 3 * 3600 ? `${fmt0.format(Math.round(sec / 60))} min` : `${fmt0.format(Math.round(sec / 3600))} h`);
+    const V_CIRC = Math.sqrt(GM / R0), V_ESC = Math.sqrt((2 * GM) / R0);
+
+    function render() {
+      const r = Math.hypot(s.x, s.y), alt = Math.max(0, r - RE), g = (GM / (r * r)) * 1000;
+      trail.setAttribute("d", s.trail.length > 1 ? d(s.trail) : "");
+      oldG.textContent = "";
+      s.old.forEach((t) => el("path", { d: d(t), class: "trail old" }, oldG));
+      const [bx, by] = toScreen(s.x, s.y);
+      ball.setAttribute("cx", bx.toFixed(1)); ball.setAttribute("cy", by.toFixed(1));
+      ball.setAttribute("visibility", s.result === "hit" ? "hidden" : "visible");
+      boom.setAttribute("visibility", s.result === "hit" ? "visible" : "hidden");
+      boom.setAttribute("cx", bx.toFixed(1)); boom.setAttribute("cy", by.toFixed(1));
+
+      // na věži vás drží podlaha a váha ukazuje; ve střele padá všechno stejně a váha ukazuje nulu
+      const free = s.flying || s.result === "orbit" || s.result === "escape";
+      who.setAttribute("transform", `translate(0 ${free ? -22 + 3 * Math.sin(s.t / 300) : 0}) rotate(${free ? 9 : 0} 100 100)`);
+      put(kg, free ? "0 kg" : `${fmt0.format(Math.round((70 * g) / G0))} kg`);
+      put(pullText, `${fmt0.format(Math.round((g / G0) * 100))} % tíhy`);
+
+      put($("speed-val"), `${fmt1.format(s.v0)} km/s`);
+      put($("st-alt"), `${fmt0.format(Math.round(alt / 10) * 10)} km`);
+      put($("st-g"), `${fmt0.format(Math.round((g / G0) * 100))} %`);
+      put($("st-time"), s.t > 0 ? clock(s.t) : "—");
+
+      let status;
+      if (s.flying && r > R0 * 1.6) {
+        status = "<strong>Stoupá a zpomaluje.</strong> Vystřelená rychleji, než je potřeba na kruhovou dráhu, se střela od Země vzdaluje. Gravitace ji brzdí a jednou ji otočí zpátky.";
+      } else if (s.flying) {
+        status = "<strong>Letí a padá.</strong> Střelu po výstřelu nic nepohání. Gravitace ji stáčí dolů, a jde jen o to, jestli se pod ní Země stihne zakřivit.";
+      } else if (s.result === "hit") {
+        const km = Math.round((s.swept * RE) / 10) * 10;
+        status = km < 30
+          ? "<strong>Spadla rovnou dolů.</strong> Bez vodorovné rychlosti střela prostě padá. Ze 400 kilometrů jí to trvá pár minut."
+          : `<strong>Dopadla po ${fmt0.format(km)} kilometrech.</strong> Padala celou cestu. Jen letěla do strany dost rychle na to, aby kus Země stihla přeletět. Na oběžnou dráhu to nestačilo.`;
+      } else if (s.result === "orbit") {
+        status = Math.abs(s.v0 - V_CIRC) < 0.12
+          ? `<strong>Oběžná dráha.</strong> Střela obletěla Zemi za ${clock(s.t)} a je zpátky u děla. Padala celou dobu, ale povrch pod ní uhýbal stejně rychle. Takhle létá stanice.`
+          : `<strong>Protáhlá oběžná dráha.</strong> Střela měla rychlosti navíc, vyletěla dál od Země a vrátila se po elipse za ${clock(s.t)}. Kdyby nenarazila na dělo, obíhala by dál.`;
+      } else if (s.result === "escape") {
+        status = "<strong>Uletěla.</strong> Nad 10,9 km/s už Země střelu nedokáže otočit zpátky. Zpomaluje, ale nezastaví se nikdy.";
+      } else {
+        status = `<strong>Dělo stojí na věži 400 km vysoké.</strong> Kosmonaut uvnitř váží skoro tolik co dole. Na kruhovou dráhu je odtud potřeba ${fmt1.format(V_CIRC)} km/s.`;
+      }
+      put($("status"), status, true);
+      $("fire").disabled = s.flying;
+    }
+
+    /* ---------- ovládání ---------- */
+    $("speed").addEventListener("input", (e) => { s.v0 = Number(e.target.value); render(); });
+    $("fire").addEventListener("click", fire);
+    $("clear").addEventListener("click", () => { s.old = []; if (!s.flying) { s.trail = []; s.result = ""; s.x = 0; s.y = R0; s.t = 0; } render(); });
+
+    let prev = performance.now();
+    function frame(now) {
+      const dt = Math.min(0.05, (now - prev) / 1000);
+      prev = now;
+      step(dt);
+      render();
+      requestAnimationFrame(frame);
+    }
+    render();
+    requestAnimationFrame(frame);
+  })();
+  </script>
+</body>
+</html>

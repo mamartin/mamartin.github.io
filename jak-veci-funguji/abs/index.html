@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Jak fungují brzdy s ABS</title>
+  <meta name="description" content="Proč zablokované kolo brzdí hůř než kolo, které se ještě točí, proč se s ním nedá zatáčet a co s tím dělá ABS. S autem, které si můžete zkusit zastavit na ledu.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700&display=swap">
+  <link rel="stylesheet" href="../style.css">
+  <style>
+    .abs-stage { display: grid; gap: 1rem; grid-template-columns: minmax(0, 1fr); align-items: center; }
+    .side { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; }
+    .side figure { display: grid; gap: 0.35rem; margin: 0; }
+    .side svg { border: 1px solid var(--rule); background: var(--surface); }
+    .side .label { text-align: center; }
+    @media (min-width: 60rem) {
+      .abs-stage { grid-template-columns: minmax(0, 1fr) 15rem; }
+      .side { grid-template-columns: minmax(0, 1fr); }
+    }
+    .road { fill: var(--sunk); }
+    .road-top { stroke: var(--ink); stroke-width: 2; }
+    .post line { stroke: var(--ink-3); stroke-width: 2; }
+    .post text { fill: var(--ink-3); font: 500 12px var(--font-mono); text-anchor: middle; }
+    .skid { fill: var(--ink); opacity: 0.7; }
+    .car-body { fill: var(--cat); stroke: var(--metal-line); stroke-width: 1.4; }
+    .car-glass { fill: var(--surface); stroke: var(--metal-line); stroke-width: 1.2; }
+    .lamp { fill: var(--steel-hatch); }
+    .lamp.on { fill: var(--bad); }
+    .tyre { fill: var(--ink); }
+    .rim { fill: var(--steel); stroke: var(--metal-line); stroke-width: 1.2; }
+    .spoke { stroke: var(--metal-line); stroke-width: 3; stroke-linecap: round; }
+    .big-speed { fill: var(--ink); font: 800 40px var(--font-display); font-stretch: 112%; font-variant-numeric: tabular-nums; }
+    .cap { fill: var(--ink-3); font: 500 11px var(--font-mono); letter-spacing: 0.08em; }
+
+    .c-axis { stroke: var(--ink-3); stroke-width: 1; }
+    .c-band { fill: var(--ok); opacity: 0.16; }
+    .c-line { fill: none; stroke: var(--ink); stroke-width: 2.4; stroke-linejoin: round; }
+    .c-line.wheel { stroke: var(--cat); }
+    .c-dot { fill: var(--cat); stroke: var(--surface); stroke-width: 1.5; }
+    .c-text { fill: var(--ink-2); font: 500 10.5px var(--font-mono); }
+    .c-text.cat { fill: var(--cat); }
+
+    .result { display: grid; gap: 0.35rem; margin: 0; padding: 0; list-style: none; font-family: var(--font-mono); font-size: 0.82rem; font-variant-numeric: tabular-nums; }
+    .result li { display: grid; grid-template-columns: 5.2rem minmax(0, 1fr) 4.2rem; align-items: center; gap: 0.6rem; }
+    .result .bar { height: 0.7rem; background: var(--sunk); border: 1px solid var(--rule); }
+    .result .bar i { display: block; height: 100%; background: var(--cat); }
+    .result .off .bar i { background: var(--ink-3); }
+    .result .v { text-align: right; font-weight: 600; }
+  </style>
+</head>
+<body data-cat="doprava">
+  <header class="topbar">
+    <div class="wrap">
+      <a class="brand" href="../">Jak věci fungují</a>
+      <nav class="crumbs" aria-label="Drobečková navigace"><a href="../#doprava">Doprava</a><span aria-hidden="true">/</span><span>Brzdy s ABS</span></nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <header class="art-head">
+      <p class="eyebrow">Doprava</p>
+      <h1 class="display">Jak fungují brzdy s ABS</h1>
+      <p class="lede">Kolo, které se při brzdění zastaví dřív než auto, brzdí hůř a nejde s ním zatáčet. ABS proto dělá něco, co zní jako nesmysl: uprostřed brzdění brzdy na okamžik povoluje.</p>
+    </header>
+
+    <section class="tldr" aria-labelledby="h-zkratka">
+      <h2 class="label" id="h-zkratka">Ve zkratce</h2>
+      <ul>
+        <li>Pneumatika drží na silnici nejlíp, když se ještě odvaluje a klouže jen trochu. Zablokované kolo drží hůř.</li>
+        <li>Zablokované kolo navíc neposlouchá volant. Auto jede rovně, ať točíte kamkoli.</li>
+        <li>ABS hlídá otáčky každého kola. Když se některé začne zastavovat, <span class="hl">povolí mu brzdu a hned zase přitáhne,</span> až patnáctkrát za sekundu.</li>
+      </ul>
+    </section>
+
+    <figure class="fig" id="obr1">
+      <div class="fig-head">
+        <p class="fig-num"><b>Obr. 1</b> Brzdění naplno</p>
+        <span class="label">Vyberte povrch a dupněte na brzdu</span>
+      </div>
+      <div class="fig-stage abs-stage">
+        <svg id="scene" viewBox="0 0 640 300" role="img" aria-label="Auto z boku při brzdění, kola se otáčejí podle skutečné rychlosti kol"></svg>
+        <div class="side">
+          <figure>
+            <svg id="mu" viewBox="0 0 200 150" role="img" aria-label="Graf: jak dobře pneumatika drží podle toho, jak moc kolo prokluzuje"></svg>
+            <span class="label">Přilnavost podle prokluzu</span>
+          </figure>
+          <figure>
+            <svg id="speeds" viewBox="0 0 200 150" role="img" aria-label="Graf rychlosti auta a rychlosti kola v čase"></svg>
+            <span class="label">Rychlost auta a kola</span>
+          </figure>
+        </div>
+      </div>
+      <div class="fig-controls">
+        <div class="ctl">
+          <span class="label" id="lbl-surf">Povrch</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-surf" id="surf-seg">
+            <button type="button" role="radio" data-v="dry" aria-checked="false">Suchý asfalt</button>
+            <button type="button" role="radio" data-v="wet" aria-checked="true">Mokro</button>
+            <button type="button" role="radio" data-v="ice" aria-checked="false">Led</button>
+          </div>
+        </div>
+        <div class="ctl">
+          <span class="label" id="lbl-abs">ABS</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-abs" id="abs-seg">
+            <button type="button" role="radio" data-v="1" aria-checked="true">Zapnuté</button>
+            <button type="button" role="radio" data-v="0" aria-checked="false">Vypnuté</button>
+          </div>
+        </div>
+        <div class="ctl ctl-grow">
+          <label class="label" for="speed">Rychlost</label>
+          <div class="ctl-row">
+            <input type="range" id="speed" min="30" max="130" step="10" value="90">
+            <output class="val" id="speed-val" for="speed">90 km/h</output>
+          </div>
+        </div>
+        <button type="button" class="btn" id="go">Dupnout na brzdu</button>
+      </div>
+      <div class="fig-status split">
+        <p class="status" id="status" aria-live="polite"></p>
+        <div style="display:grid; gap:.7rem; min-width:0">
+          <ul class="stats" aria-label="Stav modelu">
+            <li><span class="n">Ujeto od brzdění</span><span class="v" id="st-dist"></span></li>
+            <li><span class="n">Tlak v brzdě</span><span class="meter" aria-hidden="true"><i id="st-press"></i></span></li>
+            <li><span class="n">Volant</span><span class="v small" id="st-steer"></span></li>
+          </ul>
+          <ul class="result" aria-label="Brzdné dráhy">
+            <li><span>s ABS</span><span class="bar"><i id="bar-on"></i></span><span class="v" id="res-on">—</span></li>
+            <li class="off"><span>bez ABS</span><span class="bar"><i id="bar-off"></i></span><span class="v" id="res-off">—</span></li>
+          </ul>
+        </div>
+      </div>
+      <figcaption class="fig-caption">Zjednodušený model jednoho kola. Řidič v něm šlápne na brzdu naplno a drží. Reakční doba se nepočítá, dráha se měří od chvíle, kdy brzdy zaberou. Zelený pruh v grafu přilnavosti je oblast, ve které se ABS snaží kolo udržet.</figcaption>
+    </figure>
+
+    <section class="sec" aria-labelledby="h-prokluz">
+      <div class="prose">
+        <h2 id="h-prokluz">Kolo má brzdit, ne stát</h2>
+        <p>Auto nezastavují brzdy. Ty jen zpomalují kola. Auto zastavuje tření mezi pneumatikami a silnicí, čtyři plošky velké jako dlaň.</p>
+        <p>To tření je největší, když se kolo ještě odvaluje, ale o kousek pomaleji, než by odpovídalo rychlosti auta. Guma se přitom o asfalt opírá a jen lehce po něm klouže. Nejlíp drží, když se kolo točí asi o desetinu až pětinu pomaleji.</p>
+        <p>Když brzdu stisknete víc, kolo se zastaví úplně a pneumatika začne po silnici smýkat jako sáně. Smýkající se guma drží hůř, na mokru zhruba o třetinu. Kolo, které stojí, tak brzdí míň než kolo, které se ještě točí. <span class="hl">Brzdit silněji neznamená zastavit dřív.</span></p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Vypněte ABS a zabrzděte. V grafu přilnavosti tečka přeběhne vrchol a sjede až na pravý okraj: kolo stojí a auto se veze. Pak ABS zapněte a porovnejte dráhy.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-volant">
+      <div class="prose">
+        <h2 id="h-volant">A hlavně má zatáčet</h2>
+        <p>Delší brzdná dráha je ta menší potíž. Horší je, že zablokované kolo neřídí.</p>
+        <p>Odvalující se kolo vede auto tam, kam je natočené, protože do boku se pneumatika brání a dopředu se valí. Smýkajícímu se kolu je to jedno. Klouže tam, kam auto zrovna letí, a je lhostejné, jestli je natočené rovně, nebo napříč. Řidič, který v panice dupne na brzdu a strhne volant, se tak nevyhne ničemu. Auto pokračuje rovně do překážky.</p>
+        <p>Právě kvůli tomu ABS vzniklo. Zkrácení dráhy je příjemný vedlejší účinek. Hlavní smysl je, že při brzdění naplno <span class="hl">zůstane auto řiditelné.</span></p>
+      </div>
+      <aside class="note" aria-label="Brzdění v číslech">
+        <span class="label">V číslech</span>
+        <dl class="facts">
+          <div><dt>10–20 %</dt><dd>prokluz, při kterém pneumatika drží nejlíp</dd></div>
+          <div><dt>až 15×</dt><dd>za sekundu ABS povolí a přitáhne brzdu</dd></div>
+          <div><dt>4×</dt><dd>delší je brzdná dráha při dvojnásobné rychlosti</dd></div>
+        </dl>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-jak">
+      <div class="prose">
+        <h2 id="h-jak">Co se děje pod pedálem</h2>
+        <ol class="steps">
+          <li><div><b>Čidla.</b> U každého kola je ozubený kroužek a snímač, který počítá zuby, jak kolem něj probíhají. Řídicí jednotka tak ví, jak rychle se které kolo točí.</div></li>
+          <li><div><b>Podezření.</b> Auto nemůže zpomalit rychleji, než dovolí tření. Když otáčky jednoho kola padají prudčeji, je jasné, že se nezpomaluje auto, ale že se zastavuje kolo.</div></li>
+          <li><div><b>Povolit.</b> Jednotka zavře ventil mezi pedálem a brzdou toho kola a druhým ventilem z ní část tlaku vypustí. Kolo se zase roztočí.</div></li>
+          <li><div><b>Přitáhnout.</b> Jakmile kolo dožene auto, čerpadlo vrátí tlak zpátky. A znovu, dokud řidič stojí na pedálu.</div></li>
+        </ol>
+        <p>Celé kolečko trvá zlomek sekundy. Čerpadlo při něm tlačí kapalinu zpátky proti vaší noze, a proto pedál při zásahu ABS cuká a ozývá se drnčení. Není to porucha. Je to znamení, že systém pracuje.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Při brzdění s ABS sledujte ukazatel tlaku a graf rychlostí. Rychlost kola kmitá těsně pod rychlostí auta: to jsou jednotlivé zásahy.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-noha">
+      <div class="prose">
+        <h2 id="h-noha">Šlápnout, držet, řídit</h2>
+        <p>Řidiči bez ABS se učili přerušované brzdění: pumpovat pedálem, aby se kola stíhala roztáčet. S ABS je to chyba. Systém pumpuje sám, mnohem rychleji a pro každé kolo zvlášť. Když do toho pumpujete nohou, jen mu berete tlak.</p>
+        <p>Správně je šlápnout na brzdu co nejsilněji, nepolevit, ani když pedál začne cukat, a dívat se a točit volantem tam, kam chcete jet.</p>
+      </div>
+    </section>
+
+    <section class="sec" aria-labelledby="h-meze">
+      <div class="prose">
+        <h2 id="h-meze">Fyziku neobejde</h2>
+        <p>ABS využije tření, které je k dispozici. Nevyrobí žádné navíc. Na ledu zastaví auto o něco dřív než zablokovaná kola, ale pořád na mnohonásobku dráhy, kterou potřebuje na suchu. Sjeté pneumatiky nenahradí.</p>
+        <p>Na dvou površích může dráhu dokonce prodloužit: na hlubokém štěrku a v čerstvém sněhu. Zablokované kolo si tam před sebou nahrne klín, který ho brzdí. ABS mu to nedovolí.</p>
+        <p>A žádný systém nezmění to hlavní pravidlo. Brzdná dráha roste s druhou mocninou rychlosti. Ze stovky je čtyřikrát delší než z padesátky.</p>
+      </div>
+    </section>
+
+    <section class="sec" aria-labelledby="h-historie">
+      <div class="prose">
+        <h2 id="h-historie">Nejdřív pro letadla</h2>
+        <p>Protiblokovací systém se poprvé rozšířil v padesátých letech u letadel. Při přistání nemá pilot šanci poznat, že se některé kolo zablokovalo, a zablokovaná pneumatika se za pár sekund prodře až do prasknutí.</p>
+        <p>Do aut se dostal, až když elektronika zlevnila. První sériové elektronické ABS dodala firma Bosch v roce 1978 do Mercedesu třídy S. V Evropské unii ho musí mít každé nové osobní auto od roku 2004. Na stejných čidlech a ventilech dnes stojí i stabilizační systém ESP, který brzdí jednotlivá kola, aby auto srovnal ve smyku.</p>
+      </div>
+    </section>
+
+    <footer class="art-foot">
+      <a class="next" href="../prehazovacka/" data-cat="doprava">
+        <span class="label">Další článek · Doprava</span>
+        <span class="t">Jak funguje přehazovačka na kole</span>
+        <p>Proč jde s lehkým převodem do kopce snáz a jak řetěz přeskočí na jiné kolečko.</p>
+      </a>
+      <a class="back" href="../">Všechna témata</a>
+    </footer>
+  </main>
+
+  <script>
+  (() => {
+    const NS = "http://www.w3.org/2000/svg";
+    function el(tag, attrs, parent) {
+      const n = document.createElementNS(NS, tag);
+      for (const k in attrs || {}) n.setAttribute(k, attrs[k]);
+      if (parent) parent.appendChild(n);
+      return n;
+    }
+    const scene = document.getElementById("scene"), muSvg = document.getElementById("mu"), spSvg = document.getElementById("speeds");
+
+    /* ---------- model ---------- */
+    const G = 9.81;
+    const S_PEAK = 0.15;               // prokluz, při kterém guma drží nejlíp
+    const BRAKE = 1.5;                 // co zvládnou brzdy naplno, v násobcích g (vždy víc než silnice)
+    const INERTIA = 0.06;              // kolo reaguje mnohem rychleji než celé auto
+    const SURFACES = {
+      dry: { peak: 1.0, slide: 0.75, name: "na suchém asfaltu" },
+      wet: { peak: 0.72, slide: 0.48, name: "na mokru" },
+      ice: { peak: 0.16, slide: 0.08, name: "na ledu" },
+    };
+    function grip(slip, surf) {
+      const x = Math.max(0, Math.min(1, slip));
+      if (x <= S_PEAK) return surf.peak * (x / S_PEAK) * (2 - x / S_PEAK);
+      return surf.peak - ((surf.peak - surf.slide) * (x - S_PEAK)) / (1 - S_PEAK);
+    }
+
+    const s = { surface: "wet", abs: true, v0: 90 / 3.6, v: 90 / 3.6, w: 90 / 3.6, p: 0, x: 0, t: 0, braking: false, done: false, road: 0, spin: 0, skids: [], log: [] };
+    const results = { on: null, off: null };
+    const slipNow = () => (s.v < 0.3 ? 0 : (s.v - s.w) / s.v);
+
+    function substep(h) {
+      const surf = SURFACES[s.surface], slip = slipNow(), mu = grip(slip, surf);
+      if (s.abs) {
+        // povolit, když kolo prokluzuje moc, přitáhnout, když málo
+        if (slip > 0.22) s.p -= 14 * h; else if (slip < 0.1) s.p += 7 * h;
+        s.p = Math.max(0, Math.min(1, s.p));
+      } else {
+        s.p = 1;
+      }
+      s.w += ((mu * G - s.p * BRAKE * G) / INERTIA) * h;
+      s.w = Math.max(0, Math.min(s.v, s.w));
+      s.v = Math.max(0, s.v - mu * G * h);
+      s.x += s.v * h;
+      s.t += h;
+    }
+
+    function step(dt) {
+      if (s.braking && !s.done) {
+        const before = s.x;
+        for (let i = 0; i < 100; i++) substep(dt / 100);
+        if (slipNow() > 0.6 && s.v > 0.3) s.skids.push([before, s.x]);
+        s.log.push([s.t, s.v, s.w]);
+        if (s.v < 0.3) {
+          s.v = 0; s.w = 0; s.done = true;
+          results[s.abs ? "on" : "off"] = s.x;
+        }
+      }
+      s.road += s.v * dt;
+      s.spin += (s.w / 0.3) * dt;      // kolo o poloměru 30 cm
+    }
+    function reset(keepResults) {
+      Object.assign(s, { v: s.v0, w: s.v0, p: 0, x: 0, t: 0, braking: false, done: false, skids: [], log: [] });
+      if (!keepResults) { results.on = null; results.off = null; }
+    }
+
+    /* ---------- scéna ---------- */
+    const PX = 6, CAR_X = 150, ROAD_Y = 232;
+    el("rect", { x: 0, y: ROAD_Y, width: 640, height: 68, class: "road" }, scene);
+    const skidG = el("g", {}, scene);
+    el("line", { x1: 0, y1: ROAD_Y, x2: 640, y2: ROAD_Y, class: "road-top" }, scene);
+    const postG = el("g", {}, scene);
+    el("text", { x: 20, y: 34, class: "cap" }, scene).textContent = "RYCHLOST AUTA";
+    const speedText = el("text", { x: 18, y: 76, class: "big-speed" }, scene);
+
+    const car = el("g", {}, scene);
+    el("path", { d: `M${CAR_X - 104} ${ROAD_Y - 34} V${ROAD_Y - 62} Q${CAR_X - 104} ${ROAD_Y - 74} ${CAR_X - 90} ${ROAD_Y - 76} L${CAR_X - 62} ${ROAD_Y - 108} H${CAR_X + 22} L${CAR_X + 58} ${ROAD_Y - 76} L${CAR_X + 96} ${ROAD_Y - 70} Q${CAR_X + 108} ${ROAD_Y - 66} ${CAR_X + 108} ${ROAD_Y - 52} V${ROAD_Y - 34} Z`, class: "car-body" }, car);
+    el("path", { d: `M${CAR_X - 54} ${ROAD_Y - 100} H${CAR_X - 14} V${ROAD_Y - 78} H${CAR_X - 74} Z M${CAR_X - 6} ${ROAD_Y - 100} H${CAR_X + 18} L${CAR_X + 44} ${ROAD_Y - 78} H${CAR_X - 6} Z`, class: "car-glass" }, car);
+    const lamp = el("rect", { x: CAR_X - 104, y: ROAD_Y - 66, width: 8, height: 16, rx: 2, class: "lamp" }, car);
+    const wheels = [CAR_X - 62, CAR_X + 62].map((x) => {
+      el("circle", { cx: x, cy: ROAD_Y - 28, r: 28, class: "tyre" }, car);
+      const g = el("g", {}, car);
+      el("circle", { cx: x, cy: ROAD_Y - 28, r: 18, class: "rim" }, g);
+      for (let k = 0; k < 5; k++) {
+        const a = (k / 5) * 2 * Math.PI;
+        el("line", { x1: x, y1: ROAD_Y - 28, x2: x + 16 * Math.cos(a), y2: ROAD_Y - 28 + 16 * Math.sin(a), class: "spoke" }, g);
+      }
+      return { g, x };
+    });
+
+    /* ---------- graf přilnavosti ---------- */
+    const M = { x: 26, y: 12, w: 162, h: 112 };
+    const mx = (slip) => M.x + slip * M.w, my = (mu) => M.y + M.h - (mu / 1.05) * M.h;
+    el("rect", { x: mx(0.1), y: M.y, width: mx(0.22) - mx(0.1), height: M.h, class: "c-band" }, muSvg);
+    el("line", { x1: M.x, y1: M.y, x2: M.x, y2: M.y + M.h, class: "c-axis" }, muSvg);
+    el("line", { x1: M.x, y1: M.y + M.h, x2: M.x + M.w, y2: M.y + M.h, class: "c-axis" }, muSvg);
+    el("text", { x: M.x, y: M.y + M.h + 14, class: "c-text" }, muSvg).textContent = "kolo se valí";
+    el("text", { x: M.x + M.w, y: M.y + M.h + 14, "text-anchor": "end", class: "c-text" }, muSvg).textContent = "kolo stojí";
+    el("text", { x: M.x + 5, y: M.y + 9, class: "c-text" }, muSvg).textContent = "jak drží";
+    const muLine = el("path", { class: "c-line" }, muSvg);
+    const muDot = el("circle", { r: 5, class: "c-dot" }, muSvg);
+
+    /* ---------- graf rychlostí ---------- */
+    const Q = { x: 26, y: 12, w: 162, h: 112 };
+    el("line", { x1: Q.x, y1: Q.y, x2: Q.x, y2: Q.y + Q.h, class: "c-axis" }, spSvg);
+    el("line", { x1: Q.x, y1: Q.y + Q.h, x2: Q.x + Q.w, y2: Q.y + Q.h, class: "c-axis" }, spSvg);
+    el("text", { x: Q.x + 6, y: Q.y + 10, class: "c-text" }, spSvg).textContent = "auto";
+    el("text", { x: Q.x + 44, y: Q.y + 10, class: "c-text cat" }, spSvg).textContent = "kolo";
+    const spEnd = el("text", { x: Q.x + Q.w, y: Q.y + Q.h + 14, "text-anchor": "end", class: "c-text" }, spSvg);
+    const carLine = el("path", { class: "c-line" }, spSvg), wheelLine = el("path", { class: "c-line wheel" }, spSvg);
+
+    /* ---------- výpis ---------- */
+    const fmt0 = new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 0 });
+    const fmt1 = new Intl.NumberFormat("cs-CZ", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    const $ = (id) => document.getElementById(id);
+    const cache = new WeakMap();
+    function put(node, str, html) {
+      if (cache.get(node) === str) return;
+      cache.set(node, str);
+      if (html) node.innerHTML = str; else node.textContent = str;
+    }
+
+    function render() {
+      const surf = SURFACES[s.surface], slip = slipNow();
+      // silnice ubíhá pod autem; patníky po 10 metrech počítají vzdálenost od začátku brzdění
+      postG.textContent = "";
+      const origin = s.braking ? s.x : s.road % 10;
+      for (let m = Math.floor((origin - CAR_X / PX - 10) / 10) * 10; m < origin + 90; m += 10) {
+        const x = CAR_X + 108 + (m - origin) * PX;
+        if (x < -20 || x > 660) continue;
+        const g = el("g", { class: "post" }, postG);
+        el("line", { x1: x, y1: ROAD_Y, x2: x, y2: ROAD_Y + 12 }, g);
+        if (s.braking && m >= 0) el("text", { x, y: ROAD_Y + 28 }, g).textContent = `${m} m`;
+      }
+      skidG.textContent = "";
+      s.skids.forEach(([a, b]) => {
+        const x = CAR_X + 108 + (a - s.x) * PX;
+        if (x < 700 && x > -700) el("rect", { x: (x - 46).toFixed(1), y: ROAD_Y + 1, width: Math.max(1.5, (b - a) * PX + 0.6).toFixed(1), height: 4, class: "skid" }, skidG);
+      });
+      wheels.forEach((w) => w.g.setAttribute("transform", `rotate(${(((s.spin * 180) / Math.PI) % 360).toFixed(1)} ${w.x} ${ROAD_Y - 28})`));
+      lamp.setAttribute("class", s.braking ? "lamp on" : "lamp");
+      put(speedText, `${fmt0.format(Math.round(s.v * 3.6))} km/h`);
+
+      let d = "";
+      for (let i = 0; i <= 50; i++) d += `${i ? "L" : "M"}${mx(i / 50).toFixed(1)} ${my(grip(i / 50, surf)).toFixed(1)}`;
+      muLine.setAttribute("d", d);
+      muDot.setAttribute("cx", mx(Math.max(0, Math.min(1, slip))).toFixed(1));
+      muDot.setAttribute("cy", my(grip(slip, surf)).toFixed(1));
+      muDot.setAttribute("visibility", s.braking && !s.done ? "visible" : "hidden");
+
+      const span = Math.max(3, s.t), sx = (t) => Q.x + (t / span) * Q.w, sy = (v) => Q.y + Q.h - (v / s.v0) * (Q.h - 16);
+      carLine.setAttribute("d", s.log.length ? s.log.map(([t, v], i) => `${i ? "L" : "M"}${sx(t).toFixed(1)} ${sy(v).toFixed(1)}`).join("") : "");
+      wheelLine.setAttribute("d", s.log.length ? s.log.map(([t, , w], i) => `${i ? "L" : "M"}${sx(t).toFixed(1)} ${sy(w).toFixed(1)}`).join("") : "");
+      spEnd.textContent = `${fmt1.format(span)} s`;
+
+      put($("st-dist"), s.braking ? `${fmt0.format(Math.round(s.x))} m` : "—");
+      $("st-press").style.width = `${Math.round(s.p * 100)}%`;
+      put($("st-steer"), !s.braking || s.done ? "—" : slip > 0.6 ? "nereaguje" : "řídí");
+
+      const max = Math.max(results.on || 0, results.off || 0, 1);
+      [["on", "bar-on", "res-on"], ["off", "bar-off", "res-off"]].forEach(([k, bar, txt]) => {
+        $(bar).style.width = results[k] === null ? "0%" : `${(results[k] / max) * 100}%`;
+        put($(txt), results[k] === null ? "—" : `${fmt0.format(Math.round(results[k]))} m`);
+      });
+
+      let status;
+      if (s.done && results.on !== null && results.off !== null) {
+        const diff = Math.round(results.off) - Math.round(results.on);
+        status = diff > 0
+          ? `<strong>Stojí.</strong> S ABS zastavilo auto ${surf.name} o ${diff} m dřív. A hlavně: po celou dobu se dalo řídit.`
+          : `<strong>Stojí.</strong> Dráhy vyšly skoro stejně. Rozdíl je v tom, že s ABS se dalo po celou dobu řídit.`;
+      } else if (s.done) {
+        status = `<strong>Stojí.</strong> Brzdná dráha ${surf.name} byla ${fmt0.format(Math.round(s.x))} m. Přepněte ABS a zkuste to znovu pro srovnání.`;
+      } else if (s.braking && s.abs) {
+        status = "<strong>ABS zasahuje.</strong> Pokaždé, když se kolo začne zastavovat, mu jednotka povolí brzdu a hned ji zase přitáhne. Kolo se pořád točí a drží na hranici toho, co silnice dovolí.";
+      } else if (s.braking && slip > 0.6) {
+        status = "<strong>Kola stojí, auto jede.</strong> Brzda je silnější než tření, kolo se zablokovalo a pneumatika smýká. Drží hůř a volant nereaguje.";
+      } else if (s.braking) {
+        status = "<strong>Brzda zabrala.</strong> Kolo se zpomaluje rychleji než auto.";
+      } else {
+        status = `<strong>Auto jede ${fmt0.format(Math.round(s.v0 * 3.6))} km/h ${surf.name}.</strong> Dupněte na brzdu.`;
+      }
+      put($("status"), status, true);
+      put($("go"), s.done ? "Znovu rozjet" : s.braking ? "Brzdí…" : "Dupnout na brzdu");
+      $("go").disabled = s.braking && !s.done;
+    }
+
+    /* ---------- ovládání ---------- */
+    function bindSeg(id, apply) {
+      const seg = $(id);
+      seg.addEventListener("click", (e) => {
+        const b = e.target.closest("button[data-v]");
+        if (!b) return;
+        seg.querySelectorAll("button").forEach((x) => x.setAttribute("aria-checked", String(x === b)));
+        apply(b.dataset.v);
+        render();
+      });
+    }
+    bindSeg("surf-seg", (v) => { s.surface = v; reset(false); });
+    bindSeg("abs-seg", (v) => { s.abs = v === "1"; reset(true); });
+    $("speed").addEventListener("input", (e) => {
+      s.v0 = Number(e.target.value) / 3.6;
+      $("speed-val").textContent = `${e.target.value} km/h`;
+      reset(false);
+      render();
+    });
+    $("go").addEventListener("click", () => {
+      if (s.done) reset(true); else if (!s.braking) { s.braking = true; s.x = 0; s.t = 0; }
+      render();
+    });
+
+    let prev = performance.now();
+    function frame(now) {
+      const dt = Math.min(0.05, (now - prev) / 1000);
+      prev = now;
+      step(dt);
+      render();
+      requestAnimationFrame(frame);
+    }
+    render();
+    requestAnimationFrame(frame);
+  })();
+  </script>
+</body>
+</html>

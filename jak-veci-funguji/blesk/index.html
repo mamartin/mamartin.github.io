@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Jak vzniká blesk</title>
+  <meta name="description" content="Jak se v bouřkovém mraku nastřádá napětí milionů voltů, proč si blesk hledá cestu po kouskách, proč hřmí a co dělá hromosvod. S bouřkou, kterou si můžete pustit.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700&display=swap">
+  <link rel="stylesheet" href="../style.css">
+  <style>
+    /* bouřková scéna je tmavá v obou režimech, barvy jsou proto pevné */
+    #storm { border: 1px solid var(--rule); }
+    .night { fill: #171c28; }
+    .cloud { fill: #3a4252; }
+    .cloud.low { fill: #2b3240; }
+    .land { fill: #0d1017; }
+    .thing { fill: #0d1017; stroke: #0d1017; stroke-width: 2; stroke-linejoin: round; }
+    .rod { stroke: #c9d2e0; stroke-width: 2.4; stroke-linecap: round; }
+    .plus { fill: #ff9b7a; font: 700 17px var(--font-mono); text-anchor: middle; }
+    .minus { fill: #8fb8ff; font: 700 19px var(--font-mono); text-anchor: middle; }
+    .leader { fill: none; stroke: #b9a4ff; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+    .stroke-glow { fill: none; stroke: #9db8ff; stroke-width: 14; stroke-linecap: round; stroke-linejoin: round; opacity: 0.35; }
+    .stroke-core { fill: none; stroke: #ffffff; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
+    .flash { fill: #dfe8ff; pointer-events: none; }
+    .wave { fill: none; stroke: #dfe8ff; stroke-width: 2; }
+    .tag { fill: #cdd6ea; font: 500 12.5px var(--font-mono); }
+    .boom { fill: #ffffff; font: 800 30px var(--font-display); font-stretch: 112%; text-anchor: middle; }
+    @media (max-width: 46rem) { .tag { display: none; } }
+  </style>
+</head>
+<body data-cat="priroda">
+  <header class="topbar">
+    <div class="wrap">
+      <a class="brand" href="../">Jak věci fungují</a>
+      <nav class="crumbs" aria-label="Drobečková navigace"><a href="../#priroda">Příroda</a><span aria-hidden="true">/</span><span>Jak vzniká blesk</span></nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <header class="art-head">
+      <p class="eyebrow">Příroda</p>
+      <h1 class="display">Jak vzniká blesk</h1>
+      <p class="lede">Bouřkový mrak je obří baterie. Nabíjí se tím, jak se v něm o sebe třou kousky ledu, a když napětí přeroste, co vzduch vydrží, vybije se jiskrou dlouhou několik kilometrů.</p>
+    </header>
+
+    <section class="tldr" aria-labelledby="h-zkratka">
+      <h2 class="label" id="h-zkratka">Ve zkratce</h2>
+      <ul>
+        <li>Srážky ledových krystalků a krupek v mraku oddělí náboje: kladný skončí nahoře, záporný dole.</li>
+        <li>Blesk nesjede k zemi naráz. Nejdřív si slabý výboj <span class="hl">po krocích hledá cestu,</span> a teprve hotovým kanálem proteče hlavní proud.</li>
+        <li>Kanál se na okamžik rozpálí na 30 000 °C. Vzduch kolem se prudce rozepne, a to je hrom.</li>
+      </ul>
+    </section>
+
+    <figure class="fig" id="obr1">
+      <div class="fig-head">
+        <p class="fig-num"><b>Obr. 1</b> Bouřka</p>
+        <span class="label">Nechte mrak nabít a sledujte, kudy blesk půjde</span>
+      </div>
+      <div class="fig-stage">
+        <svg id="storm" viewBox="0 0 760 440" role="img" aria-label="Bouřkový mrak s kladným nábojem nahoře a záporným dole, pod ním krajina se stromem a domem"></svg>
+      </div>
+      <div class="fig-controls">
+        <button type="button" class="btn" id="go">Spustit bouřku</button>
+        <div class="ctl">
+          <span class="label" id="lbl-rod">Dům</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-rod" id="rod-seg">
+            <button type="button" role="radio" data-v="0" aria-checked="true">Bez hromosvodu</button>
+            <button type="button" role="radio" data-v="1" aria-checked="false">S hromosvodem</button>
+          </div>
+        </div>
+        <div class="ctl ctl-grow">
+          <label class="label" for="dist">Jak daleko stojíte</label>
+          <div class="ctl-row">
+            <input type="range" id="dist" min="0.3" max="5" step="0.1" value="1.5">
+            <output class="val" id="dist-val" for="dist">1,5 km</output>
+          </div>
+        </div>
+      </div>
+      <div class="fig-status split">
+        <p class="status" id="status" aria-live="polite"></p>
+        <ul class="stats" aria-label="Stav modelu">
+          <li><span class="n">Náboj v mraku</span><span class="meter" aria-hidden="true"><i id="st-charge"></i></span></li>
+          <li><span class="n">Od záblesku</span><span class="v" id="st-timer"></span></li>
+          <li><span class="n">Kam uhodil</span><span class="v small" id="st-hit"></span></li>
+        </ul>
+      </div>
+      <figcaption class="fig-caption">Fialové čáry jsou vůdčí výboj, který hledá cestu. Ve skutečnosti mu to trvá setiny sekundy a je skoro neviditelný, tady je zpomalený. Hrom v modelu přichází ve skutečném čase: zvuk urazí kilometr za tři sekundy.</figcaption>
+    </figure>
+
+    <section class="sec" aria-labelledby="h-baterie">
+      <div class="prose">
+        <h2 id="h-baterie">Mrak jako baterie</h2>
+        <p>V bouřkovém mraku stoupá vzduch rychlostí rozjetého auta a vynáší kapky vody do výšek, kde je minus dvacet a míň. Kapky tam mrznou. Vznikají z nich drobné ledové krystalky a větší, měkké kuličky ledu, krupky.</p>
+        <p>Krystalky jsou lehké a proud je unáší vzhůru. Krupky jsou těžší, vznášejí se nebo padají. Cestou do sebe narážejí, a při každé srážce přeskočí trocha náboje: krystalek odletí kladný, krupka zůstane záporná. Je to stejný jev, jako když si třete balonek o vlasy, jen se odehrává miliardkrát za sekundu v mraku vysokém deset kilometrů.</p>
+        <p>Výsledek je mrak rozdělený na patra. Nahoře se hromadí kladný náboj, v dolní části záporný. Ten odpuzuje elektrony v zemi pod sebou, takže půda pod mrakem je nabitá kladně. Mezi spodkem mraku a zemí je teď napětí stovek milionů voltů.</p>
+      </div>
+      <aside class="note" aria-label="Blesk v číslech">
+        <span class="label">V číslech</span>
+        <dl class="facts">
+          <div><dt>30 000 A</dt><dd>proud v běžném blesku</dd></div>
+          <div><dt>30 000 °C</dt><dd>teplota kanálu, pětkrát víc než povrch Slunce</dd></div>
+          <div><dt>≈ 45</dt><dd>blesků udeří na Zemi každou sekundu</dd></div>
+          <div><dt>3 s</dt><dd>trvá hromu jeden kilometr</dd></div>
+        </dl>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-vudce">
+      <div class="prose">
+        <h2 id="h-vudce">Cesta po kouskách</h2>
+        <p>Vzduch je izolant a neproráží se snadno. Blesk proto neletí k zemi jedním skokem. Ze spodku mraku nejdřív vyrazí slabý výboj, kterému se říká vůdčí. Prorazí asi padesát metrů, na pár stotisícin sekundy se zastaví, a pak skočí dál, pokaždé trochu jiným směrem. Cestou se větví. Za sebou nechává tenký kanál rozžhaveného, vodivého vzduchu.</p>
+        <p>Tohle hledání trvá jen pár setin sekundy a okem ho skoro nevidíte. Vysvětluje ale, proč je blesk klikatý a rozvětvený: je to záznam všech pokusů, které výboj cestou udělal.</p>
+        <p>Když se vůdčí výboj přiblíží k zemi, pole pod ním zesílí natolik, že mu z vyvýšených míst vyrazí naproti krátké vstřícné výboje. Ze stromů, komínů, stožárů, někdy i z lidí. <span class="hl">Který z nich se s ním spojí první, ten určí, kam blesk uhodí.</span></p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Spusťte bouřku několikrát za sebou. Blesk pokaždé vyrazí odjinud a jde jinudy. Jednou skončí ve stromě, podruhé v domě, potřetí na louce. Rozhoduje, co má vůdčí výboj nejblíž, když doletí dolů.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-vyboj">
+      <div class="prose">
+        <h2 id="h-vyboj">Hlavní výboj</h2>
+        <p>Ve chvíli spojení je mezi mrakem a zemí hotový vodivý kanál a náboj se jím může vybít. Proud naskočí u země a jeho čelo vyběhne kanálem vzhůru třetinovou rychlostí světla. To je záblesk, který vidíte.</p>
+        <p>Kanál je tlustý jen jako palec, ale teče jím kolem třiceti tisíc ampérů. Vzduch v něm se rozpálí na teplotu pětkrát vyšší, než má povrch Slunce. Celé to trvá pár desetitisícin sekundy.</p>
+        <p>Jedním výbojem to většinou nekončí. Kanál zůstane chvíli vodivý a z mraku jím sjede další dávka náboje, pak další, obvykle tři až čtyři. Proto blesk na obloze bliká.</p>
+      </div>
+    </section>
+
+    <section class="sec" aria-labelledby="h-hrom">
+      <div class="prose">
+        <h2 id="h-hrom">Proč hřmí</h2>
+        <p>Vzduch zahřátý ve zlomku okamžiku na desítky tisíc stupňů se rozepne prudčeji než při výbuchu. Okolní vzduch odtlačí rázovou vlnou, a ta se o kus dál změní v obyčejný zvuk. To je hrom.</p>
+        <p>Když blesk uhodí blízko, slyšíte jednu suchou ránu. Z dálky hrom duní a převaluje se. Kanál je dlouhý kilometry a zvuk z jeho různých částí k vám dorazí v různou dobu. K tomu se přidají ozvěny od kopců a mraků.</p>
+        <p>Světlo je u vás okamžitě, zvuk urazí kilometr za tři sekundy. Stačí tedy počítat. Od záblesku k hromu devět sekund znamená tři kilometry.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Nastavte vzdálenost na 3 km a spusťte bouřku. Počítadlo se rozběhne v okamžiku záblesku a zastaví, až dorazí hrom.</p>
+        <p>Hrom je slyšet nejdál asi na dvacet kilometrů. Vzdálenější bouřka se jen tiše blýská. Říká se tomu blýskání na časy.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-hromosvod">
+      <div class="prose">
+        <h2 id="h-hromosvod">Hromosvod blesk nepřitahuje</h2>
+        <p>Hromosvod je kovová tyč nad střechou, spojená tlustým drátem se zemí. Blesky nepřitahuje ani nezahání. Dělá jedinou věc: když už blesk míří k domu, nabídne mu ze svého hrotu vstřícný výboj dřív než komín nebo hřeben střechy. Proud pak sjede po drátě do země a krovu se nedotkne.</p>
+        <p>Bez hromosvodu teče stejný proud vším, co mu stojí v cestě: mokrým dřevem, elektrickým vedením, vodovodními trubkami. Dřevo se přitom párou roztrhne a vzplane.</p>
+        <p>Hromosvod navrhl v roce 1752 Benjamin Franklin. Nezávisle na něm postavil o dva roky později svůj „povětrnostní stroj“ farář Prokop Diviš v Příměticích u Znojma. Měl stovky kovových hrotů a Diviš věřil, že bouřku rozežene. To nedokázal, ale jako hromosvod by fungoval.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Přepněte dům na S hromosvodem. Blesky, které předtím končily ve střeše, teď sjedou tyčí.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-bezpeci">
+      <div class="prose">
+        <h2 id="h-bezpeci">Co dělat v bouřce</h2>
+        <p>Když je od záblesku k hromu méně než půl minuty, je bouřka blíž než deset kilometrů a je čas se schovat. Bezpečno je v budově a v autě se zavřenými okny. Plechová karoserie svede proud po povrchu do země a dovnitř ho nepustí.</p>
+        <p>Venku se nestavte pod osamělý strom. Je to nejvyšší bod v okolí a proud z něj může přeskočit na vás. Nezůstávejte na hřebeni, na otevřené pláni ani ve vodě.</p>
+        <p>Nebezpečný není jen přímý zásah. Proud se z místa úderu rozbíhá zemí, a mezi dvěma místy vzdálenými na krok je napětí, které může projít nohama. Kdo nemá kam utéct, má si dřepnout s nohama těsně u sebe. Ležet na zemi je naopak to nejhorší.</p>
+      </div>
+    </section>
+
+    <footer class="art-foot">
+      <a class="next" href="../duha/" data-cat="priroda">
+        <span class="label">Další článek · Příroda</span>
+        <span class="t">Jak vzniká duha</span>
+        <p>Proč je duha oblouk, proč má barvy vždy ve stejném pořadí a proč k ní nejde dojít.</p>
+      </a>
+      <a class="back" href="../">Všechna témata</a>
+    </footer>
+  </main>
+
+  <script>
+  (() => {
+    const NS = "http://www.w3.org/2000/svg";
+    function el(tag, attrs, parent) {
+      const n = document.createElementNS(NS, tag);
+      for (const k in attrs || {}) n.setAttribute(k, attrs[k]);
+      if (parent) parent.appendChild(n);
+      return n;
+    }
+    const svg = document.getElementById("storm");
+
+    /* ---------- scéna ---------- */
+    const GROUND = 392, BASE = 150;
+    const TREE = { x: 214, y: 318, name: "do stromu" };
+    const HOUSE = { x: 522, y: 322 }, ROD = { x: 548, y: 286 };
+    el("rect", { x: 0, y: 0, width: 760, height: 440, class: "night" }, svg);
+    el("path", { d: "M70 96 Q60 40 150 44 Q190 6 270 30 Q330 -8 420 26 Q500 0 560 40 Q660 30 690 96 Q730 130 660 150 H110 Q30 140 70 96 Z", class: "cloud" }, svg);
+    el("path", { d: "M100 150 Q90 112 170 118 Q230 96 300 116 Q380 98 450 118 Q540 100 600 122 Q680 124 660 150 Z", class: "cloud low" }, svg);
+    const chargeG = el("g", {}, svg);
+    const marks = [];
+    [[150, 62], [230, 50], [320, 44], [410, 46], [500, 54], [590, 66], [275, 74], [455, 76]].forEach(([x, y]) => marks.push({ kind: "plus", node: el("text", { x, y, class: "plus" }, chargeG), txt: "+" }));
+    [[160, 142], [230, 136], [305, 142], [380, 134], [455, 142], [530, 136], [600, 142]].forEach(([x, y]) => marks.push({ kind: "minus", node: el("text", { x, y, class: "minus" }, chargeG), txt: "−" }));
+    [[120, 412], [200, 418], [300, 414], [400, 418], [480, 414], [600, 418], [680, 412]].forEach(([x, y]) => marks.push({ kind: "plus", node: el("text", { x, y, class: "plus" }, chargeG), txt: "+" }));
+    marks.forEach((m) => { m.node.textContent = m.txt; });
+
+    const boltG = el("g", {}, svg);
+    el("rect", { x: 0, y: GROUND, width: 760, height: 48, class: "land" }, svg);
+    el("path", { d: `M${TREE.x - 4} ${GROUND} V${TREE.y + 44} h8 V${GROUND} Z M${TREE.x} ${TREE.y} q-34 26 -22 52 q22 14 44 0 q12 -26 -22 -52 Z`, class: "thing" }, svg);
+    el("path", { d: `M${HOUSE.x - 44} ${GROUND} V${HOUSE.y + 28} L${HOUSE.x} ${HOUSE.y} L${HOUSE.x + 44} ${HOUSE.y + 28} V${GROUND} Z`, class: "thing" }, svg);
+    const rod = el("path", { d: `M${ROD.x} ${ROD.y} V${HOUSE.y + 18} L${HOUSE.x + 50} ${HOUSE.y + 30} V${GROUND}`, class: "rod", fill: "none" }, svg);
+    el("path", { d: `M704 ${GROUND} v-14 m-6 6 h12 m-6 -6 a5 5 0 1 0 0.1 0`, class: "rod", fill: "none" }, svg);
+    el("text", { x: 704, y: GROUND + 22, "text-anchor": "middle", class: "tag" }, svg).textContent = "vy";
+    const wave = el("circle", { class: "wave", r: 0, opacity: 0 }, svg);
+    const boom = el("text", { x: 380, y: 250, class: "boom", opacity: 0 }, svg);
+    boom.textContent = "HROM";
+    const flash = el("rect", { x: 0, y: 0, width: 760, height: 440, class: "flash", opacity: 0 }, svg);
+
+    /* ---------- model ---------- */
+    const s = { phase: "idle", charge: 0.25, rod: false, dist: 1.5, t: 0, shown: 0, main: [], branches: [], target: null, timer: 0, heard: false, hit: "" };
+
+    // vůdčí výboj: náhodné kroky dolů, občas slepá větev
+    function grow() {
+      const main = [{ x: 190 + Math.random() * 400, y: BASE }], branches = [];
+      const targets = [{ ...TREE, reach: 96 }, s.rod ? { ...ROD, reach: 128, name: "do hromosvodu" } : { ...HOUSE, reach: 84, name: "do střechy" }];
+      let hit = null;
+      for (let i = 0; i < 60 && !hit; i++) {
+        const tip = main[main.length - 1];
+        const near = targets.find((t) => Math.hypot(t.x - tip.x, t.y - tip.y) < t.reach);
+        if (near) { hit = near; break; }
+        if (tip.y > GROUND - 34) { hit = { x: tip.x + (Math.random() - 0.5) * 16, y: GROUND, name: "do země" }; break; }
+        const a = (Math.random() - 0.5) * 1.9, len = 15 + Math.random() * 13;
+        const next = { x: Math.max(30, Math.min(730, tip.x + Math.sin(a) * len)), y: tip.y + Math.cos(a) * len * 0.95 + 2 };
+        main.push(next);
+        if (Math.random() < 0.34) {
+          const br = [tip];
+          let p = tip;
+          const side = Math.random() < 0.5 ? -1 : 1;
+          for (let k = 0; k < 2 + Math.floor(Math.random() * 4); k++) {
+            const b = side * (0.5 + Math.random() * 0.8), l = 12 + Math.random() * 12;
+            p = { x: p.x + Math.sin(b) * l, y: Math.min(GROUND - 20, p.y + Math.cos(b) * l) };
+            br.push(p);
+          }
+          branches.push({ at: main.length - 1, pts: br });
+        }
+      }
+      main.push({ x: hit.x, y: hit.y });
+      return { main, branches, target: hit };
+    }
+    const path = (pts) => pts.map((p, i) => `${i ? "L" : "M"}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join("");
+
+    function step(dt) {
+      s.t += dt;
+      if (s.phase === "charging") {
+        s.charge = Math.min(1, s.charge + dt * 0.3);
+        if (s.charge >= 1) {
+          Object.assign(s, grow(), { phase: "leader", t: 0, shown: 1 });
+        }
+      } else if (s.phase === "leader") {
+        s.shown = 1 + Math.floor(s.t / 0.055);
+        if (s.shown >= s.main.length) { s.phase = "stroke"; s.t = 0; s.timer = 0; s.heard = false; s.hit = s.target.name; }
+      } else if (s.phase === "stroke") {
+        s.timer += dt;
+        if (s.t > 0.55) { s.phase = "after"; s.t = 0; s.charge = 0.2; }
+      } else if (s.phase === "after") {
+        if (!s.heard) {
+          s.timer += dt;
+          if (s.timer >= s.dist * 3) { s.timer = s.dist * 3; s.heard = true; s.t = 0; }
+        } else if (s.t > 1.6) {
+          s.phase = "idle";
+        }
+      }
+    }
+
+    /* ---------- výpis ---------- */
+    const fmt1 = new Intl.NumberFormat("cs-CZ", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    const $ = (id) => document.getElementById(id);
+    const cache = new WeakMap();
+    function put(node, str, html) {
+      if (cache.get(node) === str) return;
+      cache.set(node, str);
+      if (html) node.innerHTML = str; else node.textContent = str;
+    }
+
+    function render() {
+      const q = s.charge;
+      marks.forEach((m, i) => m.node.setAttribute("opacity", Math.max(0.12, Math.min(1, q * 1.6 - (i % 4) * 0.12)).toFixed(2)));
+      rod.setAttribute("visibility", s.rod ? "visible" : "hidden");
+
+      boltG.textContent = "";
+      let glow = 0;
+      if (s.phase === "leader") {
+        el("path", { d: path(s.main.slice(0, s.shown)), class: "leader" }, boltG);
+        s.branches.filter((b) => b.at < s.shown).forEach((b) => el("path", { d: path(b.pts.slice(0, Math.max(2, s.shown - b.at + 1))), class: "leader" }, boltG));
+      } else if (s.phase === "stroke") {
+        // několik dílčích výbojů po sobě: blesk bliká
+        const on = s.t < 0.14 || (s.t > 0.22 && s.t < 0.3) || (s.t > 0.4 && s.t < 0.46);
+        glow = on ? 1 : 0.25;
+        s.branches.forEach((b) => el("path", { d: path(b.pts), class: "leader", opacity: glow }, boltG));
+        el("path", { d: path(s.main), class: "stroke-glow", opacity: 0.35 * glow }, boltG);
+        el("path", { d: path(s.main), class: "stroke-core", opacity: glow }, boltG);
+      } else if (s.phase === "after" && s.t < 0.5 && !s.heard) {
+        el("path", { d: path(s.main), class: "stroke-core", opacity: (0.4 * (1 - s.t / 0.5)).toFixed(2) }, boltG);
+      }
+      flash.setAttribute("opacity", s.phase === "stroke" ? (0.42 * glow).toFixed(2) : 0);
+
+      // zvuková vlna běží od kanálu k pozorovateli
+      const travelling = (s.phase === "stroke" || s.phase === "after") && !s.heard && s.target;
+      wave.setAttribute("opacity", travelling ? 0.5 : 0);
+      if (travelling) {
+        wave.setAttribute("cx", s.target.x); wave.setAttribute("cy", s.target.y);
+        wave.setAttribute("r", (Math.min(1, s.timer / (s.dist * 3)) * Math.hypot(704 - s.target.x, GROUND - s.target.y)).toFixed(1));
+      }
+      boom.setAttribute("opacity", s.heard && s.phase === "after" ? Math.max(0, 1 - s.t / 1.4).toFixed(2) : 0);
+
+      $("st-charge").style.width = `${Math.round(q * 100)}%`;
+      put($("st-timer"), s.phase === "stroke" || s.phase === "after" || s.hit ? `${fmt1.format(s.timer)} s` : "—");
+      put($("st-hit"), s.hit || "—");
+
+      let status;
+      if (s.phase === "charging") {
+        status = "<strong>Mrak se nabíjí.</strong> Krystalky ledu odnášejí kladný náboj nahoru, krupky drží záporný dole. Země pod mrakem se nabíjí kladně a napětí roste.";
+      } else if (s.phase === "leader") {
+        status = "<strong>Vůdčí výboj hledá cestu.</strong> Prorazí kus vzduchu, zastaví se, skočí dál jiným směrem. Cestou se větví a nechává za sebou vodivý kanál.";
+      } else if (s.phase === "stroke") {
+        status = `<strong>Hlavní výboj.</strong> Kanál se spojil se zemí a proteče jím třicet tisíc ampérů. Blesk uhodil ${s.target.name}.`;
+      } else if (s.phase === "after" && !s.heard) {
+        status = "<strong>Záblesk jste viděli hned, hrom je na cestě.</strong> Zvuk urazí kilometr za tři sekundy. Počítejte.";
+      } else if (s.hit) {
+        const where = s.hit === "do střechy" ? "Proud prošel krovem. Bez hromosvodu hrozí požár." : s.hit === "do hromosvodu" ? "Proud sjel po drátě do země a domu se nic nestalo." : s.hit === "do stromu" ? "Míza se proměnila v páru a roztrhla kůru." : "Na volném prostranství bez vyšších bodů.";
+        status = `<strong>Hrom dorazil za ${fmt1.format(s.timer)} s.</strong> Blesk tedy uhodil ${fmt1.format(s.timer / 3)} km od vás, ${s.hit}. ${where}`;
+      } else {
+        status = "<strong>Bouřka se blíží.</strong> V mraku je zatím jen trochu náboje. Spusťte ji.";
+      }
+      put($("status"), status, true);
+      const busy = s.phase !== "idle";
+      $("go").disabled = busy;
+      put($("go"), busy ? "Bouří…" : s.hit ? "Další blesk" : "Spustit bouřku");
+    }
+
+    /* ---------- ovládání ---------- */
+    $("go").addEventListener("click", () => { if (s.phase === "idle") { s.phase = "charging"; s.t = 0; } });
+    const seg = $("rod-seg");
+    seg.addEventListener("click", (e) => {
+      const b = e.target.closest("button[data-v]");
+      if (!b) return;
+      seg.querySelectorAll("button").forEach((x) => x.setAttribute("aria-checked", String(x === b)));
+      s.rod = b.dataset.v === "1";
+    });
+    $("dist").addEventListener("input", (e) => { s.dist = Number(e.target.value); $("dist-val").textContent = `${fmt1.format(s.dist)} km`; });
+
+    let prev = performance.now();
+    function frame(now) {
+      const dt = Math.min(0.1, (now - prev) / 1000);
+      prev = now;
+      step(dt);
+      render();
+      requestAnimationFrame(frame);
+    }
+    render();
+    requestAnimationFrame(frame);
+  })();
+  </script>
+</body>
+</html>
