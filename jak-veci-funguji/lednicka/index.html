@@ -1,0 +1,611 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Jak funguje lednička</title>
+  <meta name="description" content="Proč lednička nevyrábí chlad, ale přečerpává teplo, co v ní bzučí a proč vzadu hřeje. S interaktivním modelem chladicího okruhu.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700&display=swap">
+  <link rel="stylesheet" href="../style.css">
+  <style>
+    .insul-bg { fill: var(--plug); }
+    .insul-ln { stroke: var(--plug-hatch); stroke-width: 1.2; }
+    .f-insul { fill: url(#hatch-insul); }
+    .outline { fill: none; stroke: var(--metal-line); stroke-width: 1.4; }
+    .inside { fill: var(--surface); }
+    .tint { fill: var(--cold); pointer-events: none; }
+    .floor { stroke: var(--ink-3); stroke-width: 1.5; }
+    .plinth { fill: var(--sunk); stroke: var(--metal-line); stroke-width: 1.4; }
+    .shelf { stroke: var(--ink-3); stroke-width: 2.5; }
+    .food { fill: var(--sunk); stroke: var(--ink-3); stroke-width: 1.2; }
+    .drawer { fill: none; stroke: var(--ink-3); stroke-width: 1.2; }
+    .lamp { fill: var(--rule); stroke: var(--ink-3); stroke-width: 1; transition: fill 0.2s; }
+    .lamp.on { fill: #ffd84a; }
+
+    .tube-out { fill: none; stroke: var(--metal-line); stroke-width: 9; stroke-linejoin: round; stroke-linecap: round; }
+    .tube-in { fill: none; stroke: var(--surface); stroke-width: 6.2; stroke-linejoin: round; stroke-linecap: round; }
+    .cap-out { fill: none; stroke: var(--metal-line); stroke-width: 3.6; stroke-linejoin: round; }
+    .glow, .flow { fill: none; stroke-linejoin: round; stroke-linecap: round; }
+    .glow { stroke-width: 6.2; opacity: 0.26; }
+    .flow { stroke-width: 4.2; }
+    .flow.thin { stroke-width: 1.8; stroke-linecap: butt; }
+    .c-hot { stroke: var(--hot); }
+    .c-warm { stroke: var(--warm); }
+    .c-cold { stroke: var(--cold); }
+    .c-cool { stroke: var(--cool); }
+    .drier { fill: var(--steel); stroke: var(--metal-line); stroke-width: 1.2; }
+
+    .comp { fill: #23272e; stroke: var(--metal-line); stroke-width: 1.4; }
+    .comp-foot { fill: var(--metal-line); }
+    #comp.running { animation: hum 0.09s linear infinite; }
+    @keyframes hum { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(0.9px, 0); } }
+
+    #door { transition: transform 0.5s cubic-bezier(0.3, 0.7, 0.2, 1), opacity 0.5s; }
+    #door.open { transform: translate(-70px, 0); opacity: 0.5; }
+    .handle { fill: var(--metal-line); }
+    .gasket { fill: var(--ink-3); }
+    #air { opacity: 0; transition: opacity 0.4s; }
+    #air.on { opacity: 1; }
+    .arrow line { stroke-width: 3; stroke-linecap: round; }
+    .arrow.hot line { stroke: var(--hot); } .arrow.hot path { fill: var(--hot); }
+    .arrow.cold line { stroke: var(--cold); } .arrow.cold path { fill: var(--cold); }
+    .arrow.warm line { stroke: var(--warm); stroke-width: 2.2; } .arrow.warm path { fill: var(--warm); }
+    .wave { fill: none; stroke: var(--hot); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+
+    .mk circle { fill: var(--ink); }
+    .mk text { fill: var(--paper); font: 700 12.5px var(--font-mono); text-anchor: middle; dominant-baseline: central; }
+    .mk { transform-box: fill-box; transform-origin: center; }
+    .callout text { fill: var(--ink-2); font: 500 13px var(--font-mono); }
+    .callout line { stroke: var(--ink-3); stroke-width: 1; }
+    .callout circle { fill: var(--ink-2); }
+    .callout .big { fill: var(--hot); font-weight: 600; font-size: 15px; }
+    .r-cap { fill: var(--ink-3); font: 500 11px var(--font-mono); letter-spacing: 0.08em; }
+    .r-val { fill: var(--ink); font: 800 34px var(--font-display); font-stretch: 112%; font-variant-numeric: tabular-nums; }
+    .r-val.small { font-size: 28px; }
+
+    .readout { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+    .readout th, .readout td { padding: 0.4rem 0.6rem 0.4rem 0; border-bottom: 1px solid var(--rule); text-align: right; white-space: nowrap; }
+    .readout th { font-weight: 500; font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); }
+    .readout th:first-child, .readout td:first-child, .readout th:nth-child(2), .readout td:nth-child(2) { text-align: left; }
+    .readout td:nth-child(2) { color: var(--ink-2); }
+    .mk-n {
+      display: inline-grid;
+      place-items: center;
+      width: 1.25rem;
+      height: 1.25rem;
+      margin-right: 0.5rem;
+      border-radius: 50%;
+      background: var(--ink);
+      color: var(--paper);
+      font-size: 0.72rem;
+      font-weight: 600;
+    }
+    .table-wrap { overflow-x: auto; }
+    .formula { font-family: var(--font-mono); font-size: 0.85rem; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+    .formula b { color: var(--ink); font-weight: 600; }
+    .status { font-size: 1.02rem; }
+    .fr-status { display: grid; gap: 0.9rem; }
+    .legend { display: flex; flex-wrap: wrap; gap: 0.3rem 1.25rem; font-family: var(--font-mono); font-size: 0.78rem; color: var(--ink-2); }
+    .legend span { display: inline-flex; align-items: center; gap: 0.45rem; }
+    .legend svg { width: 2.4rem; height: 0.6rem; flex: none; }
+    .legend line { stroke: var(--ink-2); stroke-width: 4.2; stroke-linecap: round; }
+
+    @media (max-width: 46rem) {
+      .callout, .desk { display: none; }
+      .mk { transform: scale(1.6); }
+      .readout th:nth-child(2), .readout td:nth-child(2) { display: none; }
+    }
+    @media (min-width: 60rem) {
+      .fr-status { grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); align-items: start; gap: 2rem; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #comp.running { animation: none; }
+    }
+  </style>
+</head>
+<body data-cat="domacnost">
+  <header class="topbar">
+    <div class="wrap">
+      <a class="brand" href="../">Jak věci fungují</a>
+      <nav class="crumbs" aria-label="Drobečková navigace"><a href="../#domacnost">Domácnost</a><span aria-hidden="true">/</span><span>Lednička</span></nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <header class="art-head">
+      <p class="eyebrow">Domácnost</p>
+      <h1 class="display">Jak funguje lednička</h1>
+      <p class="lede">Lednička chlad nevyrábí. Bere teplo z potravin a přenáší ho ven, na černou mřížku na svých zádech. Stačí jí k tomu pár desítek gramů chladiva, které nutí pořád dokola vařit se a zase zkapalnět.</p>
+    </header>
+
+    <section class="tldr" aria-labelledby="h-zkratka">
+      <h2 class="label" id="h-zkratka">Ve zkratce</h2>
+      <ul>
+        <li>V trubkách obíhá chladivo. Uvnitř ledničky se <span class="hl">vypařuje</span> a bere si na to teplo z potravin.</li>
+        <li>Kompresor páru stlačí. Na zadní mřížce pak pára zkapalní a teplo odevzdá do kuchyně.</li>
+        <li>Termostat kompresor zapíná a vypíná. Většinu dne lednička stojí.</li>
+      </ul>
+    </section>
+
+    <figure class="fig" id="obr1">
+      <div class="fig-head">
+        <p class="fig-num"><b>Obr. 1</b> Chladicí okruh</p>
+        <span class="label">Otevřete dveře nebo změňte teploty</span>
+      </div>
+      <div class="fig-stage">
+        <svg id="fridge" viewBox="0 0 940 520" role="img" aria-label="Řez ledničkou z boku: výparník uvnitř, kondenzátor na zádech, kompresor dole a chladivo, které mezi nimi obíhá">
+          <defs>
+            <pattern id="hatch-insul" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)">
+              <rect width="7" height="7" class="insul-bg"/>
+              <line x1="0" y1="0" x2="0" y2="7" class="insul-ln"/>
+            </pattern>
+          </defs>
+        </svg>
+      </div>
+      <div class="fig-controls">
+        <div class="ctl ctl-grow">
+          <label class="label" for="set">Termostat</label>
+          <div class="ctl-row">
+            <input type="range" id="set" min="2" max="8" step="1" value="5">
+            <output class="val" id="set-val" for="set">5 °C</output>
+          </div>
+        </div>
+        <div class="ctl ctl-grow">
+          <label class="label" for="room">Teplota v místnosti</label>
+          <div class="ctl-row">
+            <input type="range" id="room" min="16" max="35" step="1" value="22">
+            <output class="val" id="room-val" for="room">22 °C</output>
+          </div>
+        </div>
+        <button type="button" class="btn" id="door-btn" aria-pressed="false">Otevřít dveře</button>
+      </div>
+      <div class="fig-status fr-status">
+        <div style="display:grid; gap:.6rem; min-width:0">
+          <p class="status" id="status" aria-live="polite"></p>
+          <p class="formula" id="balance"></p>
+          <p class="formula" id="duty"></p>
+        </div>
+        <div style="display:grid; gap:.7rem; min-width:0">
+          <div class="table-wrap">
+            <table class="readout">
+              <thead><tr><th scope="col">Místo v okruhu</th><th scope="col">Chladivo</th><th scope="col">Tlak</th><th scope="col">Teplota</th></tr></thead>
+              <tbody id="rows"></tbody>
+            </table>
+          </div>
+          <p class="legend" aria-hidden="true">
+            <span><svg viewBox="0 0 48 12"><line x1="4" y1="6" x2="4.1" y2="6"/><line x1="17" y1="6" x2="17.1" y2="6"/><line x1="30" y1="6" x2="30.1" y2="6"/><line x1="43" y1="6" x2="43.1" y2="6"/></svg>pára</span>
+            <span><svg viewBox="0 0 48 12"><line x1="4" y1="6" x2="18" y2="6"/><line x1="28" y1="6" x2="42" y2="6"/></svg>kapalina</span>
+          </p>
+        </div>
+      </div>
+      <figcaption class="fig-caption">Zjednodušený model s chladivem R600a. Tečky v trubkách jsou pára, dlouhé čárky kapalina. Čas běží zrychleně: jedna sekunda odpovídá třem minutám. Tlaky jsou absolutní, běžný tlak vzduchu je 1 bar.</figcaption>
+    </figure>
+
+    <section class="sec" aria-labelledby="h-chlad">
+      <div class="prose">
+        <h2 id="h-chlad">Chlad se vyrobit nedá</h2>
+        <p>Chlad není látka, kterou by šlo někam přidat. Je to jen málo tepla. Když chcete něco ochladit, musíte z toho teplo odvést jinam.</p>
+        <p>Teplo ale samo teče jen jedním směrem: z teplejšího místa na studenější. Lednička ho potřebuje dostat opačně, z vnitřku, kde je 5 °C, do kuchyně, kde je 22 °C. To samo od sebe nejde, a proto potřebuje elektřinu.</p>
+        <p>Dělá to oklikou. Uvnitř si vytvoří místo ještě studenější, než jsou potraviny, a venku místo teplejší, než je kuchyně. Do toho prvního teplo z potravin steče samo. Z toho druhého samo odteče do místnosti.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Sledujte v tabulce body 3 a 1. Výparník má kolem −20 °C, takže do něj teplo z jídla teče samo. Pára za kompresorem má přes 70 °C, takže z ní teplo samo odchází do kuchyně.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-var">
+      <div class="prose">
+        <h2 id="h-var">Trik je v bodu varu</h2>
+        <p>Když se kapalina vypařuje, bere si teplo z okolí. Znáte to z ruky namočené v lihu nebo z mokrého trička ve větru. Když pára zase zkapalní, stejné teplo vrátí.</p>
+        <p>Teplota, při které kapalina vře, navíc záleží na tlaku. Voda vře u moře při 100 °C, na vrcholu Mount Everestu už asi při 70 °C. Chladivo v dnešních ledničkách, isobutan, vře za běžného tlaku při −12 °C. Když tlak snížíte na 0,7 baru, vře už při −20 °C. Když ho stlačíte na 5 barů, zůstane kapalné až do 38 °C.</p>
+        <p>Lednička tedy dělá jedinou věc: <span class="hl">mění tlak chladiva.</span> Tam, kde má teplo brát, ho nechá vařit při nízkém tlaku. Tam, kde má teplo odevzdat, ho stlačí, aby zkapalnělo.</p>
+      </div>
+      <aside class="note" aria-label="Lednička v číslech">
+        <span class="label">V číslech</span>
+        <dl class="facts">
+          <div><dt>−11,7 °C</dt><dd>bod varu isobutanu za běžného tlaku</dd></div>
+          <div><dt>30–70 g</dt><dd>chladiva v celém okruhu</dd></div>
+          <div><dt>0,7 / 5 bar</dt><dd>tlak ve výparníku a v kondenzátoru</dd></div>
+          <div><dt>4 °C</dt><dd>doporučená teplota v ledničce, v mrazáku −18 °C</dd></div>
+        </dl>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-okruh">
+      <div class="prose">
+        <h2 id="h-okruh">Jedno kolečko okruhem</h2>
+        <ol class="steps">
+          <li><div><b>Kompresor.</b> Nasaje chladnou páru o nízkém tlaku a stlačí ji zhruba sedmkrát. Pára se tím zahřeje přes 70 °C, stejně jako se zahřívá hustilka, když pumpujete kolo. Kompresor je to, co z ledničky slyšíte bzučet.</div></li>
+          <li><div><b>Kondenzátor.</b> Horká pára teče černou mřížkou na zádech ledničky. Je teplejší než kuchyně, takže chladne, a protože je pod tlakem, zkapalní. Teplo, které přitom odevzdá, ucítíte, když za ledničku sáhnete.</div></li>
+          <li><div><b>Kapilára.</b> Kapalina se protlačuje několik metrů dlouhou trubičkou s otvorem tenkým jako jehla. Ta ji brzdí, a tím drží před sebou vysoký tlak a za sebou nízký. Na konci tlak prudce spadne, část kapaliny se hned vypaří a zbytek se tím ochladí hluboko pod nulu.</div></li>
+          <li><div><b>Výparník.</b> Studená kapalina teče trubkami uvnitř ledničky. Při nízkém tlaku vře už při −20 °C, takže jí k varu stačí teplo z jogurtu. Vypaří se, teplo odnese s sebou a jako pára se vrátí ke kompresoru.</div></li>
+        </ol>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Na okraj</span>
+        <p>V celém okruhu jsou jen dva tlaky: vysoký od kompresoru ke kapiláře a nízký od kapiláry zpátky ke kompresoru.</p>
+        <p>Ten nízký je nižší než tlak vzduchu v kuchyni. Kdyby trubka ve výparníku praskla, chladivo by nevystříklo ven. Lednička by naopak nasávala vzduch dovnitř.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-termostat">
+      <div class="prose">
+        <h2 id="h-termostat">Většinu dne lednička stojí</h2>
+        <p>Kompresor běžné ledničky umí jen dvě věci: běžet naplno, nebo stát. Řídí ho termostat. Když teplota uvnitř stoupne kousek nad nastavenou hodnotu, kompresor zapne. Když klesne kousek pod ni, vypne ho. Teplota uvnitř proto pořád mírně kolísá.</p>
+        <p>Když kompresor stojí, tlaky se přes kapiláru vyrovnají a chladivo přestane obíhat. Teplo mezitím pomalu prosakuje izolací dovnitř, dokud termostat nezapne znovu. V dobře izolované ledničce běží kompresor jen asi čtvrtinu až třetinu času.</p>
+        <p>Novější ledničky mají invertorový kompresor, který umí měnit otáčky. Běží skoro pořád, ale pomalu, a je díky tomu tišší a úspornější.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Zvyšte teplotu v místnosti na 35 °C. Izolací teče dovnitř víc tepla a kompresor ho navíc musí tlačit do většího kopce. Poběží zhruba dvakrát déle.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-topi">
+      <div class="prose">
+        <h2 id="h-topi">Proč lednička topí</h2>
+        <p>Teplo, které lednička odebere potravinám, nezmizí. Skončí na zadní mřížce a přidá se k němu ještě energie, kterou spotřeboval kompresor. Do kuchyně tak lednička vždycky vydá víc tepla, než kolik ho uvnitř odebrala.</p>
+        <p>Proto se kuchyně otevřenou ledničkou ochladit nedá. Studený vzduch vám sice ovane nohy, ale zadní mřížka do stejné místnosti vrací všechno to teplo a ještě něco navíc. Místnost se pomalu ohřívá.</p>
+        <p>Stejný stroj, jen otočený, je <span class="hl">tepelné čerpadlo.</span> Výparník má venku, kde bere teplo ze studeného vzduchu, a kondenzátorem topí v domě. Klimatizace to dělá obráceně.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Otevřete v obrázku dveře. Dovnitř teče několikrát víc tepla, než kolik kompresor stíhá odvádět, a teplota uvnitř se ustálí vysoko nad tím, co chce termostat.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-kuchyne">
+      <div class="prose">
+        <h2 id="h-kuchyne">Co z toho plyne v kuchyni</h2>
+        <p>Nechte za ledničkou místo. Mřížka se tepla zbavuje jen tak, že kolem ní proudí vzduch. Když je natlačená na zeď nebo obalená prachem, kompresor běží déle.</p>
+        <p>Horké jídlo nechte nejdřív vychladnout na lince. Jinak musí všechno to teplo přečerpat kompresor a mezitím se ohřívají potraviny okolo.</p>
+        <p>Námraza na zadní stěně je vlhkost ze vzduchu, která na výparníku zmrzla. Tenká vrstva nevadí, tlustá ale funguje jako izolace a ledničce překáží. Ledničky s funkcí No Frost mají výparník schovaný za stěnou, ofukují ho ventilátorem a čas od času ho krátce ohřejí, aby led odtál.</p>
+        <p>Po stěhování nechte ledničku pár hodin stát, než ji zapnete, hlavně když cestovala naležato. V kompresoru je olej, který se při naklonění může dostat do trubek, a potřebuje čas stéct zpátky.</p>
+      </div>
+    </section>
+
+    <section class="sec" aria-labelledby="h-chladivo">
+      <div class="prose">
+        <h2 id="h-chladivo">Co v trubkách koluje</h2>
+        <p>První domácí ledničky používaly jedovaté plyny, třeba čpavek nebo oxid siřičitý. Ve třicátých letech je nahradily freony: nehořlavé, nejedovaté a zdánlivě neškodné. V osmdesátých letech se ukázalo, že ničí ozonovou vrstvu, a Montrealský protokol z roku 1987 je postupně zakázal.</p>
+        <p>Jejich náhrada, chladivo R134a, ozonu neškodí, ale je to silný skleníkový plyn. Evropské ledničky proto dnes používají isobutan (R600a), plyn podobný tomu v zapalovači. Je hořlavý, ale v okruhu je ho jen pár desítek gramů.</p>
+        <p>Isobutan do ledniček prosadila v roce 1993 organizace Greenpeace spolu se saskou továrnou Foron, v době, kdy velcí výrobci tvrdili, že to nejde.</p>
+      </div>
+    </section>
+
+    <footer class="art-foot">
+      <a class="next" href="../gps/" data-cat="technika">
+        <span class="label">Další článek · Technika</span>
+        <span class="t">Jak funguje GPS</span>
+        <p>Jak telefon zjistí, kde je, když do vesmíru nic neposílá.</p>
+      </a>
+      <a class="back" href="../">Všechna témata</a>
+    </footer>
+  </main>
+
+  <script>
+  (() => {
+    const NS = "http://www.w3.org/2000/svg";
+    function el(tag, attrs, parent) {
+      const n = document.createElementNS(NS, tag);
+      for (const k in attrs || {}) n.setAttribute(k, attrs[k]);
+      if (parent) parent.appendChild(n);
+      return n;
+    }
+    const svg = document.getElementById("fridge");
+
+    /* ---------- fyzika modelu ---------- */
+    const SPEED = 180;        // kolikrát rychleji běží čas v modelu
+    const CAP = 40000;        // tepelná kapacita vnitřku s jídlem, J/K
+    const UA = 1.6;           // prostup tepla izolací, W/K
+    const UA_OPEN = 22;       // totéž s otevřenými dveřmi
+    const P_EL = 65;          // příkon kompresoru, W
+    const ETA = 0.42;         // jak blízko je okruh ideálnímu (Carnotovu) stroji
+    const HYST = 1;           // termostat spíná ±1 °C kolem nastavené teploty
+    const TAU = 150;          // jak rychle se po startu ustálí tlaky, s
+
+    // tlak sytých par isobutanu (Antoineova rovnice), °C -> bar, a zpět
+    const A = 6.74808, B = 882.8, C = 240, MMHG = 0.00133322;
+    const psat = (t) => Math.pow(10, A - B / (C + t)) * MMHG;
+    const tsat = (p) => B / (A - Math.log10(p / MMHG)) - C;
+    const lerp = (a, b, k) => a + (b - a) * k;
+
+    const s = { set: 5, room: 22, door: false, on: true, run: 1, Tin: 5.9 };
+
+    function derive() {
+      const Te = s.Tin - 25, Tc = s.room + 16;            // teplota varu ve výparníku a v kondenzátoru
+      const cop = (ETA * (Te + 273.15)) / (Tc - Te);
+      const pEq = psat(s.Tin);                            // když kompresor stojí, tlaky se vyrovnají
+      const pLow = lerp(pEq, psat(Te), s.run), pHigh = lerp(pEq, psat(Tc), s.run);
+      return {
+        pLow, pHigh,
+        qc: s.run * cop * P_EL,
+        pel: s.run * P_EL,
+        leak: (s.door ? UA_OPEN : UA) * (s.room - s.Tin),
+        T: [lerp(s.room, Tc + 35, s.run), lerp(s.room, Tc - 3, s.run), tsat(pLow), lerp(s.Tin, s.Tin - 4, s.run)],
+      };
+    }
+
+    function step(dt) {
+      let left = Math.min(dt, 0.1) * SPEED;
+      while (left > 0) {
+        const h = Math.min(left, 15);
+        left -= h;
+        const d = derive();
+        s.Tin += ((d.leak - d.qc) * h) / CAP;
+        if (!s.on && s.Tin >= s.set + HYST) s.on = true;
+        else if (s.on && s.Tin <= s.set - HYST) s.on = false;
+        s.run += ((s.on ? 1 : 0) - s.run) * (1 - Math.exp(-h / TAU));
+      }
+    }
+
+    // podíl času, kdy kompresor poběží při zavřených dveřích
+    function dutyAtSet() {
+      const Te = s.set - 25, Tc = s.room + 16;
+      const q = ((ETA * (Te + 273.15)) / (Tc - Te)) * P_EL;
+      return Math.min(1, (UA * (s.room - s.set)) / q);
+    }
+
+    /* ---------- skříň ---------- */
+    el("line", { x1: 110, y1: 492.5, x2: 850, y2: 492.5, class: "floor" }, svg);
+    el("rect", { x: 200, y: 430, width: 320, height: 62, class: "plinth" }, svg);
+    el("rect", { x: 216, y: 64, width: 424, height: 366, class: "f-insul" }, svg);
+    el("rect", { x: 215, y: 90, width: 399, height: 314, class: "inside" }, svg);
+    const tint = el("rect", { x: 216, y: 90, width: 398, height: 314, class: "tint" }, svg);
+    el("path", { d: "M216 64 H640 V430 H216 M216 90 H614 V404 H216 M216 64 V90 M216 404 V430", class: "outline" }, svg);
+
+    const lamp = el("rect", { x: 380, y: 91, width: 36, height: 7, rx: 2, class: "lamp" }, svg);
+    el("line", { x1: 216, y1: 190, x2: 540, y2: 190, class: "shelf" }, svg);
+    el("line", { x1: 216, y1: 290, x2: 540, y2: 290, class: "shelf" }, svg);
+    [
+      { x: 240, y: 164, width: 60, height: 26, rx: 3 },
+      { x: 316, y: 156, width: 28, height: 34, rx: 5 },
+      { x: 447, y: 110, width: 12, height: 22, rx: 2 },
+      { x: 440, y: 128, width: 26, height: 62, rx: 4 },
+      { x: 484, y: 160, width: 30, height: 30, rx: 5 },
+      { x: 250, y: 250, width: 72, height: 40, rx: 5 },
+      { x: 244, y: 244, width: 84, height: 8, rx: 3 },
+      { x: 346, y: 262, width: 52, height: 28, rx: 3 },
+      { x: 414, y: 238, width: 30, height: 52, rx: 2 },
+    ].forEach((a) => el("rect", { ...a, class: "food" }, svg));
+    el("rect", { x: 226, y: 318, width: 244, height: 78, rx: 5, class: "drawer" }, svg);
+    el("line", { x1: 318, y1: 334, x2: 378, y2: 334, class: "shelf" }, svg);
+
+    /* ---------- potrubí ---------- */
+    const rows = (n, y0, dy, xa, xb) => {
+      const out = [];
+      for (let k = 0; k < n; k++) {
+        const y = y0 + k * dy;
+        out.push(k % 2 ? [[xb, y], [xa, y]] : [[xa, y], [xb, y]]);
+      }
+      return out;
+    };
+    const cond = rows(9, 96, 28, 740, 664);     // kondenzátor: shora dolů
+    const evap = rows(8, 120, 30, 602, 550);    // výparník: shora dolů
+    const flat = (list) => list.flat();
+    const last = (pts) => pts[pts.length - 1];
+    const d = (pts) => "M" + pts.map((p) => p.join(" ")).join(" L");
+
+    const hotGas = [[622, 466], [770, 466], [770, 80], [740, 80], ...flat(cond.slice(0, 3))];
+    const hotMix = [last(hotGas), ...flat(cond.slice(3, 6))];
+    const hotLiq = [last(hotMix), ...flat(cond.slice(6)), [664, 356]];
+    const capil = [[664, 356], [627, 356], [627, 104], [602, 104], [602, 120]];
+    const coldLiq = [[602, 120], ...flat(evap.slice(0, 3))];
+    const coldMix = [last(coldLiq), ...flat(evap.slice(3, 6))];
+    const coldGas = [last(coldMix), ...flat(evap.slice(6)), [602, 440]];
+
+    const highSide = [...hotGas, ...hotMix, ...hotLiq];
+    const lowSide = [...coldLiq, ...coldMix, ...coldGas];
+    [highSide, lowSide].forEach((pts) => {
+      el("path", { d: d(pts), class: "tube-out" }, svg);
+      el("path", { d: d(pts), class: "tube-in" }, svg);
+    });
+    el("path", { d: d(capil), class: "cap-out" }, svg);
+
+    const GAS = { dash: "0.1 12.9", period: 13, v: 62 };
+    const MIX = { dash: "7 9", period: 16, v: 40 };
+    const LIQ = { dash: "14 6", period: 20, v: 26 };
+    const flows = [
+      [hotGas, "c-hot", GAS], [hotMix, "c-warm", MIX], [hotLiq, "c-warm", LIQ],
+      [coldLiq, "c-cold", LIQ], [coldMix, "c-cold", MIX], [coldGas, "c-cool", GAS],
+    ].map(([pts, cls, kind]) => {
+      el("path", { d: d(pts), class: `glow ${cls}` }, svg);
+      return { node: el("path", { d: d(pts), class: `flow ${cls}`, "stroke-dasharray": kind.dash }, svg), kind, off: 0 };
+    });
+    flows.push({
+      node: el("path", { d: d(capil), class: "flow thin c-warm", "stroke-dasharray": "8 4" }, svg),
+      kind: { period: 12, v: 50 }, off: 0,
+    });
+    el("rect", { x: 657, y: 328, width: 14, height: 22, rx: 4, class: "drier" }, svg);
+
+    const comp = el("g", { id: "comp" }, svg);
+    el("rect", { x: 552, y: 484, width: 16, height: 8, class: "comp-foot" }, comp);
+    el("rect", { x: 602, y: 484, width: 16, height: 8, class: "comp-foot" }, comp);
+    el("path", { d: "M548 486 V462 A37 26 0 0 1 622 462 V486 Z", class: "comp" }, comp);
+
+    /* ---------- dveře a vzduch ---------- */
+    const door = el("g", { id: "door" }, svg);
+    el("rect", { x: 190, y: 64, width: 26, height: 366, class: "f-insul" }, door);
+    el("rect", { x: 190, y: 64, width: 26, height: 366, class: "outline" }, door);
+    el("rect", { x: 213, y: 72, width: 3, height: 350, class: "gasket" }, door);
+    el("rect", { x: 180, y: 206, width: 10, height: 76, rx: 4, class: "handle" }, door);
+
+    function arrow(x1, y, x2, cls, parent) {
+      const g = el("g", { class: `arrow ${cls}` }, parent);
+      const dir = Math.sign(x2 - x1);
+      el("line", { x1, y1: y, x2: x2 - dir * 8, y2: y }, g);
+      el("path", { d: `M${x2} ${y} L${x2 - dir * 13} ${y - 7} L${x2 - dir * 13} ${y + 7} Z` }, g);
+      return g;
+    }
+    const air = el("g", { id: "air" }, svg);
+    arrow(156, 120, 228, "hot", air);
+    arrow(228, 386, 156, "cold", air);
+
+    // teplo: z vnitřku do výparníku a z kondenzátoru do místnosti
+    const heatIn = el("g", {}, svg);
+    arrow(488, 250, 540, "warm", heatIn);
+    arrow(488, 352, 540, "warm", heatIn);
+    const heatOut = el("g", {}, svg);
+    const waves = [676, 702, 728].map((x) => {
+      let p = `M${x} 86`;
+      for (let y = 82; y >= 28; y -= 3) p += ` L${(x + 4.5 * Math.sin(((86 - y) / 58) * Math.PI * 3)).toFixed(1)} ${y}`;
+      el("path", { d: `M${x - 6} 31 L${x} 20 L${x + 6} 31`, class: "wave" }, heatOut);
+      return el("path", { d: p, class: "wave", "stroke-dasharray": "7 6" }, heatOut);
+    });
+
+    /* ---------- popisky ---------- */
+    function marker(n, x, y) {
+      const g = el("g", { class: "mk" }, svg);
+      el("circle", { cx: x, cy: y, r: 10 }, g);
+      el("text", { x, y: y + 0.5 }, g).textContent = n;
+    }
+    marker(1, 790, 300);
+    marker(2, 684, 356);
+    marker(3, 578, 104);
+    marker(4, 582, 380);
+
+    function callout(label, tx, ty, anchor, x1, y1, x2, y2) {
+      const g = el("g", { class: "callout" }, svg);
+      if (x1 !== undefined) {
+        el("line", { x1, y1, x2, y2 }, g);
+        el("circle", { cx: x2, cy: y2, r: 2.2 }, g);
+      }
+      el("text", { x: tx, y: ty, "text-anchor": anchor }, g).textContent = label;
+      return g;
+    }
+    callout("izolace", 270, 40, "start", 300, 46, 330, 77);
+    callout("kapilára", 560, 40, "end", 566, 38, 627, 104);
+    callout("výparník", 536, 214, "end", 540, 210, 550, 210);
+    callout("kondenzátor", 702, 392, "middle");
+    callout("kompresor", 508, 470, "end", 514, 466, 548, 466);
+    const outLabel = callout("teplo do místnosti", 786, 30, "start");
+    const outVal = el("text", { x: 786, y: 52, class: "big" }, outLabel);
+
+    const desk = el("g", { class: "desk" }, svg);
+    el("text", { x: 24, y: 112, class: "r-cap" }, desk).textContent = "MÍSTNOST";
+    const roomTxt = el("text", { x: 24, y: 142, class: "r-val small" }, desk);
+    el("text", { x: 236, y: 108, class: "r-cap desk" }, svg).textContent = "UVNITŘ";
+    const inTxt = el("text", { x: 236, y: 142, class: "r-val" }, svg);
+
+    /* ---------- výpis ---------- */
+    const fmt0 = new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 0 });
+    const fmt1 = new Intl.NumberFormat("cs-CZ", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    const minus = (str) => str.replace("-", "−");
+    const deg0 = (v) => `${minus(fmt0.format(Math.round(v) || 0))} °C`;
+    const deg1 = (v) => `${minus(fmt1.format(v))} °C`;
+    const watts = (v) => `${fmt0.format(Math.round(v))} W`;
+
+    const cache = new WeakMap();
+    function put(node, str, html) {
+      if (cache.get(node) === str) return;
+      cache.set(node, str);
+      if (html) node.innerHTML = str; else node.textContent = str;
+    }
+
+    const PLACES = ["za kompresorem", "za kondenzátorem", "za kapilárou", "za výparníkem"];
+    const PHASES = ["horká pára", "kapalina", "vroucí kapalina", "chladná pára"];
+    const rowsEl = document.getElementById("rows");
+    const trs = PLACES.map((name, i) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td><span class="mk-n">${i + 1}</span>${name}</td><td></td><td></td><td></td>`;
+      rowsEl.appendChild(tr);
+      return tr;
+    });
+
+    const statusEl = document.getElementById("status");
+    const balanceEl = document.getElementById("balance");
+    const dutyEl = document.getElementById("duty");
+    const setIn = document.getElementById("set"), setVal = document.getElementById("set-val");
+    const roomIn = document.getElementById("room"), roomVal = document.getElementById("room-val");
+    const doorBtn = document.getElementById("door-btn");
+
+    function render() {
+      const m = derive();
+      const running = s.run > 0.05;
+
+      put(inTxt, deg1(s.Tin));
+      put(roomTxt, deg0(s.room));
+      tint.setAttribute("opacity", (Math.max(0, Math.min(1, (16 - s.Tin) / 14)) * 0.16).toFixed(3));
+      comp.classList.toggle("running", s.on);
+      heatIn.setAttribute("opacity", s.run.toFixed(2));
+      heatOut.setAttribute("opacity", s.run.toFixed(2));
+      outLabel.setAttribute("opacity", s.run.toFixed(2));
+      flows.forEach((f) => f.node.setAttribute("opacity", (0.35 + 0.65 * s.run).toFixed(2)));
+      const qc = Math.round(m.qc), pel = Math.round(m.pel);   // součet ze zaokrouhlených, ať na sebe čísla sedí
+      put(outVal, watts(qc + pel));
+
+      const p = [m.pHigh, m.pHigh, m.pLow, m.pLow];
+      trs.forEach((tr, i) => {
+        put(tr.children[1], running ? PHASES[i] : "stojí");
+        put(tr.children[2], `${fmt1.format(p[i])} bar`);
+        put(tr.children[3], deg0(m.T[i]));
+      });
+
+      let status;
+      if (s.door && !s.on) {
+        status = "<strong>Dveře jsou otevřené.</strong> Studený vzduch vytéká spodem ven a horem se dovnitř tlačí teplý. Termostat za chvíli zapne kompresor.";
+      } else if (s.door && m.leak - m.qc > 8) {
+        status = "<strong>Dveře jsou otevřené.</strong> Dovnitř teče teplo rychleji, než ho kompresor stíhá odvádět. Teplota uvnitř stoupá.";
+      } else if (s.door) {
+        status = "<strong>Dveře jsou otevřené.</strong> Kompresor běží bez přestávky, a přesto nastavenou teplotu neudrží.";
+      } else if (s.on) {
+        status = `<strong>Kompresor běží.</strong> Přečerpává teplo z vnitřku na zadní mřížku. Termostat ho vypne, až teplota uvnitř klesne na ${deg0(s.set - HYST)}.`;
+      } else {
+        status = `<strong>Kompresor stojí.</strong> Izolací pomalu prosakuje teplo dovnitř. Termostat ho zapne, až uvnitř bude ${deg0(s.set + HYST)}.`;
+      }
+      put(statusEl, status, true);
+
+      put(balanceEl, running
+        ? `teplo z vnitřku + elektřina = teplo do místnosti: ${watts(qc)} + ${watts(pel)} = <b>${watts(qc + pel)}</b>`
+        : `kompresor stojí · ${s.door ? "dveřmi" : "izolací"} teče dovnitř <b>${watts(m.leak)}</b>`, true);
+
+      const duty = dutyAtSet();
+      const kwh = Math.round((duty * P_EL * 8.76) / 10) * 10;
+      put(dutyEl, `Se zavřenými dveřmi poběží kompresor asi <b>${fmt0.format(Math.round(duty * 100))} % času</b>, za rok spotřebuje zhruba ${fmt0.format(kwh)} kWh.`, true);
+    }
+
+    /* ---------- ovládání ---------- */
+    setIn.addEventListener("input", () => { s.set = Number(setIn.value); setVal.textContent = deg0(s.set); render(); });
+    roomIn.addEventListener("input", () => { s.room = Number(roomIn.value); roomVal.textContent = deg0(s.room); render(); });
+    doorBtn.addEventListener("click", () => {
+      s.door = !s.door;
+      doorBtn.setAttribute("aria-pressed", String(s.door));
+      doorBtn.textContent = s.door ? "Zavřít dveře" : "Otevřít dveře";
+      door.classList.toggle("open", s.door);
+      air.classList.toggle("on", s.door);
+      lamp.classList.toggle("on", s.door);
+      render();
+    });
+
+    // na úzkém displeji ořízneme prázdné okraje, aby byl řez větší
+    const narrow = window.matchMedia("(max-width: 46rem)");
+    const fitView = () => svg.setAttribute("viewBox", narrow.matches ? "110 6 700 500" : "0 0 940 520");
+    narrow.addEventListener("change", fitView);
+    fitView();
+
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let prev = performance.now(), waveOff = 0;
+    function frame(now) {
+      const dt = Math.min(0.1, (now - prev) / 1000);
+      prev = now;
+      step(dt);
+      if (!reduced) {
+        flows.forEach((f) => {
+          f.off = (f.off - f.kind.v * s.run * dt) % f.kind.period;
+          f.node.setAttribute("stroke-dashoffset", f.off.toFixed(2));
+        });
+        waveOff = (waveOff - 22 * s.run * dt) % 13;
+        waves.forEach((w) => w.setAttribute("stroke-dashoffset", waveOff.toFixed(2)));
+      }
+      render();
+      requestAnimationFrame(frame);
+    }
+    render();
+    requestAnimationFrame(frame);
+  })();
+  </script>
+</body>
+</html>
