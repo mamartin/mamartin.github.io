@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Jak funguje Bluetooth</title>
+  <meta name="description" content="Jak se sluchátka domluví s telefonem v pásmu, kde vysílá Wi-Fi i mikrovlnka, proč Bluetooth 1 600krát za sekundu mění kanál a jak se naučí vyhýbat těm obsazeným. S pásmem, které si můžete zarušit.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700&display=swap">
+  <link rel="stylesheet" href="../style.css?v=5">
+  <style>
+    .seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+    .plot { fill: var(--surface); stroke: var(--rule); stroke-width: 1; }
+    .src { fill: var(--ink-3); fill-opacity: 0.1; stroke: var(--ink-3); stroke-opacity: 0.5; stroke-width: 1; stroke-dasharray: 3 3; }
+    .src.on { fill-opacity: 0.4; stroke-opacity: 1; stroke-dasharray: none; }
+    .src-name { fill: var(--ink-3); font: 500 11px var(--font-mono); text-anchor: middle; }
+    .src-name.on { fill: var(--ink); font-weight: 600; }
+    .shade { fill: var(--ink-3); opacity: 0.13; }
+    .ch { fill: var(--cat); }
+    .ch.off { fill: none; stroke: var(--ink-3); stroke-width: 1; }
+    .hop { fill: var(--cat); }
+    .hop.b { fill: var(--warm); }
+    .hop.lost { fill: var(--bad); }
+    .lost-x { stroke: var(--bad); stroke-width: 1.5; }
+    .ax { fill: var(--ink-3); font: 500 10.5px var(--font-mono); text-anchor: middle; }
+    .cap { fill: var(--ink-3); font: 500 11px var(--font-mono); letter-spacing: 0.08em; }
+    @media (max-width: 46rem) { .cap { font-size: 16px; } .src-name { font-size: 13.5px; } .ax { font-size: 15px; } }
+    .legend { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; margin: 0; padding: 0; list-style: none; font-family: var(--font-mono); font-size: 0.75rem; color: var(--ink-2); }
+    .legend li { display: inline-flex; align-items: center; gap: 0.4rem; }
+    .legend i { width: 0.7rem; height: 0.7rem; }
+  </style>
+</head>
+<body data-cat="technika">
+  <header class="topbar">
+    <div class="wrap">
+      <a class="brand" href="../">Jak věci fungují</a>
+      <nav class="crumbs" aria-label="Drobečková navigace"><a href="../#technika">Technika</a><span aria-hidden="true">/</span><span>Bluetooth</span></nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <header class="art-head">
+      <p class="eyebrow">Technika</p>
+      <h1 class="display">Jak funguje Bluetooth</h1>
+      <p class="lede">Sluchátka vysílají ve stejném pásmu jako Wi-Fi, bezdrátové myši a mikrovlnná trouba, a to výkonem menším než kapesní svítilna. Hudba přesto nevypadává. Bluetooth totiž na žádné frekvenci nezůstane déle než zlomek tisíciny sekundy.</p>
+    </header>
+
+    <section class="tldr" aria-labelledby="h-zkratka">
+      <h2 class="label" id="h-zkratka">Ve zkratce</h2>
+      <ul>
+        <li>Bluetooth má pásmo rozdělené na 79 úzkých kanálů a 1 600krát za sekundu přeskočí na jiný.</li>
+        <li><span class="hl">Když se trefí do obsazeného kanálu, ztratí jen jeden krátký paket</span> a pošle ho znovu jinde.</li>
+        <li>Pořadí skoků znají jen dvě spárovaná zařízení. Kanály, kde je trvale rušno, si spojení zapamatuje a přestane na ně skákat.</li>
+      </ul>
+    </section>
+
+    <figure class="fig" id="obr1">
+      <div class="fig-head">
+        <p class="fig-num"><b>Obr. 1</b> Pásmo 2,4 GHz</p>
+        <span class="label">Zapněte rušení a pak adaptivní přeskakování</span>
+      </div>
+      <div class="fig-stage">
+        <svg id="band" viewBox="0 0 720 420" role="img" aria-label="Pásmo rozdělené na 79 kanálů, nahoře zdroje rušení, pod nimi záznam, na který kanál Bluetooth v kterém okamžiku skočil"></svg>
+      </div>
+      <div class="fig-controls">
+        <div class="ctl">
+          <span class="label" id="lbl-src">Kdo dál vysílá</span>
+          <div class="seg" role="group" aria-labelledby="lbl-src" id="src-seg">
+            <button type="button" data-v="w1" aria-pressed="false">Wi-Fi 1</button>
+            <button type="button" data-v="w6" aria-pressed="true">Wi-Fi 6</button>
+            <button type="button" data-v="w11" aria-pressed="false">Wi-Fi 11</button>
+            <button type="button" data-v="mw" aria-pressed="false">Mikrovlnka</button>
+            <button type="button" data-v="bt2" aria-pressed="false">Druhá sluchátka</button>
+          </div>
+        </div>
+        <div class="ctl">
+          <span class="label" id="lbl-afh">Přeskakování</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-afh" id="afh-seg">
+            <button type="button" role="radio" data-v="0" aria-checked="true">Naslepo</button>
+            <button type="button" role="radio" data-v="1" aria-checked="false">Adaptivní</button>
+          </div>
+        </div>
+        <div class="ctl ctl-grow">
+          <label class="label" for="rate">Rychlost</label>
+          <div class="ctl-row">
+            <input type="range" id="rate" min="2" max="40" step="1" value="10">
+            <output class="val" id="rate-val" for="rate"></output>
+          </div>
+        </div>
+        <button type="button" class="btn ghost" id="play">Zastavit</button>
+      </div>
+      <div class="fig-status split">
+        <div style="display:grid; gap:.6rem; min-width:0">
+          <p class="status" id="status" aria-live="polite"></p>
+          <ul class="legend" aria-hidden="true">
+            <li><i style="background:var(--cat)"></i>paket prošel</li>
+            <li><i style="background:var(--bad)"></i>paket se ztratil</li>
+            <li><i style="background:var(--warm)"></i>druhá sluchátka</li>
+          </ul>
+        </div>
+        <ul class="stats" aria-label="Stav modelu">
+          <li><span class="n">Ztracené pakety</span><span class="v" id="st-loss"></span></li>
+          <li><span class="n">Používá kanálů</span><span class="v" id="st-ch"></span></li>
+          <li><span class="n">Posláno paketů</span><span class="v" id="st-n"></span></li>
+        </ul>
+      </div>
+      <figcaption class="fig-caption">Každý řádek je jeden skok, nejnovější je nahoře. Čtvereček ukazuje, na kterém ze 79 kanálů zrovna spojení vysílalo. Model je silně zpomalený: skutečný Bluetooth udělá 1 600 skoků za sekundu. Ztráty se počítají z posledních sto paketů.</figcaption>
+    </figure>
+
+    <section class="sec" aria-labelledby="h-pasmo">
+      <div class="prose">
+        <h2 id="h-pasmo">Pásmo, kde smí vysílat každý</h2>
+        <p>Na většinu rádiových frekvencí je potřeba licence. Kus kolem 2,4 gigahertzu je výjimka: vysílat tam smí kdokoli, kdo dodrží malý výkon. Proto se tam nastěhovalo všechno, co potřebuje bezdrátové spojení na pár metrů. <a href="../wifi/">Wi-Fi</a>, bezdrátové myši, chůvičky, ovladače k hračkám. A taky <a href="../mikrovlnka/">mikrovlnné trouby</a>, které na stejné frekvenci ohřívají jídlo a trochu toho pustí ven.</p>
+        <p>Wi-Fi si z pásma vezme široký kus, asi čtvrtinu, a vysílá na něm výkonem i čtyřicetkrát větším než sluchátka. Kdyby Bluetooth zůstal sedět na jedné frekvenci a někdo tam pustil Wi-Fi, bylo by po spojení.</p>
+      </div>
+      <aside class="note" aria-label="Bluetooth v číslech">
+        <span class="label">V číslech</span>
+        <dl class="facts">
+          <div><dt>79</dt><dd>kanálů po jednom megahertzu</dd></div>
+          <div><dt>1 600×</dt><dd>za sekundu změní kanál</dd></div>
+          <div><dt>2,5 mW</dt><dd>je obvyklý výkon sluchátek, s dosahem kolem deseti metrů</dd></div>
+        </dl>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-skok">
+      <div class="prose">
+        <h2 id="h-skok">Nikde se nezdržet</h2>
+        <p>Bluetooth to řeší tak, že na žádné frekvenci nezůstává. Pásmo má rozdělené na 79 úzkých kanálů. Na jednom vyšle krátký paket dat, hned přeskočí jinam a tam vyšle další. Na každém kanálu se zdrží 625 miliontin sekundy.</p>
+        <p><span class="hl">Rušení tak nikdy nezasáhne celé spojení, jen jednotlivé pakety.</span> Když skok padne na kanál, kde zrovna vysílá Wi-Fi, paket se ztratí. Přijímač nepotvrdí, že ho dostal, a vysílač ho o zlomek sekundy později pošle znovu, už na jiném kanálu.</p>
+        <p>Sluchátka si proto drží malou zásobu zvuku dopředu, asi desetinu sekundy. Z ní hrají, zatímco se ztracený paket posílá znovu. Je to důvod, proč má zvuk přes Bluetooth vždycky malé zpoždění za obrazem.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Nechte přeskakování naslepo a zapněte všechny tři Wi-Fi. Ztratí se víc než polovina paketů. Spojení pořád drží, ale většinu času tráví opakováním.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-poradi">
+      <div class="prose">
+        <h2 id="h-poradi">Jak přijímač ví, kam skočit</h2>
+        <p>Skákat náhodně by nešlo, sluchátka by telefon nikdy nenašla. Pořadí kanálů proto jen náhodně vypadá. Ve skutečnosti ho počítá vzorec ze dvou čísel: z adresy zařízení, které spojení řídí, a z jeho vnitřních hodin.</p>
+        <p>Při navazování spojení si obě strany tahle dvě čísla předají. Od té chvíle počítají stejný vzorec a v každém okamžiku jim vyjde stejný kanál. Skáčou spolu, aniž by si to musely průběžně říkat.</p>
+        <p>Jiný pár zařízení má jinou adresu a jiné hodiny, takže mu vychází úplně jiné pořadí. Dvoje sluchátka vedle sebe se na stejném kanálu sejdou jen náhodou, zhruba jednou za osmdesát skoků. Ztracený paket se pošle znovu a nikdo si ničeho nevšimne.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Vypněte všechno rušení a zapněte Druhá sluchátka. Oranžové a modré čtverečky skáčou každý po svém. Na srážku si počkáte, pak ji poznáte podle červeného čtverečku.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-afh">
+      <div class="prose">
+        <h2 id="h-afh">Naučí se, kde je obsazeno</h2>
+        <p>První verze Bluetoothu skákaly naslepo po všech 79 kanálech. Když vedle běžela Wi-Fi, která zabírá dvacet z nich, ztrácel se zhruba každý čtvrtý paket. A stejně tak Bluetooth kazil pakety jí.</p>
+        <p>Od roku 2003 proto spojení sleduje, na kterých kanálech pakety nedocházejí. Ty si označí jako špatné, pošle seznam druhé straně a obě je ze svého pořadí vynechají. Dál skáčou jen po zbytku. Vyřazené kanály přitom dál poslouchají, a když se uvolní, vrátí je do hry.</p>
+        <p>Vyhýbat se dá jen do určité míry. Spojení si musí nechat aspoň dvacet kanálů, aby se pořád dost rozprostřelo. Kde je pásmo plné, nezbývá než skákat i do obsazených.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Zapněte Adaptivní a sledujte řadu kanálů nad záznamem. Kanály pod Wi-Fi postupně zhasnou a ztráty spadnou skoro na nulu. Pak Wi-Fi vypněte: spojení si kanály po chvíli vezme zpátky.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-hedy">
+      <div class="prose">
+        <h2 id="h-hedy">Nápad z roku 1942</h2>
+        <p>Přeskakování frekvencí si nechali patentovat hollywoodská herečka Hedy Lamarrová a skladatel George Antheil. Šlo jim o torpéda řízená rádiem, která nepřítel snadno zarušil, jakmile zjistil, na jaké frekvenci poslouchají.</p>
+        <p>Navrhli, aby vysílač i torpédo měnily frekvenci podle stejného děrovaného pásu, jaký se používal v mechanických pianech. Frekvencí mělo být 88, tolik, kolik má piano kláves. Námořnictvo nápad odložilo a použilo ho až o dvacet let později. Dnes na něm stojí Bluetooth a v jiné podobě i řada dalších rádiových sítí.</p>
+        <p>Jméno má Bluetooth po dánském králi Haraldu Modrozubovi, který v desátém století sjednotil dánské kmeny. Stejně měl nový standard sjednotit telefony a počítače různých výrobců. Logo jsou jeho iniciály zapsané runami.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Na okraj</span>
+        <p>Úsporný Bluetooth v hodinkách a čidlech má kanálů jen 40 a dvakrát širších. Tři z nich slouží k ohlašování, že zařízení existuje. Leží schválně v mezerách mezi nejpoužívanějšími kanály Wi-Fi.</p>
+      </aside>
+    </section>
+
+    <footer class="art-foot">
+      <a class="next" href="../dotykovy-displej/" data-cat="technika">
+        <span class="label">Další článek · Technika</span>
+        <span class="t">Jak funguje dotykový displej</span>
+        <p>Jak telefon pozná, kde se ho dotýkáte, a proč to nejde v rukavici.</p>
+      </a>
+      <a class="back" href="../">Všechna témata</a>
+    </footer>
+  </main>
+
+  <script>
+  (() => {
+    const NS = "http://www.w3.org/2000/svg";
+    function el(tag, attrs, parent) {
+      const n = document.createElementNS(NS, tag);
+      for (const k in attrs || {}) n.setAttribute(k, attrs[k]);
+      if (parent) parent.appendChild(n);
+      return n;
+    }
+    const $ = (id) => document.getElementById(id);
+    const svg = $("band");
+    const fmt0 = new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 0 });
+
+    /* ---------- model ---------- */
+    const CH = 79, ROWS = 28, MIN_CH = 20;
+    // zdroje rušení: které kanály zabírají a jak často na nich opravdu vysílají
+    const SOURCES = {
+      w1: { name: "Wi-Fi 1", from: 0, to: 20, duty: 0.8 },
+      w6: { name: "Wi-Fi 6", from: 25, to: 45, duty: 0.8 },
+      w11: { name: "Wi-Fi 11", from: 50, to: 70, duty: 0.8 },
+      mw: { name: "mikrovlnka", from: 36, to: 68, duty: 0.5 },
+    };
+    const s = {
+      on: { w1: false, w6: true, w11: false, mw: false, bt2: false }, afh: false, rate: 10,
+      playing: !window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+      n: 0, hops: [], recent: [], blocked: new Array(CH).fill(-1),
+    };
+    const usable = () => s.blocked.map((b, c) => (b < 0 ? c : -1)).filter((c) => c >= 0);
+    const busy = (c) => Object.keys(SOURCES).some((k) => s.on[k] && c >= SOURCES[k].from && c <= SOURCES[k].to && Math.random() < SOURCES[k].duty);
+
+    const covered = (c) => Object.keys(SOURCES).some((k) => s.on[k] && c >= SOURCES[k].from && c <= SOURCES[k].to);
+    function step() {
+      s.n++;
+      // poslechem průběžně zjišťuje, jestli se některý vyřazený kanál neuvolnil
+      for (let i = 0; i < 3; i++) {
+        const c = Math.floor(Math.random() * CH);
+        if (s.blocked[c] >= 0 && !covered(c)) s.blocked[c] = -1;
+      }
+      const pool = usable(), a = pool[Math.floor(Math.random() * pool.length)];
+      const b = s.on.bt2 ? Math.floor(Math.random() * CH) : -1;
+      const lost = busy(a) || a === b;
+      // rušení bývá široké, proto vyřadí i sousední kanály; aspoň dvacet si jich ale musí nechat
+      if (s.afh && lost) for (let c = a - 2; c <= a + 2; c++) if (c >= 0 && c < CH && s.blocked[c] < 0 && usable().length > MIN_CH) s.blocked[c] = s.n;
+      s.hops.unshift({ a, b, lost });
+      if (s.hops.length > ROWS) s.hops.pop();
+      s.recent.push(lost ? 1 : 0);
+      if (s.recent.length > 100) s.recent.shift();
+    }
+
+    /* ---------- scéna ---------- */
+    const X0 = 26, CW = 668 / CH, TOP = 104, RH = 10.5;
+    const cx = (c) => X0 + c * CW;
+    el("text", { x: X0, y: 14, class: "cap" }, svg).textContent = "KDO V PÁSMU VYSÍLÁ";
+    const srcEls = {};
+    Object.keys(SOURCES).forEach((k) => {
+      const o = SOURCES[k], x1 = cx(o.from), x2 = cx(o.to + 1), mid = (x1 + x2) / 2, mw = k === "mw";
+      const y = mw ? 50 : 24, h = mw ? 14 : 22;
+      srcEls[k] = {
+        shape: el("path", { d: mw ? `M${x1} ${y + h}V${y + 4}Q${x1} ${y} ${x1 + 4} ${y}H${x2 - 4}Q${x2} ${y} ${x2} ${y + 4}V${y + h}Z` : `M${x1} ${y + h}Q${x1 + 6} ${y} ${x1 + 22} ${y}H${x2 - 22}Q${x2 - 6} ${y} ${x2} ${y + h}Z`, class: "src" }, svg),
+        name: el("text", { x: mid, y: y + h - 4, class: "src-name" }, svg),
+        shade: el("rect", { x: x1, y: TOP, width: x2 - x1, height: ROWS * RH, class: "shade" }),
+      };
+      srcEls[k].name.textContent = o.name;
+    });
+    el("text", { x: X0, y: 82, class: "cap" }, svg).textContent = "KANÁLY, PO KTERÝCH SPOJENÍ SKÁČE";
+    const chEls = [];
+    for (let c = 0; c < CH; c++) chEls.push(el("rect", { x: (cx(c) + 1).toFixed(1), y: 88, width: (CW - 2).toFixed(1), height: 8, class: "ch" }, svg));
+    el("rect", { x: X0, y: TOP, width: CH * CW, height: ROWS * RH, class: "plot" }, svg);
+    const shadeG = el("g", {}, svg), hopG = el("g", {}, svg);
+    Object.keys(srcEls).forEach((k) => shadeG.appendChild(srcEls[k].shade));
+    [[0, "2 402"], [19, "2 421"], [39, "2 441"], [59, "2 461"], [78, "2 480 MHz"]].forEach(([c, t], i) =>
+      (el("text", { x: cx(c) + CW / 2, y: TOP + ROWS * RH + 16, class: "ax", "text-anchor": i === 0 ? "start" : i === 4 ? "end" : "middle" }, svg).textContent = t));
+
+    let statusKey = "";
+    function render() {
+      Object.keys(srcEls).forEach((k) => {
+        srcEls[k].shape.classList.toggle("on", s.on[k]);
+        srcEls[k].name.classList.toggle("on", s.on[k]);
+        srcEls[k].shade.setAttribute("visibility", s.on[k] ? "visible" : "hidden");
+      });
+      chEls.forEach((r, c) => r.classList.toggle("off", s.blocked[c] >= 0));
+      hopG.textContent = "";
+      s.hops.forEach((h, i) => {
+        const y = TOP + i * RH + 1.5, op = (1 - (i / ROWS) * 0.75).toFixed(2);
+        if (h.b >= 0) el("rect", { x: cx(h.b).toFixed(1), y, width: CW.toFixed(1), height: RH - 3, class: "hop b", opacity: op }, hopG);
+        el("rect", { x: cx(h.a).toFixed(1), y, width: CW.toFixed(1), height: RH - 3, class: h.lost ? "hop lost" : "hop", opacity: h.lost ? 1 : op }, hopG);
+      });
+      const loss = s.recent.length ? (s.recent.reduce((a, b) => a + b, 0) / s.recent.length) * 100 : 0;
+      const free = usable().length, noise = Object.keys(SOURCES).some((k) => s.on[k]);
+      $("st-loss").textContent = `${fmt0.format(loss)} %`;
+      $("st-ch").textContent = `${free} ze 79`;
+      $("st-n").textContent = fmt0.format(s.n);
+      $("rate-val").textContent = `${s.rate}/s`;
+
+      const key = !noise ? (s.on.bt2 ? "two" : "clear") : !s.afh ? "blind" : free <= MIN_CH ? "full" : loss > 6 ? "learn" : "avoid";
+      if (key === statusKey) return;
+      statusKey = key;
+      $("status").innerHTML = {
+        clear: "<strong>Volné pásmo.</strong> Nikdo další nevysílá, a tak projde každý paket, ať skočí kamkoli.",
+        two: "<strong>Dvoje sluchátka vedle sebe.</strong> Každý pár skáče podle vlastního pořadí. Na stejném kanálu se sejdou jen náhodou, asi jednou za osmdesát skoků.",
+        blind: "<strong>Skáče naslepo.</strong> Spojení střídá všech 79 kanálů bez ohledu na to, co na nich je. Kdykoli se trefí do místa, kde zrovna vysílá někdo silnější, paket se ztratí a musí se poslat znovu.",
+        learn: "<strong>Učí se.</strong> Kanály, na kterých se pakety ztrácejí, si spojení jeden po druhém označuje jako špatné a vyřazuje je z pořadí.",
+        avoid: "<strong>Vyhýbá se.</strong> Spojení skáče jen po kanálech, kde je volno, a pakety procházejí. Vyřazené kanály průběžně poslouchá, aby poznalo, až se uvolní.",
+        full: "<strong>Není kam uhnout.</strong> Volných kanálů je míň než dvacet, a tolik si jich spojení nechat musí. Skáče proto i do obsazených a část paketů dál ztrácí.",
+      }[key];
+    }
+
+    let last = 0, acc = 0;
+    function frame(now) {
+      const dt = Math.min(0.2, (now - last) / 1000 || 0);
+      last = now;
+      if (s.playing) {
+        acc += dt * s.rate;
+        let did = false;
+        while (acc >= 1) { step(); acc -= 1; did = true; }
+        if (did) render();
+      }
+      requestAnimationFrame(frame);
+    }
+
+    /* ---------- ovládání ---------- */
+    $("src-seg").addEventListener("click", (e) => {
+      const b = e.target.closest("button[data-v]");
+      if (!b) return;
+      s.on[b.dataset.v] = !s.on[b.dataset.v];
+      b.setAttribute("aria-pressed", String(s.on[b.dataset.v]));
+      s.recent = [];
+      render();
+    });
+    $("afh-seg").addEventListener("click", (e) => {
+      const b = e.target.closest("button[data-v]");
+      if (!b) return;
+      $("afh-seg").querySelectorAll("button").forEach((x) => x.setAttribute("aria-checked", String(x === b)));
+      s.afh = b.dataset.v === "1";
+      s.blocked.fill(-1); s.recent = [];
+      render();
+    });
+    $("rate").addEventListener("input", (e) => { s.rate = Number(e.target.value); render(); });
+    $("play").addEventListener("click", () => { s.playing = !s.playing; $("play").textContent = s.playing ? "Zastavit" : "Spustit"; });
+    $("play").textContent = s.playing ? "Zastavit" : "Spustit";
+    for (let i = 0; i < ROWS; i++) step();
+    render();
+    requestAnimationFrame(frame);
+  })();
+  </script>
+</body>
+</html>

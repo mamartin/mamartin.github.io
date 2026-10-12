@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Jak fotí foťák</title>
+  <meta name="description" content="Co dělá clona, čas a ISO, proč má portrét rozmazané pozadí, proč je večerní fotka zrnitá a jak to, že mobil s čočkou jako špendlíková hlavička fotí tak dobře. S fotkou, kterou si můžete naexponovat.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700&display=swap">
+  <link rel="stylesheet" href="../style.css?v=5">
+  <style>
+    .cam-stage { display: grid; gap: 1rem; grid-template-columns: minmax(0, 1fr); align-items: center; }
+    .side { display: grid; gap: 0.35rem; margin: 0; justify-self: center; width: min(13rem, 55%); }
+    .side .label { text-align: center; }
+    @media (min-width: 60rem) {
+      .cam-stage { grid-template-columns: minmax(0, 1fr) 13rem; }
+      .side { width: 100%; }
+    }
+    #photo { border: 1px solid var(--rule); background: #000; }
+  </style>
+</head>
+<body data-cat="technika">
+  <header class="topbar">
+    <div class="wrap">
+      <a class="brand" href="../">Jak věci fungují</a>
+      <nav class="crumbs" aria-label="Drobečková navigace"><a href="../#technika">Technika</a><span aria-hidden="true">/</span><span>Jak fotí foťák</span></nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <header class="art-head">
+      <p class="eyebrow">Technika</p>
+      <h1 class="display">Jak fotí foťák</h1>
+      <p class="lede">Fotka je jen spočítané světlo. Foťák má tři způsoby, jak ho nabrat víc nebo míň, a každý z nich udělá s obrázkem ještě něco navíc. Jeden rozmaže pozadí, druhý pohyb a třetí přidá zrno.</p>
+    </header>
+
+    <section class="tldr" aria-labelledby="h-zkratka">
+      <h2 class="label" id="h-zkratka">Ve zkratce</h2>
+      <ul>
+        <li>Čočka promítne obraz na čip a ten v milionech bodů spočítá, kolik světla kam dopadlo.</li>
+        <li><span class="hl">Množství světla určují clona a čas, ISO ho jen dodatečně zesílí.</span> Všechny tři se dají navzájem vyměnit.</li>
+        <li>Velký otvor clony rozmaže pozadí, dlouhý čas rozmaže pohyb a vysoké ISO přidá šum. Fotografování je vybírání, co z toho vadí nejmíň.</li>
+      </ul>
+    </section>
+
+    <figure class="fig" id="obr1">
+      <div class="fig-head">
+        <p class="fig-num"><b>Obr. 1</b> Jedna scéna, tři kolečka</p>
+        <span class="label">Měňte clonu, čas a ISO a sledujte, co to udělá s fotkou</span>
+      </div>
+      <div class="fig-stage cam-stage">
+        <svg id="photo" viewBox="0 0 640 400" role="img" aria-label="Fotka: v popředí postava, vlevo letí míč, vzadu stromy a dům">
+          <defs>
+            <linearGradient id="g-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5c9bdc"/><stop offset="1" stop-color="#cfe4f5"/></linearGradient>
+            <filter id="f-bg" filterUnits="userSpaceOnUse" x="-60" y="-60" width="760" height="520"><feGaussianBlur id="fe-bg" stdDeviation="1"/></filter>
+            <filter id="f-ground" filterUnits="userSpaceOnUse" x="-60" y="180" width="760" height="280"><feGaussianBlur id="fe-ground" stdDeviation="0.5"/></filter>
+            <filter id="f-motion" filterUnits="userSpaceOnUse" x="-60" y="80" width="760" height="140"><feGaussianBlur id="fe-motion" stdDeviation="1 0"/></filter>
+            <filter id="f-expo" filterUnits="userSpaceOnUse" x="0" y="0" width="640" height="400">
+              <feGaussianBlur id="fe-shake" in="SourceGraphic" stdDeviation="0.01" result="img"/>
+              <feComponentTransfer in="img" result="lit">
+                <feFuncR class="fe-gain" type="linear" slope="1"/><feFuncG class="fe-gain" type="linear" slope="1"/><feFuncB class="fe-gain" type="linear" slope="1"/>
+              </feComponentTransfer>
+              <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="7" result="noise"/>
+              <feColorMatrix in="noise" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0 1" result="grain"/>
+              <feComposite id="fe-grain" in="lit" in2="grain" operator="arithmetic" k1="0" k2="1" k3="0" k4="0"/>
+            </filter>
+          </defs>
+          <g filter="url(#f-expo)">
+            <rect x="0" y="0" width="640" height="400" fill="#86a86a"/>
+            <g filter="url(#f-bg)">
+              <rect x="-60" y="-60" width="760" height="330" fill="url(#g-sky)"/>
+              <circle cx="560" cy="62" r="24" fill="#fff8d6"/>
+              <path d="M40 78q14 -18 34 -8q16 -14 34 0q22 -4 22 14H34q-6 -4 6 -6Z" fill="#ffffff" opacity="0.9"/>
+              <path d="M-60 250Q40 150 150 200T360 170T700 215V270H-60Z" fill="#7d9c8c"/>
+              <path d="M-60 262Q90 205 230 232T470 218T700 240V280H-60Z" fill="#5f8a63"/>
+              <rect x="236" y="196" width="74" height="52" fill="#e3c7a6"/>
+              <path d="M228 198L273 164L318 198Z" fill="#a5513b"/>
+              <rect x="250" y="212" width="16" height="18" fill="#5d7fa3"/><rect x="282" y="212" width="14" height="36" fill="#7a5238"/>
+              <g fill="#5a4632"><rect x="64" y="212" width="8" height="40"/><rect x="146" y="218" width="7" height="34"/><rect x="371" y="206" width="8" height="44"/><rect x="566" y="212" width="8" height="40"/><rect x="606" y="220" width="7" height="32"/></g>
+              <g fill="#3c6b45"><circle cx="68" cy="196" r="30"/><circle cx="150" cy="206" r="22"/><circle cx="375" cy="188" r="32"/><circle cx="570" cy="194" r="30"/><circle cx="610" cy="208" r="20"/></g>
+              <g fill="#4f8256"><circle cx="58" cy="188" r="16"/><circle cx="366" cy="178" r="17"/><circle cx="562" cy="184" r="15"/></g>
+            </g>
+            <g filter="url(#f-ground)">
+              <path d="M-60 250H700V460H-60Z" fill="#7fae58"/>
+              <path d="M-60 300Q200 280 420 300T700 292V320Q400 330 200 316T-60 330Z" fill="#8fbb63"/>
+              <path d="M-60 360Q260 340 700 366V460H-60Z" fill="#6f9f4c"/>
+            </g>
+            <g filter="url(#f-motion)">
+              <circle cx="168" cy="150" r="19" fill="#e2412f"/>
+              <path d="M152 140q16 10 32 0M152 160q16 -10 32 0" fill="none" stroke="#fff3e0" stroke-width="3.5"/>
+              <circle cx="168" cy="150" r="19" fill="none" stroke="#7d1d12" stroke-width="1.5"/>
+            </g>
+            <g>
+              <path d="M342 400Q346 318 420 304H482Q556 318 560 400Z" fill="#2c4a7d"/>
+              <path d="M420 304Q451 332 482 304L474 296H428Z" fill="#e9eef5"/>
+              <rect x="436" y="262" width="30" height="46" rx="8" fill="#dfa87f"/>
+              <ellipse cx="451" cy="226" rx="40" ry="46" fill="#f0c39d"/>
+              <path d="M410 222Q404 168 451 168Q500 168 492 224Q484 196 462 190Q432 196 418 190Q412 204 410 222Z" fill="#3b2a21"/>
+              <circle cx="436" cy="228" r="3.6" fill="#2a1c16"/><circle cx="466" cy="228" r="3.6" fill="#2a1c16"/>
+              <path d="M437 248Q451 260 465 248" fill="none" stroke="#9c4a3c" stroke-width="3" stroke-linecap="round"/>
+              <path d="M449 232q-4 8 2 10" fill="none" stroke="#c98f6a" stroke-width="2" stroke-linecap="round"/>
+            </g>
+          </g>
+        </svg>
+        <figure class="side">
+          <svg id="iris" viewBox="0 0 200 200" role="img" aria-label="Otvor clony při pohledu do objektivu">
+            <circle cx="100" cy="100" r="92" fill="#14181e"/>
+            <circle cx="100" cy="100" r="84" fill="#2b3442"/>
+            <polygon id="hole" fill="#dfeaf6"/>
+            <circle cx="100" cy="100" r="84" fill="none" stroke="#6b727d" stroke-width="2"/>
+          </svg>
+          <span class="label" id="iris-label"></span>
+        </figure>
+      </div>
+      <div class="fig-controls">
+        <div class="ctl ctl-grow">
+          <label class="label" for="ap">Clona</label>
+          <div class="ctl-row">
+            <input type="range" id="ap" min="0" max="6" step="1" value="4">
+            <output class="val" id="ap-val" for="ap"></output>
+          </div>
+        </div>
+        <div class="ctl ctl-grow">
+          <label class="label" for="sh">Čas</label>
+          <div class="ctl-row">
+            <input type="range" id="sh" min="0" max="10" step="1" value="4">
+            <output class="val" id="sh-val" for="sh"></output>
+          </div>
+        </div>
+        <div class="ctl ctl-grow">
+          <label class="label" for="iso">ISO</label>
+          <div class="ctl-row">
+            <input type="range" id="iso" min="0" max="6" step="1" value="0">
+            <output class="val" id="iso-val" for="iso"></output>
+          </div>
+        </div>
+        <div class="ctl">
+          <span class="label" id="lbl-light">Světlo</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-light" id="light-seg">
+            <button type="button" role="radio" data-v="15" aria-checked="true">Slunce</button>
+            <button type="button" role="radio" data-v="12" aria-checked="false">Zataženo</button>
+            <button type="button" role="radio" data-v="8" aria-checked="false">Večer</button>
+          </div>
+        </div>
+        <button type="button" class="btn ghost" id="auto">Doladit čas a ISO</button>
+      </div>
+      <div class="fig-status split">
+        <p class="status" id="status" aria-live="polite"></p>
+        <ul class="stats" aria-label="Stav fotky">
+          <li><span class="n">Expozice</span><span class="v small" id="st-ev"></span></li>
+          <li><span class="n">Pozadí</span><span class="v small" id="st-bg"></span></li>
+          <li><span class="n">Míč v letu</span><span class="v small" id="st-move"></span></li>
+        </ul>
+      </div>
+      <figcaption class="fig-caption">Zjednodušený model. Rozmazání a šum jsou přehnané, aby byly vidět i na malém obrázku. Tlačítko Doladit čas a ISO nechá clonu, jak je, a zbytek nastaví tak, aby fotka nebyla tmavá ani přepálená. Tak pracuje poloautomatický režim, kterému se říká priorita clony.</figcaption>
+    </figure>
+
+    <section class="sec" aria-labelledby="h-krabice">
+      <div class="prose">
+        <h2 id="h-krabice">Krabice, čočka a miliony kbelíků</h2>
+        <p>Každý foťák je v jádru tmavá krabice s otvorem. Čočka v otvoru ohne světlo z každého bodu scény tak, aby se na zadní stěně zase sešlo v jednom bodě. Vznikne tam ostrý obraz, zmenšený a vzhůru nohama, stejně jako na sítnici <a href="../oko/">oka</a>.</p>
+        <p>Na zadní stěně sedí čip a na něm miliony drobných plošek. Každá funguje jako kbelík na déšť. Když se otevře závěrka, začnou do nich padat částice světla, a když se zavře, foťák v každém kbelíku spočítá, kolik se jich nachytalo. Kde jich je hodně, bude bod světlý. Kde málo, tmavý.</p>
+        <p>Barvy plošky samy nerozeznají. Každá má proto nad sebou barevné sklíčko, červené, zelené nebo modré, a měří jen svou barvu. Zbylé dvě si foťák dopočítá ze sousedů. Je to obrácený postup, než jakým barvy skládá <a href="../lcd-oled/">displej</a>.</p>
+      </div>
+      <aside class="note" aria-label="Focení v číslech">
+        <span class="label">V číslech</span>
+        <dl class="facts">
+          <div><dt>2×</dt><dd>víc světla znamená jeden krok clony, času i ISO</dd></div>
+          <div><dt>1,4×</dt><dd>větší clonové číslo pustí polovinu světla</dd></div>
+          <div><dt>1/30 s</dt><dd>je zhruba nejdelší čas, který se dá udržet z ruky</dd></div>
+        </dl>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-tri">
+      <div class="prose">
+        <h2 id="h-tri">Tři kohoutky na jedno světlo</h2>
+        <p>Aby fotka nebyla tmavá ani vybledlá do bílé, musí se do kbelíků nachytat správné množství světla. Foťák ho umí řídit třemi způsoby.</p>
+        <p>Clona je otvor v objektivu, který se dá zvětšit a zmenšit. Čas je doba, po kterou je závěrka otevřená. A ISO je zesílení, kterým se výsledek po změření vynásobí. Kdo si představí kbelík pod kohoutkem, má clonu jako otočení kohoutku, čas jako dobu, po kterou voda teče, a ISO jako lupu, přes kterou se pak dívá na rysku.</p>
+        <p><span class="hl">Všechny tři se počítají ve stejných krocích a každý krok znamená dvakrát víc nebo dvakrát míň.</span> Dají se proto vyměňovat. Kdo přivře clonu o krok, může čas o krok prodloužit a fotka bude stejně světlá. Stejná ale nebude, protože každý z kohoutků dělá ještě něco dalšího.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Posuňte clonu o čtyři kroky doleva a čas taky o čtyři doleva. Expozice zůstane správná, jen se rozmaže pozadí. Stejné množství světla, jiná fotka.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-clona">
+      <div class="prose">
+        <h2 id="h-clona">Clona: co všechno bude ostré</h2>
+        <p>Clonové číslo říká, kolikrát se průměr otvoru vejde do ohniskové vzdálenosti objektivu. Proto je to naopak, než by člověk čekal: malé číslo je velká díra. A proto má řada tak divné hodnoty, 2, 2,8, 4, 5,6, 8. Každé další číslo je 1,4krát větší, otvor má poloviční plochu a pustí polovinu světla.</p>
+        <p>Čočka umí zaostřit jen na jednu vzdálenost. Světlo z bodu, který leží jinde, se na čipu nesejde do bodu, ale dopadne jako kolečko. Čím je otvor clony větší, tím je kužel světla širší a kolečko větší. Z bodů v pozadí jsou pak velké překrývající se skvrny.</p>
+        <p>Malým otvorem projde jen úzký svazek, kolečka jsou drobná a ostře vypadá skoro všechno. Portréty se proto fotí s clonou dokořán, aby pozadí nerušilo, a krajiny s clonou přivřenou.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Na okraj</span>
+        <p>Stejný trik dělají oči. Kdo mhouří, zmenšuje si otvor, kterým světlo vchází, a vidí ostřeji i bez brýlí.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-cas">
+      <div class="prose">
+        <h2 id="h-cas">Čas: zmrazit, nebo rozmazat</h2>
+        <p>Dokud je závěrka otevřená, čip sbírá všechno, co na něj dopadá. Co se mezitím pohne, zapíše se na víc míst najednou a je z toho šmouha.</p>
+        <p>Tisícina sekundy zastaví míč ve vzduchu i kapky vody. Při třicetině už je rozmazaný běžec a při osmině stačí, že se ruka s foťákem maličko chvěje, a neostrá je celá fotka. Dlouhé časy proto potřebují stativ, nebo aspoň stabilizaci, která pohyb ruky vyrovnává posouváním čočky nebo čipu.</p>
+        <p>Rozmazání nemusí být chyba. Hladká voda v potoce nebo čáry světel aut jsou dlouhý čas použitý schválně.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Přepněte světlo na Večer a nechte clonu na 8. Tlačítko Doladit čas a ISO vybere třicetinu sekundy a ISO 800. Míč je šmouha a na fotce začíná být vidět zrno. Pak clonu otevřete na 2 a zmáčkněte ho znovu.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-iso">
+      <div class="prose">
+        <h2 id="h-iso">ISO: zesilovač, ne zázrak</h2>
+        <p>Když je světla málo a clona ani čas už víc nedají, zbývá ISO. Do kbelíků ale žádné další světlo nepřidá. Jen vynásobí to, co se naměřilo.</p>
+        <p>Potíž je, že světlo dopadá po jednotlivých částicích a náhodně, jako kapky deště. Když jich do každého kbelíku spadnou tisíce, vyjde to všude skoro stejně. Když jen desítky, má jeden o pár víc a sousední o pár míň, i když na oba svítí stejně. Zesílením se tyhle rozdíly zvětší spolu s obrazem a na fotce z nich je zrno.</p>
+        <p>Šum tedy nedělá ISO, ale málo světla. Proto velký čip šumí míň než malý: jeho kbelíky jsou větší a za stejnou dobu nachytají víc.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Nechte Slunce a vytáhněte ISO na 6400. Fotka zbělá. Vraťte ji nejkratším časem a clonou 16. Je správně světlá, ale zrnitá: světla dopadlo málo a zbytek dohnalo zesílení.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-mobil">
+      <div class="prose">
+        <h2 id="h-mobil">Jak to, že mobil fotí tak dobře</h2>
+        <p>Telefon má čočku velkou jako špendlíková hlavička, čip menší než nehet a clonu, která se nedá měnit. Podle všeho, co tu bylo řečeno, by měl večer fotit špatně.</p>
+        <p>Dohání to počítáním. Místo jedné fotky jich při zmáčknutí spouště udělá rychle za sebou třeba deset, každou krátkým časem, aby nebyla rozmazaná. Pak je přesně položí na sebe a zprůměruje. Náhodný šum se v průměru vyruší, obraz zůstane. Noční režim dělá totéž s desítkami snímků po dobu několika sekund.</p>
+        <p>Rozmazané pozadí v portrétním režimu z čočky nepochází vůbec. Telefon odhadne, co je v popředí a co vzadu, a pozadí rozmaže výpočtem. Pozná se to na vlasech a brýlích, kde se občas splete.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Na okraj</span>
+        <p>Zvuk spouště v telefonu je nahrávka. Mechanickou závěrku většina mobilů nemá, čip se jen na chvíli elektronicky zapne.</p>
+      </aside>
+    </section>
+
+    <footer class="art-foot">
+      <a class="next" href="../potlaceni-hluku/" data-cat="technika">
+        <span class="label">Další článek · Technika</span>
+        <span class="t">Jak sluchátka potlačují hluk</span>
+        <p>Jak sluchátka vyrobí ticho tím, že přidají další zvuk, a proč to nejde na hlasy.</p>
+      </a>
+      <a class="back" href="../">Všechna témata</a>
+    </footer>
+  </main>
+
+  <script>
+  (() => {
+    const $ = (id) => document.getElementById(id);
+    // stupnice po jednom kroku: každý krok je dvojnásobek nebo polovina světla
+    const APERTURES = [2, 2.8, 4, 5.6, 8, 11, 16];                 // první má hodnotu 2 EV
+    const TIMES = [8000, 4000, 2000, 1000, 500, 250, 125, 60, 30, 15, 8];   // zlomky sekundy, první má hodnotu 13 EV
+    const ISOS = [100, 200, 400, 800, 1600, 3200, 6400];
+    const s = { ap: 4, sh: 4, iso: 0, light: 15 };
+    const num = (n) => String(n).replace(".", ",");
+
+    // o kolik kroků je fotka světlejší (+) nebo tmavší (−), než má být
+    const over = () => s.light - ((2 + s.ap) + (13 - s.sh) - s.iso);
+
+    function render() {
+      const N = APERTURES[s.ap], t = 1 / TIMES[s.sh], iso = ISOS[s.iso], ev = over();
+      $("ap").value = s.ap; $("sh").value = s.sh; $("iso").value = s.iso;
+      $("ap-val").textContent = `f/${num(N)}`;
+      $("sh-val").textContent = `1/${TIMES[s.sh]} s`;
+      $("iso-val").textContent = iso;
+
+      const blur = Math.max(0.01, 18 / N - 1.1), smear = Math.max(0.01, 280 * t), shake = t >= 1 / 15 ? t * 30 : 0.01;
+      $("fe-bg").setAttribute("stdDeviation", blur.toFixed(2));
+      $("fe-ground").setAttribute("stdDeviation", (blur * 0.35).toFixed(2));
+      $("fe-motion").setAttribute("stdDeviation", `${smear.toFixed(2)} 0`);
+      $("fe-shake").setAttribute("stdDeviation", shake.toFixed(2));
+      const gain = Math.min(32, Math.max(1 / 32, 2 ** ev));
+      document.querySelectorAll(".fe-gain").forEach((f) => f.setAttribute("slope", gain.toFixed(4)));
+      const grain = 1.1 * (s.iso / 6) ** 1.6;
+      $("fe-grain").setAttribute("k3", grain.toFixed(3));
+      $("fe-grain").setAttribute("k4", (-grain / 2).toFixed(3));
+
+      // otvor clony: sedmiúhelník, průměr nepřímo úměrný clonovému číslu
+      const r = Math.min(80, 150 / N), pts = [];
+      for (let i = 0; i < 7; i++) { const a = (i / 7) * 2 * Math.PI + 0.3; pts.push(`${(100 + r * Math.cos(a)).toFixed(1)},${(100 + r * Math.sin(a)).toFixed(1)}`); }
+      $("hole").setAttribute("points", pts.join(" "));
+      $("iris-label").textContent = `Otvor clony při f/${num(N)}`;
+
+      $("st-ev").textContent = ev === 0 ? "správná" : `${ev > 0 ? "+" : "−"}${Math.abs(ev)} EV, ${ev > 0 ? "světlá" : "tmavá"}`;
+      $("st-bg").textContent = N <= 2.8 ? "rozmazané" : N <= 5.6 ? "měkké" : "ostré";
+      $("st-move").textContent = TIMES[s.sh] >= 500 ? "ostrý" : TIMES[s.sh] >= 125 ? "lehce rozmazaný" : "šmouha";
+
+      let status;
+      if (ev >= 2) status = "<strong>Přepálená.</strong> Na čip dopadlo několikrát víc světla, než snese. Kbelíky přetekly a světlá místa jsou čistě bílá, kresba se z nich už nedá dostat. Zkraťte čas, přivřete clonu nebo snižte ISO.";
+      else if (ev <= -2) status = "<strong>Tmavá.</strong> Světla dopadlo málo. Otevřete clonu, prodlužte čas nebo zvyšte ISO. Každý z těch kroků něco stojí.";
+      else if (TIMES[s.sh] <= 15) status = "<strong>Roztřesená.</strong> Závěrka je otevřená tak dlouho, že se za tu dobu pohnula i ruka s foťákem. Neostré je všechno, nejen míč.";
+      else if (s.iso >= 4) status = "<strong>Zrnitá.</strong> Světla dopadlo málo a vysoké ISO ho jen zesílilo, i s náhodnými rozdíly mezi sousedními body. Na fotce je z nich šum.";
+      else if (TIMES[s.sh] <= 60) status = "<strong>Míč je šmouha.</strong> Za dobu, co byla závěrka otevřená, uletěl kus cesty a zapsal se po celé její délce. Postava se nehýbala a je ostrá.";
+      else if (N <= 2.8) status = "<strong>Portrét.</strong> Clona je dokořán. Ostré je jen to, na co je zaostřeno, a pozadí se rozpilo do barevných skvrn. Otvorem zároveň teče hodně světla, takže stačí krátký čas.";
+      else if (N >= 11) status = "<strong>Všechno ostré.</strong> Malým otvorem projde jen úzký svazek světla a ostře se zobrazí postava i stromy vzadu. Světla je ale málo a musí ho dohnat čas nebo ISO.";
+      else status = "<strong>Vyvážená fotka.</strong> Světla dopadlo tak akorát, pohyb je skoro zmrazený a pozadí jen lehce měkké. Zkuste teď změnit jednu hodnotu a druhou ji vyrovnat.";
+      $("status").innerHTML = status;
+    }
+
+    // priorita clony: clona zůstane, správnou expozici dožene čas a teprve pak ISO
+    function auto() {
+      s.iso = 0;
+      let sh = (2 + s.ap) + 13 - s.light;        // index času, při kterém vyjde expozice na nulu
+      if (sh > 8) {                              // delší než 1/30 z ruky neudržíme: radši přidat ISO
+        s.iso = Math.min(6, sh - 8);
+        sh -= s.iso;
+      }
+      s.sh = Math.min(10, Math.max(0, sh));
+      render();
+    }
+
+    ["ap", "sh", "iso"].forEach((id) => $(id).addEventListener("input", (e) => { s[id] = Number(e.target.value); render(); }));
+    $("light-seg").addEventListener("click", (e) => {
+      const b = e.target.closest("button[data-v]");
+      if (!b) return;
+      $("light-seg").querySelectorAll("button").forEach((x) => x.setAttribute("aria-checked", String(x === b)));
+      s.light = Number(b.dataset.v);
+      render();
+    });
+    $("auto").addEventListener("click", auto);
+    render();
+  })();
+  </script>
+</body>
+</html>

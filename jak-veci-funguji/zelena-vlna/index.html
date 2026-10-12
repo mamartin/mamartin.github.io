@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Semafory a zelená vlna</title>
+  <meta name="description" content="Jak se semafory domluví, aby auta projela celou ulici na zelenou, proč nepomůže jet rychleji a proč zelená vlna skoro nikdy nefunguje oběma směry. S ulicí, na které si ji můžete nastavit.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700&display=swap">
+  <link rel="stylesheet" href="../style.css?v=5">
+  <style>
+    .road { fill: var(--sunk); stroke: var(--rule); stroke-width: 1; }
+    .lane { stroke: var(--surface); stroke-width: 1.5; stroke-dasharray: 8 8; }
+    .lamp-box { fill: #14181e; }
+    .car-f { fill: var(--cat); }
+    .car-b { fill: var(--ink-2); }
+    .plot { fill: var(--surface); stroke: var(--rule); stroke-width: 1; }
+    .col-red { stroke: #d23b2f; stroke-width: 5; opacity: 0.85; }
+    .col-green { stroke: #2e9e57; stroke-width: 5; }
+    .tr-f { fill: none; stroke: var(--cat); stroke-width: 1.8; stroke-linejoin: round; }
+    .tr-b { fill: none; stroke: var(--ink-2); stroke-width: 1.4; stroke-linejoin: round; stroke-dasharray: 5 3; }
+    .now { stroke: var(--ink); stroke-width: 1.5; }
+    .now-tag { fill: var(--ink); font: 600 11px var(--font-mono); paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
+    .ax { fill: var(--ink-3); font: 500 10.5px var(--font-mono); }
+    .cap { fill: var(--ink-3); font: 500 11px var(--font-mono); letter-spacing: 0.08em; }
+    @media (max-width: 46rem) { .cap { font-size: 17px; } .now-tag { font-size: 16px; } }
+    .legend { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; margin: 0; padding: 0; list-style: none; font-family: var(--font-mono); font-size: 0.75rem; color: var(--ink-2); }
+    .legend li { display: inline-flex; align-items: center; gap: 0.4rem; }
+    .legend i { width: 1.2rem; height: 3px; }
+  </style>
+</head>
+<body data-cat="doprava">
+  <header class="topbar">
+    <div class="wrap">
+      <a class="brand" href="../">Jak věci fungují</a>
+      <nav class="crumbs" aria-label="Drobečková navigace"><a href="../#doprava">Doprava</a><span aria-hidden="true">/</span><span>Semafory a zelená vlna</span></nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <header class="art-head">
+      <p class="eyebrow">Doprava</p>
+      <h1 class="display">Semafory a zelená vlna</h1>
+      <p class="lede">Někdy projedete celou třídu bez jediného zastavení a jindy stojíte na každé křižovatce. Náhoda to není. Semafory na jedné ulici jsou seřízené podle sebe, jen to umějí zařídit pro jeden směr a jednu rychlost.</p>
+    </header>
+
+    <section class="tldr" aria-labelledby="h-zkratka">
+      <h2 class="label" id="h-zkratka">Ve zkratce</h2>
+      <ul>
+        <li>Semafory na ulici běží ve stejném rytmu. Každý další ale rozsvítí zelenou o tolik později, kolik trvá autu cesta od toho předchozího.</li>
+        <li><span class="hl">Zelená se tak ulicí pohybuje jako vlna a auta se vezou na ní.</span> Kdo jede rychleji, dojede na červenou a počká si.</li>
+        <li>Vlna jedním směrem obvykle rozbije ten opačný. Oběma směry vychází jen při přesné souhře vzdálenosti křižovatek, rychlosti a délky cyklu.</li>
+      </ul>
+    </section>
+
+    <figure class="fig" id="obr1">
+      <div class="fig-head">
+        <p class="fig-num"><b>Obr. 1</b> Ulice s pěti semafory</p>
+        <span class="label">Změňte řízení, rychlost aut a délku cyklu</span>
+      </div>
+      <div class="fig-stage">
+        <svg id="street" viewBox="0 0 720 520" role="img" aria-label="Ulice s pěti semafory shora a pod ní záznam, kdy má který semafor zelenou a kudy jedou auta"></svg>
+      </div>
+      <div class="fig-controls">
+        <div class="ctl">
+          <span class="label" id="lbl-mode">Semafory</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-mode" id="mode-seg">
+            <button type="button" role="radio" data-v="wave" aria-checked="true">Zelená vlna</button>
+            <button type="button" role="radio" data-v="sync" aria-checked="false">Všechny naráz</button>
+            <button type="button" role="radio" data-v="own" aria-checked="false">Každý jinak</button>
+          </div>
+        </div>
+        <div class="ctl ctl-grow">
+          <label class="label" for="speed">Auta jedou</label>
+          <div class="ctl-row">
+            <input type="range" id="speed" min="30" max="70" step="5" value="50">
+            <output class="val" id="speed-val" for="speed"></output>
+          </div>
+        </div>
+        <div class="ctl ctl-grow">
+          <label class="label" for="cycle">Délka cyklu</label>
+          <div class="ctl-row">
+            <input type="range" id="cycle" min="40" max="110" step="2" value="80">
+            <output class="val" id="cycle-val" for="cycle"></output>
+          </div>
+        </div>
+        <button type="button" class="btn ghost" id="play">Zastavit</button>
+      </div>
+      <div class="fig-status split">
+        <div style="display:grid; gap:.6rem; min-width:0">
+          <p class="status" id="status" aria-live="polite"></p>
+          <ul class="legend" aria-hidden="true">
+            <li><i style="background:var(--cat)"></i>auta jedoucí doprava</li>
+            <li><i style="background:repeating-linear-gradient(90deg,var(--ink-2) 0 5px,transparent 5px 8px)"></i>auta jedoucí doleva</li>
+            <li><i style="background:#2e9e57; height:5px"></i>zelená</li>
+            <li><i style="background:#d23b2f; height:5px"></i>červená</li>
+          </ul>
+        </div>
+        <ul class="stats" aria-label="Stav modelu">
+          <li><span class="n">Směr doprava</span><span class="v small" id="st-f"></span></li>
+          <li><span class="n">Směr doleva</span><span class="v small" id="st-b"></span></li>
+          <li><span class="n">Zelená svítí</span><span class="v small" id="st-g"></span></li>
+        </ul>
+      </div>
+      <figcaption class="fig-caption">Nahoře ulice shora, křižovatky jsou 375 metrů od sebe. Pod ní záznam: čas běží shora dolů, každý semafor má svůj sloupec a šikmé čáry jsou jízdy aut. Čím je čára strmější, tím auto jede pomaleji, svislý kus znamená stání. Sledujeme kolonu, která se rozjela z krajní křižovatky. Vlna je nastavená na 50 km/h, čas běží osmkrát rychleji a auta nejsou v měřítku.</figcaption>
+    </figure>
+
+    <section class="sec" aria-labelledby="h-cyklus">
+      <div class="prose">
+        <h2 id="h-cyklus">Každý semafor má svůj rytmus</h2>
+        <p>Semafor střídá směry v pevném kole, kterému se říká cyklus. Zelená pro hlavní ulici, pak pro příčnou, případně pro odbočující a chodce, a zase znovu. Ve městě trvá jedno kolo obvykle minutu až minutu a půl.</p>
+        <p>Kdyby každá křižovatka běžela sama pro sebe, bylo by na řidiči jen štěstí. Kolona, která se rozjede na zelenou, dojede k další křižovatce v náhodnou chvíli, polovina aut na červenou. Tam se zastaví, znovu rozjede a o kus dál znovu.</p>
+        <p>Každé takové zastavení stojí čas, palivo a místo. Auta ve frontě se rozjíždějí jedno po druhém, asi dvě sekundy po sobě, takže za jednu zelenou jich projede jen omezený počet.</p>
+      </div>
+      <aside class="note" aria-label="Semafory v číslech">
+        <span class="label">V číslech</span>
+        <dl class="facts">
+          <div><dt>60–90 s</dt><dd>trvá ve městě běžný cyklus semaforu</dd></div>
+          <div><dt>≈ 2 s</dt><dd>po sobě se rozjíždějí auta ve frontě</dd></div>
+          <div><dt>27 s</dt><dd>jede auto v padesátce 375 metrů mezi křižovatkami</dd></div>
+        </dl>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-posun">
+      <div class="prose">
+        <h2 id="h-posun">Stačí posunout start</h2>
+        <p>Řešení je jednoduché. Všechny semafory na ulici dostanou stejně dlouhý cyklus, takže se vůči sobě nerozcházejí. A každý další rozsvítí zelenou o něco později než ten před ním. Přesně o tolik, kolik autu trvá mezi nimi dojet.</p>
+        <p>Když je to mezi křižovatkami 375 metrů a jezdí se padesátkou, je ten posun 27 sekund. Kolona se rozjede na první zelenou, za 27 sekund dojede k druhé křižovatce a tam právě padla zelená. Za dalších 27 sekund totéž na třetí.</p>
+        <p><span class="hl">Zelená tak ulicí postupuje jako vlna a kolona jede na jejím hřebeni.</span> V záznamu pod ulicí je to vidět jako šikmý zelený pruh, kterým čáry aut projdou bez zalomení.</p>
+        <p>Vlna má svou šířku. Je do ní vidět tolik aut, kolik jich za zelenou stihne projet. Kdo do ní najede z boční ulice uprostřed, veze se dál s ostatními.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Přepněte na Všechny naráz. Kolona projede jednu křižovatku a na druhé už dojede na červenou. Ulici zvládne asi o třetinu pomaleji než s vlnou.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-rychle">
+      <div class="prose">
+        <h2 id="h-rychle">Rychleji to nejde</h2>
+        <p>Vlna se ulicí pohybuje rychlostí, na jakou ji někdo nastavil. Kdo jede rychleji, ujede jí. K další křižovatce dorazí dřív, než tam padne zelená, zastaví a počká, až ho vlna dožene. Na konci ulice je ve stejnou chvíli jako ti, co jeli pomalu. Jen cestou několikrát brzdil a rozjížděl se.</p>
+        <p>Proto někde nad ulicí visí cedule s doporučenou rychlostí. Není to prosba. Je to návod, jak nestát.</p>
+        <p>Kdo jede pomaleji, z vlny naopak vypadává dozadu. Nějakou dobu se v ní udrží, protože zelená trvá desítky sekund. Na některé další křižovatce ale dojede až po jejím konci.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Nechte zelenou vlnu a zrychlete auta na 70 km/h. Průměrná rychlost zůstane skoro stejná jako při padesátce, jen přibudou zastavení. Pak zkuste 35 km/h.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-proti">
+      <div class="prose">
+        <h2 id="h-proti">Proč ne oběma směry</h2>
+        <p>Auta v protisměru jedou proti vlně. Pro ně by měl každý další semafor svítit zeleně taky o 27 sekund později, jenže ten jejich další je z pohledu vlny ten předchozí. Svítil o 27 sekund dřív. Rozdíl je 54 sekund a do zelené se nestrefí.</p>
+        <p>Jedna výjimka existuje. Když cyklus trvá přesně těch 54 sekund, tedy dvojnásobek doby jízdy mezi křižovatkami, je posun o 27 sekund dopředu totéž co o 27 sekund dozadu. Sousední semafory pak běží přesně proti sobě a vlna jede oběma směry.</p>
+        <p>V praxi to vyjde málokdy. Křižovatky nejsou stejně daleko od sebe a délku cyklu určuje hlavně to, kolik aut potřebuje projet z bočních ulic. Dopravní inženýr proto většinou vybírá. Ráno dostane vlnu směr do centra, odpoledne směr ven.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Zkraťte při zelené vlně cyklus na 54 sekund. Čárkované čáry aut v protisměru se narovnají a zelené pruhy v záznamu vytvoří mříž.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-mesto">
+      <div class="prose">
+        <h2 id="h-mesto">A proč ne v celém městě</h2>
+        <p>Na jedné ulici se dá vlna spočítat. Ve městě se ulice kříží a každá křižovatka patří do dvou z nich. Posun, který se hodí jedné třídě, příčné nevyhovuje. Dobře to vychází jen v pravidelné síti jednosměrek, kterou má třeba Manhattan.</p>
+        <p>Vlnu taky snadno rozbije provoz sám. Stačí, aby na jedné křižovatce zbyla z minulé zelené fronta. Kolona, která přijede s vlnou, musí počkat, až se fronta rozjede, a část jí už zelenou nestihne. Když je aut víc, než ulice pobere, žádné seřízení nepomůže.</p>
+        <p>A pak jsou tu ti, kdo mají přednost před plynulostí aut: chodci, kteří potřebují dost času na přejití, a tramvaje a autobusy, kterým si semafor zelenou prodlouží nebo zařadí mimo pořadí.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Na okraj</span>
+        <p>Moderní křižovatky nejedou jen podle hodin. Ve vozovce mají smyčky z drátu, které poznají, že nad nimi stojí auto. Když v boční ulici nikdo nečeká, zelenou jí semafor zkrátí nebo vynechá.</p>
+      </aside>
+    </section>
+
+    <footer class="art-foot">
+      <a class="next" href="../letadlo/" data-cat="doprava">
+        <span class="label">Další článek · Doprava</span>
+        <span class="t">Proč letadlo letí</span>
+        <p>Jak křídlo drží ve vzduchu stovky tun a co je špatně na vysvětlení z učebnic.</p>
+      </a>
+      <a class="back" href="../">Všechna témata</a>
+    </footer>
+  </main>
+
+  <script>
+  (() => {
+    const NS = "http://www.w3.org/2000/svg";
+    function el(tag, attrs, parent) {
+      const n = document.createElementNS(NS, tag);
+      for (const k in attrs || {}) n.setAttribute(k, attrs[k]);
+      if (parent) parent.appendChild(n);
+      return n;
+    }
+    const $ = (id) => document.getElementById(id);
+    const svg = $("street");
+    const fmt1 = new Intl.NumberFormat("cs-CZ", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+    /* ---------- model ---------- */
+    const GAP = 375, FIRST = 125, LEN = 1750, LIGHTS = 5;   // metry
+    const WAVE_SPEED = 50 / 3.6;      // na tuhle rychlost je vlna nastavená
+    const CARS = 5, HEADWAY = 2.2;    // kolona a rozestup při rozjezdu ve vteřinách
+    const QUEUE = 28;                 // rozestup stojících aut v metrech (zvětšený, aby byl vidět)
+    const SPEEDUP = 8;
+    const s = { mode: "wave", kmh: 50, cycle: 80, t: 0, playing: !window.matchMedia("(prefers-reduced-motion: reduce)").matches };
+    const mod = (a, m) => ((a % m) + m) % m;
+
+    function offsets() {
+      return Array.from({ length: LIGHTS }, (_, i) =>
+        s.mode === "wave" ? (i * GAP) / WAVE_SPEED : s.mode === "sync" ? 0 : [0, 0.62, 0.23, 0.81, 0.4][i] * s.cycle);
+    }
+    const green = () => s.cycle / 2;
+    const isGreen = (o, t) => mod(t - o, s.cycle) < green();
+    const nextGreen = (o, t) => (isGreen(o, t) ? t : t + s.cycle - mod(t - o, s.cycle));
+
+    // jízda kolony jedním směrem; u je vzdálenost od krajní křižovatky, ze které se rozjela
+    function plan(dir) {
+      const off = offsets(), v = s.kmh / 3.6, order = dir > 0 ? [0, 1, 2, 3, 4] : [4, 3, 2, 1, 0];
+      const gate = off[order[0]], left = order.map(() => []), cars = [];
+      for (let k = 0; k < CARS; k++) {
+        let u = -6 - QUEUE * k, t = gate + 1.5 + HEADWAY * k, stops = 0;
+        const arrive = gate - 0.35 * s.cycle + 2 * k, started = t;
+        const pts = [[arrive - (u + 240) / v, -240], [arrive, u], [t, u]];
+        for (let j = 1; j < LIGHTS; j++) {
+          const o = off[order[j]], line = j * GAP - 6, free = t + (line - u) / v;
+          const waiting = left[j].filter((d) => d > free).length, prev = k ? left[j][k - 1] : -1e9;
+          if (!waiting && isGreen(o, free) && free >= prev + 2) { left[j].push(free); continue; }
+          const pos = line - QUEUE * waiting, at = t + (pos - u) / v;
+          let go = Math.max(isGreen(o, at) ? at : nextGreen(o, at) + 1.5, prev + HEADWAY);
+          if (!isGreen(o, go)) go = nextGreen(o, go) + 1.5;
+          pts.push([at, pos], [go, pos]);
+          t = go; u = pos; stops++;
+          left[j].push(go);
+        }
+        const end = (LIGHTS - 1) * GAP;
+        pts.push([t + (end + 240 - u) / v, end + 240]);
+        cars.push({ pts: pts.map(([tt, uu]) => [tt, dir > 0 ? FIRST + uu : FIRST + end - uu]), stops, pace: (end + 6 + QUEUE * k) / (t + (end - u) / v - started) });
+      }
+      const mean = (f) => cars.reduce((a, c) => a + f(c), 0) / cars.length;
+      return { cars, stops: mean((c) => c.stops), kmh: mean((c) => c.pace) * 3.6 };
+    }
+    function where(pts, t) {
+      if (t < pts[0][0] || t > pts[pts.length - 1][0]) return null;
+      for (let i = 1; i < pts.length; i++) if (t <= pts[i][0]) {
+        const [t0, x0] = pts[i - 1], [t1, x1] = pts[i];
+        return t1 === t0 ? x1 : x0 + ((x1 - x0) * (t - t0)) / (t1 - t0);
+      }
+      return null;
+    }
+
+    /* ---------- scéna ---------- */
+    const X = (m) => 44 + (m / LEN) * 656, lightX = (i) => X(FIRST + i * GAP);
+    const PLOT = { y: 150, h: 340 }, Y = (t) => PLOT.y + (t / (2 * s.cycle)) * PLOT.h;
+    const defs = el("defs", {}, svg);
+    el("rect", { x: 44, y: 20, width: 656, height: 90 }, el("clipPath", { id: "clip-road" }, defs));
+    el("rect", { x: 44, y: PLOT.y, width: 656, height: PLOT.h }, el("clipPath", { id: "clip-plot" }, defs));
+    for (let i = 0; i < LIGHTS; i++) el("rect", { x: lightX(i) - 9, y: 30, width: 18, height: 72, class: "road" }, svg);
+    el("rect", { x: 44, y: 46, width: 656, height: 40, class: "road" }, svg);
+    for (let i = 0; i < LIGHTS; i++) el("rect", { x: lightX(i) - 8.5, y: 46.5, width: 17, height: 39, fill: "var(--sunk)" }, svg);
+    el("line", { x1: 44, y1: 66, x2: 700, y2: 66, class: "lane" }, svg);
+    const lamps = [];
+    for (let i = 0; i < LIGHTS; i++) {
+      el("rect", { x: lightX(i) - 8, y: 6, width: 16, height: 20, rx: 3, class: "lamp-box" }, svg);
+      lamps.push(el("circle", { cx: lightX(i), cy: 16, r: 5.5 }, svg));
+    }
+    const carG = el("g", { "clip-path": "url(#clip-road)" }, svg), pool = [];
+    for (let i = 0; i < 2 * CARS * 5; i++) pool.push(el("rect", { width: 11, height: 6, rx: 1.5, class: i % 2 ? "car-b" : "car-f", visibility: "hidden" }, carG));
+    el("text", { x: 44, y: 126, class: "cap" }, svg).textContent = "ZÁZNAM";
+    el("text", { x: 700, y: 126, class: "cap", "text-anchor": "end" }, svg).textContent = "MÍSTO NA ULICI →";
+    el("rect", { x: 44, y: PLOT.y, width: 656, height: PLOT.h, class: "plot" }, svg);
+    const plotG = el("g", { "clip-path": "url(#clip-plot)" }, svg), axisG = el("g", {}, svg);
+    const nowLine = el("line", { x1: 44, x2: 700, class: "now" }, svg);
+    const nowTag = el("text", { x: 694, class: "now-tag", "text-anchor": "end" }, svg);
+    nowTag.textContent = "teď";
+
+    let fwd, back;
+    function rebuild() {
+      fwd = plan(1); back = plan(-1);
+      const off = offsets(), C = s.cycle;
+      plotG.textContent = ""; axisG.textContent = "";
+      for (let i = 0; i < LIGHTS; i++) {
+        el("line", { x1: lightX(i), y1: PLOT.y, x2: lightX(i), y2: PLOT.y + PLOT.h, class: "col-red" }, plotG);
+        for (let m = -2; m <= 2; m++) el("line", { x1: lightX(i), y1: Y(off[i] + m * C), x2: lightX(i), y2: Y(off[i] + m * C + green()), class: "col-green" }, plotG);
+      }
+      [[back, "tr-b"], [fwd, "tr-f"]].forEach(([p, cls]) => p.cars.forEach((c) => {
+        for (let m = -3; m <= 3; m++) el("polyline", { points: c.pts.map(([t, x]) => `${X(x).toFixed(1)},${Y(t + m * C).toFixed(1)}`).join(" "), class: cls }, plotG);
+      }));
+      [0, C, 2 * C].forEach((t) => el("text", { x: 38, y: Y(t) + (t ? (t === C ? 4 : 0) : 9), class: "ax", "text-anchor": "end" }, axisG).textContent = `${t} s`);
+
+      $("speed-val").textContent = `${s.kmh} km/h`;
+      $("cycle-val").textContent = `${C} s`;
+      const tell = (p) => `${p.stops < 0.05 ? "bez zastavení" : `${fmt1.format(p.stops)}× zastaví`} · ${Math.round(p.kmh)} km/h`;
+      $("st-f").textContent = tell(fwd);
+      $("st-b").textContent = tell(back);
+      $("st-g").textContent = `${green()} s z ${C}`;
+
+      const f0 = fwd.stops < 0.05, b0 = back.stops < 0.05;
+      let status;
+      if (s.mode === "wave" && f0 && b0) status = "<strong>Zelená vlna oběma směry.</strong> Cesta mezi křižovatkami trvá přesně půl cyklu. Sousední semafory běží proti sobě, a tak posun vyhovuje autům zleva i zprava.";
+      else if (s.mode === "wave" && f0) status = "<strong>Zelená vlna doprava.</strong> Kolona dojede ke každé další křižovatce právě ve chvíli, kdy tam padla zelená. Auta v protisměru jedou proti vlně a stojí skoro na každém semaforu.";
+      else if (s.mode === "wave" && s.kmh > 50) status = "<strong>Rychleji to nejde.</strong> Auta ujedou vlně, k další křižovatce dorazí před zelenou a musejí počkat, až je dožene. Na konec ulice dojedou stejně jako při padesátce.";
+      else if (s.mode === "wave") status = "<strong>Pomalá auta z vlny vypadnou.</strong> Na každé křižovatce jsou o kus pozdě. Chvíli se v zelené ještě udrží, pak dojedou až po jejím konci.";
+      else if (s.mode === "sync") status = "<strong>Všechny naráz.</strong> Zelená padne všude ve stejnou chvíli. Kolona projede, kam za jednu zelenou stihne dojet, a tam zůstane stát do dalšího kola.";
+      else status = "<strong>Každý jinak.</strong> Semafory mají stejný cyklus, ale začínají bez ohledu na sousedy. Jestli auto dojede na zelenou, je náhoda, a ta se na pěti křižovatkách po sobě nepodaří.";
+      $("status").innerHTML = status;
+      draw();
+    }
+    function draw() {
+      const off = offsets(), C = s.cycle;
+      lamps.forEach((l, i) => l.setAttribute("fill", isGreen(off[i], s.t) ? "#3fd27f" : "#ff5a4d"));
+      nowLine.setAttribute("y1", Y(s.t)); nowLine.setAttribute("y2", Y(s.t));
+      nowTag.setAttribute("y", Y(s.t) - 5);
+      let n = 0;
+      [fwd, back].forEach((p, d) => p.cars.forEach((c) => {
+        for (let m = -2; m <= 2; m++) {
+          const x = where(c.pts, s.t + m * C), r = pool[n++];
+          if (x === null) { r.setAttribute("visibility", "hidden"); continue; }
+          r.setAttribute("visibility", "visible");
+          r.setAttribute("x", (X(x) - 5.5).toFixed(1));
+          r.setAttribute("y", d ? 53 : 73);
+        }
+      }));
+    }
+
+    let last = 0;
+    function frame(now) {
+      const dt = Math.min(0.1, (now - last) / 1000 || 0);
+      last = now;
+      if (s.playing) { s.t = mod(s.t + dt * SPEEDUP, 2 * s.cycle); draw(); }
+      requestAnimationFrame(frame);
+    }
+
+    /* ---------- ovládání ---------- */
+    $("speed").addEventListener("input", (e) => { s.kmh = Number(e.target.value); rebuild(); });
+    $("cycle").addEventListener("input", (e) => { const k = s.t / s.cycle; s.cycle = Number(e.target.value); s.t = k * s.cycle; rebuild(); });
+    $("mode-seg").addEventListener("click", (e) => {
+      const b = e.target.closest("button[data-v]");
+      if (!b) return;
+      $("mode-seg").querySelectorAll("button").forEach((x) => x.setAttribute("aria-checked", String(x === b)));
+      s.mode = b.dataset.v;
+      rebuild();
+    });
+    $("play").addEventListener("click", () => { s.playing = !s.playing; $("play").textContent = s.playing ? "Zastavit" : "Spustit"; });
+    $("play").textContent = s.playing ? "Zastavit" : "Spustit";
+    if (!s.playing) s.t = 30;
+    rebuild();
+    requestAnimationFrame(frame);
+  })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Jak sluchátka potlačují hluk</title>
+  <meta name="description" content="Jak sluchátka vyrobí ticho tím, že přidají další zvuk, proč jim to jde na hukot letadla a nejde na hlasy a k čemu je vedle elektroniky ještě obyčejné polstrování. S vlnami, které si můžete proti sobě pustit.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700&display=swap">
+  <link rel="stylesheet" href="../style.css?v=5">
+  <style>
+    .nc-stage { display: grid; gap: 1rem; grid-template-columns: minmax(0, 1fr); align-items: center; }
+    .side { display: grid; gap: 0.35rem; margin: 0; justify-self: center; width: min(17rem, 80%); }
+    .side svg, #waves { border: 1px solid var(--rule); background: var(--surface); }
+    .side .label { text-align: center; }
+    @media (min-width: 60rem) {
+      .nc-stage { grid-template-columns: minmax(0, 1fr) 17rem; }
+      .side { width: 100%; }
+    }
+    .zero { stroke: var(--grid); stroke-width: 1; }
+    .cap { fill: var(--ink-3); font: 500 11px var(--font-mono); letter-spacing: 0.08em; }
+    .w { fill: none; stroke-width: 2; stroke-linejoin: round; }
+    .w-noise { stroke: var(--ink-2); }
+    .w-anti { stroke: var(--cat); }
+    .w-rest { stroke: var(--hot); stroke-width: 2.4; }
+    .w-ghost { stroke: var(--ink-3); stroke-width: 1.2; stroke-dasharray: 4 4; opacity: 0.7; }
+    .c-grid { stroke: var(--grid); stroke-width: 1; }
+    .c-zero { stroke: var(--ink-3); stroke-width: 1; }
+    .c-worse { fill: var(--bad); opacity: 0.1; }
+    .c-act { fill: none; stroke: var(--cat); stroke-width: 2; }
+    .c-pad { fill: none; stroke: var(--ink-3); stroke-width: 1.6; stroke-dasharray: 5 4; }
+    .c-all { fill: none; stroke: var(--ink); stroke-width: 2.6; }
+    .c-dot { fill: var(--hot); stroke: var(--surface); stroke-width: 1.5; }
+    .c-text { fill: var(--ink-3); font: 500 10px var(--font-mono); }
+    @media (max-width: 46rem) { .cap { font-size: 15px; } }
+    .legend { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; margin: 0; padding: 0; list-style: none; font-family: var(--font-mono); font-size: 0.75rem; color: var(--ink-2); }
+    .legend li { display: inline-flex; align-items: center; gap: 0.4rem; }
+    .legend i { width: 1.2rem; height: 3px; }
+  </style>
+</head>
+<body data-cat="technika">
+  <header class="topbar">
+    <div class="wrap">
+      <a class="brand" href="../">Jak věci fungují</a>
+      <nav class="crumbs" aria-label="Drobečková navigace"><a href="../#technika">Technika</a><span aria-hidden="true">/</span><span>Potlačení hluku</span></nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <header class="art-head">
+      <p class="eyebrow">Technika</p>
+      <h1 class="display">Jak sluchátka potlačují hluk</h1>
+      <p class="lede">Nasadíte sluchátka, zmáčknete tlačítko a hukot letadla zmizí, i když nic nehraje. Sluchátka přitom hluk nezastavila. Přidala k němu další zvuk, a z těch dvou dohromady vyšlo ticho.</p>
+    </header>
+
+    <section class="tldr" aria-labelledby="h-zkratka">
+      <h2 class="label" id="h-zkratka">Ve zkratce</h2>
+      <ul>
+        <li>Zvuk je střídání vyššího a nižšího tlaku vzduchu. Když se potkají dvě stejné vlny přesně obráceně, vyruší se.</li>
+        <li><span class="hl">Mikrofon na sluchátku poslouchá hluk a reproduktor k němu přehrává jeho zrcadlový obraz.</span></li>
+        <li>Stihnout se to dá jen u pomalých, hlubokých vln. Hukot motoru zmizí skoro celý, hlasy a cinkání musí ztlumit polstrování.</li>
+      </ul>
+    </section>
+
+    <figure class="fig" id="obr1">
+      <div class="fig-head">
+        <p class="fig-num"><b>Obr. 1</b> Vlna proti vlně</p>
+        <span class="label">Vyberte hluk a zkuste, co s ním udělá zpoždění</span>
+      </div>
+      <div class="fig-stage nc-stage">
+        <svg id="waves" viewBox="0 0 640 390" role="img" aria-label="Tři průběhy pod sebou: hluk zvenku, protizvuk z reproduktoru a jejich součet u bubínku"></svg>
+        <figure class="side">
+          <svg id="curve" viewBox="0 0 240 220" role="img" aria-label="Kolik hluku sluchátka uberou na různých výškách tónu"></svg>
+          <span class="label">Útlum podle výšky tónu</span>
+        </figure>
+      </div>
+      <div class="fig-controls">
+        <div class="ctl">
+          <span class="label" id="lbl-noise">Hluk</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-noise" id="noise-seg">
+            <button type="button" role="radio" data-v="tone" aria-checked="false">Jeden tón</button>
+            <button type="button" role="radio" data-v="plane" aria-checked="true">Letadlo</button>
+            <button type="button" role="radio" data-v="voices" aria-checked="false">Hlasy</button>
+            <button type="button" role="radio" data-v="clink" aria-checked="false">Cinkání</button>
+          </div>
+        </div>
+        <div class="ctl ctl-grow">
+          <label class="label" for="freq">Výška tónu</label>
+          <div class="ctl-row">
+            <input type="range" id="freq" min="0" max="100" step="1" value="14">
+            <output class="val" id="freq-val" for="freq"></output>
+          </div>
+        </div>
+        <div class="ctl ctl-grow">
+          <label class="label" for="delay">Zpoždění elektroniky</label>
+          <div class="ctl-row">
+            <input type="range" id="delay" min="0" max="200" step="10" value="40">
+            <output class="val" id="delay-val" for="delay"></output>
+          </div>
+        </div>
+        <div class="ctl">
+          <span class="label" id="lbl-anc">Potlačení</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-anc" id="anc-seg">
+            <button type="button" role="radio" data-v="0" aria-checked="false">Vypnuté</button>
+            <button type="button" role="radio" data-v="1" aria-checked="true">Zapnuté</button>
+          </div>
+        </div>
+        <div class="ctl">
+          <span class="label" id="lbl-pad">Polstrování</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-pad" id="pad-seg">
+            <button type="button" role="radio" data-v="0" aria-checked="true">Bez něj</button>
+            <button type="button" role="radio" data-v="1" aria-checked="false">Těsné</button>
+          </div>
+        </div>
+      </div>
+      <div class="fig-status split">
+        <div style="display:grid; gap:.6rem; min-width:0">
+          <p class="status" id="status" aria-live="polite"></p>
+          <ul class="legend" aria-hidden="true">
+            <li><i style="background:var(--ink-2)"></i>hluk</li>
+            <li><i style="background:var(--cat)"></i>protizvuk</li>
+            <li><i style="background:var(--hot)"></i>co zbude</li>
+            <li><i style="background:repeating-linear-gradient(90deg,var(--ink-3) 0 4px,transparent 4px 8px)"></i>jak by to mělo být přesně</li>
+          </ul>
+        </div>
+        <ul class="stats" aria-label="Stav modelu">
+          <li><span class="n">Hluk u bubínku</span><span class="v" id="st-db"></span></li>
+          <li><span class="n">Na poslech</span><span class="v small" id="st-loud"></span></li>
+          <li><span class="n">Elektronika / polstrování</span><span class="v small" id="st-parts"></span></li>
+        </ul>
+      </div>
+      <figcaption class="fig-caption">Zjednodušený model. Časová osa se u každého hluku natáhne tak, aby byly vidět asi tři nejdelší vlny, takže stejné zpoždění vypadá u vysokých tónů mnohem větší. Graf vpravo ukazuje útlum v decibelech: každých deset decibelů dolů slyšíme zhruba jako poloviční hlasitost. Tečky jsou tóny, ze kterých se vybraný hluk skládá.</figcaption>
+    </figure>
+
+    <section class="sec" aria-labelledby="h-vlna">
+      <div class="prose">
+        <h2 id="h-vlna">Ticho ze dvou zvuků</h2>
+        <p>Zvuk je vlnění tlaku. Motor letadla rozechvívá vzduch a ten se střídavě zhušťuje a zřeďuje. Vlny tlaku doběhnou k uchu a rozkmitají bubínek, jednou dovnitř a jednou ven.</p>
+        <p>Když k uchu přijdou dvě vlny najednou, jejich tlaky se sečtou. A sčítat se dá i na nulu. Stačí, aby druhá vlna byla přesným zrcadlovým obrazem té první: tam, kde první tlak zvedá, druhá ho o stejný kus snižuje. Vzduch u bubínku se pak nehýbe a není co slyšet.</p>
+        <p><span class="hl">Sluchátka tedy hluk nezadrží. Přehrají k němu protizvuk.</span> Kdyby šel pustit samotný, slyšeli byste stejný hukot jako předtím.</p>
+      </div>
+      <aside class="note" aria-label="Potlačení hluku v číslech">
+        <span class="label">V číslech</span>
+        <dl class="facts">
+          <div><dt>3,4 m</dt><dd>měří vlna hlubokého tónu 100 Hz</dd></div>
+          <div><dt>8,5 cm</dt><dd>měří vlna vysokého tónu 4 kHz</dd></div>
+          <div><dt>až 30 dB</dt><dd>uberou dobrá sluchátka z hlubokého hukotu, na poslech osminu hlasitosti</dd></div>
+        </dl>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-jak">
+      <div class="prose">
+        <h2 id="h-jak">Mikrofon, čip a reproduktor</h2>
+        <p>Na vnější straně každého sluchátka je malý mikrofon. Slyší hluk o zlomek okamžiku dřív, než projde mušlí k uchu. Čip z něj spočítá, jak bude hluk znít uvnitř, obrátí ho a pošle do reproduktoru. Ten ho přehraje společně s hudbou.</p>
+        <p>Lepší sluchátka mají druhý mikrofon i uvnitř, těsně u reproduktoru. Ten poslouchá, co k uchu opravdu dolehlo. Když tam nějaký hluk zbyl, čip protizvuk opraví. Hudbu, kterou sám pouští, při tom odečte, aby nepotlačoval i ji.</p>
+        <p>Celé se to musí stihnout dřív, než vlna doběhne od mikrofonu k bubínku. Na pár centimetrů je to asi desetina tisíciny sekundy. Proto to nepočítá telefon, ale zvláštní rychlý obvod přímo ve sluchátku.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Vyberte Letadlo a přepínejte Potlačení. Červená čára dole se zapnutím skoro narovná. Pak stáhněte zpoždění na nulu: zbytek zmizí ještě o něco víc.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-proc">
+      <div class="prose">
+        <h2 id="h-proc">Proč hukot ano a hlasy ne</h2>
+        <p>Protizvuk nikdy nepřijde úplně včas. Mikrofon, čip i reproduktor potřebují chvilku, řekněme pár desítek miliontin sekundy. Jestli to vadí, záleží na tom, jak rychle se vlna mění.</p>
+        <p>Hluboký tón o sto kmitech za sekundu má jednu vlnu dlouhou setinu sekundy. Zpoždění o čtyřicet miliontin je proti tomu nic a protizvuk sedí skoro přesně. Vysoký tón o čtyřech tisících kmitů má vlnu čtyřicetkrát kratší. Stejné zpoždění je u něj už šestina vlny a obraz se s předlohou rozejde.</p>
+        <p>Když je posun moc velký, protizvuk hluk neruší, ale přidává se k němu. Sluchátka proto protizvuk na vysokých tónech raději sama zeslabují. Výsledek: rovnoměrný hluboký hukot motorů, klimatizace nebo vlaku zmizí skoro celý. Hlasy, cinkání nádobí a dětský křik projdou.</p>
+        <p>Vysoké tóny mají ještě jednu potíž. Jejich vlny jsou krátké jako sama mušle, takže tlak v ní není všude stejný. Mikrofon o centimetr vedle měří něco jiného, než co cítí bubínek.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Vyberte Jeden tón a táhněte jeho výšku nahoru. Modrá vlna se od čárkované čím dál víc opožďuje a červený zbytek roste. Pak přidejte zpoždění na 200 a najděte místo, kde je s potlačením hlasitěji než bez něj.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-pasivni">
+      <div class="prose">
+        <h2 id="h-pasivni">O výšky se postará polstrování</h2>
+        <p>Na krátké vlny naštěstí stačí obyčejná překážka. Těsná mušle, měkký polštářek kolem ucha nebo silikonový špunt ve zvukovodu vysoké tóny odrazí a pohltí, stejně jako zavřené okno ztlumí hlasy z ulice.</p>
+        <p>Na hluboké tóny překážka nestačí. Dlouhá vlna rozkmitá celou mušli a projde skrz, tak jako basy od sousedů projdou zdí. A právě tam nastupuje elektronika.</p>
+        <p>Obě cesty se tak doplňují. Polstrování bere výšky, protizvuk hloubky a nejhůř se tlumí pásmo mezi nimi, kde leží lidská řeč. Sluchátka, která špatně sedí, nezachrání ani nejlepší čip.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Vyberte Cinkání. Elektronika s ním nic neudělá. Přepněte polstrování na Těsné a podívejte se do grafu vpravo: čárkovaná křivka padá tam, kde modrá končí.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-dal">
+      <div class="prose">
+        <h2 id="h-dal">Co se s tím dá ještě dělat</h2>
+        <p>Když už sluchátka mají mikrofony venku, umějí i opak. V režimu propustnosti zvuk z okolí nepotlačují, ale pouštějí do reproduktoru. Slyšíte hlášení na nádraží a nemusíte sluchátka sundávat.</p>
+        <p>Potlačení hluku funguje, i když nic nehraje, a šetří sluch. V letadle nebo v metru si lidé hudbu zesilují, aby přehlušila okolí. Když okolí ztichne, stačí jim hlasitost o hodně nižší.</p>
+        <p>Některým lidem je ticho ze sluchátek nepříjemné. Popisují ho jako tlak v uších, podobný tomu při stoupání letadla. Tlak se přitom nemění. Mozek je jen zvyklý, že hluboké zvuky zmizí právě tehdy, když má ucho zalehlé.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Na okraj</span>
+        <p>Nápad rušit zvuk zvukem je z třicátých let minulého století. První sluchátka, která to uměla, dostali v osmdesátých letech piloti. Do té doby byla elektronika na takový výpočet moc pomalá a velká.</p>
+      </aside>
+    </section>
+
+    <footer class="art-foot">
+      <a class="next" href="../abs/" data-cat="doprava">
+        <span class="label">Další článek · Doprava</span>
+        <span class="t">Jak fungují brzdy s ABS</span>
+        <p>Proč zablokované kolo brzdí hůř a proč ABS uprostřed brzdění povoluje.</p>
+      </a>
+      <a class="back" href="../">Všechna témata</a>
+    </footer>
+  </main>
+
+  <script>
+  (() => {
+    const NS = "http://www.w3.org/2000/svg";
+    function el(tag, attrs, parent) {
+      const n = document.createElementNS(NS, tag);
+      for (const k in attrs || {}) n.setAttribute(k, attrs[k]);
+      if (parent) parent.appendChild(n);
+      return n;
+    }
+    const $ = (id) => document.getElementById(id);
+    const waves = $("waves"), curve = $("curve");
+    const fmt1 = new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 1 });
+
+    /* ---------- model ---------- */
+    // hluk jako několik tónů: [kmitů za sekundu, síla]
+    const NOISES = {
+      plane: [[90, 1], [180, 0.6], [270, 0.35], [450, 0.2]],
+      voices: [[220, 0.6], [440, 0.8], [880, 0.6], [1760, 0.4], [2600, 0.25]],
+      clink: [[3000, 0.6], [4200, 0.7], [5600, 0.5], [7000, 0.4]],
+    };
+    const s = { noise: "plane", freq: 100, delay: 40, anc: true, pad: false, t: 0 };
+    const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const tones = () => (s.noise === "tone" ? [[s.freq, 1]] : NOISES[s.noise]);
+    // polstrování: hluboké tóny pustí, vysoké ztlumí až o 35 dB
+    const padGain = (f) => (s.pad ? 10 ** (-Math.min(35, Math.max(0, 9 * Math.log2(f / 250))) / 20) : 1);
+    // elektronika protizvuk nad 3 kHz sama zeslabuje, aby hluk nezesilovala
+    const antiGain = (f) => 0.97 / (1 + (f / 3000) ** 2);
+    // jaká část tónu po sečtení s opožděným protizvukem zbude
+    function leftover(f) {
+      if (!s.anc) return 1;
+      const g = antiGain(f), ph = 2 * Math.PI * f * s.delay * 1e-6;
+      return Math.hypot(1 - g * Math.cos(ph), g * Math.sin(ph));
+    }
+    const dB = (x) => 20 * Math.log10(Math.max(1e-4, x));
+    function levels() {
+      let out = 0, inPad = 0, rest = 0;
+      tones().forEach(([f, a]) => { out += a * a; inPad += (a * padGain(f)) ** 2; rest += (a * padGain(f) * leftover(f)) ** 2; });
+      return { total: 10 * Math.log10(rest / out), pad: 10 * Math.log10(inPad / out), anc: 10 * Math.log10(rest / inPad) };
+    }
+
+    /* ---------- průběhy ---------- */
+    const X0 = 20, W = 600, AMP = 40, ROWS = [72, 196, 320];
+    ["HLUK ZVENKU", "PROTIZVUK Z REPRODUKTORU", "CO DOLEHNE K BUBÍNKU"].forEach((t, i) => {
+      el("line", { x1: X0, y1: ROWS[i], x2: X0 + W, y2: ROWS[i], class: "zero" }, waves);
+      el("text", { x: X0, y: ROWS[i] - 52, class: "cap" }, waves).textContent = t;
+    });
+    const scaleText = el("text", { x: X0 + W, y: ROWS[0] - 52, class: "cap", "text-anchor": "end" }, waves);
+    const pNoise = el("path", { class: "w w-noise" }, waves);
+    const pIdeal = el("path", { class: "w w-ghost" }, waves), pAnti = el("path", { class: "w w-anti" }, waves);
+    const pGhost = el("path", { class: "w w-ghost" }, waves), pRest = el("path", { class: "w w-rest" }, waves);
+
+    function drawWaves() {
+      const list = tones(), span = 3 / Math.min(...list.map(([f]) => f)), norm = list.reduce((a, [, v]) => a + v, 0);
+      const tau = s.delay * 1e-6, d = [[], [], [], [], []];
+      for (let i = 0; i <= 300; i++) {
+        const t = s.t + (i / 300) * span;
+        let out = 0, inside = 0, anti = 0;
+        for (const [f, a] of list) {
+          const w = 2 * Math.PI * f, p = padGain(f);
+          out += a * Math.sin(w * t);
+          inside += a * p * Math.sin(w * t);
+          if (s.anc) anti -= a * p * antiGain(f) * Math.sin(w * (t - tau));
+        }
+        const x = (X0 + i * 2).toFixed(0), k = AMP / norm;
+        d[0].push(`${x} ${(ROWS[0] - out * k).toFixed(1)}`);
+        d[1].push(`${x} ${(ROWS[1] + inside * k).toFixed(1)}`);
+        d[2].push(`${x} ${(ROWS[1] - anti * k).toFixed(1)}`);
+        d[3].push(`${x} ${(ROWS[2] - out * k).toFixed(1)}`);
+        d[4].push(`${x} ${(ROWS[2] - (inside + anti) * k).toFixed(1)}`);
+      }
+      [pNoise, pIdeal, pAnti, pGhost, pRest].forEach((p, i) => p.setAttribute("d", "M" + d[i].join("L")));
+      pIdeal.setAttribute("visibility", s.anc ? "visible" : "hidden");
+      scaleText.textContent = `CELÁ ŠÍŘKA = ${fmt1.format(span * 1000)} ms`;
+    }
+
+    /* ---------- graf útlumu ---------- */
+    const C = { x: 30, y: 14, w: 196, h: 170, lo: 50, hi: 8000, top: 6, bottom: -40 };
+    const cx = (f) => C.x + (Math.log(f / C.lo) / Math.log(C.hi / C.lo)) * C.w;
+    const cy = (db) => C.y + ((C.top - Math.max(C.bottom, Math.min(C.top, db))) / (C.top - C.bottom)) * C.h;
+    function drawCurve() {
+      curve.textContent = "";
+      el("rect", { x: C.x, y: C.y, width: C.w, height: cy(0) - C.y, class: "c-worse" }, curve);
+      [-10, -20, -30, -40].forEach((v) => {
+        el("line", { x1: C.x, y1: cy(v), x2: C.x + C.w, y2: cy(v), class: "c-grid" }, curve);
+        el("text", { x: C.x - 4, y: cy(v) + 3.5, class: "c-text", "text-anchor": "end" }, curve).textContent = v;
+      });
+      el("line", { x1: C.x, y1: cy(0), x2: C.x + C.w, y2: cy(0), class: "c-zero" }, curve);
+      el("text", { x: C.x - 4, y: cy(0) + 3.5, class: "c-text", "text-anchor": "end" }, curve).textContent = "0";
+      el("text", { x: C.x + 3, y: C.y + 9, class: "c-text" }, curve).textContent = "dB · nahoře hlasitěji";
+      [[100, "100 Hz"], [1000, "1 kHz"], [8000, "8 kHz"]].forEach(([f, t]) => {
+        el("line", { x1: cx(f), y1: C.y, x2: cx(f), y2: C.y + C.h, class: "c-grid" }, curve);
+        el("text", { x: cx(f), y: C.y + C.h + 14, class: "c-text", "text-anchor": f === 8000 ? "end" : "middle" }, curve).textContent = t;
+      });
+      const line = (fn) => { const p = []; for (let i = 0; i <= 80; i++) { const f = C.lo * (C.hi / C.lo) ** (i / 80); p.push(`${cx(f).toFixed(1)} ${cy(fn(f)).toFixed(1)}`); } return "M" + p.join("L"); };
+      if (s.pad) el("path", { d: line((f) => dB(padGain(f))), class: "c-pad" }, curve);
+      if (s.anc) el("path", { d: line((f) => dB(leftover(f))), class: "c-act" }, curve);
+      if (s.pad && s.anc) el("path", { d: line((f) => dB(padGain(f) * leftover(f))), class: "c-all" }, curve);
+      tones().forEach(([f, a]) => el("circle", { cx: cx(f).toFixed(1), cy: cy(dB(padGain(f) * leftover(f))).toFixed(1), r: (2.5 + a * 2.5).toFixed(1), class: "c-dot" }, curve));
+    }
+
+    /* ---------- výpis ---------- */
+    const sign = (v) => (Math.abs(v) < 0.5 ? "0 dB" : `${v > 0 ? "+" : "−"}${Math.abs(v).toFixed(0)} dB`);
+    function render() {
+      const L = levels();
+      $("freq").disabled = s.noise !== "tone";
+      $("freq-val").textContent = s.freq < 1000 ? `${s.freq} Hz` : `${fmt1.format(s.freq / 1000)} kHz`;
+      $("delay-val").textContent = `${s.delay} µs`;
+      $("st-db").textContent = sign(L.total);
+      const times = 2 ** (-L.total / 10);
+      $("st-loud").textContent = L.total > 0.5 ? "o něco hlasitější" : L.total > -1.5 ? "skoro stejně" : `asi ${times < 3 ? fmt1.format(times) : Math.round(times)}× tišší`;
+      $("st-parts").textContent = `${sign(L.anc)} / ${sign(L.pad)}`;
+      let status;
+      if (!s.anc) status = s.pad
+        ? "<strong>Jen polstrování.</strong> Těsná mušle ztlumí vysoké tóny. Hluboké projdou skoro celé, protože dlouhá vlna rozkmitá sluchátko i s uchem."
+        : "<strong>Bez potlačení.</strong> Reproduktor mlčí a hluk dojde k bubínku celý.";
+      else if (L.anc > 0.5) status = "<strong>Hlasitěji než bez něj.</strong> Protizvuk přichází tak pozdě, že se s hlukem místo rušení sčítá. Skutečná sluchátka proto na takhle vysokých tónech protizvuk vypínají.";
+      else if (L.anc > -4) status = "<strong>Skoro nic.</strong> Vlny jsou krátké a rychlé. Než elektronika protizvuk spočítá a přehraje, je předloha jinde a obě vlny se míjejí.";
+      else if (L.anc > -15) status = "<strong>Napůl.</strong> Hluboké tóny protizvuk trefí, vyšší už mu utíkají. Z hluku zůstane hlavně to vysoké.";
+      else status = "<strong>Skoro ticho.</strong> Vlny jsou dlouhé a pomalé, zpoždění je proti nim nepatrné. Protizvuk na ně sedí a tlaky se u bubínku ruší.";
+      if (s.anc && s.pad && L.pad < -3) status += " O vysoké tóny se postaralo polstrování.";
+      $("status").innerHTML = status;
+      drawCurve();
+      drawWaves();
+    }
+
+    let last = 0;
+    function frame(now) {
+      const dt = Math.min(0.1, (now - last) / 1000 || 0);
+      last = now;
+      // vlny pomalu ujíždějí doleva: pětina okna za sekundu
+      s.t += dt * 0.2 * (3 / Math.min(...tones().map(([f]) => f)));
+      drawWaves();
+      requestAnimationFrame(frame);
+    }
+
+    /* ---------- ovládání ---------- */
+    function bindSeg(id, apply) {
+      const seg = $(id);
+      seg.addEventListener("click", (e) => {
+        const b = e.target.closest("button[data-v]");
+        if (!b) return;
+        seg.querySelectorAll("button").forEach((x) => x.setAttribute("aria-checked", String(x === b)));
+        apply(b.dataset.v);
+        render();
+      });
+    }
+    bindSeg("noise-seg", (v) => { s.noise = v; s.t = 0; });
+    bindSeg("anc-seg", (v) => { s.anc = v === "1"; });
+    bindSeg("pad-seg", (v) => { s.pad = v === "1"; });
+    $("freq").addEventListener("input", (e) => {
+      const f = 50 * 160 ** (Number(e.target.value) / 100);
+      s.freq = f < 1000 ? Math.round(f / 10) * 10 : Math.round(f / 100) * 100;
+      render();
+    });
+    $("delay").addEventListener("input", (e) => { s.delay = Number(e.target.value); render(); });
+    render();
+    if (!still) requestAnimationFrame(frame);
+  })();
+  </script>
+</body>
+</html>
