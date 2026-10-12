@@ -1,0 +1,581 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Jak funguje mikrovlnná trouba</title>
+  <meta name="description" content="Jak mikrovlny ohřívají jídlo, proč se talíř točí, proč vlny neutečou dvířky a co do mikrovlnky nepatří. S interaktivním pohledem do trouby.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700&display=swap">
+  <link rel="stylesheet" href="../style.css">
+  <style>
+    .mw-stage { display: grid; gap: 1rem; grid-template-columns: minmax(0, 1fr); align-items: center; }
+    .detail { display: grid; gap: 0.35rem; justify-items: center; justify-self: center; width: min(13rem, 62%); }
+    @media (min-width: 60rem) {
+      .mw-stage { grid-template-columns: minmax(0, 1fr) 13rem; }
+      .detail { width: 100%; }
+    }
+    .detail .label { text-align: center; }
+    .detail svg { border: 1px solid var(--rule); }
+
+    .casing { fill: var(--steel); stroke: var(--metal-line); stroke-width: 1.4; }
+    .cavity { fill: var(--surface); stroke: var(--metal-line); stroke-width: 1.4; }
+    .spot { fill: var(--hot); }
+    .stipple { fill: #14181e; opacity: 0.42; }
+    .field-layer { transition: opacity 0.25s; }
+    .field-layer.off { opacity: 0; }
+    .glass { fill: var(--surface); fill-opacity: 0.55; stroke: var(--metal-line); stroke-width: 1.4; }
+    .notch { fill: var(--metal-line); }
+    .plate { fill: var(--surface); stroke: var(--metal-line); stroke-width: 1.4; }
+    .food-edge { fill: none; stroke: var(--metal-line); stroke-width: 1.2; }
+    .guide { fill: var(--hole); stroke: var(--metal-line); stroke-width: 1.4; }
+    .mag { fill: var(--sunk); stroke: var(--metal-line); stroke-width: 1.4; }
+    .mag-fin { stroke: var(--metal-line); stroke-width: 1.2; }
+    .mag-core { fill: var(--steel-hatch); stroke: var(--metal-line); stroke-width: 1.4; transition: fill 0.15s; }
+    .emitting .mag-core { fill: var(--hot); }
+    .ripple { fill: none; stroke: var(--hot); stroke-width: 2.4; stroke-linecap: round; opacity: 0; }
+    .door { fill: var(--surface); stroke: var(--metal-line); stroke-width: 1.4; }
+    .mesh { stroke: var(--metal-line); stroke-width: 6; stroke-dasharray: 1.5 3.5; }
+    .lcd { fill: #12161b; stroke: var(--metal-line); stroke-width: 1.4; }
+    .lcd-text { fill: #dff5e8; font: 600 30px var(--font-mono); text-anchor: middle; font-variant-numeric: tabular-nums; }
+    .callout text { fill: var(--ink-2); font: 500 13px var(--font-mono); }
+    .callout line { stroke: var(--ink-2); stroke-width: 2; }
+
+    .mol-o { fill: var(--hot); stroke: var(--ink); stroke-width: 1.2; }
+    .mol-h { fill: var(--surface); stroke: var(--ink); stroke-width: 1.2; }
+    .mol-sign { font: 700 11px var(--font-mono); text-anchor: middle; dominant-baseline: central; }
+    .mol-sign.o { fill: var(--paper); }
+    .mol-sign.h { fill: var(--ink); }
+    .e-arrow line { stroke: var(--cat); stroke-width: 3.5; stroke-linecap: round; }
+    .e-arrow path { fill: var(--cat); }
+    .e-axis { stroke: var(--rule); stroke-width: 1.2; stroke-dasharray: 3 4; }
+    .e-label { fill: var(--ink-3); font: 500 11px var(--font-mono); text-anchor: middle; }
+    .detail-bg { fill: var(--surface); }
+
+    .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.4rem; margin: 0; padding: 0; list-style: none; }
+    .stats li {
+      display: grid;
+      gap: 0.1rem;
+      padding: 0.45rem 0.6rem;
+      border: 1px solid var(--rule);
+      border-top: 4px solid var(--rule);
+      background: var(--surface);
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.3;
+    }
+    .stats .n { color: var(--ink-3); }
+    .stats .short { display: none; }
+    .stats .v { font-family: var(--font-display); font-stretch: 112%; font-weight: 800; font-size: 1.3rem; color: var(--ink); white-space: nowrap; }
+    .scale { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 0.6rem; font-family: var(--font-mono); font-size: 0.75rem; color: var(--ink-3); }
+    .scale i { height: 0.6rem; border: 1px solid var(--rule); }
+    .status { font-size: 1.02rem; }
+    .mw-status { display: grid; gap: 0.9rem; }
+    .btn.ghost { background: transparent; color: var(--cat); }
+
+    @media (max-width: 46rem) {
+      .callout { display: none; }
+      .stats .wide { display: none; }
+      .stats .short { display: inline; }
+      .stats li { padding: 0.4rem 0.45rem; }
+    }
+    @media (min-width: 60rem) {
+      .mw-status { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; gap: 2rem; }
+    }
+  </style>
+</head>
+<body data-cat="domacnost">
+  <header class="topbar">
+    <div class="wrap">
+      <a class="brand" href="../">Jak věci fungují</a>
+      <nav class="crumbs" aria-label="Drobečková navigace"><a href="../#domacnost">Domácnost</a><span aria-hidden="true">/</span><span>Mikrovlnná trouba</span></nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <header class="art-head">
+      <p class="eyebrow">Domácnost</p>
+      <h1 class="display">Jak funguje mikrovlnná trouba</h1>
+      <p class="lede">Mikrovlnka neohřívá vzduch ani nádobí. Rádiovými vlnami rozhýbává molekuly vody přímo v jídle. Proto je polévka horká za minutu a hrnek pod ní jen vlažný.</p>
+    </header>
+
+    <section class="tldr" aria-labelledby="h-zkratka">
+      <h2 class="label" id="h-zkratka">Ve zkratce</h2>
+      <ul>
+        <li>Magnetron vyrábí mikrovlny: rádiové vlny dlouhé 12 centimetrů, ze stejného pásma, jaké používá Wi-Fi.</li>
+        <li>Molekuly vody se v jejich poli <span class="hl">přetáčejí sem a tam,</span> vrážejí do sousedů, a tím jídlo ohřívají.</li>
+        <li>Vlny se v troubě odrážejí od stěn a skládají se do horkých a studených míst. Proto se talíř točí.</li>
+      </ul>
+    </section>
+
+    <figure class="fig" id="obr1">
+      <div class="fig-head">
+        <p class="fig-num"><b>Obr. 1</b> Pohled do trouby shora</p>
+        <span class="label">Zapněte troubu a zkuste zastavit talíř</span>
+      </div>
+      <div class="fig-stage mw-stage">
+        <svg id="oven" viewBox="0 0 720 470" role="img" aria-label="Půdorys mikrovlnné trouby: komora s horkými a studenými místy, otočný talíř s jídlem obarveným podle teploty a magnetron po straně"></svg>
+        <div class="detail">
+          <svg id="mols" viewBox="0 0 200 250" role="img" aria-label="Molekuly vody, které se natáčejí podle elektrického pole"></svg>
+          <span class="label">Detail · molekuly vody</span>
+        </div>
+      </div>
+      <div class="fig-controls">
+        <div class="ctl">
+          <span class="label" id="lbl-plate">Talíř</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-plate" id="plate-seg">
+            <button type="button" role="radio" data-v="1" aria-checked="true">Točí se</button>
+            <button type="button" role="radio" data-v="0" aria-checked="false">Stojí</button>
+          </div>
+        </div>
+        <div class="ctl">
+          <span class="label" id="lbl-power">Výkon</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-power" id="power-seg">
+            <button type="button" role="radio" data-v="1" aria-checked="true">100 %</button>
+            <button type="button" role="radio" data-v="0.5" aria-checked="false">50 %</button>
+            <button type="button" role="radio" data-v="0.3" aria-checked="false">30 %</button>
+          </div>
+        </div>
+        <div class="ctl">
+          <span class="label" id="lbl-field">Pole v komoře</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-field" id="field-seg">
+            <button type="button" role="radio" data-v="1" aria-checked="true">Ukázat</button>
+            <button type="button" role="radio" data-v="0" aria-checked="false">Skrýt</button>
+          </div>
+        </div>
+        <button type="button" class="btn" id="start">Start</button>
+        <button type="button" class="btn ghost" id="reset">Nové jídlo</button>
+      </div>
+      <div class="fig-status mw-status">
+        <p class="status" id="status" aria-live="polite"></p>
+        <div style="display:grid; gap:.7rem; min-width:0">
+          <ul class="stats" aria-label="Teploty v jídle">
+            <li id="st-min"><span class="n"><span class="wide">Nejstudenější místo</span><span class="short">Minimum</span></span><span class="v"></span></li>
+            <li id="st-avg"><span class="n">Průměr</span><span class="v"></span></li>
+            <li id="st-max"><span class="n"><span class="wide">Nejteplejší místo</span><span class="short">Maximum</span></span><span class="v"></span></li>
+          </ul>
+          <p class="scale" aria-hidden="true"><span>5 °C</span><i id="scale-bar"></i><span>100 °C</span></p>
+        </div>
+      </div>
+      <figcaption class="fig-caption">Zjednodušeno do roviny. Skutečné pole v troubě je trojrozměrné a složitější, ale horká a studená místa v něm vznikají stejně. Čas na displeji běží osmkrát rychleji. Detail s molekulami je naopak zpomalený několikamiliardkrát.</figcaption>
+    </figure>
+
+    <section class="sec" aria-labelledby="h-voda">
+      <div class="prose">
+        <h2 id="h-voda">Molekula vody má dva konce</h2>
+        <p>Molekula vody není elektricky souměrná. Kyslík si přitahuje elektrony o něco víc, takže jeho konec je mírně záporný a konec s vodíky mírně kladný. V elektrickém poli se proto molekula natočí, podobně jako střelka kompasu v poli magnetickém.</p>
+        <p>Mikrovlna je elektrické pole, které pořád mění směr. V troubě se otočí tam a zpět 2,45miliardkrát za sekundu. Molekuly vody se ho snaží následovat, ale nestíhají, protože jim v tom překážejí sousedky. Strkají do nich a rozhýbávají je. A neuspořádaný pohyb molekul <span class="hl">je teplo.</span></p>
+        <p>Stejně, i když slaběji, reagují tuky a cukry. Sklo, porcelán a většina plastů mikrovlny skoro nepohlcují. Hrnek se proto ohřeje hlavně od čaje, který je v něm.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Častý omyl</span>
+        <p>Trouba není naladěná na „rezonanci vody“. Voda pohlcuje mikrovlny v širokém rozsahu a nejlíp až kolem 20 GHz. Nižší frekvence je zvolená schválně: vlny se nepohltí hned na povrchu a dostanou se hlouběji do jídla.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-magnetron">
+      <div class="prose">
+        <h2 id="h-magnetron">Odkud se vlny berou</h2>
+        <p>Mikrovlny vyrábí magnetron, vakuová trubice velká asi jako pěst. Uprostřed má rozžhavenou katodu, ze které vyletují elektrony. Silný magnet je nutí kroužit dokola podél anody, do níž jsou vyfrézované dutinky. Elektrony je při průletu rozeznívají podobně, jako když fouknete přes hrdlo láhve. Jen místo zvuku vzniká rádiová vlna.</p>
+        <p>Z magnetronu vede vlny krátký kovový kanál, vlnovod, do komory. Její stěny jsou z plechu a vlny odrážejí jako zrcadlo světlo. Zůstávají uvnitř a létají od stěny ke stěně, dokud je nepohltí jídlo.</p>
+        <p>Výkonný magnetron vznikl za druhé světové války pro radary. Mikrovlnka je vlastně radar zavřený v plechové krabici.</p>
+      </div>
+      <aside class="note" aria-label="Mikrovlnka v číslech">
+        <span class="label">V číslech</span>
+        <dl class="facts">
+          <div><dt>2,45 GHz</dt><dd>frekvence mikrovln</dd></div>
+          <div><dt>12,2 cm</dt><dd>jejich vlnová délka</dd></div>
+          <div><dt>≈ 4 000 V</dt><dd>napětí, které magnetron potřebuje</dd></div>
+          <div><dt>800 W</dt><dd>typický výkon do jídla, ze zásuvky jde asi 1 200 W</dd></div>
+        </dl>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-talir">
+      <div class="prose">
+        <h2 id="h-talir">Proč se talíř točí</h2>
+        <p>Vlny odražené od stěn se v komoře potkávají. Někde se sečtou a pole tam kmitá naplno, jinde se navzájem vyruší a nekmitá skoro vůbec. Ta místa se nehýbou, říká se tomu stojaté vlnění. Horká místa jsou od sebe zhruba půl vlnové délky, tedy asi 6 centimetrů.</p>
+        <p>Jídlo, které by v troubě jen leželo, by se tak ohřálo flekatě: kus by vřel a o tři centimetry vedle by zůstalo studené. Otočný talíř proto jídlo vozí skrz horká i studená místa, aby se každý kousek dostal na řadu. Dokonalé to není. Střed talíře se nikam neveze, a tak se jídlo vyplatí položit kousek od středu.</p>
+        <p>Horká místa si můžete změřit. Vyndejte otočný talíř, vložte na pevném talíři tabulku čokolády a zapněte troubu na pár sekund. Čokoláda začne tát ve skvrnách. Dvojnásobek jejich vzdálenosti je vlnová délka, a když ji vynásobíte frekvencí ze štítku trouby, vyjde vám <span class="hl">rychlost světla.</span></p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Přepněte talíř na Stojí, dejte Nové jídlo a Start. Po dvou minutách část jídla vře a část má pořád teplotu z ledničky.</p>
+        <p>Výpočet s čokoládou: <span class="num">2 × 0,06 m × 2 450 000 000 Hz ≈ 294 000 km/s.</span></p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-hloubka">
+      <div class="prose">
+        <h2 id="h-hloubka">Zevnitř to není</h2>
+        <p>Traduje se, že mikrovlnka ohřívá jídlo zevnitř. Není to pravda. Vlny pronikají do jídla jen jeden až tři centimetry a cestou slábnou, protože je voda pohlcuje. Doprostřed velkého kusu se teplo musí dostat obyčejným vedením, stejně jako v klasické troubě.</p>
+        <p>Rozdíl je jinde. V klasické troubě je horký vzduch a teplo jde do jídla jen přes povrch. V mikrovlnce se rovnou ohřívá vrstva tlustá pár centimetrů, a vzduch kolem zůstává studený. Proto je mikrovlnka rychlá a proto v ní nic nezezlátne: povrch jídla se nedostane přes 100 °C, dokud je v něm voda, a kůrka potřebuje teploty mnohem vyšší.</p>
+        <p>Návody radí nechat jídlo po ohřevu chvíli stát. Není to zdržování. Teplo se za tu dobu vedením rozleze z horkých míst do studených.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Rozmrazování</span>
+        <p>Led mikrovlny skoro nepohlcuje, protože jeho molekuly drží krystal a nemohou se otáčet. Jakmile ale kousek roztaje, začne se ohřívat naplno a okolní led za ním zaostává. Proto je maso z mikrovlnky na kraji uvařené a uprostřed zmrzlé.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-vykon">
+      <div class="prose">
+        <h2 id="h-vykon">Poloviční výkon neexistuje</h2>
+        <p>Magnetron běžné mikrovlnky umí jen dvě věci: vysílat naplno, nebo mlčet. Když nastavíte poloviční výkon, trouba ho střídavě zapíná a vypíná, třeba deset sekund ano a deset ne. Slyšíte to jako změnu bzučení.</p>
+        <p>Smysl to má. V pauzách se teplo stačí rozlézt z horkých míst dál, takže se jídlo ohřívá pomaleji, ale rovnoměrněji. Program na rozmrazování dělá přesně tohle, jen s delšími pauzami.</p>
+        <p>Dražší trouby s invertorem umějí výkon magnetronu opravdu plynule snížit.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Nastavte výkon 50 % a sledujte magnetron v obrázku. Polovinu času svítí, polovinu ne. Molekuly v detailu se v pauzách přestanou otáčet podle pole.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-dvirka">
+      <div class="prose">
+        <h2 id="h-dvirka">Proč vlny neutečou dvířky</h2>
+        <p>Ve skle dvířek je plech s dírkami o průměru jeden až dva milimetry. Vlna dlouhá 12 centimetrů se do tak malého otvoru „nevejde“ a plech se pro ni chová jako plná stěna. Světlo má vlnovou délku asi půl tisíciny milimetru, a tak dírkami projde bez potíží. Vy vidíte dovnitř, mikrovlny nevidí ven.</p>
+        <p>Trochu vln přece jen uniká, hlavně kolem těsnění. Norma dovoluje nejvýš 5 miliwattů na čtvereční centimetr ve vzdálenosti 5 centimetrů od trouby, což je hluboko pod hranicí, kdy by vás to mohlo znatelně ohřát. Dvířka navíc mají několik spínačů, které magnetron vypnou dřív, než se stačí otevřít.</p>
+        <p>Mikrovlny nejsou radioaktivita. Foton mikrovlny, tedy nejmenší možná dávka záření, nese asi dvěstětisíckrát méně energie než foton viditelného světla. Na rozbití chemické vazby zdaleka nestačí. Umí jen ohřívat. Jídlo po nich nezáří a ve chvíli, kdy trouba vypne, jsou vlny pryč.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Na okraj</span>
+        <p>Wi-Fi v pásmu 2,4 GHz vysílá skoro na stejné frekvenci. To málo, co z trouby unikne, proto někdy stačí na to, aby se vám během ohřívání oběda zasekalo video.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-nepatri">
+      <div class="prose">
+        <h2 id="h-nepatri">Co do mikrovlnky nepatří</h2>
+        <p>Kov s hranami a hroty: vidlička, zmačkaný alobal, zlatý proužek na hrnku. Pole se na ostrých místech zhustí natolik, že vzduchem přeskočí jiskra. Hladké kovové stěny trouby přitom nevadí, ty vlny jen odrážejí.</p>
+        <p>Nic. Když v troubě není jídlo, vlny nemá co pohltit a vracejí se zpátky do magnetronu, který se tím přehřívá.</p>
+        <p>Vejce ve skořápce a zavřené nádoby. Voda uvnitř se mění v páru, ta nemá kam uniknout a tlak nakonec skořápku nebo víčko roztrhne.</p>
+        <p>Pozor i na obyčejnou vodu v hladkém hrnku. Může se ohřát nad 100 °C, aniž začne vřít, protože bublinky nemají kde vzniknout. Když do ní pak nasypete kávu nebo ji jen zamícháte, vzkypí naráz.</p>
+      </div>
+    </section>
+
+    <section class="sec" aria-labelledby="h-historie">
+      <div class="prose">
+        <h2 id="h-historie">Tyčinka v kapse</h2>
+        <p>V roce 1945 zkoušel americký inženýr Percy Spencer ve firmě Raytheon magnetrony pro radary. Všiml si, že se mu v kapse rozpustila sladká tyčinka. Místo aby to přešel, poslal pro kukuřici a nechal ji u magnetronu vypukat. Vejce, které zkusil druhý den, vybuchlo kolegovi do obličeje.</p>
+        <p>První prodávaná trouba, Radarange z roku 1947, byla vysoká skoro jako člověk, vážila kolem 340 kilogramů a musela se chladit vodou. Do domácností se mikrovlnky dostaly až v sedmdesátých letech, když magnetrony zlevnily a zmenšily se.</p>
+      </div>
+    </section>
+
+    <footer class="art-foot">
+      <a class="next" href="../gps/" data-cat="technika">
+        <span class="label">Další článek · Technika</span>
+        <span class="t">Jak funguje GPS</span>
+        <p>Jak telefon zjistí, kde je, když do vesmíru nic neposílá.</p>
+      </a>
+      <a class="back" href="../">Všechna témata</a>
+    </footer>
+  </main>
+
+  <script>
+  (() => {
+    const NS = "http://www.w3.org/2000/svg";
+    function el(tag, attrs, parent) {
+      const n = document.createElementNS(NS, tag);
+      for (const k in attrs || {}) n.setAttribute(k, attrs[k]);
+      if (parent) parent.appendChild(n);
+      return n;
+    }
+    const svg = document.getElementById("oven");
+
+    /* ---------- model ---------- */
+    const UNIT = 14;                                  // jednotek SVG na centimetr
+    const CAV = { x: 40, y: 30, w: 476, h: 378 };     // komora 34 × 27 cm
+    const C = { x: 278, y: 219 };                     // střed otočného talíře
+    const R_FOOD = 140, CELL = 12;
+    const SPEED = 8;                                  // kolikrát rychleji běží čas v modelu
+    const RATE = 0.5;                                 // průměrný ohřev při plném výkonu, °C/s
+    const T0 = 5, T_MAX = 100;                        // z ledničky; nad 100 °C se voda mění v páru
+    const TURN = (2 * Math.PI) / 12;                  // talíř se otočí jednou za 12 s
+    const CYCLE = 16;                                 // délka cyklu zapnuto/vypnuto při nižším výkonu, s
+    const KAPPA = 0.0019;                             // vedení tepla mezi sousedními buňkami, 1/s
+    const COOK = 120, EXTRA = 60;
+
+    // stojaté vlnění: součet několika vidů obdélníkové komory
+    const MODES = [[0.7, 5, 4], [0.6, 4, 3], [0.4, 3, 5]];
+    function field(x, y) {
+      const u = (x - CAV.x) / CAV.w, v = (y - CAV.y) / CAV.h;
+      if (u <= 0 || u >= 1 || v <= 0 || v >= 1) return 0;
+      let e = 0;
+      for (const [a, m, n] of MODES) e += a * Math.sin(m * Math.PI * u) * Math.sin(n * Math.PI * v);
+      return e * e;
+    }
+
+    const cells = [];
+    const N = Math.ceil(R_FOOD / CELL);
+    for (let j = -N; j <= N; j++) for (let i = -N; i <= N; i++) {
+      const x = i * CELL, y = j * CELL;
+      if (Math.hypot(x, y) <= R_FOOD - 2) cells.push({ x, y, t: T0, nb: [], color: -1 });
+    }
+    const byKey = new Map(cells.map((c) => [`${c.x},${c.y}`, c]));
+    cells.forEach((c) => {
+      [[CELL, 0], [-CELL, 0], [0, CELL], [0, -CELL]].forEach(([dx, dy]) => {
+        const n = byKey.get(`${c.x + dx},${c.y + dy}`);
+        if (n) c.nb.push(n);
+      });
+    });
+    const fieldMean = cells.reduce((sum, c) => sum + field(C.x + c.x, C.y + c.y), 0) / cells.length;
+
+    const s = { running: false, done: false, remain: COOK, rot: true, power: 1, theta: 0, clock: 0, diff: 0 };
+    const emitting = () => s.running && (s.power >= 1 || s.clock % CYCLE < CYCLE * s.power);
+
+    function step(h) {
+      if (s.running) {
+        const on = emitting();
+        s.clock += h;
+        s.remain -= h;
+        if (s.rot) s.theta += TURN * h;
+        if (on) {
+          const cos = Math.cos(s.theta), sin = Math.sin(s.theta);
+          const k = (RATE * h) / fieldMean;
+          for (const c of cells) {
+            const i = field(C.x + c.x * cos - c.y * sin, C.y + c.x * sin + c.y * cos);
+            c.t = Math.min(T_MAX, c.t + k * i);
+          }
+        }
+        if (s.remain <= 0) {
+          s.running = false;
+          s.done = true;
+          s.remain = EXTRA;
+          const st = stats();
+          s.diff = Math.round(st.max) - Math.round(st.min);
+        }
+      }
+      // vedení tepla běží pořád, i když je trouba vypnutá
+      for (const c of cells) {
+        let d = 0;
+        for (const n of c.nb) d += n.t - c.t;
+        c.next = c.t + KAPPA * h * d;
+      }
+      for (const c of cells) c.t = c.next;
+    }
+
+    function stats() {
+      let min = Infinity, max = -Infinity, sum = 0;
+      for (const c of cells) { if (c.t < min) min = c.t; if (c.t > max) max = c.t; sum += c.t; }
+      return { min, max, avg: sum / cells.length };
+    }
+
+    /* ---------- barvy teploty ---------- */
+    const STOPS = [[5, [47, 86, 176]], [28, [111, 176, 220]], [45, [239, 233, 207]], [62, [243, 189, 69]], [80, [229, 98, 31]], [100, [168, 24, 29]]];
+    const STEPS = 48;
+    const rgbAt = (t) => {
+      let k = 1;
+      while (k < STOPS.length - 1 && t > STOPS[k][0]) k++;
+      const [t0, a] = STOPS[k - 1], [t1, b] = STOPS[k];
+      const f = Math.max(0, Math.min(1, (t - t0) / (t1 - t0)));
+      return `rgb(${a.map((v, i) => Math.round(v + (b[i] - v) * f)).join(",")})`;
+    };
+    const PALETTE = Array.from({ length: STEPS }, (_, i) => rgbAt(T0 + ((T_MAX - T0) * i) / (STEPS - 1)));
+    const colorIndex = (t) => Math.round(((t - T0) / (T_MAX - T0)) * (STEPS - 1));
+    document.getElementById("scale-bar").style.background = `linear-gradient(90deg, ${STOPS.map(([t, c]) => `rgb(${c.join(",")}) ${(((t - T0) / (T_MAX - T0)) * 100).toFixed(0)}%`).join(", ")})`;
+
+    /* ---------- kresba trouby ---------- */
+    el("rect", { x: 20, y: 14, width: 680, height: 412, rx: 6, class: "casing" }, svg);
+    el("rect", { x: CAV.x, y: CAV.y, width: CAV.w, height: CAV.h, class: "cavity" }, svg);
+
+    // pole kreslíme dvakrát: jako skvrny na dně komory a jako tečky přes jídlo
+    const fieldG = el("g", { class: "field-layer" }, svg);
+    const dots = [];
+    {
+      const cols = 28, rowsN = 22, w = CAV.w / cols, h = CAV.h / rowsN;
+      let peak = 0;
+      const vals = [];
+      for (let r = 0; r < rowsN; r++) for (let c = 0; c < cols; c++) {
+        const v = field(CAV.x + (c + 0.5) * w, CAV.y + (r + 0.5) * h);
+        vals.push(v);
+        peak = Math.max(peak, v);
+      }
+      vals.forEach((v, k) => {
+        const o = (v / peak) * 0.5;
+        if (o < 0.02) return;
+        if (v / peak > 0.18) dots.push([CAV.x + ((k % cols) + 0.5) * w, CAV.y + (Math.floor(k / cols) + 0.5) * h, 0.9 + 3.6 * (v / peak)]);
+        el("rect", { x: (CAV.x + (k % cols) * w).toFixed(1), y: (CAV.y + Math.floor(k / cols) * h).toFixed(1), width: (w + 0.3).toFixed(1), height: (h + 0.3).toFixed(1), class: "spot", opacity: o.toFixed(2) }, fieldG);
+      });
+    }
+
+    // dvířka s mřížkou, vlnovod, magnetron, displej
+    el("rect", { x: CAV.x, y: 408, width: CAV.w, height: 14, class: "door" }, svg);
+    el("line", { x1: CAV.x + 6, y1: 415, x2: CAV.x + CAV.w - 6, y2: 415, class: "mesh" }, svg);
+    el("rect", { x: 516, y: 150, width: 34, height: 50, class: "guide" }, svg);
+    const mag = el("g", {}, svg);
+    el("rect", { x: 550, y: 118, width: 116, height: 114, rx: 4, class: "mag" }, mag);
+    for (let y = 130; y <= 220; y += 10) el("line", { x1: 558, y1: y, x2: 658, y2: y, class: "mag-fin" }, mag);
+    el("circle", { cx: 608, cy: 175, r: 24, class: "mag-core" }, mag);
+    const ripples = [16, 32, 48].map((r) => el("path", { d: `M516 ${175 - r} A${r} ${r} 0 0 0 516 ${175 + r}`, class: "ripple" }, svg));
+    el("rect", { x: 550, y: 300, width: 116, height: 54, rx: 4, class: "lcd" }, svg);
+    const lcd = el("text", { x: 608, y: 338, class: "lcd-text" }, svg);
+
+    // otočný talíř a jídlo
+    const table = el("g", {}, svg);
+    el("circle", { cx: C.x, cy: C.y, r: 172, class: "glass" }, table);
+    el("path", { d: `M${C.x - 7} ${C.y - 172} L${C.x + 7} ${C.y - 172} L${C.x} ${C.y - 160} Z`, class: "notch" }, table);
+    el("circle", { cx: C.x, cy: C.y, r: 156, class: "plate" }, table);
+    const foodG = el("g", {}, table);
+    cells.forEach((c) => {
+      c.node = el("rect", { x: C.x + c.x - CELL / 2 - 0.3, y: C.y + c.y - CELL / 2 - 0.3, width: CELL + 0.6, height: CELL + 0.6 }, foodG);
+    });
+    el("circle", { cx: C.x, cy: C.y, r: 1.6, class: "notch" }, table);
+    const stippleG = el("g", { class: "field-layer" }, svg);
+    dots.forEach(([x, y, r]) => {
+      if (Math.hypot(x - C.x, y - C.y) < 150) el("circle", { cx: x.toFixed(1), cy: y.toFixed(1), r: r.toFixed(1), class: "stipple" }, stippleG);
+    });
+
+    const co = el("g", { class: "callout" }, svg);
+    el("text", { x: 608, y: 254, "text-anchor": "middle" }, co).textContent = "magnetron";
+    el("text", { x: 608, y: 376, "text-anchor": "middle" }, co).textContent = "zbývá";
+    el("text", { x: 278, y: 446, "text-anchor": "middle" }, co).textContent = "dvířka s mřížkou";
+    el("line", { x1: CAV.x, y1: 442, x2: CAV.x + 5 * UNIT, y2: 442 }, co);
+    el("line", { x1: CAV.x, y1: 437, x2: CAV.x, y2: 447 }, co);
+    el("line", { x1: CAV.x + 5 * UNIT, y1: 437, x2: CAV.x + 5 * UNIT, y2: 447 }, co);
+    el("text", { x: CAV.x + 5 * UNIT + 8, y: 446 }, co).textContent = "5 cm";
+
+    /* ---------- detail: molekuly vody ---------- */
+    const mols = document.getElementById("mols");
+    el("rect", { x: 0, y: 0, width: 200, height: 250, class: "detail-bg" }, mols);
+    el("line", { x1: 28, y1: 40, x2: 28, y2: 210, class: "e-axis" }, mols);
+    el("text", { x: 28, y: 24, class: "e-label" }, mols).textContent = "pole";
+    const eArrow = el("g", { class: "e-arrow" }, mols);
+    const eLine = el("line", { x1: 28, y1: 125, x2: 28 }, eArrow);
+    const eHead = el("path", {}, eArrow);
+    const eOff = el("text", { x: 28, y: 236, class: "e-label" }, mols);
+    eOff.textContent = "vypnuté";
+    const molecules = [[86, 52], [152, 76], [102, 122], [164, 148], [84, 190], [146, 212]].map(([x, y], i) => {
+      const g = el("g", {}, mols);
+      el("circle", { cx: -11.9, cy: -9.2, r: 6.8, class: "mol-h" }, g);
+      el("circle", { cx: 11.9, cy: -9.2, r: 6.8, class: "mol-h" }, g);
+      el("circle", { cx: 0, cy: 2, r: 11.5, class: "mol-o" }, g);
+      el("text", { x: 0, y: 2.5, class: "mol-sign o" }, g).textContent = "−";
+      el("text", { x: -11.9, y: -9, class: "mol-sign h" }, g).textContent = "+";
+      el("text", { x: 11.9, y: -9, class: "mol-sign h" }, g).textContent = "+";
+      return { g, x, y, phi: (i * 2.1) % 6.28, p1: i * 1.7, p2: i * 2.9, f1: 9 + i * 1.3, f2: 11 - i * 0.8 };
+    });
+
+    function renderMolecules(dt, e, heat) {
+      const amp = 0.7 + 4.2 * heat;
+      molecules.forEach((m) => {
+        // moment síly táhne kladný konec ve směru pole; srážky se sousedy přidávají náhodné postrčení
+        m.phi += -7 * e * Math.sin(m.phi) * dt + (Math.random() - 0.5) * (1.2 + 5 * heat) * Math.sqrt(dt);
+        m.p1 += m.f1 * (1 + heat) * dt;
+        m.p2 += m.f2 * (1 + heat) * dt;
+        const x = m.x + amp * Math.sin(m.p1), y = m.y + amp * Math.cos(m.p2);
+        m.g.setAttribute("transform", `translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${((m.phi * 180) / Math.PI).toFixed(1)})`);
+      });
+      const show = Math.abs(e) > 0.08;
+      eArrow.setAttribute("visibility", show ? "visible" : "hidden");
+      eOff.setAttribute("visibility", e === 0 ? "visible" : "hidden");
+      if (show) {
+        const tip = 125 - 72 * e, dir = Math.sign(e);
+        eLine.setAttribute("y2", (tip + dir * 10).toFixed(1));
+        eHead.setAttribute("d", `M28 ${tip.toFixed(1)} L20 ${(tip + dir * 14).toFixed(1)} L36 ${(tip + dir * 14).toFixed(1)} Z`);
+      }
+    }
+
+    /* ---------- výpis ---------- */
+    const fmt0 = new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 0 });
+    const deg = (v) => `${fmt0.format(Math.round(v))} °C`;
+    const cache = new WeakMap();
+    function put(node, str, html) {
+      if (cache.get(node) === str) return;
+      cache.set(node, str);
+      if (html) node.innerHTML = str; else node.textContent = str;
+    }
+    const statusEl = document.getElementById("status");
+    const chips = ["st-min", "st-avg", "st-max"].map((id) => document.getElementById(id));
+    const startBtn = document.getElementById("start");
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    function render() {
+      const st = stats();
+      const on = emitting();
+
+      cells.forEach((c) => {
+        const k = colorIndex(c.t);
+        if (k !== c.color) { c.color = k; c.node.setAttribute("fill", PALETTE[k]); }
+      });
+      // při omezeném pohybu se díváme „z talíře“: jídlo stojí, výsledek je stejný
+      if (!reduced) table.setAttribute("transform", `rotate(${(((s.theta * 180) / Math.PI) % 360).toFixed(1)} ${C.x} ${C.y})`);
+      mag.classList.toggle("emitting", on);
+
+      const sec = Math.max(0, Math.ceil(s.remain - 0.001));
+      put(lcd, `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`);
+
+      [st.min, st.avg, st.max].forEach((v, i) => {
+        put(chips[i].querySelector(".v"), deg(v));
+        chips[i].style.borderTopColor = PALETTE[colorIndex(v)];
+      });
+
+      let status;
+      if (s.done) {
+        status = s.diff >= 40
+          ? `<strong>Cink.</strong> Mezi nejteplejším a nejstudenějším místem je rozdíl ${s.diff} °C. Teplo se teď pomalu rozlézá vedením, proto se má jídlo nechat chvíli stát.`
+          : `<strong>Cink.</strong> Rozdíl mezi nejteplejším a nejstudenějším místem je ${s.diff} °C. Zbytek dorovná vedení tepla, když jídlo necháte chvíli stát.`;
+      } else if (!s.running && s.remain >= COOK) {
+        status = "Jídlo je rovnou z ledničky a všude má 5 °C. Zapněte troubu.";
+      } else if (!s.running) {
+        status = "<strong>Pozastaveno.</strong> Magnetron mlčí, teplo se v jídle jen pomalu rozlézá vedením.";
+      } else if (!on) {
+        status = `<strong>Magnetron má pauzu.</strong> Výkon ${Math.round(s.power * 100)} % znamená, že vysílá jen ${Math.round(s.power * 100)} % času, ale vždycky naplno.`;
+      } else if (s.rot) {
+        status = "<strong>Magnetron vysílá.</strong> Talíř vozí jídlo skrz horká i studená místa, takže se ohřívá skoro všude.";
+      } else {
+        status = "<strong>Magnetron vysílá.</strong> Talíř stojí, a tak horká místa pálí pořád do stejných kousků jídla.";
+      }
+      put(statusEl, status, true);
+      put(startBtn, s.running ? "Pauza" : s.done ? "Přidat minutu" : s.remain < COOK ? "Pokračovat" : "Start");
+    }
+
+    /* ---------- ovládání ---------- */
+    function bindSeg(id, apply) {
+      const seg = document.getElementById(id);
+      seg.addEventListener("click", (e) => {
+        const b = e.target.closest("button[data-v]");
+        if (!b) return;
+        seg.querySelectorAll("button").forEach((x) => x.setAttribute("aria-checked", String(x === b)));
+        apply(Number(b.dataset.v));
+        render();
+      });
+    }
+    bindSeg("plate-seg", (v) => { s.rot = v === 1; });
+    bindSeg("power-seg", (v) => { s.power = v; s.clock = 0; });
+    bindSeg("field-seg", (v) => [fieldG, stippleG].forEach((g) => g.classList.toggle("off", v === 0)));
+
+    startBtn.addEventListener("click", () => {
+      s.running = !s.running;
+      if (s.running) { s.done = false; s.clock = 0; }
+      render();
+    });
+    document.getElementById("reset").addEventListener("click", () => {
+      cells.forEach((c) => { c.t = T0; });
+      Object.assign(s, { running: false, done: false, remain: COOK, theta: 0, clock: 0 });
+      render();
+    });
+
+    let prev = performance.now(), wall = 0;
+    function frame(now) {
+      const dt = Math.min(0.1, (now - prev) / 1000);
+      prev = now;
+      wall += dt;
+      step(dt * SPEED);
+      render();
+      if (!reduced) {
+        const on = emitting();
+        renderMolecules(dt, on ? Math.cos((wall * 2 * Math.PI) / 1.8) : 0, (stats().avg - T0) / (T_MAX - T0));
+        ripples.forEach((r, i) => r.setAttribute("opacity", on ? (0.25 + 0.6 * Math.max(0, Math.sin(wall * 9 - i * 1.3))).toFixed(2) : "0"));
+      }
+      requestAnimationFrame(frame);
+    }
+    renderMolecules(0, 0, 0);
+    render();
+    requestAnimationFrame(frame);
+  })();
+  </script>
+</body>
+</html>
