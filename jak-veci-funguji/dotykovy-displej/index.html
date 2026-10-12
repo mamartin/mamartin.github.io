@@ -452,7 +452,7 @@
     }
     fingerG.forEach((fg, k) => {
       let dragging = false;
-      fg.handle.addEventListener("pointerdown", (e) => { dragging = true; fg.handle.setPointerCapture(e.pointerId); fg.handle.style.cursor = "grabbing"; e.stopPropagation(); });
+      fg.handle.addEventListener("pointerdown", (e) => { e.stopPropagation(); dragging = true; fg.handle.style.cursor = "grabbing"; try { fg.handle.setPointerCapture(e.pointerId); } catch (err) { /* ukazatel už není aktivní */ } });
       fg.handle.addEventListener("pointermove", (e) => {
         if (!dragging) return;
         const p = toMm(e);
@@ -471,15 +471,25 @@
         render();
       });
     });
-    // klepnutí na displej přesune bližší prst
-    svg.addEventListener("click", (e) => {
+    // stisk kdekoli na displeji přenese bližší prst hned a dál ho táhne
+    let pulling = -1;
+    svg.addEventListener("pointerdown", (e) => {
       const p = toMm(e);
       if (!p || p.x < 0 || p.y < 0 || p.x > W_MM || p.y > H_MM) return;
       const list = active();
-      const k = list.length > 1 && Math.hypot(list[1].x - p.x, list[1].y - p.y) < Math.hypot(list[0].x - p.x, list[0].y - p.y) ? 1 : 0;
-      s.fingers[k] = clamp(p);
+      pulling = list.length > 1 && Math.hypot(list[1].x - p.x, list[1].y - p.y) < Math.hypot(list[0].x - p.x, list[0].y - p.y) ? 1 : 0;
+      s.fingers[pulling] = clamp(p);
       render();
+      try { svg.setPointerCapture(e.pointerId); } catch (err) { /* ukazatel už není aktivní */ }
     });
+    svg.addEventListener("pointermove", (e) => {
+      if (pulling < 0) return;
+      const p = toMm(e);
+      if (p) { s.fingers[pulling] = clamp(p); render(); }
+    });
+    const release = () => { pulling = -1; };
+    svg.addEventListener("pointerup", release);
+    svg.addEventListener("pointercancel", release);
 
     // šum a postup skenování po řadách (zpomaleně)
     let prev = performance.now(), acc = 0;

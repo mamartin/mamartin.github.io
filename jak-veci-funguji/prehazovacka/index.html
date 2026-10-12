@@ -99,7 +99,7 @@
           <li><span class="n">Rychlost</span><span class="v" id="st-speed"></span></li>
         </ul>
       </div>
-      <figcaption class="fig-caption">Kolečka a řetěz jsou ve správném poměru, zadní kolo je kvůli místu nakreslené menší. Skutečná kazeta má koleček víc a leží vedle sebe, tady jsou vidět jako soustředné kruhy. Rychlost platí pro silniční kolo s obvodem kola 2,1 metru.</figcaption>
+      <figcaption class="fig-caption">Kolečka a řetěz jsou ve správném poměru, zadní kolo je kvůli místu nakreslené menší. Skutečná kazeta má koleček víc a leží vedle sebe, tady jsou vidět jako soustředné kruhy. Rychlost platí pro silniční kolo s obvodem kola 2,1 metru. Pohyb je pětkrát zpomalený, aby bylo vidět, jak řetěz běží.</figcaption>
     </figure>
 
     <section class="sec" aria-labelledby="h-proc">
@@ -209,6 +209,7 @@
     const A = { x: 250, y: 208 };            // osa zadního kola
     const B = { x: 660, y: 228 };            // osa klik
     const PULLEY = 15, CAGE = 66;
+    const SLOW = 0.2;                         // pohyb je zpomalený; ve skutečné rychlosti by řetěz na obrazovce jen blikal
     const s = { front: 1, rear: 4, cadence: 80, crank: 0, wheel: 0, chain: 0 };
 
     // všechny čtyři společné tečny dvou kružnic
@@ -363,7 +364,7 @@
       const dt = Math.min(0.1, (now - prev) / 1000);
       prev = now;
       if (!reduced) {
-        const turn = (s.cadence / 60) * 2 * Math.PI * dt;
+        const turn = (s.cadence / 60) * 2 * Math.PI * dt * SLOW;
         s.crank += turn;
         s.wheel += turn * (FRONT[s.front] / REAR[s.rear]);
         s.chain = (s.chain + turn * L.rf) % 12.7;
