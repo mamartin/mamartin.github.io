@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Jak počítač sčítá</title>
+  <meta name="description" content="Proč počítač zná jen nuly a jedničky, jak se z pěti jednoduchých součástek postaví sčítačka a co se stane, když se výsledek nevejde. Se sčítačkou, ve které si můžete přepínat jednotlivé bity.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700&display=swap">
+  <link rel="stylesheet" href="../style.css?v=5">
+  <style>
+    .add-stage { display: grid; gap: 1.5rem; }
+    .adder { border-collapse: separate; border-spacing: 3px; margin: 0 auto; font-family: var(--font-mono); }
+    .adder th { padding: 0 0.3rem; font-weight: 500; font-size: 0.72rem; color: var(--ink-3); text-align: center; white-space: nowrap; }
+    .adder th[scope="row"] { text-align: right; padding-right: 0.5rem; }
+    .adder td { padding: 0; text-align: center; }
+    .adder .val { padding-left: 0.6rem; text-align: left; font: 700 1.15rem var(--font-display); color: var(--ink); white-space: nowrap; min-width: 3.2rem; }
+    .bit { display: grid; place-items: center; width: 2.3rem; height: 2.3rem; border: 1px solid var(--ink); background: var(--surface); color: var(--ink); font: 600 1.05rem var(--font-mono); }
+    button.bit { cursor: pointer; padding: 0; border-radius: 0; }
+    button.bit[aria-pressed="true"], .bit.one { background: var(--ink); color: var(--paper); }
+    .bit.sum { border-color: var(--cat); }
+    .bit.sum.one { background: var(--cat); border-color: var(--cat); color: var(--paper); }
+    .bit.carry { width: 2.3rem; height: 1.5rem; border: 0; background: none; color: var(--ink-3); font-size: 0.85rem; }
+    .bit.carry.one { color: var(--hot); font-weight: 700; background: none; }
+    .adder .col-on .bit { outline: 3px solid var(--cat); outline-offset: 1px; }
+    .adder .col-on .bit.carry { outline: 0; }
+    .adder tr.rule td { height: 3px; background: var(--ink); }
+    .adder tr.rule td.none { background: none; }
+    .pickcol { cursor: pointer; background: none; border: 0; padding: 0.15rem 0; width: 100%; font: inherit; color: inherit; }
+    .col-on .pickcol { color: var(--cat); font-weight: 700; }
+    #gates { border: 1px solid var(--rule); background: var(--surface); }
+    .wire { fill: none; stroke: var(--ink-3); stroke-width: 2.5; stroke-linejoin: round; }
+    .wire.hot { stroke: var(--cat); stroke-width: 4; }
+    .gate { fill: var(--sunk); stroke: var(--ink); stroke-width: 1.5; }
+    .gate.hot { fill: var(--cat); }
+    .g-name { fill: var(--ink); font: 700 13px var(--font-display); text-anchor: middle; }
+    .g-name.hot { fill: var(--paper); }
+    .g-sub { fill: var(--ink-3); font: 500 10.5px var(--font-mono); text-anchor: middle; }
+    .g-sub.hot { fill: var(--paper); }
+    .pin { fill: var(--surface); stroke: var(--ink); stroke-width: 1.5; }
+    .pin.hot { fill: var(--ink); }
+    .pin-v { fill: var(--ink); font: 600 13px var(--font-mono); text-anchor: middle; }
+    .pin-v.hot { fill: var(--paper); }
+    .pin-n { fill: var(--ink-2); font: 500 11.5px var(--font-mono); }
+    .cap { fill: var(--ink-3); font: 500 11px var(--font-mono); letter-spacing: 0.08em; }
+    .dot { fill: var(--ink-3); }
+    .dot.hot { fill: var(--cat); }
+    @media (max-width: 46rem) {
+      .bit { width: 1.5rem; height: 1.8rem; font-size: 0.9rem; }
+      .bit.carry { width: 1.5rem; }
+      .adder { border-spacing: 2px; }
+      .adder th { font-size: 0.62rem; padding: 0 0.1rem; }
+      .adder th[scope="row"] { padding-right: 0.25rem; }
+      .adder .val { font-size: 1rem; padding-left: 0.35rem; min-width: 2.4rem; }
+      .g-name { font-size: 17px; } .g-sub, .pin-n, .cap { font-size: 14.5px; } .pin-v { font-size: 16px; }
+    }
+  </style>
+</head>
+<body data-cat="technika">
+  <header class="topbar">
+    <div class="wrap">
+      <a class="brand" href="../">Jak věci fungují</a>
+      <nav class="crumbs" aria-label="Drobečková navigace"><a href="../#technika">Technika</a><span aria-hidden="true">/</span><span>Jak počítač sčítá</span></nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <header class="art-head">
+      <p class="eyebrow">Technika</p>
+      <h1 class="display">Jak počítač sčítá</h1>
+      <p class="lede">Procesor neumí skoro nic. Umí se zeptat, jestli jsou dva dráty pod proudem oba, aspoň jeden, nebo právě jeden. Z těchhle tří otázek, položených miliardkrát za sekundu, je poskládané všechno ostatní. Začíná to sčítáním.</p>
+    </header>
+
+    <section class="tldr" aria-labelledby="h-zkratka">
+      <h2 class="label" id="h-zkratka">Ve zkratce</h2>
+      <ul>
+        <li>Počítač píše čísla jen nulami a jedničkami, protože drát buď pod proudem je, nebo není.</li>
+        <li><span class="hl">Sčítá stejně jako my na papíře: sloupec po sloupci zprava a s přenosem do dalšího.</span></li>
+        <li>Na jeden sloupec stačí pět jednoduchých součástek. Když se jich seřadí osm nebo šedesát čtyři vedle sebe, sečtou jakkoli velká čísla.</li>
+      </ul>
+    </section>
+
+    <figure class="fig" id="obr1">
+      <div class="fig-head">
+        <p class="fig-num"><b>Obr. 1</b> Osmibitová sčítačka</p>
+        <span class="label">Klikáním přepínejte bity a vyberte sloupec, do kterého chcete nahlédnout</span>
+      </div>
+      <div class="fig-stage add-stage">
+        <table class="adder" id="adder" aria-label="Dvě čísla zapsaná ve dvojkové soustavě a jejich součet"></table>
+        <svg id="gates" viewBox="0 0 720 300" role="img" aria-label="Zapojení pěti hradel, která sečtou jeden sloupec"></svg>
+      </div>
+      <div class="fig-controls">
+        <button type="button" class="btn" id="inc">Přičíst k A jedničku</button>
+        <button type="button" class="btn ghost" id="rnd">Náhodná čísla</button>
+        <button type="button" class="btn ghost" id="zero">Vynulovat</button>
+      </div>
+      <div class="fig-status">
+        <p class="status" id="status" aria-live="polite"></p>
+      </div>
+      <figcaption class="fig-caption">Nahoře dvě čísla A a B a jejich součet, každé zapsané osmi bity. Číslo nad sloupcem říká, kolik jednička na tom místě znamená. Červené jedničky v horním řádku jsou přenosy z vedlejšího sloupce. Dole je zapojení, které sčítá vybraný sloupec. Tlusté barevné dráty jsou pod proudem, tedy jednička.</figcaption>
+    </figure>
+
+    <section class="sec" aria-labelledby="h-dve">
+      <div class="prose">
+        <h2 id="h-dve">Proč jen dvě číslice</h2>
+        <p>My počítáme v desítkové soustavě, protože máme deset prstů. Počítač je z tranzistorů a tranzistor je vypínač. Proud jím buď teče, nebo neteče. Dva stavy se dají rozlišit spolehlivě i tehdy, když napětí trochu kolísá. Rozlišit jich deset by šlo taky, ale každé zakolísání by mohlo udělat z pětky šestku.</p>
+        <p>Počítač si proto vystačí se dvěma číslicemi, nulou a jedničkou. Jedné takové číslici se říká bit.</p>
+        <p>Čísla se z nich skládají stejně jako z našich deseti číslic, jen místa mají jinou cenu. V desítkové soustavě znamenají číslice zprava jednotky, desítky, stovky. Ve dvojkové jedničky, dvojky, čtyřky, osmičky a tak dál, pokaždé dvojnásobek. Číslo 13 je osm plus čtyři plus jedna, a píše se tedy 1101.</p>
+      </div>
+      <aside class="note" aria-label="Dvojková soustava v číslech">
+        <span class="label">V číslech</span>
+        <dl class="facts">
+          <div><dt>255</dt><dd>je největší číslo, které se vejde do osmi bitů</dd></div>
+          <div><dt>5</dt><dd>hradel stačí na sečtení jednoho sloupce</dd></div>
+          <div><dt>desítky miliard</dt><dd>tranzistorů má dnešní procesor</dd></div>
+        </dl>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-papir">
+      <div class="prose">
+        <h2 id="h-papir">Sčítání jako na papíře</h2>
+        <p>Ve škole jste se učili sčítat pod sebou. Začne se vpravo, sečtou se dvě číslice, a když vyjde víc než devět, napíše se jen poslední číslice a jednička se přenese do dalšího sloupce.</p>
+        <p>Ve dvojkové soustavě je to stejné, jen se přenáší dřív. Největší číslice je jednička, a tak už jedna a jedna dá víc, než se do sloupce vejde. Pravidla jsou čtyři:</p>
+        <p>Nula a nula je nula. Nula a jedna je jedna. Jedna a jedna je nula a jedna jde dál. A když k tomu přijde ještě přenos zprava, je jedna a jedna a jedna rovno jedné a jedna jde dál.</p>
+        <p><span class="hl">Víc toho počítač k sčítání znát nemusí.</span> Na rozdíl od malé násobilky se to dá postavit z vypínačů.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Vynulujte obě čísla a mačkejte Přičíst k A jedničku. Uvidíte, jak se počítá dvojkově: pravý bit se střídá pokaždé, druhý každé dva kroky, třetí každé čtyři.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-hradla">
+      <div class="prose">
+        <h2 id="h-hradla">Tři otázky</h2>
+        <p>Z tranzistorů se skládají hradla. Hradlo je součástka se dvěma vstupními dráty a jedním výstupním, která odpovídá na jednoduchou otázku.</p>
+        <p>První hradlo se ptá: jsou pod proudem oba vstupy? Postaví se ze dvou vypínačů za sebou, proud projde, jen když jsou sepnuté oba. Druhé se ptá: je pod proudem aspoň jeden? To jsou dva vypínače vedle sebe. Třetí se ptá: je pod proudem právě jeden? To je o něco složitější, ale skládá se z předchozích.</p>
+        <p>A teď se podívejte na pravidla sčítání. Co se má napsat do sloupce, když sčítám dva bity? Jednička, když je jedničkou právě jeden z nich. A kdy jde jednička dál? Když jsou jedničky oba. Hradla tedy sčítají, aniž by o číslech cokoli věděla.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Vyberte pravý sloupec a přepínejte jeho bity v A a B. Sledujte dolní obrázek: hradlo Právě jeden dává součet, hradlo Oba dává přenos. Pak nastavte v obou číslech jedničku i o sloupec vedle a podívejte se na něj.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-retez">
+      <div class="prose">
+        <h2 id="h-retez">Řetěz sloupců</h2>
+        <p>Každý sloupec kromě pravého musí sečíst tři bity: jeden z prvního čísla, jeden z druhého a přenos, který přišel zprava. Dělá to nadvakrát. Nejdřív sečte první dva, pak k výsledku přičte přenos. Jednička jde dál, když se přeneslo při prvním nebo při druhém sčítání. Dohromady je to pět hradel.</p>
+        <p>Takových obvodů se postaví řada vedle sebe, pro každý sloupec jeden, a přenos z každého se zapojí do sousedního vlevo. Osm jich sečte čísla do 255, šedesát čtyři čísla o dvaceti cifrách.</p>
+        <p>Má to jednu slabinu. Levý sloupec nemůže dát výsledek, dokud neví, jestli k němu dojde přenos, a ten někdy musí proběhnout celou řadou. Opravdové procesory proto používají chytřejší zapojení, která přenosy odhadnou předem pro několik sloupců najednou. Princip se nemění.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Nastavte A na 01111111, tedy 127, a B na 00000001. Jediná jednička spustí přenos, který proběhne všemi sloupci až na levý kraj.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-preteceni">
+      <div class="prose">
+        <h2 id="h-preteceni">Když se výsledek nevejde</h2>
+        <p>Sčítačka má pevný počet sloupců. Když se součet do nich nevejde, přenos z levého kraje nemá kam jít a ztratí se. V osmi bitech je 255 plus 1 rovno nule, jako když tachometr starého auta přetočí samé devítky.</p>
+        <p>Říká se tomu přetečení a občas je vidět i navenek. Stará hra Pac-Man si číslo úrovně pamatovala v osmi bitech. Kdo se dostal do úrovně 256, uviděl obrazovku z půlky rozsypanou do nesmyslných znaků a hra se nedala dohrát.</p>
+        <p>V roce 2014 muselo YouTube předělat počítadlo zhlédnutí. Jedno video se blížilo k číslu 2 147 483 647, největšímu, které se vejde do 32 bitů se znaménkem. Dnes má počítadlo bitů 64 a stačilo by, i kdyby se na video díval každý člověk na Zemi každou sekundu po desítky let.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Nastavte v A samé jedničky, to je 255, a přičtěte jedničku. Součet potřebuje devátý bit, který osmibitová sčítačka nemá. V osmi bitech zbudou samé nuly.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-vsechno">
+      <div class="prose">
+        <h2 id="h-vsechno">Všechno ostatní je sčítání</h2>
+        <p>Odčítat procesor zvlášť neumí a nepotřebuje to. Záporné číslo si zapíše tak, aby jeho přičtením vyšlo totéž co odečtením, a použije stejnou sčítačku. Násobení je opakované sčítání s posouváním, stejně jako když násobíte pod sebou na papíře. Dělení je opakované odčítání.</p>
+        <p>A všechno ostatní, co počítač dělá, jsou čísla. Písmeno je číslo, barva bodu na <a href="../lcd-oled/">displeji</a> jsou tři čísla, zvuk je dlouhá řada čísel. Zesvětlit fotku znamená ke každému bodu něco přičíst. Posunout postavu ve hře znamená přičíst k její poloze rychlost.</p>
+        <p>Sčítačka zabere z procesoru nepatrný kousek, pár set hradel z miliard. Zbytek jsou paměť a obvody, které rozhodují, co se má sečíst s čím a kam uložit výsledek. I ty jsou ale postavené ze stejných tří otázek.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Na okraj</span>
+        <p>Že se dá logika zapsat jako počítání s nulami a jedničkami, vymyslel v polovině 19. století anglický matematik George Boole. Že se takové počítání dá postavit z vypínačů, ukázal v roce 1937 Claude Shannon ve své diplomové práci. Bylo mu jednadvacet.</p>
+      </aside>
+    </section>
+
+    <footer class="art-foot">
+      <a class="next" href="../abs/" data-cat="doprava">
+        <span class="label">Další článek · Doprava</span>
+        <span class="t">Jak fungují brzdy s ABS</span>
+        <p>Proč zablokované kolo brzdí hůř a proč ABS uprostřed brzdění povoluje.</p>
+      </a>
+      <a class="back" href="../">Všechna témata</a>
+    </footer>
+  </main>
+
+  <script>
+  (() => {
+    const NS = "http://www.w3.org/2000/svg";
+    function el(tag, attrs, parent) {
+      const n = document.createElementNS(NS, tag);
+      for (const k in attrs || {}) n.setAttribute(k, attrs[k]);
+      if (parent) parent.appendChild(n);
+      return n;
+    }
+    const $ = (id) => document.getElementById(id);
+    const BITS = 8;
+    const s = { a: 13, b: 7, col: 0 };          // col 0 je pravý sloupec
+    const bit = (n, i) => (n >> i) & 1;
+
+    // sečte sloupec po sloupci zprava; vrací pro každý sloupec přenos, který do něj přišel, a součet
+    function add() {
+      const rows = [];
+      let carry = 0;
+      for (let i = 0; i < BITS; i++) {
+        const a = bit(s.a, i), b = bit(s.b, i), p = a ^ b;
+        rows.push({ a, b, cin: carry, p, sum: p ^ carry, g: a & b, h: p & carry, cout: (a & b) | (p & carry) });
+        carry = rows[i].cout;
+      }
+      return { rows, out: carry };
+    }
+
+    /* ---------- tabulka ---------- */
+    function renderTable(r) {
+      const cols = [...Array(BITS).keys()].reverse(), on = (i) => (i === s.col ? ' class="col-on"' : "");
+      const head = `<tr><th></th><th></th>${cols.map((i) => `<th scope="col"${on(i)}><button type="button" class="pickcol" data-col="${i}" aria-label="Ukázat sloupec s hodnotou ${1 << i}">${1 << i}</button></th>`).join("")}<th></th></tr>`;
+      const carry = `<tr><th scope="row">přenos</th><td><span class="bit carry${r.out ? " one" : ""}">${r.out || ""}</span></td>${cols.map((i) => `<td${on(i)}><span class="bit carry${r.rows[i].cin ? " one" : ""}">${r.rows[i].cin || ""}</span></td>`).join("")}<td></td></tr>`;
+      const row = (name, n) => `<tr><th scope="row">${name}</th><td></td>${cols.map((i) => `<td${on(i)}><button type="button" class="bit" data-row="${name.toLowerCase()}" data-i="${i}" aria-pressed="${bit(n, i) === 1}" aria-label="${name}, bit s hodnotou ${1 << i}">${bit(n, i)}</button></td>`).join("")}<td class="val">${n}</td></tr>`;
+      const rule = `<tr class="rule"><td class="none"></td><td></td>${cols.map(() => "<td></td>").join("")}<td class="none"></td></tr>`;
+      const total = s.a + s.b;
+      const sum = `<tr><th scope="row">součet</th><td><span class="bit sum${r.out ? " one" : ""}">${r.out}</span></td>${cols.map((i) => `<td${on(i)}><span class="bit sum${r.rows[i].sum ? " one" : ""}">${r.rows[i].sum}</span></td>`).join("")}<td class="val">${total}</td></tr>`;
+      $("adder").innerHTML = head + carry + row("A", s.a) + row("B", s.b) + rule + sum;
+    }
+
+    /* ---------- hradla ---------- */
+    const svg = $("gates");
+    function renderGates(c) {
+      svg.textContent = "";
+      el("text", { x: 20, y: 22, class: "cap" }, svg).textContent = `UVNITŘ SLOUPCE S HODNOTOU ${1 << s.col}`;
+      const wire = (d, v) => el("path", { d, class: `wire${v ? " hot" : ""}` }, svg);
+      const dot = (x, y, v) => el("circle", { cx: x, cy: y, r: 4.5, class: `dot${v ? " hot" : ""}` }, svg);
+      // dráty
+      wire("M52 70H200", c.a); wire("M150 70V175H200", c.a);
+      wire("M52 100H200", c.b); wire("M172 100V205H200", c.b);
+      wire("M52 262H380V115H400", c.cin); wire("M380 210H400", c.cin);
+      wire("M330 85H365V95H400", c.p); wire("M365 95V190H400", c.p);
+      wire("M530 105H668", c.sum);
+      wire("M330 190H346V244H528V232H545", c.g);
+      wire("M530 200H538V212H545", c.h);
+      wire("M660 222H668", c.cout);
+      dot(150, 70, c.a); dot(172, 100, c.b); dot(380, 210, c.cin); dot(365, 95, c.p);
+      // hradla
+      const gate = (x, y, w, name, sub, v) => {
+        el("rect", { x, y, width: w, height: 60, rx: 6, class: `gate${v ? " hot" : ""}` }, svg);
+        el("text", { x: x + w / 2, y: y + 27, class: `g-name${v ? " hot" : ""}` }, svg).textContent = name;
+        el("text", { x: x + w / 2, y: y + 45, class: `g-sub${v ? " hot" : ""}` }, svg).textContent = sub;
+      };
+      gate(200, 55, 130, "PRÁVĚ JEDEN", "z A a B", c.p);
+      gate(200, 160, 130, "OBA", "A i B", c.g);
+      gate(400, 75, 130, "PRÁVĚ JEDEN", "s přenosem", c.sum);
+      gate(400, 170, 130, "OBA", "s přenosem", c.h);
+      gate(545, 192, 115, "ASPOŇ JEDEN", "přenos dál", c.cout);
+      // vstupy a výstupy
+      const pin = (x, y, v, name, side) => {
+        el("circle", { cx: x, cy: y, r: 13, class: `pin${v ? " hot" : ""}` }, svg);
+        el("text", { x, y: y + 4.5, class: `pin-v${v ? " hot" : ""}` }, svg).textContent = v;
+        el("text", { x: side === "right" ? x : x + 20, y: side === "right" ? y - 20 : y - 16, class: "pin-n", "text-anchor": side === "right" ? "middle" : "start" }, svg).textContent = name;
+      };
+      pin(40, 70, c.a, "bit z A"); pin(40, 100, c.b, ""); pin(40, 262, c.cin, "přenos zprava");
+      el("text", { x: 60, y: 122, class: "pin-n" }, svg).textContent = "bit z B";
+      pin(682, 105, c.sum, "součet", "right"); pin(682, 222, c.cout, "dál", "right");
+    }
+
+    function render() {
+      const r = add(), c = r.rows[s.col], total = s.a + s.b;
+      renderTable(r);
+      renderGates(c);
+      // nejdelší řada sloupců, kterou přenos proběhl
+      let run = 0, best = 0;
+      r.rows.forEach((q) => { run = q.cout ? run + 1 : 0; best = Math.max(best, run); });
+      const ones = c.a + c.b + c.cin;
+      const here = `Ve vybraném sloupci se sčítá ${[c.a, c.b].join(" a ")}${c.cin ? " a přenos 1" : ""}: ${["samé nuly, výsledek je 0", "jedna jednička, píše se 1", "dvě jedničky, píše se 0 a jedna jde dál", "tři jedničky, píše se 1 a jedna jde dál"][ones]}.`;
+      let lead;
+      if (r.out) lead = `<strong>Přeteklo.</strong> ${s.a} + ${s.b} = ${total}, a to se do osmi bitů nevejde. Poslední přenos nemá kam jít. Osmibitový počítač by ho zahodil a vyšlo by mu ${total - 256}.`;
+      else if (best >= 4) lead = `<strong>Přenos běží řadou.</strong> ${s.a} + ${s.b} = ${total}. Jednička se tu přenáší přes ${best} sloupce za sebou a každý z nich musí počkat na souseda vpravo.`.replace(/přes (\d+) sloupce/, (m, n) => (Number(n) > 4 ? `přes ${n} sloupců` : m));
+      else if (best === 0) lead = `<strong>Bez přenosu.</strong> ${s.a} + ${s.b} = ${total}. V žádném sloupci se nesešly dvě jedničky, a tak každý sloupec počítá sám za sebe.`;
+      else lead = `<strong>${s.a} + ${s.b} = ${total}.</strong> Kde se v jednom sloupci sejdou dvě jedničky, jde jednička do sloupce vlevo.`;
+      $("status").innerHTML = `${lead} ${here}`;
+    }
+
+    /* ---------- ovládání ---------- */
+    $("adder").addEventListener("click", (e) => {
+      const b = e.target.closest("button");
+      if (!b) return;
+      if (b.dataset.col !== undefined) s.col = Number(b.dataset.col);
+      else { const i = Number(b.dataset.i); s[b.dataset.row] ^= 1 << i; s.col = i; }
+      const key = b.dataset.col !== undefined ? `[data-col="${b.dataset.col}"]` : `[data-row="${b.dataset.row}"][data-i="${b.dataset.i}"]`;
+      render();
+      const again = $("adder").querySelector(`button${key}`);          // tabulka se překreslila, vrátíme fokus
+      if (again) again.focus();
+    });
+    $("inc").addEventListener("click", () => { s.a = (s.a + 1) % 256; render(); });
+    $("rnd").addEventListener("click", () => { s.a = Math.floor(Math.random() * 256); s.b = Math.floor(Math.random() * 256); render(); });
+    $("zero").addEventListener("click", () => { s.a = 0; s.b = 0; s.col = 0; render(); });
+    render();
+  })();
+  </script>
+</body>
+</html>

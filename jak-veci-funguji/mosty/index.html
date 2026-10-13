@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Jak drží most</title>
+  <meta name="description" content="Proč kamenný oblouk vydrží dva tisíce let, k čemu jsou na železničním mostě trojúhelníky a jak může silnice viset na laně. S mostem, po kterém si můžete projet náklaďákem a sledovat, kde se táhne a kde tlačí.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700&display=swap">
+  <link rel="stylesheet" href="../style.css?v=5">
+  <style>
+    #bridge { border: 1px solid var(--rule); background: var(--surface); }
+    .ground { fill: var(--sunk); stroke: var(--rule); stroke-width: 1; }
+    .river { fill: var(--cool); opacity: 0.22; }
+    .deck { stroke: var(--ink); stroke-width: 4; stroke-linecap: round; }
+    .idle { stroke: var(--ink-3); stroke-linecap: round; fill: none; }
+    .pull { stroke: var(--hot); stroke-linecap: round; fill: none; }
+    .push { stroke: var(--cold); stroke-linecap: round; fill: none; }
+    .joint { fill: var(--surface); stroke: var(--ink); stroke-width: 1.5; }
+    .truck { fill: var(--cat); }
+    .wheel { fill: var(--ink); }
+    .force line { stroke: var(--ink); stroke-width: 3; stroke-linecap: round; }
+    .force path { fill: var(--ink); }
+    .force text, .tag { fill: var(--ink); font: 600 12.5px var(--font-mono); paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
+    .legend { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; margin: 0; padding: 0; list-style: none; font-family: var(--font-mono); font-size: 0.75rem; color: var(--ink-2); }
+    .legend li { display: inline-flex; align-items: center; gap: 0.4rem; }
+    .legend i { width: 1.4rem; height: 4px; }
+    @media (max-width: 46rem) { .force text, .tag { font-size: 17px; } }
+  </style>
+</head>
+<body data-cat="doprava">
+  <header class="topbar">
+    <div class="wrap">
+      <a class="brand" href="../">Jak věci fungují</a>
+      <nav class="crumbs" aria-label="Drobečková navigace"><a href="../#doprava">Doprava</a><span aria-hidden="true">/</span><span>Jak drží most</span></nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <header class="art-head">
+      <p class="eyebrow">Doprava</p>
+      <h1 class="display">Jak drží most</h1>
+      <p class="lede">Most má jediný úkol: přenést tíhu toho, co po něm jede, někam na pevnou zem. Dá se to udělat jen dvěma způsoby, tahem a tlakem. Podle toho, kterým z nich most pracuje, vypadá jako trám, oblouk, mříž z trojúhelníků, nebo silnice zavěšená na laně.</p>
+    </header>
+
+    <section class="tldr" aria-labelledby="h-zkratka">
+      <h2 class="label" id="h-zkratka">Ve zkratce</h2>
+      <ul>
+        <li>Každou část mostu síla buď natahuje, nebo mačká. Kámen a beton snesou velký tlak a skoro žádný tah, ocelové lano naopak.</li>
+        <li><span class="hl">Tvar mostu určuje, jestli v něm vládne tah, nebo tlak.</span> Oblouk je celý stlačený, lano visutého mostu celé natažené.</li>
+        <li>Obyčejný trám je namáhaný obojím najednou a nejhůř. Proto se na velké rozpětí nehodí.</li>
+      </ul>
+    </section>
+
+    <figure class="fig" id="obr1">
+      <div class="fig-head">
+        <p class="fig-num"><b>Obr. 1</b> Čtyři mosty přes stejnou řeku</p>
+        <span class="label">Vyberte most a projeďte po něm náklaďákem</span>
+      </div>
+      <div class="fig-stage">
+        <svg id="bridge" viewBox="0 0 720 400" role="img" aria-label="Most přes řeku s náklaďákem; části mostu jsou obarvené podle toho, jestli jsou tažené, nebo tlačené"></svg>
+      </div>
+      <div class="fig-controls">
+        <div class="ctl">
+          <span class="label" id="lbl-type">Most</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-type" id="type-seg">
+            <button type="button" role="radio" data-v="beam" aria-checked="false">Trám</button>
+            <button type="button" role="radio" data-v="truss" aria-checked="true">Příhradový</button>
+            <button type="button" role="radio" data-v="arch" aria-checked="false">Oblouk</button>
+            <button type="button" role="radio" data-v="cable" aria-checked="false">Visutý</button>
+          </div>
+        </div>
+        <div class="ctl ctl-grow">
+          <label class="label" for="pos">Kde stojí náklaďák</label>
+          <div class="ctl-row">
+            <input type="range" id="pos" min="0" max="60" step="1" value="20">
+            <output class="val" id="pos-val" for="pos"></output>
+          </div>
+        </div>
+      </div>
+      <div class="fig-status split">
+        <div style="display:grid; gap:.6rem; min-width:0">
+          <p class="status" id="status" aria-live="polite"></p>
+          <ul class="legend" aria-hidden="true">
+            <li><i style="background:var(--hot)"></i>tah: síla část natahuje</li>
+            <li><i style="background:var(--cold)"></i>tlak: síla část mačká</li>
+          </ul>
+        </div>
+        <ul class="stats" aria-label="Stav modelu">
+          <li><span class="n">Levá podpora nese</span><span class="v" id="st-l"></span></li>
+          <li><span class="n">Pravá podpora nese</span><span class="v" id="st-r"></span></li>
+          <li><span class="n" id="st-x-n"></span><span class="v" id="st-x"></span></li>
+        </ul>
+      </div>
+      <figcaption class="fig-caption">Zjednodušený model mostu dlouhého 60 metrů s náklaďákem o váze 40 tun. Čím je čára silnější, tím větší síla tou částí prochází. Počítá se jen tíha náklaďáku, u visutého mostu i tíha mostovky, bez které by lano nedrželo tvar. Skutečný most nese hlavně sám sebe: jeho vlastní váha bývá mnohokrát větší než váha všeho, co po něm jede.</figcaption>
+    </figure>
+
+    <section class="sec" aria-labelledby="h-sily">
+      <div class="prose">
+        <h2 id="h-sily">Tah a tlak</h2>
+        <p>Vezměte do rukou gumu na vlasy a natáhněte ji. To je tah. Zmáčkněte mezi dlaněmi houbu na nádobí. To je tlak. Nic třetího se s materiálem dělat nedá, všechno ostatní je kombinace těch dvou.</p>
+        <p>Materiály se liší tím, co z toho vydrží. Kámen, cihla a beton snesou obrovský tlak. Sloup z žuly by mohl být vysoký kilometry, než by se spodní kámen rozdrtil. V tahu jsou ale slabé a prasknou. Ocelové lano je na tom obráceně. Unese v tahu desítky tun, a když na něj zatlačíte, ohne se.</p>
+        <p>Celé stavění mostů je proto hledání tvaru, ve kterém každý materiál dostane jen to namáhání, které snese.</p>
+      </div>
+      <aside class="note" aria-label="Mosty v číslech">
+        <span class="label">V číslech</span>
+        <dl class="facts">
+          <div><dt>16 oblouků</dt><dd>má Karlův most, stavět se začal roku 1357</dd></div>
+          <div><dt>330 m</dt><dd>měří ocelový oblouk Žďákovského mostu přes Vltavu</dd></div>
+          <div><dt>2 023 m</dt><dd>mezi věžemi má nejdelší visutý most světa, v Turecku</dd></div>
+        </dl>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-tram">
+      <div class="prose">
+        <h2 id="h-tram">Trám: obojí najednou</h2>
+        <p>Nejjednodušší most je kláda přes potok. Když na ni stoupnete, prohne se. Horní strana se přitom zkrátí a je stlačená, spodní se natáhne a je tažená. Uprostřed tloušťky je vrstva, která se nenatahuje ani nemačká a nenese skoro nic.</p>
+        <p>Je to nehospodárné. Pracují jen okraje trámu a nejvíc uprostřed rozpětí, zbytek materiálu se jen veze. A namáhání roste rychle: dvakrát delší trám se stejným nákladem se ohýbá dvakrát víc, a k tomu sám víc váží.</p>
+        <p>Kamenný trám navíc praskne na spodní, tažené straně už při malém rozpětí. Proto mají řecké chrámy sloupy tak hustě u sebe. Dnešní trámové mosty jsou z oceli nebo z betonu vyztuženého ocelí, která tah na spodní straně převezme, a mají tvar písmene I nebo dutého nosníku. Materiál je v nich jen nahoře a dole, kde pracuje.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Vyberte Trám a jezděte náklaďákem. Nejvíc se prohne, když je uprostřed. Horní okraj zmodrá, spodní zčervená a u podpor zůstává trám skoro bez barvy.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-oblouk">
+      <div class="prose">
+        <h2 id="h-oblouk">Oblouk: jen tlak</h2>
+        <p>Oblouk je tvar, ve kterém se tíha nepřenáší ohybem, ale stlačením. Každý kámen se opírá o sousední a tlačí ho šikmo dolů a do strany. Nikde v oblouku nevzniká tah, a tak může být z kamene nebo z cihel poskládaných na sebe.</p>
+        <p><span class="hl">Zátěž oblouk nerozevírá, ale ještě víc ho sevře.</span> Proto římské mosty stojí dva tisíce let a jezdí po nich auta, o jakých se jejich stavitelům nesnilo.</p>
+        <p>Má to cenu. Oblouk se nesnaží jen dolů, ale i do stran. Tlačí do břehů, jako když se rozkročíte na ledě a nohy vám ujíždějí od sebe. Potřebuje pevné opěry, skálu nebo mohutné zdivo. U mostu s řadou oblouků se sousední oblouky o sebe opřou a boční tlaky se navzájem vyruší, až na ty krajní.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Vyberte Oblouk. Celý je modrý, tedy stlačený. Šipky u břehů ukazují, kam oblouk tlačí: nejen dolů, ale i ven do stran. Boční tlak je největší, když náklaďák stojí uprostřed.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-prihrada">
+      <div class="prose">
+        <h2 id="h-prihrada">Příhrada: trám z trojúhelníků</h2>
+        <p>Když z trámu odstraníte všechen materiál, který nic nenese, zbude mříž. Horní pás, dolní pás a mezi nimi šikmé a svislé pruty, které je drží od sebe. Tomu se říká příhradová konstrukce.</p>
+        <p>Pruty jsou spojené do trojúhelníků, protože trojúhelník je jediný tvar, který se nedá zkosit, aniž by se některá strana natáhla nebo zkrátila. Čtverec z tyček se složí, trojúhelník drží.</p>
+        <p>V takové mříži se žádný prut neohýbá. Každý je buď čistě tažený, nebo čistě tlačený. Horní pás je stlačený jako horní strana trámu, dolní natažený jako spodní. Stejnou práci tak zastane zlomek oceli. Proto jsou z příhrad železniční mosty z 19. století, jeřáby, stožáry i Eiffelova věž.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Vyberte Příhradový a pomalu jeďte náklaďákem z jednoho břehu na druhý. Horní pás je pořád modrý a dolní červený. Šikmé pruty ale cestou mění barvu i sílu, protože podle polohy nákladu se některé natahují a jiné mačkají.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-visuty">
+      <div class="prose">
+        <h2 id="h-visuty">Visutý most: jen tah</h2>
+        <p>Visutý most je oblouk obrácený vzhůru nohama. Místo aby se kameny opíraly jeden o druhý, visí mostovka na laně. Lano je celé tažené, a to je namáhání, které ocel snáší nejlíp.</p>
+        <p>Dvě hlavní lana jsou přehozená přes vrcholy věží a na obou koncích ukotvená do země. Z nich visí svislé závěsy a na nich mostovka. Věže samy jsou stlačené, nesou váhu celého mostu. Lano netlačí do stran jako oblouk, ale táhne dovnitř. Kotvy na březích proto musejí být obrovské betonové bloky nebo skála.</p>
+        <p>Lano je lehké a ocel v tahu velmi pevná, a tak se takhle dají překlenout největší vzdálenosti. Nejdelší visuté mosty mají mezi věžemi přes dva kilometry. Jejich hlavní lana jsou spletená z desítek tisíc drátů a jsou silná skoro metr.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Vyberte Visutý. Lana a závěsy jsou červené, věže modré. Závěs přímo nad náklaďákem je nejsilnější. Šipky u kotev ukazují, že lano táhne kotvu nahoru a směrem k mostu.</p>
+        <span class="label">Na okraj</span>
+        <p>Zavěšené mosty, třeba Mariánský most v Ústí nad Labem, vypadají podobně, ale pracují jinak. Lana vedou šikmo rovnou z pylonu k mostovce a žádné kotvy v zemi nepotřebují.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-kmity">
+      <div class="prose">
+        <h2 id="h-kmity">Co mosty opravdu ohrožuje</h2>
+        <p>Náklaďák není to, co stavitele mostů trápí nejvíc. Most musí unést hlavně sám sebe, a k tomu vítr, mráz, povodeň a čas.</p>
+        <p>Lehké a štíhlé mosty se navíc mohou rozkmitat. V roce 1940 se ve státě Washington zřítil nový visutý most přes úžinu Tacoma. Vítr, který ho zničil, nebyl silný, kolem šedesáti kilometrů v hodině. Mostovka se v něm ale začala kroutit, každý další výkyv byl větší a po hodině se roztrhla. Od té doby se tvary mostovek zkoušejí ve větrném tunelu.</p>
+        <p>Ocel taky rezaví a unavuje se. Miliony přejezdů v ní časem vytvoří drobné trhlinky, které rostou. Mosty se proto pravidelně prohlížejí, a když se zanedbají, dopadne to jako v Janově v roce 2018.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Na okraj</span>
+        <p>Beton tah nesnese, a přesto jsou z něj dlouhé trámové mosty, třeba Nuselský v Praze. Uvnitř mají napnutá ocelová lana, která beton předem stlačí. Když pak náklad spodní stranu natahuje, jen ubírá z tlaku, který tam už je, a do tahu se beton nedostane.</p>
+      </aside>
+    </section>
+
+    <footer class="art-foot">
+      <a class="next" href="../modre-nebe/" data-cat="priroda">
+        <span class="label">Další článek · Příroda</span>
+        <span class="t">Proč je nebe modré</span>
+        <p>Proč je obloha modrá, západ slunce červený a mraky bílé, když je to pořád stejné světlo.</p>
+      </a>
+      <a class="back" href="../">Všechna témata</a>
+    </footer>
+  </main>
+
+  <script>
+  (() => {
+    const NS = "http://www.w3.org/2000/svg";
+    function el(tag, attrs, parent) {
+      const n = document.createElementNS(NS, tag);
+      for (const k in attrs || {}) n.setAttribute(k, attrs[k]);
+      if (parent) parent.appendChild(n);
+      return n;
+    }
+    const $ = (id) => document.getElementById(id);
+    const svg = $("bridge");
+    const fmt0 = new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 0 });
+
+    /* ---------- model ---------- */
+    const SPAN = 60, LOAD = 40;              // metry a tuny
+    const RISE = 15;                         // vzepětí oblouku a průvěs lana v metrech
+    const DECK_W = 300;                      // tíha mostovky visutého mostu v tunách
+    const s = { type: "truss", a: 20 };
+
+    // příhradový most: uzly dole (0–6) a nahoře (7–11), pruty mezi nimi
+    const NODES = [];
+    for (let i = 0; i <= 6; i++) NODES.push({ x: i * 10, y: 0 });
+    for (let i = 1; i <= 5; i++) NODES.push({ x: i * 10, y: 10 });
+    const top = (i) => 6 + i;
+    const BARS = [];
+    for (let i = 0; i < 6; i++) BARS.push([i, i + 1]);                       // dolní pás
+    for (let i = 1; i < 5; i++) BARS.push([top(i), top(i + 1)]);             // horní pás
+    BARS.push([0, top(1)], [6, top(5)]);                                     // koncové šikminy
+    for (let i = 1; i <= 5; i++) BARS.push([i, top(i)]);                     // svislice
+    BARS.push([top(1), 2], [top(2), 3], [top(4), 3], [top(5), 4]);           // šikminy ke středu
+    // rovnováha sil v každém uzlu: 24 rovnic pro 21 prutů a 3 síly v podporách
+    function solveTruss(a) {
+      const n = 24, A = Array.from({ length: n }, () => new Array(n + 1).fill(0));
+      BARS.forEach(([i, j], k) => {
+        const dx = NODES[j].x - NODES[i].x, dy = NODES[j].y - NODES[i].y, len = Math.hypot(dx, dy);
+        A[2 * i][k] += dx / len; A[2 * i + 1][k] += dy / len;
+        A[2 * j][k] -= dx / len; A[2 * j + 1][k] -= dy / len;
+      });
+      A[0][21] = 1; A[1][22] = 1; A[13][23] = 1;                             // levá podpora pevná, pravá posuvná
+      const i0 = Math.min(5, Math.floor(a / 10)), t = a / 10 - i0;           // náklad se rozdělí na dva sousední uzly
+      A[2 * i0 + 1][n] += LOAD * (1 - t); A[2 * (i0 + 1) + 1][n] += LOAD * t;
+      for (let c = 0; c < n; c++) {
+        let p = c;
+        for (let r = c + 1; r < n; r++) if (Math.abs(A[r][c]) > Math.abs(A[p][c])) p = r;
+        [A[c], A[p]] = [A[p], A[c]];
+        for (let r = 0; r < n; r++) if (r !== c) { const f = A[r][c] / A[c][c]; if (f) for (let q = c; q <= n; q++) A[r][q] -= f * A[c][q]; }
+      }
+      return A.map((row, i) => row[n] / row[i]);                             // kladná síla = tah
+    }
+
+    /* ---------- scéna ---------- */
+    const X = (m) => 110 + (m / SPAN) * 500, PX = 500 / SPAN, DECK = 230;
+    el("path", { d: "M0 300H720V400H0Z", class: "river" }, svg);
+    const scene = el("g", {}, svg);
+    function force(g, x, y, dx, dy, label, anchor) {
+      const len = Math.hypot(dx, dy), ux = dx / len, uy = dy / len, f = el("g", { class: "force" }, g);
+      el("line", { x1: x, y1: y, x2: x + dx - ux * 9, y2: y + dy - uy * 9 }, f);
+      el("path", { d: `M${x + dx} ${y + dy}L${x + dx - ux * 13 - uy * 6} ${y + dy - uy * 13 + ux * 6}L${x + dx - ux * 13 + uy * 6} ${y + dy - uy * 13 - ux * 6}Z` }, f);
+      if (label) el("text", { x: x + dx + (anchor === "end" ? -8 : 8), y: y + dy + 4, "text-anchor": anchor || "start" }, f).textContent = label;
+    }
+    const bar = (g, x1, y1, x2, y2, f, ref) => el("line", { x1, y1, x2, y2, class: Math.abs(f) < ref * 0.02 ? "idle" : f > 0 ? "pull" : "push", "stroke-width": (2 + 9 * Math.min(1, Math.abs(f) / ref)).toFixed(1) }, g);
+    function truck(g, deckY) {
+      const x = X(s.a);
+      el("rect", { x: x - 22, y: deckY - 24, width: 30, height: 18, rx: 2, class: "truck" }, g);
+      el("rect", { x: x + 9, y: deckY - 19, width: 13, height: 13, rx: 2, class: "truck" }, g);
+      [-13, 0, 15].forEach((dx) => el("circle", { cx: x + dx, cy: deckY - 5, r: 4.5, class: "wheel" }, g));
+      el("text", { x, y: deckY - 32, class: "tag", "text-anchor": "middle" }, g).textContent = "40 t";
+    }
+    function banks(g, y) {
+      el("path", { d: `M0 ${y}H${X(0)}V330L${X(0) - 30} 400H0Z`, class: "ground" }, g);
+      el("path", { d: `M720 ${y}H${X(SPAN)}V330L${X(SPAN) + 30} 400H720Z`, class: "ground" }, g);
+    }
+
+    function render() {
+      scene.textContent = "";
+      const a = s.a, b = SPAN - a, left = (LOAD * b) / SPAN, right = (LOAD * a) / SPAN;
+      let extraName, extra, status;
+      if (s.type === "beam") {
+        banks(scene, DECK + 8);
+        // průhyb a ohyb trámu pod osamělým břemenem
+        const bend = (x) => (x <= a ? left * x : right * (SPAN - x)), worst = (LOAD * SPAN) / 4;
+        const sag = (x) => (x <= a ? b * x * (SPAN * SPAN - b * b - x * x) : a * (SPAN - x) * (2 * SPAN * x - x * x - a * a)) / (SPAN ** 4 / 8) * 22;
+        for (let i = 0; i < 40; i++) {
+          const x0 = (i / 40) * SPAN, x1 = ((i + 1) / 40) * SPAN, y0 = DECK + sag(x0), y1 = DECK + sag(x1), m = bend((x0 + x1) / 2) / worst;
+          el("line", { x1: X(x0), y1: y0 + 8, x2: X(x1), y2: y1 + 8, stroke: "var(--ink-3)", "stroke-width": 17, "stroke-opacity": 0.35 }, scene);
+          el("line", { x1: X(x0), y1: y0 + 1, x2: X(x1), y2: y1 + 1, class: "push", "stroke-width": 5, "stroke-opacity": (0.08 + 0.92 * m).toFixed(2) }, scene);
+          el("line", { x1: X(x0), y1: y0 + 15, x2: X(x1), y2: y1 + 15, class: "pull", "stroke-width": 5, "stroke-opacity": (0.08 + 0.92 * m).toFixed(2) }, scene);
+        }
+        truck(scene, DECK + sag(a) - 2);
+        extraName = "Ohyb pod náklaďákem"; extra = `${fmt0.format((bend(a) / worst) * 100)} %`;
+        status = "<strong>Trám se ohýbá.</strong> Horní okraj se zkracuje a je stlačený, spodní se natahuje a je tažený. Nejvíc pod náklaďákem, u podpor skoro vůbec. Střed tloušťky trámu nenese skoro nic.";
+      } else if (s.type === "truss") {
+        banks(scene, DECK + 4);
+        const f = solveTruss(a), P = (n) => [X(NODES[n].x), DECK - NODES[n].y * PX];
+        BARS.forEach(([i, j], k) => bar(scene, ...P(i), ...P(j), f[k], 60));
+        NODES.forEach((n, i) => el("circle", { cx: P(i)[0], cy: P(i)[1], r: 4, class: "joint" }, scene));
+        truck(scene, DECK - 4);
+        const k = f.slice(0, 21).reduce((m, v, i) => (Math.abs(v) > Math.abs(f[m]) ? i : m), 0);
+        extraName = "Nejvíc namáhaný prut"; extra = Math.abs(f[k]) < 0.5 ? "žádný" : `${fmt0.format(Math.abs(f[k]))} t ${f[k] > 0 ? "tah" : "tlak"}`;
+        status = "<strong>Mříž z trojúhelníků.</strong> Žádný prut se neohýbá, každý je jen tažený, nebo jen tlačený. Horní pás je stlačený, dolní natažený, stejně jako horní a spodní strana trámu. Šikmé pruty přenášejí tíhu náklaďáku k podporám.";
+      } else if (s.type === "arch") {
+        const drop = RISE * PX, yArch = (x) => DECK + drop * (2 * x / SPAN - 1) ** 2;
+        el("path", { d: `M0 ${DECK}H${X(0) - 4}V${DECK + drop + 6}L${X(0) - 40} 400H0Z`, class: "ground" }, scene);
+        el("path", { d: `M720 ${DECK}H${X(SPAN) + 4}V${DECK + drop + 6}L${X(SPAN) + 40} 400H720Z`, class: "ground" }, scene);
+        const H = (LOAD * Math.min(a, b)) / (2 * RISE), thrust = Math.hypot(H, Math.max(left, right));
+        const pts = [];
+        for (let x = 0; x <= SPAN; x += 1.5) pts.push(`${X(x).toFixed(1)} ${yArch(x).toFixed(1)}`);
+        el("path", { d: "M" + pts.join("L"), class: "push", "stroke-width": (5 + 9 * Math.min(1, thrust / 60)).toFixed(1) }, scene);
+        for (let x = 5; x < SPAN; x += 5) if (yArch(x) - DECK > 6) el("line", { x1: X(x), y1: DECK, x2: X(x), y2: yArch(x), class: Math.abs(x - a) < 5 ? "push" : "idle", "stroke-width": Math.abs(x - a) < 5 ? 3.5 : 1.6 }, scene);
+        el("line", { x1: X(0) - 6, y1: DECK, x2: X(SPAN) + 6, y2: DECK, class: "deck" }, scene);
+        truck(scene, DECK - 2);
+        // čím oblouk tlačí do opěr: dolů a ven do stran
+        const k = 1.6;
+        if (Math.hypot(H, left) > 1) force(scene, X(0), yArch(0), -H * k, left * k, `${fmt0.format(Math.hypot(H, left))} t`, "end");
+        if (Math.hypot(H, right) > 1) force(scene, X(SPAN), yArch(SPAN), H * k, right * k, `${fmt0.format(Math.hypot(H, right))} t`, "start");
+        extraName = "Tlak do stran"; extra = `${fmt0.format(H)} t`;
+        status = "<strong>Oblouk je celý stlačený.</strong> Tíha náklaďáku se jím přenáší do obou břehů a nikde v něm nevzniká tah. Do břehů ale netlačí jen dolů, tlačí je i od sebe. Proto oblouk potřebuje pevné opěry.";
+      } else {
+        banks(scene, DECK + 4);
+        const tow = DECK - 18 * PX, lowest = DECK - 3 * PX, yCable = (x) => lowest + (tow - lowest) * (2 * x / SPAN - 1) ** 2;
+        const moment = (LOAD * a * b) / SPAN, H = ((DECK_W * SPAN) / 8 + moment) / RISE, V = (DECK_W + LOAD) / 2, T = Math.hypot(H, V);
+        const w = (2 + 9 * Math.min(1, T / 320)).toFixed(1), ax = X(-12), bx = X(SPAN + 12);
+        const pts = [];
+        for (let x = 0; x <= SPAN; x += 1.5) pts.push(`${X(x).toFixed(1)} ${yCable(x).toFixed(1)}`);
+        el("path", { d: `M${ax} ${DECK}L${pts.join("L")}L${bx} ${DECK}`, class: "pull", "stroke-width": w, "stroke-linejoin": "round" }, scene);
+        for (let x = 5; x < SPAN; x += 5) { const near = Math.max(0, 1 - Math.abs(x - a) / 5); el("line", { x1: X(x), y1: yCable(x), x2: X(x), y2: DECK, class: "pull", "stroke-width": (1.6 + 4 * near).toFixed(1) }, scene); }
+        const towerLoad = V + H * 1.5;                                        // svislé složky lana z obou stran věže
+        [0, SPAN].forEach((x) => el("line", { x1: X(x), y1: tow - 4, x2: X(x), y2: DECK + 60, class: "push", "stroke-width": (4 + 8 * Math.min(1, towerLoad / 500)).toFixed(1) }, scene));
+        el("line", { x1: ax, y1: DECK, x2: bx, y2: DECK, class: "deck" }, scene);
+        truck(scene, DECK - 2);
+        force(scene, ax + 4, DECK - 6, 44, -66, "", "start");
+        force(scene, bx - 4, DECK - 6, -44, -66, "", "end");
+        el("text", { x: ax + 6, y: DECK + 24, class: "tag" }, scene).textContent = "kotva";
+        el("text", { x: bx - 6, y: DECK + 24, class: "tag", "text-anchor": "end" }, scene).textContent = "kotva";
+        extraName = "Tah v hlavním laně"; extra = `${fmt0.format(T)} t`;
+        status = "<strong>Mostovka visí na laně.</strong> Lano i závěsy jsou jen tažené, věže jen tlačené. Váhu náklaďáku přebírá nejbližší závěs a předává ji lanu. To ji přes vrcholy věží svádí dolů do věží a tahem do kotev na březích.";
+      }
+      $("pos-val").textContent = `${s.a} m`;
+      $("st-l").textContent = `${fmt0.format(left)} t`;
+      $("st-r").textContent = `${fmt0.format(right)} t`;
+      $("st-x-n").textContent = extraName;
+      $("st-x").textContent = extra;
+      $("st-x").classList.toggle("small", extra.length > 8);
+      $("status").innerHTML = status;
+    }
+
+    /* ---------- ovládání ---------- */
+    $("pos").addEventListener("input", (e) => { s.a = Number(e.target.value); render(); });
+    $("type-seg").addEventListener("click", (e) => {
+      const b = e.target.closest("button[data-v]");
+      if (!b) return;
+      $("type-seg").querySelectorAll("button").forEach((x) => x.setAttribute("aria-checked", String(x === b)));
+      s.type = b.dataset.v;
+      render();
+    });
+    render();
+  })();
+  </script>
+</body>
+</html>

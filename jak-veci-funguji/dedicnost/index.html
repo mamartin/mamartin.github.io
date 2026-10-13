@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Jak funguje dědičnost</title>
+  <meta name="description" content="Proč může mít dítě modré oči po dědečkovi, jak se dědí krevní skupiny a proč jsou barvoslepí hlavně muži. S křížením, které si můžete sami nastavit a nechat narodit stovky potomků.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700&display=swap">
+  <link rel="stylesheet" href="../style.css?v=5">
+  <style>
+    .gen-stage { display: grid; gap: 1.5rem; grid-template-columns: minmax(0, 1fr); align-items: start; }
+    @media (min-width: 60rem) { .gen-stage { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 2.5rem; } }
+    .square { width: 100%; max-width: 26rem; border-collapse: separate; border-spacing: 4px; table-layout: fixed; font-family: var(--font-mono); }
+    .square th { padding: 0.35rem 0.2rem; font-weight: 500; font-size: 0.78rem; color: var(--ink-3); text-align: center; }
+    .square th b { display: block; font: 700 1.15rem var(--font-display); color: var(--ink); }
+    .square th.corner { text-align: left; font-size: 0.72rem; line-height: 1.3; }
+    .square td { padding: 0.6rem 0.3rem; border: 1px solid var(--rule); background: var(--surface); text-align: center; vertical-align: middle; }
+    .square td b { display: block; font: 700 1.2rem var(--font-display); }
+    .square td span { display: block; margin-top: 0.3rem; font-size: 0.74rem; color: var(--ink-2); line-height: 1.25; }
+    .chip { display: inline-block; width: 1.5rem; height: 1.5rem; border: 2px solid #14181e; border-radius: 50%; vertical-align: middle; box-shadow: 0 0 0 2px #fff; }
+    .chip.boy { border-radius: 3px; }
+    .kids-box { display: grid; gap: 0.8rem; min-width: 0; }
+    .kids { display: flex; flex-wrap: wrap; gap: 5px; min-height: 2rem; padding: 6px; border: 1px solid var(--rule); background: #fff; }
+    .kids i { width: 14px; height: 14px; border: 1.5px solid #14181e; border-radius: 50%; }
+    .kids i.boy { border-radius: 2px; }
+    .kids.many { gap: 2px; }
+    .kids.many i { width: 8px; height: 8px; border-width: 1px; }
+    .tally { display: grid; gap: 0.4rem; margin: 0; padding: 0; list-style: none; font-family: var(--font-mono); font-size: 0.82rem; color: var(--ink-2); }
+    .tally li { display: grid; grid-template-columns: 1.6rem minmax(0, 1fr) auto; align-items: center; gap: 0.6rem; }
+    .tally .chip { width: 1.1rem; height: 1.1rem; }
+    .tally b { color: var(--ink); font-weight: 600; }
+    .parents { display: flex; flex-wrap: wrap; gap: 0.9rem 1.5rem; }
+  </style>
+</head>
+<body data-cat="telo">
+  <header class="topbar">
+    <div class="wrap">
+      <a class="brand" href="../">Jak věci fungují</a>
+      <nav class="crumbs" aria-label="Drobečková navigace"><a href="../#telo">Lidské tělo</a><span aria-hidden="true">/</span><span>Dědičnost</span></nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <header class="art-head">
+      <p class="eyebrow">Lidské tělo</p>
+      <h1 class="display">Jak funguje dědičnost</h1>
+      <p class="lede">Vlastnosti rodičů se v dětech nemíchají jako barvy. Předávají se po kouscích, které se nikdy nerozpustí, jen se mohou na generaci schovat. Proto má dítě někdy oči po dědečkovi, i když je ani jeden z rodičů nemá.</p>
+    </header>
+
+    <section class="tldr" aria-labelledby="h-zkratka">
+      <h2 class="label" id="h-zkratka">Ve zkratce</h2>
+      <ul>
+        <li>Každou dědičnou vlastnost řídí gen a každý z nás má od každého genu dvě kopie: jednu od matky, jednu od otce.</li>
+        <li><span class="hl">Dítěti předá rodič jen jednu ze svých dvou kopií a kterou, to rozhodne náhoda.</span></li>
+        <li>Některé varianty genu přebijí ty druhé. Přebitá varianta se neprojeví, ale nezmizí a může se ukázat u vnuků.</li>
+      </ul>
+    </section>
+
+    <figure class="fig" id="obr1">
+      <div class="fig-head">
+        <p class="fig-num"><b>Obr. 1</b> Křížení</p>
+        <span class="label">Vyberte rodiče a nechte narodit potomky</span>
+      </div>
+      <div class="fig-stage gen-stage">
+        <div>
+          <table class="square" id="square" aria-label="Tabulka všech kombinací, které může potomek zdědit"></table>
+        </div>
+        <div class="kids-box">
+          <span class="label" id="odds-label">Šance u každého potomka</span>
+          <ul class="tally" id="odds"></ul>
+          <span class="label" id="kids-label">Potomci</span>
+          <div class="kids" id="kids" aria-hidden="true"></div>
+          <ul class="tally" id="counts"></ul>
+        </div>
+      </div>
+      <div class="fig-controls">
+        <div class="ctl">
+          <span class="label" id="lbl-trait">Co se dědí</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-trait" id="trait-seg">
+            <button type="button" role="radio" data-v="pea" aria-checked="true">Barva květu hrachu</button>
+            <button type="button" role="radio" data-v="blood" aria-checked="false">Krevní skupina</button>
+            <button type="button" role="radio" data-v="cb" aria-checked="false">Barvoslepost</button>
+          </div>
+        </div>
+        <div class="parents">
+          <div class="ctl">
+            <span class="label" id="lbl-p1"></span>
+            <div class="seg" role="radiogroup" aria-labelledby="lbl-p1" id="p1-seg"></div>
+          </div>
+          <div class="ctl">
+            <span class="label" id="lbl-p2"></span>
+            <div class="seg" role="radiogroup" aria-labelledby="lbl-p2" id="p2-seg"></div>
+          </div>
+        </div>
+        <div class="ctl">
+          <span class="label" id="lbl-n">Kolik potomků</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-n" id="n-seg">
+            <button type="button" role="radio" data-v="8" aria-checked="false">8</button>
+            <button type="button" role="radio" data-v="40" aria-checked="true">40</button>
+            <button type="button" role="radio" data-v="400" aria-checked="false">400</button>
+          </div>
+        </div>
+        <button type="button" class="btn" id="again">Nová várka potomků</button>
+      </div>
+      <div class="fig-status">
+        <p class="status" id="status" aria-live="polite"></p>
+      </div>
+      <figcaption class="fig-caption">Tabulka ukazuje všechny čtyři kombinace, které může potomek dostat: v záhlaví řádků jsou kopie genu od jednoho rodiče, v záhlaví sloupců od druhého. Každé políčko je stejně pravděpodobné. Potomci vpravo se losují náhodně, proto jejich počty vycházejí pokaždé trochu jinak. U barvosleposti jsou dcery kolečka a synové čtverečky.</figcaption>
+    </figure>
+
+    <section class="sec" aria-labelledby="h-mendel">
+      <div class="prose">
+        <h2 id="h-mendel">Hrách z klášterní zahrady</h2>
+        <p>Na pravidla dědičnosti přišel v polovině 19. století Gregor Mendel, mnich z augustiniánského kláštera v Brně. Osm let křížil na klášterní zahradě hrách a počítal, co z něj vyroste. Prošlo mu rukama skoro třicet tisíc rostlin.</p>
+        <p>Zkřížil hrách s fialovými květy s hrachem s bílými. Čekalo by se, že potomci pokvetou světle fialově. Všichni ale kvetli sytě fialově, jako by bílý rodič vůbec nebyl. Když pak zkřížil tyhle potomky mezi sebou, bílá barva se vrátila. Měla ji přesně čtvrtina rostlin.</p>
+        <p>Mendel z toho usoudil, že se vlastnosti nedědí jako tekutina, která se míchá, ale jako oddělené kousky. Dnes jim říkáme geny. <span class="hl">Bílá barva u fialových potomků nezmizela, jen ji něco překrylo.</span></p>
+      </div>
+      <aside class="note" aria-label="Dědičnost v číslech">
+        <span class="label">V číslech</span>
+        <dl class="facts">
+          <div><dt>705 : 224</dt><dd>fialově a bíle kvetoucích rostlin napočítal Mendel, tedy skoro přesně tři ku jedné</dd></div>
+          <div><dt>23 párů</dt><dd>chromozomů má člověk, z každého páru jeden od matky a jeden od otce</dd></div>
+          <div><dt>asi 20 000</dt><dd>genů nese lidská DNA</dd></div>
+        </dl>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-dve">
+      <div class="prose">
+        <h2 id="h-dve">Od každého genu dvě kopie</h2>
+        <p>Každá rostlina hrachu má gen pro barvu květu dvakrát. Jednu kopii dostala z pylu, druhou z vajíčka. Kopie nemusejí být stejné. Gen existuje ve variantě pro fialovou, značí se velkým A, a ve variantě pro bílou, malé a.</p>
+        <p>Když má rostlina obě kopie stejné, AA nebo aa, je to jasné. Když má jednu od každé, Aa, kvete fialově. Varianta A stačí jedna a květ zbarví. Říká se jí dominantní. Varianta a se projeví, jen když je sama, a říká se jí recesivní.</p>
+        <p>Potomkovi předá rostlina jen jednu ze svých dvou kopií. Kterou, o tom rozhoduje náhoda, jako hod mincí. Rostlina Aa tak polovině potomků pošle A a polovině a. Když se setkají dvě takové rostliny, mají čtyři stejně pravděpodobné možnosti: AA, Aa, aA a aa. Tři z nich kvetou fialově, jedna bíle.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Nastavte rodiče AA a aa. Všichni potomci jsou Aa a kvetou fialově. Pak nastavte oba rodiče na Aa, tedy dva z těch potomků. Bílá se vrátí u čtvrtiny.</p>
+        <p>Přepněte počet potomků na 8 a zmáčkněte několikrát Nová várka. Někdy nevyjde bílý žádný, jindy čtyři. Pravidlo tři ku jedné je vidět až na stovkách.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-krev">
+      <div class="prose">
+        <h2 id="h-krev">Krevní skupiny: tři varianty místo dvou</h2>
+        <p>U lidí se stejně jednoduše dědí krevní skupina. Gen má tři varianty: A, B a 0. Každý z nás má dvě z nich.</p>
+        <p>Varianty A a B jsou obě dominantní nad nulou. Člověk s kombinací A0 má skupinu A a o nule ve své výbavě neví. Když se ale sejdou A a B, nepřebije jedna druhou. Projeví se obě a vznikne skupina AB.</p>
+        <p>Odtud plynou věci, které na první pohled nedávají smysl. Rodiče se skupinami A a B mohou mít dítě se skupinou 0, pokud oba nesou schovanou nulu. A rodič se skupinou AB nemůže mít dítě s nulou nikdy, protože žádnou nulu, kterou by předal, nemá.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Přepněte na Krevní skupinu a nastavte matku A0 a otce B0. V tabulce jsou všechny čtyři skupiny, každá s šancí jedna ku čtyřem. Děti se skupinou 0 nebo AB nemají skupinu ani po jednom z rodičů.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-pohlavi">
+      <div class="prose">
+        <h2 id="h-pohlavi">Proč jsou barvoslepí hlavně muži</h2>
+        <p>Jeden pár chromozomů je zvláštní. Ženy mají dva chromozomy X, muži jeden X a jeden malý Y. Od matky dostane dítě vždycky X. Od otce buď X, a je to dcera, nebo Y, a je to syn.</p>
+        <p>Geny pro červené a zelené čípky v oku leží na chromozomu X. Na Y nejsou. Když má žena jeden z těch genů poškozený, zastoupí ho zdravá kopie na jejím druhém X a <a href="../barevne-videni/">barvy vidí</a> normálně. Je jen přenašečka. Muž žádnou záložní kopii nemá. Jeden vadný gen stačí a je barvoslepý.</p>
+        <p>Syn přitom dostává své jediné X od matky. Barvoslepost proto přeskakuje z dědečka přes zdravou dceru na vnuka. Od barvoslepého otce ji syn zdědit nemůže, od něj dostal Y.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Přepněte na Barvoslepost a nastavte matku přenašečku a otce, který barvy vidí. Dcery vidí barvy všechny, polovina z nich je přenašečka. Ze synů je barvoslepá polovina.</p>
+        <p>Pak nastavte barvoslepého otce a zdravou matku. Všechny děti vidí barvy, ale každá dcera je přenašečka.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-slozite">
+      <div class="prose">
+        <h2 id="h-slozite">Většinou je to složitější</h2>
+        <p>Takhle přehledně se dědí jen málo vlastností. Výšku, barvu kůže nebo tvar obličeje ovlivňují stovky genů najednou, každý nepatrně, a k tomu strava a prostředí. Děti pak vycházejí někde mezi rodiči a vypadá to, jako by se vlastnosti přece jen míchaly.</p>
+        <p>Ani barva očí, která se ve škole uvádí jako příklad, není dílem jednoho genu. Hlavní gen ji určuje z velké části, ale ne úplně. Dva modroocí rodiče mohou mít hnědooké dítě. Je to vzácné, ne nemožné.</p>
+        <p>Pravidlo ale platí pro každý gen zvlášť: dvě kopie, od každého rodiče jedna, a dál jde náhodně vybraná polovina. Protože se takhle losuje u každého z třiadvaceti párů chromozomů nezávisle, jsou sourozenci každý jiný. Jedna dvojice rodičů může dát desítky bilionů různých kombinací, a to ještě nepočítáme, že se chromozomy při tom mezi sebou promíchávají. Žádné dvě děti nedostanou stejnou. Výjimkou jsou jednovaječná dvojčata, která vznikla z jediného oplozeného vajíčka.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Na okraj</span>
+        <p>Mendel své výsledky přednesl v Brně v roce 1865 a o rok později je vydal tiskem. Nikdo si jich nevšiml. Znovu je objevili až v roce 1900, šestnáct let po jeho smrti, tři botanici nezávisle na sobě. O tom, že geny jsou zapsané v DNA, tehdy ještě nikdo nevěděl.</p>
+      </aside>
+    </section>
+
+    <footer class="art-foot">
+      <a class="next" href="../faze-mesice/" data-cat="vesmir">
+        <span class="label">Další článek · Vesmír</span>
+        <span class="t">Jak fungují fáze Měsíce</span>
+        <p>Proč Měsíc dorůstá a couvá a proč to není stín Země.</p>
+      </a>
+      <a class="back" href="../">Všechna témata</a>
+    </footer>
+  </main>
+
+  <script>
+  (() => {
+    const $ = (id) => document.getElementById(id);
+    const fmt0 = new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 0 });
+
+    /* ---------- model ---------- */
+    const D = "Xᵇ";                                   // chromozom X s vadným genem pro čípky
+    // každý rodič je dvojice kopií genu; potomkovi dá náhodně jednu z nich
+    const TRAITS = {
+      pea: {
+        who: ["První rostlina", "Druhá rostlina"], kids: ["rostlina", "rostliny", "rostlin"],
+        options: [[["A", "A"], ["A", "a"], ["a", "a"]], [["A", "A"], ["A", "a"], ["a", "a"]]], start: [1, 1],
+        order: ["A", "a"],
+        look: (g) => (g.includes("A") ? { key: "fialový květ", color: "#8e44ad" } : { key: "bílý květ", color: "#ffffff" }),
+      },
+      blood: {
+        who: ["Matka", "Otec"], kids: ["dítě", "děti", "dětí"],
+        options: [[["A", "A"], ["A", "0"], ["B", "B"], ["B", "0"], ["A", "B"], ["0", "0"]], [["A", "A"], ["A", "0"], ["B", "B"], ["B", "0"], ["A", "B"], ["0", "0"]]], start: [1, 3],
+        order: ["A", "B", "0"],
+        look: (g) => {
+          const a = g.includes("A"), b = g.includes("B");
+          return a && b ? { key: "skupina AB", color: "#7d3c98" } : a ? { key: "skupina A", color: "#c0392b" } : b ? { key: "skupina B", color: "#2471a3" } : { key: "skupina 0", color: "#95a5a6" };
+        },
+      },
+      cb: {
+        who: ["Matka", "Otec"], kids: ["dítě", "děti", "dětí"],
+        options: [[["X", "X"], ["X", D], [D, D]], [["X", "Y"], [D, "Y"]]], start: [1, 0],
+        names: [["vidí barvy", "přenašečka", "barvoslepá"], ["vidí barvy", "barvoslepý"]],
+        order: ["X", D, "Y"],
+        look: (g) => {
+          const boy = g.includes("Y"), bad = g.filter((x) => x === D).length;
+          if (boy) return bad ? { key: "syn, barvoslepý", color: "#d68910", boy } : { key: "syn, vidí barvy", color: "#27ae60", boy };
+          return bad === 2 ? { key: "dcera, barvoslepá", color: "#d68910" } : bad ? { key: "dcera, přenašečka", color: "#a9dfbf" } : { key: "dcera, vidí barvy", color: "#27ae60" };
+        },
+      },
+    };
+    const s = { trait: "pea", pick: [1, 1], n: 40, kids: [] };
+    const T = () => TRAITS[s.trait];
+    const sortG = (g) => g.slice().sort((a, b) => T().order.indexOf(a) - T().order.indexOf(b));
+    const parent = (i) => T().options[i][s.pick[i]];
+    const cells = () => parent(0).flatMap((m) => parent(1).map((f) => sortG([m, f])));
+    function draw() { s.kids = Array.from({ length: s.n }, () => sortG([parent(0)[Math.random() < 0.5 ? 0 : 1], parent(1)[Math.random() < 0.5 ? 0 : 1]])); }
+
+    /* ---------- kresba ---------- */
+    const chip = (look, tag = "span") => `<${tag} class="chip${look.boy ? " boy" : ""}" style="background:${look.color}"></${tag}>`;
+    function buildParents() {
+      [0, 1].forEach((i) => {
+        $(`lbl-p${i + 1}`).textContent = T().who[i];
+        $(`p${i + 1}-seg`).innerHTML = T().options[i].map((g, k) =>
+          `<button type="button" role="radio" data-v="${k}" aria-checked="${k === s.pick[i]}">${g.join("")}${T().names ? ` · ${T().names[i][k]}` : ""}</button>`).join("");
+      });
+    }
+    function render() {
+      const t = T(), m = parent(0), f = parent(1), all = cells();
+      $("square").innerHTML =
+        `<tr><th class="corner">${t.who[1].toLowerCase()} →<br>${t.who[0].toLowerCase()} ↓</th>${f.map((x) => `<th scope="col"><b>${x}</b></th>`).join("")}</tr>` +
+        m.map((x, r) => `<tr><th scope="row"><b>${x}</b></th>${[0, 1].map((c) => { const g = all[r * 2 + c], look = t.look(g); return `<td>${chip(look)}<b>${g.join("")}</b><span>${look.key}</span></td>`; }).join("")}</tr>`).join("");
+      // šance: kolik ze čtyř políček dá který výsledek
+      const odds = new Map();
+      all.forEach((g) => { const look = t.look(g); odds.set(look.key, { look, n: (odds.get(look.key)?.n || 0) + 1 }); });
+      $("odds").innerHTML = [...odds.values()].map(({ look, n }) => `<li>${chip(look)}<span>${look.key}</span><b>${n} ze 4 · ${n * 25} %</b></li>`).join("");
+      // vylosovaní potomci
+      $("kids").className = `kids${s.n > 100 ? " many" : ""}`;
+      $("kids").innerHTML = s.kids.map((g) => { const look = t.look(g); return `<i${look.boy ? ' class="boy"' : ""} style="background:${look.color}"></i>`; }).join("");
+      const seen = new Map();
+      s.kids.forEach((g) => { const key = t.look(g).key; seen.set(key, (seen.get(key) || 0) + 1); });
+      $("kids-label").textContent = `Narodilo se ${s.n} potomků`;
+      $("counts").innerHTML = [...odds.values()].map(({ look, n }) =>
+        `<li>${chip(look)}<span>${look.key}</span><b>${seen.get(look.key) || 0} · čekali bychom ${fmt0.format((n / 4) * s.n)}</b></li>`).join("");
+
+      const same = (a, b) => a.join("") === b.join(""), gm = m.join(""), gf = f.join("");
+      let status;
+      if (s.trait === "pea") {
+        if (gm === "Aa" && gf === "Aa") status = "<strong>Dva fialoví rodiče, čtvrtina bílých potomků.</strong> Oba rodiče nesou schovanou variantu a. Každý ji předá s šancí jedna ku dvěma, a když se sejdou dvě, nemá ji co přebít.";
+        else if ((gm === "AA" && gf === "aa") || (gm === "aa" && gf === "AA")) status = "<strong>Bílá barva se schovala.</strong> Každý potomek dostal od jednoho rodiče A a od druhého a. Všichni kvetou fialově, ale každý nese variantu pro bílou dál.";
+        else if (gm === "aa" && gf === "aa") status = "<strong>Jen bílé.</strong> Ani jeden rodič nemá variantu A, kterou by mohl předat. Bíle kvetoucí hrách má proto vždycky jen bílé potomky.";
+        else if (gm.includes("a") && gf.includes("a")) status = "<strong>Půl na půl.</strong> Jeden rodič má jen variantu a, druhý předá A, nebo a. Polovina potomků kvete fialově, polovina bíle.";
+        else status = "<strong>Všichni fialoví.</strong> Aspoň jeden rodič má obě kopie A, takže každý potomek dostane aspoň jedno A a to stačí. Z barvy květu nepoznáte, který potomek nese schovanou variantu a.";
+      } else if (s.trait === "blood") {
+        const kinds = odds.size;
+        if (kinds === 4) status = "<strong>Čtyři různé skupiny z jedněch rodičů.</strong> Matka má skupinu A a otec B, oba ale nesou schovanou nulu. Dítě může dostat A i B, jen jedno z nich, nebo dvě nuly.";
+        else if (odds.has("skupina 0") && !same(m, ["0", "0"]) && !same(f, ["0", "0"])) status = "<strong>Skupina 0, kterou nemá ani jeden rodič.</strong> Oba nesou nulu schovanou za dominantní variantou. Když ji dítě dostane od obou, nemá ji co přebít.";
+        else if (kinds === 1) status = `<strong>Všechny děti mají stejnou skupinu.</strong> Ať dítě dostane od každého rodiče kteroukoli z jeho dvou kopií, vyjde vždycky ${[...odds.keys()][0]}.`;
+        else status = "<strong>Krevní skupina dítěte se dá jen odhadnout.</strong> Tabulka říká, které skupiny přicházejí v úvahu a s jakou šancí. Podle skupin rodičů se dá některá možnost vyloučit úplně, a toho se dřív využívalo při sporech o otcovství.";
+      } else {
+        const carrier = gm === `X${D}`, dadBad = gf.startsWith(D);
+        if (carrier && !dadBad) status = "<strong>Zdraví rodiče, polovina synů barvoslepých.</strong> Matka má jeden chromozom X s vadným genem a sama o tom neví. Syn dostane od otce Y a od matky jedno z jejích X. Když je to to vadné, nemá ho čím nahradit.";
+        else if (!carrier && gm === "XX" && dadBad) status = "<strong>Barvoslepý otec, žádné barvoslepé dítě.</strong> Synové dostali od otce Y, takže jeho vadný gen nemají. Dcery ho dostaly všechny, ale zdravé X od matky ho zastoupí. Jsou přenašečky a mohou ho předat svým synům.";
+        else if (gm === `${D}${D}`) status = "<strong>Barvoslepá matka.</strong> Má vadný gen na obou chromozomech X a každému dítěti předá jeden z nich. Všichni synové jsou barvoslepí. U dcer záleží na otci.";
+        else if (carrier && dadBad) status = "<strong>Jediná cesta k barvoslepé dceři.</strong> Dcera musí dostat vadný gen od obou rodičů: od barvoslepého otce jistě, od matky přenašečky s šancí jedna ku dvěma. Proto je barvoslepých žen tak málo.";
+        else status = "<strong>Nikdo vadný gen nemá.</strong> Matka i otec mají geny pro čípky v pořádku, a tak je mají v pořádku i všechny děti.";
+      }
+      $("status").innerHTML = status;
+    }
+
+    /* ---------- ovládání ---------- */
+    function bindSeg(id, apply) {
+      $(id).addEventListener("click", (e) => {
+        const b = e.target.closest("button[data-v]");
+        if (!b) return;
+        $(id).querySelectorAll("button").forEach((x) => x.setAttribute("aria-checked", String(x === b)));
+        apply(b.dataset.v);
+        draw(); render();
+      });
+    }
+    bindSeg("trait-seg", (v) => { s.trait = v; s.pick = T().start.slice(); buildParents(); });
+    bindSeg("p1-seg", (v) => { s.pick[0] = Number(v); });
+    bindSeg("p2-seg", (v) => { s.pick[1] = Number(v); });
+    bindSeg("n-seg", (v) => { s.n = Number(v); });
+    $("again").addEventListener("click", () => { draw(); render(); });
+    buildParents();
+    draw();
+    render();
+  })();
+  </script>
+</body>
+</html>

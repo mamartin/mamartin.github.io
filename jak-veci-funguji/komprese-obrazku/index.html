@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Jak se zmenšuje fotka</title>
+  <meta name="description" content="Jak formát JPEG zmenší fotku na desetinu, aniž by to bylo poznat, co se děje ve čtverečcích osm krát osm bodů a proč se text ukládá jinak. S obrázkem, který si můžete zkomprimovat a nahlédnout do jeho čtverečků.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700&display=swap">
+  <link rel="stylesheet" href="../style.css?v=5">
+  <style>
+    .jpg-stage { display: grid; gap: 1.25rem; grid-template-columns: minmax(0, 1fr); align-items: start; }
+    @media (min-width: 60rem) { .jpg-stage { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 2rem; } }
+    #pic { display: block; width: 100%; max-width: 512px; aspect-ratio: 1; margin: 0 auto; border: 1px solid var(--rule); background: #fff; image-rendering: pixelated; cursor: crosshair; touch-action: manipulation; }
+    .tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.8rem; }
+    .tile { display: grid; gap: 0.3rem; margin: 0; }
+    .tile canvas { display: block; width: 100%; aspect-ratio: 1; border: 1px solid var(--rule); background: #fff; image-rendering: pixelated; }
+    .tile .label { line-height: 1.3; }
+    .panel { display: grid; gap: 0.8rem; min-width: 0; }
+    .file { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+    label.btn { display: inline-flex; align-items: center; cursor: pointer; }
+    .file:focus-visible + label.btn { outline: 3px solid var(--cat); outline-offset: 2px; }
+  </style>
+</head>
+<body data-cat="technika">
+  <header class="topbar">
+    <div class="wrap">
+      <a class="brand" href="../">Jak věci fungují</a>
+      <nav class="crumbs" aria-label="Drobečková navigace"><a href="../#technika">Technika</a><span aria-hidden="true">/</span><span>Jak se zmenšuje fotka</span></nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <header class="art-head">
+      <p class="eyebrow">Technika</p>
+      <h1 class="display">Jak se zmenšuje fotka</h1>
+      <p class="lede">Fotka z mobilu by měla zabírat přes třicet megabajtů. Zabírá tři. Devět desetin dat formát JPEG prostě zahodí a vy to nepoznáte, protože zahazuje přesně to, co oko nevidí. Když to přežene, ukážou se čtverečky.</p>
+    </header>
+
+    <section class="tldr" aria-labelledby="h-zkratka">
+      <h2 class="label" id="h-zkratka">Ve zkratce</h2>
+      <ul>
+        <li>Barvu vnímá oko hrubě, jas jemně. Barva se proto ukládá v polovičním rozlišení.</li>
+        <li><span class="hl">Obrázek se rozdělí na čtverečky osm krát osm bodů a každý se popíše jako směs jednoduchých vzorů,</span> od hladkých ploch po jemné šachovnice.</li>
+        <li>Jemné vzory se zaokrouhlí nahrubo a většina z nich vyjde nula. Nuly skoro nic nezabírají.</li>
+      </ul>
+    </section>
+
+    <figure class="fig" id="obr1">
+      <div class="fig-head">
+        <p class="fig-num"><b>Obr. 1</b> Obrázek zkomprimovaný ve vašem prohlížeči</p>
+        <span class="label">Stahujte kvalitu a klepněte do obrázku na čtvereček, který chcete prozkoumat</span>
+      </div>
+      <div class="fig-stage jpg-stage">
+        <canvas id="pic" width="256" height="256" role="img" aria-label="Obrázek krajiny s domem po kompresi"></canvas>
+        <div class="panel">
+          <span class="label" id="block-label">Vybraný čtvereček 8 × 8 bodů</span>
+          <div class="tiles">
+            <figure class="tile"><canvas id="t-orig" width="8" height="8"></canvas><span class="label">1 · původní body</span></figure>
+            <figure class="tile"><canvas id="t-coef" width="8" height="8"></canvas><span class="label">2 · kolik je kterého vzoru</span></figure>
+            <figure class="tile"><canvas id="t-quant" width="8" height="8"></canvas><span class="label">3 · po zaokrouhlení</span></figure>
+            <figure class="tile"><canvas id="t-out" width="8" height="8"></canvas><span class="label">4 · co z toho vyjde</span></figure>
+          </div>
+        </div>
+      </div>
+      <div class="fig-controls">
+        <div class="ctl ctl-grow">
+          <label class="label" for="q">Kvalita</label>
+          <div class="ctl-row">
+            <input type="range" id="q" min="1" max="100" step="1" value="60">
+            <output class="val" id="q-val" for="q"></output>
+          </div>
+        </div>
+        <div class="ctl">
+          <span class="label" id="lbl-chroma">Barva</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-chroma" id="chroma-seg">
+            <button type="button" role="radio" data-v="2" aria-checked="true">V polovičním rozlišení</button>
+            <button type="button" role="radio" data-v="1" aria-checked="false">V plném</button>
+          </div>
+        </div>
+        <div class="ctl">
+          <span class="label" id="lbl-view">Ukázat</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-view" id="view-seg">
+            <button type="button" role="radio" data-v="out" aria-checked="true">Výsledek</button>
+            <button type="button" role="radio" data-v="orig" aria-checked="false">Originál</button>
+            <button type="button" role="radio" data-v="diff" aria-checked="false">Co se ztratilo</button>
+          </div>
+        </div>
+        <div class="ctl">
+          <input type="file" id="file" class="file" accept="image/*">
+          <label for="file" class="btn ghost">Zkusit vlastní fotku</label>
+        </div>
+      </div>
+      <div class="fig-status split">
+        <p class="status" id="status" aria-live="polite"></p>
+        <ul class="stats" aria-label="Stav modelu">
+          <li><span class="n">Velikost</span><span class="v" id="st-size"></span></li>
+          <li><span class="n">Zmenšeno</span><span class="v" id="st-ratio"></span></li>
+          <li><span class="n">Nenulových čísel ve čtverečku</span><span class="v" id="st-nz"></span></li>
+        </ul>
+      </div>
+      <figcaption class="fig-caption">Obrázek má 256 × 256 bodů a je schválně zvětšený, aby byly vidět jednotlivé body. Komprese probíhá doopravdy, stejným postupem jako ve formátu JPEG. Velikost souboru je odhad, skutečný kodér by vyšel o něco jinak. Ve druhé dlaždici je vlevo nahoře celkový jas čtverečku, doprava a dolů jsou čím dál jemnější vzory. Vlastní fotka se zpracuje jen ve vašem prohlížeči a nikam se neposílá.</figcaption>
+    </figure>
+
+    <section class="sec" aria-labelledby="h-proc">
+      <div class="prose">
+        <h2 id="h-proc">Kolik místa zabere obrázek</h2>
+        <p>Obrázek v počítači je tabulka bodů a každý bod má tři čísla: kolik je v něm červené, zelené a modré. Fotka z dvanáctimegapixelového foťáku má dvanáct milionů bodů, tedy třicet šest milionů čísel. To je třicet šest megabajtů na jedinou fotku.</p>
+        <p>Většina těch čísel je ale zbytečná. Sousední body jsou si skoro vždycky podobné, obloha je modrá přes tisíce bodů, zeď je bílá. A hlavně: spoustu rozdílů mezi body oko vůbec nezaznamená.</p>
+        <p>Formát JPEG z roku 1992 je postavený na tom, co o <a href="../barevne-videni/">lidském vidění</a> víme. Nevybírá data náhodně. Zahazuje postupně to, čeho si všimneme nejmíň.</p>
+      </div>
+      <aside class="note" aria-label="Komprese v číslech">
+        <span class="label">V číslech</span>
+        <dl class="facts">
+          <div><dt>asi 10×</dt><dd>se dá fotka zmenšit, aniž by to bylo vidět</dd></div>
+          <div><dt>64</dt><dd>čísel popisuje jeden čtvereček osm krát osm bodů</dd></div>
+          <div><dt>1992</dt><dd>vznikl formát JPEG a používá se dodnes</dd></div>
+        </dl>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-barva">
+      <div class="prose">
+        <h2 id="h-barva">První trik: barva nahrubo</h2>
+        <p>Oko vidí jemné detaily podle jasu, ne podle barvy. Na černobílé fotce přečtete nápis stejně dobře jako na barevné. Když naopak z obrázku necháte jen barvu bez jasu, je to rozmazaná skvrna.</p>
+        <p>JPEG proto nejdřív každý bod přepočítá. Místo červené, zelené a modré uloží jas a k němu dvě čísla, která říkají, jakým směrem je barva odstínem posunutá. Jas nechá v plném rozlišení. Barevná čísla uloží jen jednou pro každou čtveřici sousedních bodů.</p>
+        <p>Z barvy tak zbude čtvrtina a z celého obrázku polovina. A to se ještě nezačalo pořádně komprimovat.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Nastavte kvalitu na 100 a přepínejte Barvu mezi plným a polovičním rozlišením. Velikost spadne, na obrázku rozdíl nenajdete. Pak se podívejte, co se ztratilo: jsou to jen tenké linky na hranách barev.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-vzory">
+      <div class="prose">
+        <h2 id="h-vzory">Druhý trik: čtverečky a vzory</h2>
+        <p>Obrázek se rozdělí na čtverečky osm krát osm bodů. Každý má šedesát čtyři hodnot jasu. JPEG je neukládá přímo. Popíše čtvereček jinak: jako směs šedesáti čtyř pevně daných vzorů.</p>
+        <p>První vzor je rovnoměrná plocha. Další jsou plynulé přechody zleva doprava a shora dolů, pak čím dál hustší pruhy a nakonec jemná šachovnice, kde se světlá a tmavá střídá bod od bodu. Jakýkoli čtvereček se dá přesně složit, když se vezme správné množství každého vzoru.</p>
+        <p>Počet čísel se tím nezměnil, pořád jich je šedesát čtyři. Změnilo se, co znamenají. <span class="hl">U běžné fotky vyjde velké číslo jen u několika hrubých vzorů a u jemných skoro nula.</span> Kus oblohy je skoro celý první vzor. Kus trávy potřebuje i ty jemnější.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Klepněte doprostřed oblohy a podívejte se na druhou dlaždici. Svítí v ní jen pár políček vlevo nahoře. Pak klepněte na trávu nebo na okno domu: políček svítí mnohem víc.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-zaokrouhleni">
+      <div class="prose">
+        <h2 id="h-zaokrouhleni">Třetí trik: zaokrouhlit nahrubo</h2>
+        <p>Tady se teprve něco zahazuje. Každé ze šedesáti čtyř čísel se zaokrouhlí, ale ne stejně. Hrubé vzory se zaokrouhlují jemně, protože chybu v nich by oko vidělo hned. Jemné vzory se zaokrouhlují velmi hrubě, třeba na násobky padesáti.</p>
+        <p>Malá čísla u jemných vzorů tím spadnou na nulu. Z šedesáti čtyř čísel jich ve čtverečku zůstane nenulových pět nebo deset.</p>
+        <p>Posuvník kvality neřídí nic jiného než tohle: jak hrubě se zaokrouhluje. Při vysoké kvalitě přežije většina čísel. Při nízké zbude z čtverečku jen jeho průměrný jas a jeden dva přechody.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Vyberte čtvereček na okraji střechy a stahujte kvalitu. Ve třetí dlaždici políčka postupně mizí a ve čtvrté se ostrá hrana mění v rozmazaný přechod. Pod kvalitou 10 je z každého čtverečku jednolitá plocha.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-baleni">
+      <div class="prose">
+        <h2 id="h-baleni">Čtvrtý trik: zabalit nuly</h2>
+        <p>Poslední krok už nic neztrácí. Čísla z každého čtverečku se seřadí od hrubých vzorů k jemným. Na konci řady je pak dlouhý ocas nul a ten se nezapisuje nula po nule. Stačí značka „odtud dál samé nuly“.</p>
+        <p>Zbylá čísla dostanou kódy různé délky. Hodnoty, které se objevují často, mají kód krátký, vzácné dlouhý, podobně jako má v Morseově abecedě nejčastější písmeno E jedinou tečku.</p>
+        <p>Při otevírání se všechno provede pozpátku. Rozbalí se čísla, vynásobí se zpátky, ze vzorů se složí čtverečky a z jasu a barvy body. Zaokrouhlení ale vrátit nejde. Co se jednou zahodilo, je pryč.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Na okraj</span>
+        <p>Proto se nemá fotka opakovaně otevírat, upravovat a znovu ukládat jako JPEG. Při každém uložení se zaokrouhluje znovu a chyby se sčítají.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-chyby">
+      <div class="prose">
+        <h2 id="h-chyby">Kde se to nepovede</h2>
+        <p>Celý postup počítá s tím, že obrázek je fotka: plynulé přechody a málo ostrých hran. Na text, čárovou kresbu nebo snímek obrazovky se nehodí. Ostrá černá čára na bílém papíře potřebuje právě ty jemné vzory, které JPEG zahazuje jako první.</p>
+        <p>Kolem písmen se pak objeví šedé stíny a tečky, kterým se říká komáři. A při silné kompresi je vidět mřížka čtverečků, protože každý se zaokrouhlil po svém a na hranicích na sebe nenavazují.</p>
+        <p>Na obrázky s ostrými hranami se proto používají formáty, které nic nezahazují a jen hledají opakování, hlavně PNG. Novější formáty pro fotky, jako WebP nebo AVIF, pracují na stejném principu jako JPEG, jen mají čtverečky různě velké a umějí odhadnout obsah čtverečku z jeho sousedů.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Stáhněte kvalitu na 15 a podívejte se na nápis v obrázku a na plot. Kolem písmen jsou šmouhy, i když obloha vedle vypadá pořád slušně. Pak přepněte na Co se ztratilo.</p>
+        <span class="label">Na okraj</span>
+        <p>Video to dělá stejně a přidává další trik: neukládá každý snímek celý, jen to, čím se liší od předchozího. Hudba ve formátu MP3 zase vynechává tóny, které <a href="../sluch/">ucho</a> vedle hlasitějších stejně neuslyší.</p>
+      </aside>
+    </section>
+
+    <footer class="art-foot">
+      <a class="next" href="../potlaceni-hluku/" data-cat="technika">
+        <span class="label">Další článek · Technika</span>
+        <span class="t">Jak sluchátka potlačují hluk</span>
+        <p>Jak sluchátka vyrobí ticho tím, že přidají další zvuk, a proč to nejde na hlasy.</p>
+      </a>
+      <a class="back" href="../">Všechna témata</a>
+    </footer>
+  </main>
+
+  <script>
+  (() => {
+    const $ = (id) => document.getElementById(id);
+    const N = 256, RAW_BYTES = N * N * 3;
+    const fmt1 = new Intl.NumberFormat("cs-CZ", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    const fmt0 = new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 0 });
+    const pic = $("pic"), ctx = pic.getContext("2d", { willReadFrequently: true });
+
+    /* ---------- zkušební obrázek ---------- */
+    function paintScene(c) {
+      let seed = 5;
+      const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+      const sky = c.createLinearGradient(0, 0, 0, 170);
+      sky.addColorStop(0, "#3f86d6"); sky.addColorStop(1, "#d6e9f8");
+      c.fillStyle = sky; c.fillRect(0, 0, N, N);
+      c.fillStyle = "#fff4b8"; c.beginPath(); c.arc(206, 46, 20, 0, 7); c.fill();
+      c.fillStyle = "#ffffff"; [[50, 40, 16], [68, 34, 20], [90, 42, 15]].forEach(([x, y, r]) => { c.beginPath(); c.arc(x, y, r, 0, 7); c.fill(); });
+      c.fillStyle = "#7c9f8c"; c.beginPath(); c.moveTo(0, 150); c.quadraticCurveTo(70, 90, 140, 140); c.quadraticCurveTo(200, 100, 256, 135); c.lineTo(256, 180); c.lineTo(0, 180); c.fill();
+      c.fillStyle = "#5c8a5f"; c.beginPath(); c.moveTo(0, 168); c.quadraticCurveTo(90, 135, 170, 160); c.quadraticCurveTo(220, 150, 256, 165); c.lineTo(256, 190); c.lineTo(0, 190); c.fill();
+      c.fillStyle = "#7fb04f"; c.fillRect(0, 176, N, 80);
+      // tráva: drobná nepravidelná textura
+      for (let i = 0; i < 2600; i++) { const x = rnd() * N, y = 178 + rnd() * 78; c.fillStyle = rnd() < 0.5 ? "#5f9238" : "#9ccb62"; c.fillRect(x, y, 1, 2 + rnd() * 3); }
+      // dům s ostrými hranami
+      c.fillStyle = "#e8d2b0"; c.fillRect(96, 128, 70, 60);
+      c.fillStyle = "#a8472f"; c.beginPath(); c.moveTo(88, 130); c.lineTo(131, 96); c.lineTo(174, 130); c.fill();
+      c.fillStyle = "#35506e"; c.fillRect(106, 142, 20, 20); c.fillStyle = "#f6f1e6"; c.fillRect(115, 142, 2, 20); c.fillRect(106, 151, 20, 2);
+      c.fillStyle = "#6b4a30"; c.fillRect(138, 152, 18, 36);
+      // strom
+      c.fillStyle = "#5a4028"; c.fillRect(208, 150, 7, 46);
+      for (let i = 0; i < 260; i++) { const a = rnd() * 7, r = rnd() * 28; c.fillStyle = ["#2f6b3a", "#3f8448", "#57a05a"][Math.floor(rnd() * 3)]; c.beginPath(); c.arc(211 + Math.cos(a) * r, 132 + Math.sin(a) * r * 0.85, 3 + rnd() * 3, 0, 7); c.fill(); }
+      // plot: husté svislé čárky
+      c.fillStyle = "#f4efe2"; for (let x = 4; x < 92; x += 5) c.fillRect(x, 186, 2, 20);
+      c.fillRect(2, 192, 90, 2);
+      // nápis
+      c.fillStyle = "#14181e"; c.font = "bold 24px Arial, Helvetica, sans-serif"; c.textBaseline = "alphabetic"; c.fillText("Ahoj!", 150, 240);
+    }
+
+    /* ---------- komprese ---------- */
+    const QY = [16, 11, 10, 16, 24, 40, 51, 61, 12, 12, 14, 19, 26, 58, 60, 55, 14, 13, 16, 24, 40, 57, 69, 56, 14, 17, 22, 29, 51, 87, 80, 62, 18, 22, 37, 56, 68, 109, 103, 77, 24, 35, 55, 64, 81, 104, 113, 92, 49, 64, 78, 87, 103, 121, 120, 101, 72, 92, 95, 98, 112, 100, 103, 99];
+    const QC = [17, 18, 24, 47, 99, 99, 99, 99, 18, 21, 26, 66, 99, 99, 99, 99, 24, 26, 56, 99, 99, 99, 99, 99, 47, 66, 99, 99, 99, 99, 99, 99].concat(new Array(32).fill(99));
+    // tabulka zaokrouhlování pro danou kvalitu, stejně jako v běžných kodérech JPEG
+    function table(base, q) {
+      const scale = q < 50 ? 5000 / q : 200 - 2 * q;
+      return base.map((v) => Math.max(1, Math.min(255, Math.floor((v * scale + 50) / 100))));
+    }
+    // vzory: C[u][x] je hodnota u-tého vzoru v bodě x
+    const C = Array.from({ length: 8 }, (_, u) => Array.from({ length: 8 }, (_, x) => (u ? Math.sqrt(0.25) : Math.sqrt(0.125)) * Math.cos(((2 * x + 1) * u * Math.PI) / 16)));
+    const tmp = new Float32Array(64);
+    function toPatterns(f, out) {          // 64 bodů -> kolik je kterého vzoru
+      for (let y = 0; y < 8; y++) for (let u = 0; u < 8; u++) { let a = 0; for (let x = 0; x < 8; x++) a += C[u][x] * f[y * 8 + x]; tmp[y * 8 + u] = a; }
+      for (let u = 0; u < 8; u++) for (let v = 0; v < 8; v++) { let a = 0; for (let y = 0; y < 8; y++) a += C[v][y] * tmp[y * 8 + u]; out[v * 8 + u] = a; }
+    }
+    function fromPatterns(F, out) {        // a zpátky
+      for (let v = 0; v < 8; v++) for (let x = 0; x < 8; x++) { let a = 0; for (let u = 0; u < 8; u++) a += C[u][x] * F[v * 8 + u]; tmp[v * 8 + x] = a; }
+      for (let x = 0; x < 8; x++) for (let y = 0; y < 8; y++) { let a = 0; for (let v = 0; v < 8; v++) a += C[v][y] * tmp[v * 8 + x]; out[y * 8 + x] = a; }
+    }
+    const s = { q: 60, chroma: 2, view: "out", block: [13, 13], rgb: null, planes: null, result: null };
+    const blk = new Float32Array(64), cf = new Float32Array(64);
+
+    // rozloží obrázek na jas a dvě barevné složky a každou převede na vzory
+    function analyse() {
+      const d = s.rgb, Y = new Float32Array(N * N), Cb = new Float32Array(N * N), Cr = new Float32Array(N * N);
+      for (let i = 0; i < N * N; i++) {
+        const r = d[i * 4], g = d[i * 4 + 1], b = d[i * 4 + 2];
+        Y[i] = 0.299 * r + 0.587 * g + 0.114 * b;
+        Cb[i] = 128 - 0.168736 * r - 0.331264 * g + 0.5 * b;
+        Cr[i] = 128 + 0.5 * r - 0.418688 * g - 0.081312 * b;
+      }
+      const shrink = (p) => {
+        if (s.chroma === 1) return { w: N, data: p };
+        const w = N / 2, out = new Float32Array(w * w);
+        for (let y = 0; y < w; y++) for (let x = 0; x < w; x++) out[y * w + x] = (p[2 * y * N + 2 * x] + p[2 * y * N + 2 * x + 1] + p[(2 * y + 1) * N + 2 * x] + p[(2 * y + 1) * N + 2 * x + 1]) / 4;
+        return { w, data: out };
+      };
+      s.planes = [{ w: N, data: Y }, shrink(Cb), shrink(Cr)].map((p) => {
+        const coef = new Float32Array(p.w * p.w);
+        for (let by = 0; by < p.w; by += 8) for (let bx = 0; bx < p.w; bx += 8) {
+          for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) blk[y * 8 + x] = p.data[(by + y) * p.w + bx + x] - 128;
+          toPatterns(blk, cf);
+          for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) coef[(by + y) * p.w + bx + x] = cf[y * 8 + x];
+        }
+        return { ...p, coef };
+      });
+    }
+    const bitsFor = (v) => (v ? Math.floor(Math.log2(Math.abs(v))) + 1 : 0);
+    // zaokrouhlí vzory podle kvality, odhadne velikost a složí obrázek zpátky
+    function compress() {
+      const tables = [table(QY, s.q), table(QC, s.q), table(QC, s.q)];
+      let bits = 600 * 8;                                    // hlavička souboru
+      const outs = s.planes.map((p, k) => {
+        const Q = tables[k], out = new Float32Array(p.w * p.w);
+        let prev = 0;
+        for (let by = 0; by < p.w; by += 8) for (let bx = 0; bx < p.w; bx += 8) {
+          for (let i = 0; i < 64; i++) {
+            const q = Math.round(p.coef[(by + (i >> 3)) * p.w + bx + (i & 7)] / Q[i]);
+            cf[i] = q * Q[i];
+            if (i === 0) { bits += 3 + bitsFor(q - prev); prev = q; } else if (q) bits += 5 + bitsFor(q);
+          }
+          bits += 4;                                         // značka „dál samé nuly“
+          fromPatterns(cf, blk);
+          for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) out[(by + y) * p.w + bx + x] = blk[y * 8 + x] + 128;
+        }
+        return out;
+      });
+      const img = new Uint8ClampedArray(N * N * 4), cw = s.planes[1].w, f = N / cw;
+      for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+        const i = y * N + x, j = Math.floor(y / f) * cw + Math.floor(x / f), Y = outs[0][i], cb = outs[1][j] - 128, cr = outs[2][j] - 128;
+        img[i * 4] = Y + 1.402 * cr; img[i * 4 + 1] = Y - 0.344136 * cb - 0.714136 * cr; img[i * 4 + 2] = Y + 1.772 * cb; img[i * 4 + 3] = 255;
+      }
+      s.result = { img, bytes: bits / 8, tableY: tables[0], lumaOut: outs[0] };
+    }
+
+    /* ---------- kresba ---------- */
+    function tile(id, cell) {
+      const c = $(id).getContext("2d"), d = c.createImageData(8, 8);
+      for (let i = 0; i < 64; i++) { const [r, g, b] = cell(i); d.data[i * 4] = r; d.data[i * 4 + 1] = g; d.data[i * 4 + 2] = b; d.data[i * 4 + 3] = 255; }
+      c.putImageData(d, 0, 0);
+    }
+    function render() {
+      const r = s.result, show = new Uint8ClampedArray(N * N * 4);
+      if (s.view === "out") show.set(r.img);
+      else if (s.view === "orig") show.set(s.rgb);
+      else for (let i = 0; i < N * N * 4; i += 4) { const e = Math.min(255, 6 * (Math.abs(r.img[i] - s.rgb[i]) + Math.abs(r.img[i + 1] - s.rgb[i + 1]) + Math.abs(r.img[i + 2] - s.rgb[i + 2])) / 3); show[i] = show[i + 1] = show[i + 2] = e; show[i + 3] = 255; }
+      ctx.putImageData(new ImageData(show, N, N), 0, 0);
+      const [bx, by] = s.block;
+      ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 2; ctx.strokeRect(bx * 8 - 1, by * 8 - 1, 10, 10);
+      ctx.strokeStyle = "#e0245e"; ctx.lineWidth = 1; ctx.strokeRect(bx * 8 - 0.5, by * 8 - 0.5, 9, 9);
+
+      // čtyři pohledy na vybraný čtvereček jasu
+      const P = s.planes[0], at = (i) => (by * 8 + (i >> 3)) * N + bx * 8 + (i & 7);
+      const gray = (v) => { const g = Math.max(0, Math.min(255, v)); return [g, g, g]; };
+      const strength = (v) => { if (!v) return [255, 255, 255]; const k = Math.min(1, Math.log2(1 + Math.abs(v)) / 9); return [Math.round(255 - k * 219), Math.round(255 - k * 189), Math.round(255 - k * 61)]; };
+      let nz = 0;
+      const qv = (i) => Math.round(P.coef[at(i)] / r.tableY[i]) * r.tableY[i];
+      for (let i = 0; i < 64; i++) if (qv(i)) nz++;
+      tile("t-orig", (i) => gray(P.data[at(i)]));
+      tile("t-coef", (i) => strength(P.coef[at(i)]));
+      tile("t-quant", (i) => strength(qv(i)));
+      tile("t-out", (i) => gray(r.lumaOut[at(i)]));
+
+      $("q-val").textContent = s.q;
+      $("st-size").textContent = `${fmt1.format(r.bytes / 1024)} kB`;
+      $("st-ratio").textContent = `${fmt0.format(RAW_BYTES / r.bytes)}×`;
+      $("st-nz").textContent = `${nz} z 64`;
+      let status;
+      if (s.q >= 85) status = "<strong>Skoro bez ztráty.</strong> Zaokrouhluje se jen jemně a přežije většina čísel. Od originálu obrázek nerozeznáte, ale soubor je velký.";
+      else if (s.q >= 45) status = "<strong>Běžná kvalita.</strong> Jemné vzory se zaokrouhlily na nulu a v každém čtverečku zbylo jen pár čísel. Obrázek je mnohokrát menší a rozdíl hledáte těžko.";
+      else if (s.q >= 15) status = "<strong>Začíná to být vidět.</strong> Kolem ostrých hran, u nápisu a plotu, se dělají šmouhy. Hladká obloha a tráva ještě drží.";
+      else status = "<strong>Čtverečky.</strong> Z každého čtverečku zbyl jen průměrný jas a jeden dva hrubé přechody. Sousední čtverečky na sebe nenavazují a je vidět mřížka.";
+      if (s.view === "diff") status += " Na obrázku je teď to, co komprese zahodila, šestkrát zesílené: čím světlejší místo, tím větší chyba.";
+      $("status").innerHTML = status;
+    }
+    function rebuild() { analyse(); compress(); render(); }
+
+    /* ---------- ovládání ---------- */
+    $("q").addEventListener("input", (e) => { s.q = Number(e.target.value); compress(); render(); });
+    function bindSeg(id, apply) {
+      $(id).addEventListener("click", (e) => {
+        const b = e.target.closest("button[data-v]");
+        if (!b) return;
+        $(id).querySelectorAll("button").forEach((x) => x.setAttribute("aria-checked", String(x === b)));
+        apply(b.dataset.v);
+      });
+    }
+    bindSeg("chroma-seg", (v) => { s.chroma = Number(v); rebuild(); });
+    bindSeg("view-seg", (v) => { s.view = v; render(); });
+    pic.addEventListener("pointerdown", (e) => {
+      const r = pic.getBoundingClientRect();
+      s.block = [Math.max(0, Math.min(31, Math.floor(((e.clientX - r.left) / r.width) * 32))), Math.max(0, Math.min(31, Math.floor(((e.clientY - r.top) / r.height) * 32)))];
+      render();
+    });
+    pic.tabIndex = 0;
+    pic.addEventListener("keydown", (e) => {
+      const mv = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
+      if (!mv) return;
+      e.preventDefault();
+      s.block = [Math.max(0, Math.min(31, s.block[0] + mv[0])), Math.max(0, Math.min(31, s.block[1] + mv[1]))];
+      render();
+    });
+    function load(draw) {
+      const off = document.createElement("canvas");
+      off.width = off.height = N;
+      const c = off.getContext("2d", { willReadFrequently: true });
+      draw(c);
+      s.rgb = c.getImageData(0, 0, N, N).data;
+      rebuild();
+    }
+    $("file").addEventListener("change", (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      const img = new Image(), url = URL.createObjectURL(file);
+      img.onload = () => {
+        // výřez na čtverec ze středu fotky
+        const side = Math.min(img.naturalWidth, img.naturalHeight);
+        load((c) => { c.fillStyle = "#fff"; c.fillRect(0, 0, N, N); c.drawImage(img, (img.naturalWidth - side) / 2, (img.naturalHeight - side) / 2, side, side, 0, 0, N, N); });
+        URL.revokeObjectURL(url);
+      };
+      img.onerror = () => URL.revokeObjectURL(url);
+      img.src = url;
+    });
+    load(paintScene);
+  })();
+  </script>
+</body>
+</html>
