@@ -3,7 +3,7 @@
 (() => {
   // Na Vercelu běží funkce na stejné adrese jako web. Kopie na GitHub Pages funkce nemá
   // a posílá odpovědi na adresu z REMOTE; dokud je prázdná, formulář se tam nezobrazí.
-  const REMOTE = "";
+  const REMOTE = "https://jak-veci-funguji.vercel.app";
   const onPages = location.hostname.endsWith("github.io");
   const endpoint = onPages ? (REMOTE ? `${REMOTE.replace(/\/$/, "")}/api/feedback` : "") : "/api/feedback";
   if (!endpoint || location.pathname.includes("/admin/")) return;
