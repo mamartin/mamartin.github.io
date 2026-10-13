@@ -26,6 +26,24 @@
     .keys li { display: inline-flex; align-items: center; gap: 0.45rem; }
     .keys i { width: 0.7rem; height: 0.7rem; border: 2px solid #fff; box-sizing: content-box; outline: 1px solid var(--rule); }
     .ctl-text { flex: 1 1 16rem; }
+    .sets-stage { display: grid; gap: 1.5rem; grid-template-columns: minmax(0, 1fr); align-items: start; }
+    @media (min-width: 60rem) { .sets-stage { grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); gap: 2.5rem; } }
+    .set-detail { display: grid; gap: 1rem; }
+    .set-card { display: grid; gap: 0.35rem; }
+    .set-card .zoom { max-width: 14rem; }
+    .set-card .zoom i { height: 3.2rem; }
+    .sets { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 0.8rem; }
+    .sets th { padding: 0 0.6rem 0.5rem 0; text-align: left; font-weight: 500; color: var(--ink-3); vertical-align: bottom; }
+    .sets th small { display: block; font-size: 0.72rem; }
+    .sets td { padding: 0.22rem 0.6rem 0.22rem 0; white-space: nowrap; border-top: 1px solid var(--rule); }
+    .sets td.d { width: 2rem; padding-left: 0.5rem; font: 700 1rem var(--font-display); }
+    .sets tbody tr { cursor: pointer; }
+    .sets tbody tr.on td { background: var(--sunk); }
+    .sets tbody tr.on td.d { box-shadow: inset 3px 0 0 var(--cat); }
+    .sets code { margin-left: 0.5rem; color: var(--ink-2); font: inherit; }
+    .strip { display: inline-grid; grid-template-columns: repeat(7, 0.5rem); height: 1.5rem; border: 1px solid var(--rule); background: #fff; vertical-align: middle; }
+    .strip i.on { background: #14181e; }
+    @media (max-width: 46rem) { .sets code { display: none; } }
     .txt { width: 100%; min-height: 42px; padding: 0.55rem 0.7rem; border: 1px solid var(--ink); border-radius: 0; background: var(--surface); color: var(--ink); font: 600 1.05rem var(--font-mono); letter-spacing: 0.08em; }
     .warn { margin: 0; font-family: var(--font-mono); font-size: 0.8rem; color: var(--bad); }
     .status.bad strong { color: var(--bad); }
@@ -108,7 +126,7 @@
       <div class="prose">
         <h2 id="h-cary">Sedm proužků na číslici</h2>
         <p>Kód je rozdělený na úzké svislé proužky stejné šířky, kterým se říká moduly. Celý kód jich má 95. Každý modul je buď černý, nebo bílý. Když jsou vedle sebe dva černé, vidíte jednu tlustší čáru. Čáry tak mají čtyři možné tloušťky a mezery mezi nimi také.</p>
-        <p>Jedna číslice zabírá sedm modulů a vždy se skládá ze dvou čar a dvou mezer. Sedmička je třeba <span class="num">0111011</span>: mezera, tři moduly černé, mezera, dva moduly černé.</p>
+        <p>Jedna číslice zabírá sedm modulů a vždy se skládá ze dvou čar a dvou mezer. Sedmička je třeba <span class="num">0111011</span>: mezera, tři moduly černé, mezera, dva moduly černé. Dvojková soustava to není. Proč vzory vypadají zrovna takhle, ukazuje druhý obrázek o kus níž.</p>
         <p>Čtečka na kód posvítí červeným světlem a měří, kolik se ho odrazí. Černá světlo pohltí, bílá vrátí. Čtečka neměří milimetry, jen poměry: tahle čára je dvakrát širší než tamta. Proto přečte kód velký jako dlaň i jako nehet, zblízka i z půl metru.</p>
       </div>
       <aside class="note" aria-label="Čárový kód v číslech">
@@ -135,16 +153,59 @@
       </aside>
     </section>
 
+    <section class="sec" aria-labelledby="h-sady">
+      <div class="prose">
+        <h2 id="h-sady">Deset číslic, tři sady vzorů</h2>
+        <p>Každá číslice má v kódu tři podoby. Která se použije, záleží na tom, kde číslice stojí. Těm třem tabulkám vzorů se říká sady a značí se písmeny L, R a G.</p>
+        <p><b>Sada L</b> je základní a patří do levé půlky kódu. Její vzory splňují tři pravidla: mají dvě čáry a dvě mezery, začínají mezerou a černých modulů je v nich lichý počet. Sedm modulů jde vybarvit 128 způsoby. Dvě čáry a dvě mezery se začátkem mezerou má jen dvacet z nich a lichý počet černých deset. <span class="hl">Deset vzorů na deset číslic: sada L jsou prostě všechny vzory, které pravidla dovolí.</span> Který z nich připadl které číslici, je už jen dohoda.</p>
+        <p><b>Sada R</b> patří do pravé půlky. Je to negativ sady L: kde má L černou, má R bílou. Její vzory proto začínají čarou a černých modulů mají sudý počet. Podle toho čtečka pozná, kterou půlku zrovna čte.</p>
+        <p><b>Sada G</b> je sada R přečtená odzadu. Začíná zase mezerou, a tak může stát v levé půlce místo sady L. K čemu to je, vysvětluje další část.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>V obrázku 2 je vybraná sedmička. V sadě L je to <span class="num">0111011</span>. V sadě R se barvy prohodí na <span class="num">1000100</span> a v sadě G se to celé otočí na <span class="num">0010001</span>. Pak vyberte osmičku: má stejné čáry jako sedmička, jen v opačném pořadí.</p>
+        <span class="label">Na okraj</span>
+        <p>Proč ne obyčejná dvojková soustava? Nula by neměla žádnou čáru a patnáctka by byla jedna tlustá. Čtečka by neměla hrany, podle kterých měří, a nepoznala by, kde číslice začíná. A každá šmouha by dala jinou platnou číslici. Takhle je platných jen pár vzorů ze 128 a poškozená číslice většinou nedává smysl.</p>
+      </aside>
+    </section>
+
+    <figure class="fig" id="obr2">
+      <div class="fig-head">
+        <p class="fig-num"><b>Obr. 2</b> Deset číslic ve třech sadách</p>
+        <span class="label">Vyberte číslici</span>
+      </div>
+      <div class="fig-stage sets-stage">
+        <div class="set-detail" id="set-detail"></div>
+        <table class="sets">
+          <thead><tr><th scope="col">Číslice</th><th scope="col">Sada L<small>levá půlka</small></th><th scope="col">Sada R<small>pravá půlka</small></th><th scope="col">Sada G<small>levá půlka</small></th></tr></thead>
+          <tbody id="sets-body"></tbody>
+        </table>
+      </div>
+      <div class="fig-controls">
+        <div class="ctl">
+          <span class="label" id="lbl-digit">Číslice</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-digit" id="digit-seg">
+            <button type="button" role="radio" data-v="0" aria-checked="false">0</button><button type="button" role="radio" data-v="1" aria-checked="false">1</button><button type="button" role="radio" data-v="2" aria-checked="false">2</button><button type="button" role="radio" data-v="3" aria-checked="false">3</button><button type="button" role="radio" data-v="4" aria-checked="false">4</button><button type="button" role="radio" data-v="5" aria-checked="false">5</button><button type="button" role="radio" data-v="6" aria-checked="false">6</button><button type="button" role="radio" data-v="7" aria-checked="true">7</button><button type="button" role="radio" data-v="8" aria-checked="false">8</button><button type="button" role="radio" data-v="9" aria-checked="false">9</button>
+          </div>
+        </div>
+      </div>
+      <div class="fig-status">
+        <p class="status" id="set-status" aria-live="polite"></p>
+      </div>
+      <figcaption class="fig-caption">Vlevo vybraná číslice ve všech třech sadách, vpravo celá tabulka. Jednička je černý modul, nula bílý. Vybrat jde i klepnutím na řádek tabulky.</figcaption>
+    </figure>
+
     <section class="sec" aria-labelledby="h-trinact">
       <div class="prose">
         <h2 id="h-trinact">Kam se schovala třináctá číslice</h2>
         <p>Spočítejte si to: dvě půlky po šesti číslicích je dvanáct. Kód jich má ale třináct a ta první je vytištěná vlevo před čarami. Žádné vlastní čáry nemá.</p>
-        <p>Je schovaná ve způsobu, jakým je zapsaná levá půlka. Pro levé číslice existují dvě sady vzorů, L a G. Která číslice použije kterou sadu, to se řídí právě první číslicí. Když je první číslice 8, je pořadí sad L, G, L, G, G, L. Čtečka přečte šest číslic, podívá se, jaké sady u nich našla, a z toho pořadí pozná sedmou.</p>
+        <p>Je schovaná ve způsobu, jakým je zapsaná levá půlka. Pro levé číslice existují dvě sady vzorů, L a G. Která číslice použije kterou sadu, to se řídí právě první číslicí. Když je první číslice 8, je pořadí sad L, G, L, G, G, L. V kódu 8 594001 234561 je tedy pětka zapsaná sadou L, devítka sadou G, čtyřka zase L, obě nuly sadou G a jednička sadou L. Čtečka přečte šest číslic, podívá se, jaké sady u nich našla, a z toho pořadí pozná sedmou.</p>
         <p>Vzniklo to z nouze. Americký kód měl číslic dvanáct. Když ho Evropa přebírala, potřebovala jednu navíc na označení země, a chtěla, aby nové čtečky dál přečetly i americké kódy. Ty se od té doby čtou jako evropské s nulou na začátku.</p>
       </div>
       <aside class="note" aria-label="Poznámka na okraj">
         <span class="label">Zkuste</span>
         <p>Změňte první číslici kódu a nic jiného. Čáry v pravé půlce zůstanou, v levé se některé změní, i když číslice pod nimi jsou stejné.</p>
+        <p>Klepejte v prvním obrázku na číslice pod kódem. U každé se ukáže, ze které sady je, a v zobrazení Co je co mají sady L a G různou barvu.</p>
       </aside>
     </section>
 
@@ -332,6 +393,26 @@
         : `<strong>Prohození odhaleno.</strong> Číslice ${d[i + 1]} a ${d[i]} si vyměnily místo. Jedna se teď násobí třemi a druhá ne, součet vyšel jinak a kontrolní číslice nesedí.`);
     });
     $("fix").addEventListener("click", () => { const base = s.code.slice(0, 12); setCode([...(base + checkDigit(base))]); });
+
+    /* ---------- obr. 2: deset číslic ve třech sadách ---------- */
+    const SETS = [["L", L_CODE, "levá půlka", "základní vzor"], ["R", R_CODE, "pravá půlka", "negativ sady L"], ["G", G_CODE, "levá půlka", "sada R přečtená odzadu"]];
+    const cells = (bits, text) => [...bits].map((b) => `<i${b === "1" ? ' class="on"' : ""}>${text ? b : ""}</i>`).join("");
+    const runs = (bits) => bits.match(/0+|1+/g).map((r) => r.length);   // šířky: mezera, čára, mezera, čára
+    $("sets-body").innerHTML = L_CODE.map((_, d) =>
+      `<tr data-d="${d}"><td class="d">${d}</td>${SETS.map(([, codes]) => `<td><span class="strip" aria-hidden="true">${cells(codes[d])}</span><code>${codes[d]}</code></td>`).join("")}</tr>`).join("");
+    function showDigit(d) {
+      $("digit-seg").querySelectorAll("button").forEach((b) => b.setAttribute("aria-checked", String(Number(b.dataset.v) === d)));
+      $("sets-body").querySelectorAll("tr").forEach((tr) => tr.classList.toggle("on", Number(tr.dataset.d) === d));
+      $("set-detail").innerHTML = SETS.map(([name, codes, where, how]) =>
+        `<div class="set-card"><span class="label">Sada ${name} · ${where}</span><div class="zoom" aria-hidden="true">${cells(codes[d], true)}</div><p class="meta"><b>${codes[d]}</b> · ${how}</p></div>`).join("");
+      const r = runs(L_CODE[d]), black = r[1] + r[3];
+      // číslice se stejnými mezerami a prohozenými čarami
+      const twin = L_CODE.findIndex((c, e) => { const q = runs(c); return e !== d && q[0] === r[0] && q[2] === r[2] && q[1] === r[3] && q[3] === r[1]; });
+      $("set-status").innerHTML = `<strong>Číslice ${d}.</strong> V sadě L je to mezera ${r[0]}, čára ${r[1]}, mezera ${r[2]}, čára ${r[3]}. Černých modulů je ${black}, tedy lichý počet. Sada R má barvy prohozené a černých modulů ${7 - black}, sudý počet. Sada G je sada R přečtená odzadu.${twin >= 0 ? ` Stejně široké čáry jako tahle číslice, jen v opačném pořadí, má číslice ${twin}.` : ""}`;
+    }
+    $("digit-seg").addEventListener("click", (e) => { const b = e.target.closest("button[data-v]"); if (b) showDigit(Number(b.dataset.v)); });
+    $("sets-body").addEventListener("click", (e) => { const tr = e.target.closest("tr[data-d]"); if (tr) showDigit(Number(tr.dataset.d)); });
+    showDigit(7);
 
     fromInput();
   })();
