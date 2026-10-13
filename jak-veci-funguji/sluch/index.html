@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Jak slyšíme</title>
+  <meta name="description" content="Jak ucho promění chvění vzduchu na výšku tónu, k čemu jsou tři nejmenší kosti v těle a proč s věkem mizí nejdřív vysoké tóny. S hlemýžděm rozvinutým do délky a tónem, který si můžete pustit.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700&display=swap">
+  <link rel="stylesheet" href="../style.css?v=5">
+  <style>
+    #ear { border: 1px solid var(--rule); background: var(--surface); }
+    .cap { fill: var(--ink-3); font: 500 11px var(--font-mono); letter-spacing: 0.08em; }
+    .lbl { fill: var(--ink-2); font: 500 11.5px var(--font-mono); text-anchor: middle; }
+    .part { fill: var(--sunk); stroke: var(--metal-line); stroke-width: 1.6; stroke-linejoin: round; }
+    .bone { fill: var(--plug); stroke: var(--metal-line); stroke-width: 1.4; stroke-linejoin: round; }
+    .drum { stroke: var(--cat); stroke-width: 3; stroke-linecap: round; }
+    .spiral { fill: none; stroke: var(--metal-line); stroke-width: 7; stroke-linecap: round; }
+    .spiral-in { fill: none; stroke: var(--cool); stroke-width: 3.5; stroke-linecap: round; }
+    .air { fill: none; stroke: var(--ink-3); stroke-width: 1.5; }
+    .membrane { fill: var(--plug); stroke: var(--metal-line); stroke-width: 1.2; }
+    .wave { fill: none; stroke: var(--cat); stroke-width: 2.4; stroke-linejoin: round; }
+    .cell { stroke-width: 2.4; stroke-linecap: round; }
+    .axis { fill: var(--ink-3); font: 500 10.5px var(--font-mono); text-anchor: middle; }
+    .peak { fill: var(--ink); font: 600 11.5px var(--font-mono); text-anchor: middle; paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
+    .btn[aria-pressed="true"] { background: var(--cat); color: var(--paper); }
+    @media (max-width: 46rem) { .cap, .axis { font-size: 15px; } .lbl { font-size: 15px; } .peak { font-size: 16px; } }
+  </style>
+</head>
+<body data-cat="telo">
+  <header class="topbar">
+    <div class="wrap">
+      <a class="brand" href="../">Jak věci fungují</a>
+      <nav class="crumbs" aria-label="Drobečková navigace"><a href="../#telo">Lidské tělo</a><span aria-hidden="true">/</span><span>Jak slyšíme</span></nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <header class="art-head">
+      <p class="eyebrow">Lidské tělo</p>
+      <h1 class="display">Jak slyšíme</h1>
+      <p class="lede">Zvuk je jen chvění vzduchu. Ucho ho musí zachytit, převést do kapaliny a rozebrat na jednotlivé výšky, a to dřív, než se cokoli dostane do mozku. Dělá to mechanicky, membránou, která je na jednom konci tuhá a na druhém poddajná.</p>
+    </header>
+
+    <section class="tldr" aria-labelledby="h-zkratka">
+      <h2 class="label" id="h-zkratka">Ve zkratce</h2>
+      <ul>
+        <li>Bubínek se chvěje se vzduchem. Tři kůstky za ním ten pohyb zesílí a předají kapalině ve vnitřním uchu.</li>
+        <li><span class="hl">V hlemýždi má každá výška tónu své místo.</span> Vysoké tóny rozechvějí membránu hned u vstupu, hluboké až na jejím konci.</li>
+        <li>Chvění snímají vláskové buňky. Máme jich jen pár tisíc a zničené už nedorostou. Nejdřív odcházejí ty pro vysoké tóny.</li>
+      </ul>
+    </section>
+
+    <figure class="fig" id="obr1">
+      <div class="fig-head">
+        <p class="fig-num"><b>Obr. 1</b> Cesta zvuku a rozvinutý hlemýžď</p>
+        <span class="label">Měňte výšku tónu a sledujte, kde se membrána rozechvěje</span>
+      </div>
+      <div class="fig-stage">
+        <svg id="ear" viewBox="0 0 720 380" role="img" aria-label="Nahoře cesta zvuku zvukovodem přes bubínek a kůstky do hlemýždě, dole hlemýžď rozvinutý do délky s vlnou, která má vrchol na místě podle výšky tónu"></svg>
+      </div>
+      <div class="fig-controls">
+        <div class="ctl">
+          <span class="label" id="lbl-sound">Zvuk</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-sound" id="sound-seg">
+            <button type="button" role="radio" data-v="one" aria-checked="true">Jeden tón</button>
+            <button type="button" role="radio" data-v="two" aria-checked="false">Dva tóny</button>
+            <button type="button" role="radio" data-v="noise" aria-checked="false">Šum</button>
+          </div>
+        </div>
+        <div class="ctl ctl-grow">
+          <label class="label" for="freq">Výška tónu</label>
+          <div class="ctl-row">
+            <input type="range" id="freq" min="0" max="100" step="1" value="52">
+            <output class="val" id="freq-val" for="freq"></output>
+          </div>
+        </div>
+        <div class="ctl">
+          <span class="label" id="lbl-cells">Vláskové buňky</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-cells" id="cells-seg">
+            <button type="button" role="radio" data-v="young" aria-checked="true">Zdravé</button>
+            <button type="button" role="radio" data-v="old" aria-checked="false">V sedmdesáti</button>
+            <button type="button" role="radio" data-v="loud" aria-checked="false">Po letech hluku</button>
+          </div>
+        </div>
+        <button type="button" class="btn ghost" id="play" aria-pressed="false">Pustit zvuk</button>
+      </div>
+      <div class="fig-status split">
+        <p class="status" id="status" aria-live="polite"></p>
+        <ul class="stats" aria-label="Stav modelu">
+          <li><span class="n">Kmitů za sekundu</span><span class="v" id="st-f"></span></li>
+          <li><span class="n">Místo v hlemýždi</span><span class="v small" id="st-place"></span></li>
+          <li><span class="n">Slyšíte</span><span class="v" id="st-hear"></span></li>
+        </ul>
+      </div>
+      <figcaption class="fig-caption">Zjednodušený model. Hlemýžď je ve skutečnosti stočená trubička dlouhá asi 35 milimetrů, tady je narovnaná a vlna na ní zvětšená a zpomalená. Tlačítko Pustit zvuk hraje potichu a zvuk upraví podle zvolených vláskových buněk. Reproduktory notebooku a telefonu nejvyšší a nejhlubší tóny nezahrají, takže ticho na okrajích nemusí být vaše ucho.</figcaption>
+    </figure>
+
+    <section class="sec" aria-labelledby="h-vnejsi">
+      <div class="prose">
+        <h2 id="h-vnejsi">Od vzduchu ke kapalině</h2>
+        <p>Zvuk je střídání vyššího a nižšího tlaku vzduchu. Boltec ho nasměruje do zvukovodu, na jehož konci je napnutý bubínek, blanka tenká jako list papíru. Tlakové vlny ho rozkmitají přesně v rytmu zvuku.</p>
+        <p>Čidla sluchu ale neleží ve vzduchu. Jsou ve vnitřním uchu, které je plné kapaliny. A to je potíž. Kapalina je mnohem těžší než vzduch a nenechá se jím rozhýbat. Kdyby zvuk dopadal rovnou na ni, odrazilo by se ho přes devadesát devět procent, stejně jako pod vodou neslyšíte, co se volá na břehu.</p>
+        <p>Proto je mezi bubínkem a vnitřním uchem řetízek tří kůstek: kladívko, kovadlinka a třmínek. Sbírají pohyb z velkého bubínku a soustředí ho na okénko asi sedmnáctkrát menší. Navíc fungují jako páka. <span class="hl">Tlak se tím zvětší zhruba dvacetkrát a to stačí, aby se kapalina dala do pohybu.</span></p>
+      </div>
+      <aside class="note" aria-label="Sluch v číslech">
+        <span class="label">V číslech</span>
+        <dl class="facts">
+          <div><dt>20 Hz – 20 kHz</dt><dd>slyší mladé ucho</dd></div>
+          <div><dt>≈ 3 mm</dt><dd>měří třmínek, nejmenší kost v těle</dd></div>
+          <div><dt>≈ 15 000</dt><dd>vláskových buněk je v jednom uchu</dd></div>
+        </dl>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-hlemyzd">
+      <div class="prose">
+        <h2 id="h-hlemyzd">Klaviatura stočená do ulity</h2>
+        <p>Vnitřní ucho má tvar šnečí ulity velké jako hrášek. Říká se mu hlemýžď. Po celé délce jím vede pružná membrána a právě na ní se zvuk třídí.</p>
+        <p>Membrána není všude stejná. U vstupu, kam buší třmínek, je úzká a tuhá. Směrem ke špičce ulity se rozšiřuje a měkne. Tuhé věci kmitají rychle, poddajné pomalu, jako krátká a dlouhá struna.</p>
+        <p>Když třmínek rozvlní kapalinu, rozběhne se po membráně vlna. Roste, dokud nedorazí na místo, které kmitá stejně rychle jako přicházející tón. Tam se rozhoupe nejvíc a hned za ním zanikne. Vysoký tón má vrchol kousek od vstupu, hluboký doběhne skoro až na konec.</p>
+        <p>Složitý zvuk, třeba hlas nebo akord, rozechvěje membránu na několika místech najednou. Ucho ho tak rozloží na jednotlivé tóny dřív, než o něm mozek cokoli ví.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Táhněte výšku tónu od nejhlubšího k nejvyššímu. Vrchol vlny přejede celou membránu zprava doleva. Pak vyberte Dva tóny: na membráně jsou dva vrcholy a každý dráždí jiné buňky.</p>
+        <span class="label">Na okraj</span>
+        <p>Že má každá výška v hlemýždi své místo, ukázal maďarský fyzik Georg von Békésy na uších zemřelých. V roce 1961 za to dostal Nobelovu cenu.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-bunky">
+      <div class="prose">
+        <h2 id="h-bunky">Buňky s vlásky</h2>
+        <p>Na membráně sedí v řadách vláskové buňky. Každá má nahoře svazek tuhých vlásků. Když se membrána pod buňkou zhoupne, vlásky se ohnou, otevřou se v nich kanálky a buňka vyšle signál do sluchového nervu. Mozek pak ví, kde na membráně se něco děje, a podle místa pozná výšku.</p>
+        <p>Vnitřních buněk, které opravdu poslouchají, je jen asi tři a půl tisíce. Zbylých dvanáct tisíc jsou vnější buňky a dělají něco nečekaného. Fungují jako zesilovače: v rytmu zvuku se natahují a smršťují a slabé chvění membrány pod sebou přiživují. Díky nim slyšíme šepot.</p>
+        <p>Zdravé ucho kvůli tomu samo vydává velmi tichý zvuk. Lékaři toho využívají u novorozenců. Pustí jim do ucha cvaknutí a mikrofonem poslouchají, jestli se z hlemýždě ozve odpověď.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Na okraj</span>
+        <p>Sítnice má čidel přes sto milionů, ucho patnáct tisíc. Přesto rozliší tóny, které se liší o zlomek procenta, a zvuky od šustění listí po startující letadlo, tedy v rozsahu sil jedna ku bilionu.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-ztrata">
+      <div class="prose">
+        <h2 id="h-ztrata">Proč mizí nejdřív výšky</h2>
+        <p>Vláskové buňky se u člověka neobnovují. S těmi, se kterými se narodíte, musíte vystačit, a každá, která odumře, chybí napořád.</p>
+        <p>Nejvíc dostávají zabrat ty u vstupu do hlemýždě. Projde kolem nich každá vlna, i ta, která míří dál k hlubokým tónům. Opotřebují se proto první. Děti slyší až k dvaceti tisícům kmitů za sekundu, padesátníci sotva k dvanácti. Dokud jde o pískání komára, nevadí to. Horší je, když ztráta sestoupí k souhláskám řeči: člověk slyší, že někdo mluví, ale nerozumí co.</p>
+        <p>Hluk to urychluje. Příliš silné chvění vlásky zláme. Typická je díra kolem čtyř tisíc kmitů, kde je ucho nejcitlivější. Bezpečná hranice je 85 decibelů po osm hodin denně. Každé tři decibely navíc tu dobu zkrátí na polovinu, takže na koncertě se sto decibely je jí čtvrt hodiny.</p>
+        <p>Pískání v uších po hlasitém večeru je varování. Buňky dostaly ránu, a i když se většina vzpamatuje, několik jich to pokaždé nepřežije.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Přepněte vláskové buňky na V sedmdesáti a táhněte tón nahoru. Vlna na membráně pořád je, ale v místě jejího vrcholu už není kdo by ji ohlásil. Pak zkuste Po letech hluku a tón kolem 4 kHz.</p>
+        <p>Když pustíte zvuk a přepínáte mezi zdravým uchem a uchem v sedmdesáti při šumu, uslyšíte, jak zní svět bez výšek.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-smer">
+      <div class="prose">
+        <h2 id="h-smer">K čemu jsou uši dvě</h2>
+        <p>Jedno ucho pozná, co zní. Odkud to zní, pozná až dvojice. Zvuk zprava dorazí do pravého ucha o zlomek tisíciny sekundy dřív než do levého a je v něm o něco silnější, protože levému stíní hlava.</p>
+        <p>Největší možné zpoždění mezi ušima je asi šest desetitisícin sekundy. Mozek z něj dokáže vyčíst směr s přesností na pár stupňů, což znamená rozlišit rozdíly kolem deseti miliontin sekundy. Je to nejpřesnější měření času, jaké tělo umí.</p>
+        <p>Nahoře a dole, vpředu a vzadu se takhle rozeznat nedá, tam je zpoždění stejné. Pomáhá složitý tvar boltce. Zvuk z různých směrů se v jeho záhybech odráží různě a trochu změní barvu. Mozek se ty změny naučil číst.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Na okraj</span>
+        <p>Vlastní hlas z nahrávky zní cize, protože ho běžně slyšíte dvakrát: vzduchem a zároveň chvěním kostí lebky, které přidává hloubky. Nahrávka má jen tu první cestu. Tak vás slyší všichni ostatní.</p>
+        <p>Jak sluchátka dokážou zvuk naopak zrušit, popisuje článek o <a href="../potlaceni-hluku/">potlačení hluku</a>.</p>
+      </aside>
+    </section>
+
+    <footer class="art-foot">
+      <a class="next" href="../reflex/" data-cat="telo">
+        <span class="label">Další článek · Lidské tělo</span>
+        <span class="t">Reflex a reakční doba</span>
+        <p>Proč trvá čtvrt sekundy, než zmáčknete tlačítko, a proč ruka od plotny ucukne dřív.</p>
+      </a>
+      <a class="back" href="../">Všechna témata</a>
+    </footer>
+  </main>
+
+  <script>
+  (() => {
+    const NS = "http://www.w3.org/2000/svg";
+    function el(tag, attrs, parent) {
+      const n = document.createElementNS(NS, tag);
+      for (const k in attrs || {}) n.setAttribute(k, attrs[k]);
+      if (parent) parent.appendChild(n);
+      return n;
+    }
+    const $ = (id) => document.getElementById(id);
+    const svg = $("ear");
+    const fmt1 = new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 1 });
+    const fmt0 = new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 0 });
+
+    /* ---------- model ---------- */
+    const LENGTH = 35;                          // délka hlemýždě v mm
+    // kde na membráně má která výška své místo: 0 = špička hlemýždě, 1 = vstup u třmínku
+    const placeOf = (f) => Math.max(0, Math.min(1, Math.log10(f / 165.4 + 0.88) / 2.1));
+    const freqAt = (x) => 165.4 * (10 ** (2.1 * x) - 0.88);
+    const s = { sound: "one", f: 1000, cells: "young", t: 0, playing: false };
+    const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const tones = () => (s.sound === "one" ? [s.f] : s.sound === "two" ? [300, 3000] : []);
+    // kolik vláskových buněk na místě dané výšky zbývá (0 až 1)
+    function alive(f) {
+      if (s.cells === "old") return Math.max(0, Math.min(1, 1 - Math.log2(f / 5000) / 1.3));
+      if (s.cells === "loud") {
+        const notch = 1 - 0.9 * Math.exp(-0.5 * (Math.log2(f / 4000) / 0.38) ** 2);
+        return Math.max(0, Math.min(notch, 1 - Math.log2(f / 9000) / 1.2));
+      }
+      return 1;
+    }
+
+    /* ---------- scéna ---------- */
+    el("text", { x: 20, y: 22, class: "cap" }, svg).textContent = "CESTA ZVUKU";
+    // zvukovod, bubínek, kůstky a hlemýžď
+    [0, 1, 2].forEach((i) => el("path", { d: `M${44 + i * 26} 62q10 22 0 44`, class: "air", opacity: 0.35 + i * 0.25 }, svg));
+    el("path", { d: "M118 50Q150 66 178 66H292V102H178Q150 102 118 118Z", class: "part" }, svg);
+    const drum = el("line", { x1: 292, y1: 62, x2: 292, y2: 106, class: "drum" }, svg);
+    const bones = el("g", {}, svg);
+    el("path", { d: "M296 80L328 70L334 80L328 92Z", class: "bone" }, bones);
+    el("path", { d: "M334 74L360 78L356 92L336 90Z", class: "bone" }, bones);
+    el("path", { d: "M360 80L384 74V96L360 90ZM366 81V89L378 91V79Z", class: "bone", "fill-rule": "evenodd" }, bones);
+    el("path", { d: "M392 84h36a34 34 0 1 1 -34 34a24 24 0 1 1 24 24a14 14 0 1 1 14 -14", class: "spiral", transform: "translate(40 -34)" }, svg);
+    el("path", { d: "M392 84h36a34 34 0 1 1 -34 34a24 24 0 1 1 24 24a14 14 0 1 1 14 -14", class: "spiral-in", transform: "translate(40 -34)" }, svg);
+    [["zvukovod", 205, 128], ["bubínek", 292, 128], ["kůstky", 342, 54], ["hlemýžď", 560, 100]].forEach(([t, x, y]) => (el("text", { x, y, class: "lbl" }, svg).textContent = t));
+    el("path", { d: "M456 150q-60 40 -150 46", class: "air", "stroke-dasharray": "4 4" }, svg);
+    el("text", { x: 20, y: 190, class: "cap" }, svg).textContent = "HLEMÝŽĎ ROZVINUTÝ DO DÉLKY";
+
+    const X0 = 60, X1 = 660, MY = 268;
+    const X = (x) => X1 - x * (X1 - X0);            // vstup vlevo, špička vpravo
+    // membrána: u vstupu úzká a tuhá, u špičky široká a poddajná
+    el("path", { d: `M${X0} ${MY - 2}L${X1} ${MY - 9}V${MY + 9}L${X0} ${MY + 2}Z`, class: "membrane" }, svg);
+    el("text", { x: X0, y: 222, class: "axis", style: "text-anchor:start" }, svg).textContent = "vstup u třmínku · úzká a tuhá";
+    el("text", { x: X1, y: 222, class: "axis", style: "text-anchor:end" }, svg).textContent = "špička · široká a poddajná";
+    [20000, 10000, 5000, 2000, 1000, 500, 200, 20].forEach((f) => {
+      const x = X(placeOf(f));
+      el("line", { x1: x, y1: 330, x2: x, y2: 336, stroke: "var(--rule)" }, svg);
+      el("text", { x, y: 350, class: "axis" }, svg).textContent = f >= 1000 ? `${f / 1000} kHz` : `${f} Hz`;
+    });
+    const cells = [];
+    for (let px = X0 + 4; px <= X1 - 2; px += 8) cells.push([px, el("line", { x1: px, y1: 304, x2: px, y2: 322, class: "cell" }, svg)]);
+    el("text", { x: X0, y: 372, class: "axis", style: "text-anchor:start" }, svg).textContent = "čárky pod membránou jsou vláskové buňky";
+    const wave = el("path", { class: "wave" }, svg), peakG = el("g", {}, svg);
+
+    // obálka vlny pro tón s vrcholem v px: od vstupu pomalu roste, za vrcholem rychle zaniká
+    const envelope = (px, peak) => (px <= peak ? Math.exp(-(((px - peak) / 95) ** 2)) : Math.exp(-(((px - peak) / 20) ** 2)));
+    function amplitude(px) {
+      if (s.sound === "noise") return 0.45;
+      return Math.min(1, tones().reduce((a, f) => a + envelope(px, X(placeOf(f))), 0));
+    }
+    function draw() {
+      const pts = [];
+      for (let px = X0; px <= X1; px += 3) {
+        const jitter = s.sound === "noise" ? Math.sin(px * 0.9 + s.t * 31) * Math.cos(px * 0.37 - s.t * 17) : Math.sin((px - X0) / 11 - s.t * 9);
+        pts.push(`${px} ${(MY - amplitude(px) * jitter * 30).toFixed(1)}`);
+      }
+      wave.setAttribute("d", "M" + pts.join("L"));
+    }
+    function render() {
+      const list = tones();
+      cells.forEach(([px, c]) => {
+        const f = freqAt((X1 - px) / (X1 - X0)), live = alive(f), amp = amplitude(px);
+        c.setAttribute("stroke", live < 0.12 ? "var(--rule)" : amp * live > 0.25 ? "var(--cat)" : "var(--ink-3)");
+        c.setAttribute("stroke-opacity", live < 0.12 ? 0.6 : (0.35 + 0.65 * Math.max(live * 0.4, amp * live)).toFixed(2));
+        c.setAttribute("stroke-dasharray", live < 0.12 ? "2 4" : "none");
+      });
+      peakG.textContent = "";
+      list.forEach((f) => { el("text", { x: Math.max(X0 + 30, Math.min(X1 - 30, X(placeOf(f)))), y: 246 - 0, class: "peak", dy: -8 }, peakG).textContent = f >= 1000 ? `${fmt1.format(f / 1000)} kHz` : `${f} Hz`; });
+      $("freq").disabled = s.sound !== "one";
+      $("freq-val").textContent = s.f >= 1000 ? `${fmt1.format(s.f / 1000)} kHz` : `${s.f} Hz`;
+      $("st-f").textContent = s.sound === "one" ? fmt0.format(s.f) : s.sound === "two" ? "300 a 3 000" : "všechny";
+      $("st-f").classList.toggle("small", s.sound !== "one");
+      $("st-place").textContent = s.sound === "one" ? `${fmt1.format((1 - placeOf(s.f)) * LENGTH)} mm od vstupu` : s.sound === "two" ? "dvě místa" : "celá membrána";
+      const heard = list.map(alive), worst = Math.min(1, ...heard);
+      $("st-hear").textContent = s.sound === "noise" ? (s.cells === "young" ? "celý" : "část") : worst > 0.6 ? "ano" : worst > 0.12 ? "slabě" : "ne";
+
+      let status;
+      if (s.sound === "noise") status = s.cells === "young"
+        ? "<strong>Šum.</strong> Obsahuje všechny výšky najednou, a tak se chvěje celá membrána a ozývají se buňky po celé její délce."
+        : "<strong>Šum bez části výšek.</strong> Membrána se chvěje celá, ale tam, kde buňky chybějí, to nemá kdo ohlásit. Šum zní dutě, jako přes zavřené dveře.";
+      else if (s.sound === "two") status = "<strong>Dva tóny, dvě místa.</strong> Každý tón má na membráně vlastní vrchol a dráždí jinou skupinu buněk. Mozek je díky tomu slyší jako dva tóny, ne jako jeden smíchaný.";
+      else if (worst <= 0.12) status = "<strong>Vlna tam je, slyšet není.</strong> Membrána se v tom místě chvěje jako dřív. Vláskové buňky, které by to měly ohlásit, ale chybějí, a do mozku nejde nic.";
+      else if (worst <= 0.6) status = "<strong>Slabě.</strong> V místě vrcholu zbyla jen část buněk. Tón slyšíte, jen když je dost silný.";
+      else if (s.f >= 4000) status = "<strong>Vysoký tón.</strong> Vlna má vrchol hned u vstupu, kde je membrána úzká a tuhá, a dál se nedostane.";
+      else if (s.f >= 400) status = "<strong>Střední tón.</strong> Vlna doběhne do středu hlemýždě. V téhle oblasti leží většina řeči a ucho je tu nejcitlivější.";
+      else status = "<strong>Hluboký tón.</strong> Vlna proběhne skoro celou membránu a rozhoupe ji až u špičky, kde je široká a poddajná.";
+      $("status").innerHTML = status;
+      draw();
+      tune();
+    }
+
+    /* ---------- zvuk ---------- */
+    let ctx = null, nodes = [];
+    function silence() { nodes.forEach((n) => { try { n.stop ? n.stop() : n.disconnect(); } catch (e) { /* už neběží */ } }); nodes = []; }
+    function tune() {
+      if (!s.playing || !ctx) return;
+      silence();
+      const out = ctx.createGain();
+      out.gain.value = 0.0001;
+      out.gain.exponentialRampToValueAtTime(0.05, ctx.currentTime + 0.05);
+      out.connect(ctx.destination);
+      nodes.push(out);
+      if (s.sound === "noise") {
+        const buf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate), data = buf.getChannelData(0);
+        for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+        const src = ctx.createBufferSource(), filter = ctx.createBiquadFilter();
+        src.buffer = buf; src.loop = true;
+        if (s.cells === "old") { filter.type = "lowpass"; filter.frequency.value = 5000; }
+        else if (s.cells === "loud") { filter.type = "notch"; filter.frequency.value = 4000; filter.Q.value = 1.2; }
+        else { filter.type = "allpass"; }
+        src.connect(filter); filter.connect(out); src.start();
+        nodes.push(src, filter);
+      } else {
+        tones().forEach((f) => {
+          const osc = ctx.createOscillator(), g = ctx.createGain();
+          osc.type = "sine"; osc.frequency.value = f; g.gain.value = alive(f) / Math.max(1, tones().length);
+          osc.connect(g); g.connect(out); osc.start();
+          nodes.push(osc, g);
+        });
+      }
+    }
+    $("play").addEventListener("click", () => {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) { $("play").disabled = true; return; }
+      s.playing = !s.playing;
+      $("play").setAttribute("aria-pressed", String(s.playing));
+      $("play").textContent = s.playing ? "Ztišit" : "Pustit zvuk";
+      if (s.playing) { ctx = ctx || new AC(); ctx.resume(); tune(); } else silence();
+    });
+    document.addEventListener("visibilitychange", () => { if (document.hidden && s.playing) $("play").click(); });
+
+    /* ---------- ovládání ---------- */
+    function bindSeg(id, apply) {
+      const seg = $(id);
+      seg.addEventListener("click", (e) => {
+        const b = e.target.closest("button[data-v]");
+        if (!b) return;
+        seg.querySelectorAll("button").forEach((x) => x.setAttribute("aria-checked", String(x === b)));
+        apply(b.dataset.v);
+        render();
+      });
+    }
+    bindSeg("sound-seg", (v) => { s.sound = v; });
+    bindSeg("cells-seg", (v) => { s.cells = v; });
+    $("freq").addEventListener("input", (e) => {
+      const f = 20 * 1000 ** (Number(e.target.value) / 100);
+      s.f = f < 100 ? Math.round(f) : f < 1000 ? Math.round(f / 10) * 10 : Math.round(f / 100) * 100;
+      render();
+    });
+    let last = 0;
+    function frame(now) {
+      const dt = Math.min(0.1, (now - last) / 1000 || 0);
+      last = now;
+      s.t += dt;
+      draw();
+      // bubínek a kůstky se chvějí se zvukem
+      const k = Math.sin(s.t * 18) * 1.6;
+      drum.setAttribute("transform", `translate(${k.toFixed(2)} 0)`);
+      bones.setAttribute("transform", `translate(${(k * 0.7).toFixed(2)} 0)`);
+      requestAnimationFrame(frame);
+    }
+    $("freq").dispatchEvent(new Event("input"));
+    if (!still) requestAnimationFrame(frame);
+  })();
+  </script>
+</body>
+</html>

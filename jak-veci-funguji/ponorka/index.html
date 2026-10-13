@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Vztlak a ponorka</title>
+  <meta name="description" content="Proč ocelová loď plave, co přesně říká Archimédův zákon a jak se ponorka potopí a zase vynoří, aniž by změnila tvar. S ponorkou, které si můžete napouštět balastní nádrže.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700&display=swap">
+  <link rel="stylesheet" href="../style.css?v=5">
+  <style>
+    #sea { border: 1px solid var(--rule); }
+    .hull { fill: #4b5563; stroke: #1f2933; stroke-width: 2; stroke-linejoin: round; }
+    .tower { fill: #374151; stroke: #1f2933; stroke-width: 2; stroke-linejoin: round; }
+    .tank { fill: #dbe4ee; stroke: #1f2933; stroke-width: 1.5; }
+    .tank-water { fill: #2a7fb8; }
+    .bubble { fill: none; stroke: #ffffff; stroke-width: 1.4; opacity: 0.85; }
+    .vec line { stroke-width: 5; stroke-linecap: round; }
+    .vec text { font: 600 13px var(--font-mono); paint-order: stroke; stroke: #0b2a47; stroke-width: 4px; stroke-linejoin: round; fill: #fff; }
+    .vec.up line { stroke: #7ee0a1; } .vec.up path { fill: #7ee0a1; }
+    .vec.down line { stroke: #ff9a8a; } .vec.down path { fill: #ff9a8a; }
+    .depth line { stroke: #ffffff; stroke-opacity: 0.45; stroke-width: 1; }
+    .depth text { fill: #ffffff; fill-opacity: 0.8; font: 500 11px var(--font-mono); }
+    .sky-text { fill: #1f3a52; font: 500 11px var(--font-mono); letter-spacing: 0.08em; }
+    @media (max-width: 46rem) { .vec text { font-size: 17px; } .depth text, .sky-text { font-size: 15px; } }
+  </style>
+</head>
+<body data-cat="doprava">
+  <header class="topbar">
+    <div class="wrap">
+      <a class="brand" href="../">Jak věci fungují</a>
+      <nav class="crumbs" aria-label="Drobečková navigace"><a href="../#doprava">Doprava</a><span aria-hidden="true">/</span><span>Vztlak a ponorka</span></nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <header class="art-head">
+      <p class="eyebrow">Doprava</p>
+      <h1 class="display">Vztlak a ponorka</h1>
+      <p class="lede">Ocelová jehla ve vodě klesne ke dnu a ocelová loď o sto tisících tunách plave. Rozhoduje jediná věc: kolik vody těleso odstrčí ze svého místa. Ponorka toho využívá naplno. Chce-li dolů, přibere vodu, a chce-li nahoru, vyfoukne ji vzduchem.</p>
+    </header>
+
+    <section class="tldr" aria-labelledby="h-zkratka">
+      <h2 class="label" id="h-zkratka">Ve zkratce</h2>
+      <ul>
+        <li>Voda nadnáší každé ponořené těleso silou, která se rovná tíze vody, kterou těleso vytlačilo.</li>
+        <li><span class="hl">Co váží míň než voda, kterou vytlačí, plave. Co váží víc, klesá.</span> Na materiálu nezáleží, jen na váze a objemu.</li>
+        <li>Ponorka má objem pořád stejný a mění svou váhu. Do balastních nádrží pouští vodu, nebo ji z nich stlačeným vzduchem vytlačuje.</li>
+      </ul>
+    </section>
+
+    <figure class="fig" id="obr1">
+      <div class="fig-head">
+        <p class="fig-num"><b>Obr. 1</b> Ponorka a dvě síly</p>
+        <span class="label">Napouštějte balastní nádrže a zkuste se vznášet</span>
+      </div>
+      <div class="fig-stage">
+        <svg id="sea" viewBox="0 0 720 420" role="img" aria-label="Ponorka v řezu ve vodě, šipka tíhy míří dolů a šipka vztlaku nahoru, vpravo stupnice hloubky"></svg>
+      </div>
+      <div class="fig-controls">
+        <div class="ctl ctl-grow">
+          <label class="label" for="fill">Voda v balastních nádržích</label>
+          <div class="ctl-row">
+            <input type="range" id="fill" min="0" max="100" step="1" value="0">
+            <output class="val" id="fill-val" for="fill"></output>
+          </div>
+        </div>
+        <div class="ctl">
+          <span class="label" id="lbl-water">Voda kolem</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-water" id="water-seg">
+            <button type="button" role="radio" data-v="sea" aria-checked="true">Mořská</button>
+            <button type="button" role="radio" data-v="fresh" aria-checked="false">Sladká</button>
+          </div>
+        </div>
+        <button type="button" class="btn" id="blow">Vyfouknout nádrže</button>
+      </div>
+      <div class="fig-status split">
+        <p class="status" id="status" aria-live="polite"></p>
+        <ul class="stats" aria-label="Stav modelu">
+          <li><span class="n">Tíha ponorky</span><span class="v" id="st-w"></span></li>
+          <li><span class="n">Vztlak</span><span class="v" id="st-b"></span></li>
+          <li><span class="n">Hloubka a tlak</span><span class="v small" id="st-d"></span></li>
+        </ul>
+      </div>
+      <figcaption class="fig-caption">Zjednodušený model. Ponorka má objem 2 000 krychlových metrů a bez vody v nádržích váží 1 700 tun, do nádrží se vejde 500 krychlových metrů vody. Ponorka není v měřítku k hloubce a čas běží pětkrát rychleji. Skutečná ponorka se navíc vyvažuje malými nádržemi a za jízdy drží hloubku kormidly.</figcaption>
+    </figure>
+
+    <section class="sec" aria-labelledby="h-archimedes">
+      <div class="prose">
+        <h2 id="h-archimedes">Odkud se bere síla, která nadnáší</h2>
+        <p>Voda tlačí na všechno, co je v ní ponořené, a tlačí ze všech stran. Čím hlouběji, tím víc, protože nad sebou nese víc vody. Spodek ponořeného tělesa je hlouběji než jeho vršek, a tak na něj voda zespodu tlačí o trochu silněji než shora. Ten rozdíl je vztlak.</p>
+        <p>Jak je velký, se dá uhodnout bez počítání. Představte si místo ponorky stejně velký a stejně tvarovaný kus vody. Ten by ve vodě nikam neklesal ani nestoupal, okolní voda ho tedy nese přesně silou jeho tíhy. Když ho vyměníte za ponorku, okolní voda o tom neví a tlačí stejně.</p>
+        <p><span class="hl">Vztlak se proto rovná tíze vody, kterou těleso vytlačilo.</span> Přišel na to ve třetím století před naším letopočtem Archimédés a zákon nese jeho jméno.</p>
+      </div>
+      <aside class="note" aria-label="Vztlak v číslech">
+        <span class="label">V číslech</span>
+        <dl class="facts">
+          <div><dt>1 tunu</dt><dd>unese každý krychlový metr vytlačené vody</dd></div>
+          <div><dt>asi 90 %</dt><dd>ledovce je pod hladinou</dd></div>
+          <div><dt>+1 atmosféra</dt><dd>tlaku přibude s každými deseti metry hloubky</dd></div>
+        </dl>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-lod">
+      <div class="prose">
+        <h2 id="h-lod">Proč plave ocelová loď</h2>
+        <p>Ocel je skoro osmkrát těžší než voda. Kostka oceli vytlačí vodu, která váží osminu toho co ona, a jde ke dnu. Když ale stejnou ocel rozválíte na plech a uděláte z něj mísu, zabere ve vodě mnohem víc místa. Vytlačí víc vody, než sama váží, a plave.</p>
+        <p>Loď je taková mísa. Uvnitř je hlavně vzduch, takže celá dohromady, ocel i vzduch, je na svůj objem lehčí než voda. Ponoří se přesně tak hluboko, až vytlačí vodu, která váží stejně jako ona. Když na ni naložíte náklad, klesne o kus hlouběji a vytlačí vody víc.</p>
+        <p>Stejně je to s ledem. Je o desetinu lehčí než mořská voda, a tak z ledovce vyčnívá jen desetina. Zbytek musí být pod hladinou, aby vytlačil dost vody.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Nechte nádrže prázdné. Ponorka plave a obě šipky jsou stejně dlouhé: z vody jí vyčnívá právě tolik, aby vytlačená voda vážila stejně jako ona. Přidávejte vodu po troškách a sledujte, jak sedá hlouběji.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-balast">
+      <div class="prose">
+        <h2 id="h-balast">Ponorka mění váhu, ne tvar</h2>
+        <p>Ponorka má pevný trup, který objem nemění. Pod vodou tedy vytlačuje pořád stejně vody a vztlak má pořád stejný. Aby klesla nebo stoupla, musí změnit to druhé: svou váhu.</p>
+        <p>Slouží k tomu balastní nádrže, velké komory po stranách trupu. Na hladině jsou plné vzduchu. Když se má ponorka potopit, otevřou se ventily nahoře, vzduch unikne a otvory ve dně do nádrží vteče mořská voda. Ponorka ztěžkne a klesá.</p>
+        <p>Při vynořování to jde obráceně. Do nádrží se pustí stlačený vzduch ze zásobníků a ten vodu vytlačí zpátky do moře. Ponorka zlehkne a vztlak ji vynese nahoru.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Napusťte nádrže na 80 procent. Tíha přeroste vztlak a ponorka klesá. Pak zmáčkněte Vyfouknout nádrže: vzduch vytlačí vodu, šipka tíhy se zkrátí a ponorka se vrátí na hladinu.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-vznaseni">
+      <div class="prose">
+        <h2 id="h-vznaseni">Vznášet se je nejtěžší</h2>
+        <p>Mezi klesáním a stoupáním je jediný bod, kdy ponorka váží přesně tolik co voda, kterou vytlačuje. Trefit ho a udržet je skoro nemožné. Stačí pár kilo navíc a ponorka pomalu klesá, pár kilo míň a stoupá.</p>
+        <p>Rovnováha je navíc vratká. Když ponorka o kus klesne, okolní tlak její trup nepatrně zmáčkne. Vytlačuje pak o něco míň vody, vztlak se zmenší a ona klesá dál. Sama se nezastaví.</p>
+        <p>Posádka si proto pomáhá jinak. Malými nádržemi dolaďuje váhu a hlavně jede. Ponorka má na přídi a na zádi vodorovná kormidla, která fungují jako <a href="../letadlo/">křídla letadla</a>. Dokud pluje dopředu, drží hloubku jimi a váha nemusí sedět na kilogram.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Zkuste ponorku zastavit v hloubce 150 metrů jen posuvníkem. Jeden dílek je pět tun vody, a i to je moc: ponorka pořád buď pomalu klesá, nebo pomalu stoupá.</p>
+        <span class="label">Na okraj</span>
+        <p>Slovo vztlak se používá i pro sílu, která nese letadlo. To je jiná věc. Křídlo nadnáší jen tehdy, když se pohybuje. Ponorku nese voda, i když stojí.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-voda">
+      <div class="prose">
+        <h2 id="h-voda">Není voda jako voda</h2>
+        <p>Mořská voda je kvůli soli asi o dvě a půl procenta těžší než sladká. Stejný objem jí tedy unese víc. Loď, která z moře vpluje do řeky, si sedne o kus hlouběji, aniž by přibrala jediné kilo.</p>
+        <p>Pro ponorku je to ještě citelnější. Když je vyvážená v moři a vpluje do místa, kde se do něj vlévá řeka, vztlak jí naráz klesne o desítky tun a začne se propadat. Hustotu mění i teplota: studená voda je těžší než teplá.</p>
+        <p>V moři proto leží vrstvy vody různé hustoty na sobě. Ponorka, která je o něco těžší než horní vrstva a lehčí než spodní, může na rozhraní ležet jako na polštáři, s vypnutými motory a úplně potichu.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Vyvažte ponorku v mořské vodě tak, aby klesala co nejpomaleji, a přepněte na Sladkou. Váha se skoro nezmění, vztlak ale spadne o padesát tun a ponorka jde rychle dolů.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-tlak">
+      <div class="prose">
+        <h2 id="h-tlak">Co drží ponorku pohromadě</h2>
+        <p>S každými deseti metry hloubky přibude tlak jedné atmosféry. Ve třech stech metrech tlačí voda na každý čtvereční metr trupu silou přes tři sta tun. Uvnitř přitom zůstává obyčejný tlak vzduchu, aby posádka mohla dýchat.</p>
+        <p>Trup proto musí být z tlusté oceli a mít tvar, který tlak rozloží rovnoměrně: válec s kulatými konci. Každá ponorka má hloubku, pod kterou nesmí, protože by ji voda rozmáčkla.</p>
+        <p>Balastní nádrže takhle pevné být nemusejí. Jsou dole otevřené do moře, takže v nich je stejný tlak jako venku. Čím je ale ponorka hlouběji, tím silnější vzduch potřebuje, aby z nich vodu vytlačil.</p>
+        <p>Nejhlouběji se lidé dostali v roce 1960. Batyskaf Trieste tehdy sestoupil na dno Mariánského příkopu, skoro jedenáct kilometrů pod hladinu. Posádka seděla v ocelové kouli se stěnami silnými dvanáct centimetrů.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Na okraj</span>
+        <p>Ryby to dělají jako ponorka. Mají v těle plynový měchýř a přidáváním nebo ubíráním plynu si nastavují, jestli budou stoupat, klesat, nebo stát na místě.</p>
+        <p>Doma si to vyzkoušíte s plastovou lahví plnou vody a sáčkem kečupu z bufetu, ve kterém je bublinka vzduchu. Když láhev zmáčknete, bublinka se stlačí, sáček vytlačí míň vody a klesne. Když povolíte, vyplave.</p>
+      </aside>
+    </section>
+
+    <footer class="art-foot">
+      <a class="next" href="../modre-nebe/" data-cat="priroda">
+        <span class="label">Další článek · Příroda</span>
+        <span class="t">Proč je nebe modré</span>
+        <p>Proč je obloha modrá, západ slunce červený a mraky bílé, když je to pořád stejné světlo.</p>
+      </a>
+      <a class="back" href="../">Všechna témata</a>
+    </footer>
+  </main>
+
+  <script>
+  (() => {
+    const NS = "http://www.w3.org/2000/svg";
+    function el(tag, attrs, parent) {
+      const n = document.createElementNS(NS, tag);
+      for (const k in attrs || {}) n.setAttribute(k, attrs[k]);
+      if (parent) parent.appendChild(n);
+      return n;
+    }
+    const $ = (id) => document.getElementById(id);
+    const svg = $("sea");
+    const fmt0 = new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 0 });
+
+    /* ---------- model ---------- */
+    const VOLUME = 2000;                  // m³, tolik vody ponorka vytlačí, když je celá pod hladinou
+    const DRY = 1700;                     // tun bez vody v nádržích
+    const TANKS = 500;                    // m³ balastních nádrží
+    const DENSITY = { sea: 1.025, fresh: 1.0 };   // tun na m³
+    const FLOOR = 300;                    // hloubka dna v metrech
+    const G = 9.81, DRAG = 0.078, SPEEDUP = 5;
+    const s = { fill: 0, water: "sea", z: 0, v: 0, blowing: false, bubbles: [] };
+    const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const mass = () => DRY + (s.fill / 100) * TANKS * DENSITY[s.water];
+    const lift = () => DENSITY[s.water] * VOLUME;           // vztlak pod hladinou, v tunách
+
+    function step(dt) {
+      if (s.blowing) {
+        s.fill = Math.max(0, s.fill - dt * 9);
+        if (s.fill === 0) s.blowing = false;
+        $("fill").value = Math.round(s.fill);
+      }
+      const m = mass(), b = lift();
+      if (s.z <= 0 && m <= b) { s.z = 0; s.v = 0; return; }      // plave na hladině
+      s.v += (G * (m - b) / m - DRAG * s.v * Math.abs(s.v)) * dt;
+      s.z += s.v * dt;
+      if (s.z >= FLOOR) { s.z = FLOOR; s.v = 0; }
+      if (s.z <= 0) { s.z = 0; s.v = 0; }
+    }
+
+    /* ---------- scéna ---------- */
+    const SURF = 60, Y = (z) => SURF + z;                      // 1 m hloubky = 1 px
+    const defs = el("defs", {}, svg);
+    const grad = el("linearGradient", { id: "g-sea", x1: 0, y1: 0, x2: 0, y2: 1 }, defs);
+    el("stop", { offset: 0, "stop-color": "#2f86bf" }, grad);
+    el("stop", { offset: 1, "stop-color": "#0b2a47" }, grad);
+    el("rect", { x: 0, y: 0, width: 720, height: SURF, fill: "#cfe6f5" }, svg);
+    el("rect", { x: 0, y: SURF, width: 720, height: 360, fill: "url(#g-sea)" }, svg);
+    el("path", { d: "M0 400Q120 392 240 400T480 398T720 400V420H0Z", fill: "#5b4a32" }, svg);
+    el("text", { x: 16, y: 22, class: "sky-text" }, svg).textContent = "HLADINA";
+    const depthG = el("g", { class: "depth" }, svg);
+    for (let z = 0; z <= FLOOR; z += 50) {
+      el("line", { x1: 640, y1: Y(z) + 18, x2: 660, y2: Y(z) + 18 }, depthG);
+      el("text", { x: 668, y: Y(z) + 22 }, depthG).textContent = `${z} m`;
+    }
+    const bubbleG = el("g", {}, svg);
+    const sub = el("g", {}, svg);
+    el("path", { d: "M-96 -18H70Q104 -18 104 0Q104 18 70 18H-96Q-112 18 -112 0Q-112 -18 -96 -18Z", class: "hull" }, sub);
+    el("path", { d: "M-18 -18V-36Q-18 -40 -14 -40H14Q18 -40 18 -36V-18Z", class: "tower" }, sub);
+    el("path", { d: "M-112 0h-16M-128 -10v20", stroke: "#1f2933", "stroke-width": 3, fill: "none", "stroke-linecap": "round" }, sub);
+    const tanks = [-86, 22].map((x) => {
+      el("rect", { x, y: -11, width: 62, height: 23, rx: 3, class: "tank" }, sub);
+      return el("rect", { x: x + 1, width: 60, class: "tank-water" }, sub);
+    });
+    const vecG = el("g", {}, svg);
+    function arrow(cls, x, y0, len, label, up) {
+      const y1 = y0 + (up ? -len : len), g = el("g", { class: `vec ${cls}` }, vecG);
+      el("line", { x1: x, y1: y0, x2: x, y2: y1 + (up ? 10 : -10) }, g);
+      el("path", { d: `M${x} ${y1}l-9 ${up ? 14 : -14}h18Z` }, g);
+      el("text", { x: x + 14, y: Math.max(16, y1 + (up ? 12 : -2)) }, g).textContent = label;
+    }
+
+    let statusKey = "";
+    function render() {
+      const m = mass(), bmax = lift(), afloat = s.z <= 0 && m <= bmax;
+      const b = afloat ? m : bmax;                              // na hladině se ponorka vynoří tak, aby se síly vyrovnaly
+      const out = afloat ? (1 - m / bmax) * 58 : 0;             // o kolik pixelů vyčnívá z vody
+      const y = Y(s.z) + 22 - out;
+      sub.setAttribute("transform", `translate(300 ${y.toFixed(1)})`);
+      tanks.forEach((t) => { const h = 21 * (s.fill / 100); t.setAttribute("y", (11 - h).toFixed(1)); t.setAttribute("height", h.toFixed(1)); });
+      vecG.textContent = "";
+      const len = (t) => 24 + (t - 1600) / 9;
+      arrow("up", 270, y - 20, len(b), `vztlak ${fmt0.format(b)} t`, true);
+      arrow("down", 330, y + 20, len(m), `tíha ${fmt0.format(m)} t`, false);
+      bubbleG.textContent = "";
+      s.bubbles.forEach((q) => el("circle", { cx: q.x.toFixed(1), cy: q.y.toFixed(1), r: q.r, class: "bubble" }, bubbleG));
+
+      $("fill-val").textContent = `${Math.round(s.fill)} %`;
+      $("st-w").textContent = `${fmt0.format(m)} t`;
+      $("st-b").textContent = `${fmt0.format(b)} t`;
+      $("st-d").textContent = afloat ? "na hladině · 1 atm" : `${fmt0.format(s.z)} m · ${fmt0.format(1 + s.z / 10)} atm`;
+      const diff = m - bmax;
+      const key = afloat ? "float" : s.z >= FLOOR ? "floor" : Math.abs(diff) <= 8 && Math.abs(s.v) < 0.5 ? "hover" : diff > 0 ? "sink" : "rise";
+      if (key === statusKey) return;
+      statusKey = key;
+      $("status").innerHTML = {
+        float: "<strong>Plave na hladině.</strong> Ponorka je lehčí než voda, kterou by vytlačila celá. Ponořila se proto jen zčásti, právě tolik, aby vytlačená voda vážila stejně jako ona. Tíha a vztlak jsou vyrovnané.",
+        sink: "<strong>Klesá.</strong> Voda v nádržích ponorku zatížila. Váží teď víc než voda, kterou vytlačuje, a vztlak ji neunese. Objem se přitom nezměnil, změnila se jen váha.",
+        rise: "<strong>Stoupá.</strong> Ponorka je lehčí než voda, kterou vytlačuje, a vztlak ji nese k hladině.",
+        hover: "<strong>Skoro se vznáší.</strong> Tíha a vztlak se liší jen o pár tun a ponorka se hýbe pomalu. Úplně zastavit ji jen nádržemi nejde, skutečná ponorka si pomáhá kormidly.",
+        floor: "<strong>Leží na dně.</strong> Je těžší než voda, kterou vytlačuje, a zbytek její váhy nese dno. Nahoru se dostane, jen když z nádrží vytlačí vodu.",
+      }[key];
+    }
+
+    /* ---------- ovládání ---------- */
+    $("fill").addEventListener("input", (e) => { s.fill = Number(e.target.value); s.blowing = false; render(); });
+    $("blow").addEventListener("click", () => { s.blowing = true; });
+    $("water-seg").addEventListener("click", (e) => {
+      const b = e.target.closest("button[data-v]");
+      if (!b) return;
+      $("water-seg").querySelectorAll("button").forEach((x) => x.setAttribute("aria-checked", String(x === b)));
+      s.water = b.dataset.v;
+      render();
+    });
+    let last = 0;
+    function frame(now) {
+      let dt = Math.min(0.1, (now - last) / 1000 || 0) * SPEEDUP;
+      last = now;
+      for (; dt > 0; dt -= 0.05) step(Math.min(0.05, dt));
+      // bublinky vzduchu, když se nádrže vyfukují
+      if (s.blowing && s.z > 0 && Math.random() < 0.6) s.bubbles.push({ x: 300 + (Math.random() - 0.5) * 170, y: Y(s.z) + 30, r: 1.5 + Math.random() * 2.5 });
+      s.bubbles.forEach((q) => { q.y -= 2.4; });
+      s.bubbles = s.bubbles.filter((q) => q.y > SURF);
+      render();
+      requestAnimationFrame(frame);
+    }
+    render();
+    if (still) {
+      // bez animace: po každé změně rovnou spočítáme, kde ponorka skončí
+      const settle = () => { for (let i = 0; i < 4000; i++) step(0.05); render(); };
+      $("fill").addEventListener("change", settle);
+      $("water-seg").addEventListener("click", settle);
+      $("blow").addEventListener("click", settle);
+    } else requestAnimationFrame(frame);
+  })();
+  </script>
+</body>
+</html>

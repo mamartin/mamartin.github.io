@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Zemětřesení a seismograf</title>
+  <meta name="description" content="Proč se země třese, jaké vlny se od zlomu šíří, jak je zachytí seismograf a jak se ze tří záznamů pozná, kde přesně k otřesu došlo. S mapou, na které si zemětřesení můžete spustit.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700&display=swap">
+  <link rel="stylesheet" href="../style.css?v=5">
+  <style>
+    #quake { border: 1px solid var(--rule); background: var(--surface); touch-action: none; }
+    .land { fill: var(--sunk); }
+    .grid { stroke: var(--grid); stroke-width: 1; }
+    .cap { fill: var(--ink-3); font: 500 11px var(--font-mono); letter-spacing: 0.08em; }
+    .front-p { fill: none; stroke: var(--ink-2); stroke-width: 1.6; stroke-dasharray: 5 4; }
+    .front-s { fill: none; stroke: var(--cat); stroke-width: 2.6; }
+    .front-tag { font: 600 12px var(--font-mono); paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
+    .ring { fill: none; stroke-width: 1.8; stroke-dasharray: 3 5; }
+    .st-name { font: 700 13px var(--font-display); }
+    .epi { stroke: var(--bad); stroke-width: 3; stroke-linecap: round; }
+    #handle { fill: transparent; cursor: grab; outline: none; }
+    .focus-ring { fill: none; stroke: var(--cat); stroke-width: 2.5; visibility: hidden; pointer-events: none; }
+    #handle:focus-visible + .focus-ring { visibility: visible; }
+    .trace { fill: none; stroke-width: 1.5; stroke-linejoin: round; }
+    .t-base { stroke: var(--grid); stroke-width: 1; }
+    .t-mark { stroke: var(--ink-3); stroke-width: 1; stroke-dasharray: 2 3; }
+    .t-text { fill: var(--ink-2); font: 500 10.5px var(--font-mono); }
+    .t-name { font: 600 11.5px var(--font-mono); }
+    @media (max-width: 46rem) { .cap, .t-text, .t-name { font-size: 14px; } .front-tag { font-size: 15px; } .st-name { font-size: 17px; } }
+  </style>
+</head>
+<body data-cat="priroda">
+  <header class="topbar">
+    <div class="wrap">
+      <a class="brand" href="../">Jak věci fungují</a>
+      <nav class="crumbs" aria-label="Drobečková navigace"><a href="../#priroda">Příroda</a><span aria-hidden="true">/</span><span>Zemětřesení a seismograf</span></nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <header class="art-head">
+      <p class="eyebrow">Příroda</p>
+      <h1 class="display">Zemětřesení a seismograf</h1>
+      <p class="lede">Hluboko pod zemí povolí skála, která se desítky let ohýbala, a za pár sekund uskočí o několik metrů. Od toho místa se rozběhnou vlny celou planetou. Citlivé přístroje je zachytí i na druhém konci světa a ze záznamů se dá vyčíst, kde a jak silně se země pohnula.</p>
+    </header>
+
+    <section class="tldr" aria-labelledby="h-zkratka">
+      <h2 class="label" id="h-zkratka">Ve zkratce</h2>
+      <ul>
+        <li>Zemské desky se o sebe třou a zasekávají. Když napětí přeroste pevnost horniny, zlom naráz povolí.</li>
+        <li>Od zlomu se šíří dva druhy vln. Rychlejší vlny P dorazí první, pomalejší a silnější vlny S až po nich.</li>
+        <li><span class="hl">Čím déle stanice čeká mezi první a druhou vlnou, tím je od zlomu dál.</span> Ze tří stanic se tak dá určit, kde k otřesu došlo.</li>
+      </ul>
+    </section>
+
+    <figure class="fig" id="obr1">
+      <div class="fig-head">
+        <p class="fig-num"><b>Obr. 1</b> Tři stanice a jedno zemětřesení</p>
+        <span class="label">Přesuňte ohnisko a spusťte otřes</span>
+      </div>
+      <div class="fig-stage">
+        <svg id="quake" viewBox="0 0 720 320" role="img" aria-label="Mapa se třemi stanicemi a ohniskem zemětřesení, vpravo záznamy seismografů"></svg>
+      </div>
+      <div class="fig-controls">
+        <button type="button" class="btn" id="go">Zatřást znovu</button>
+        <div class="ctl ctl-grow">
+          <label class="label" for="mag">Magnituda</label>
+          <div class="ctl-row">
+            <input type="range" id="mag" min="3" max="8" step="0.5" value="5">
+            <output class="val" id="mag-val" for="mag"></output>
+          </div>
+        </div>
+      </div>
+      <div class="fig-status split">
+        <p class="status" id="status" aria-live="polite"></p>
+        <ul class="stats" aria-label="Stav modelu">
+          <li><span class="n">Výchylka proti síle 5</span><span class="v small" id="st-amp"></span></li>
+          <li><span class="n">Energie proti síle 5</span><span class="v small" id="st-en"></span></li>
+          <li><span class="n">Takových je za rok</span><span class="v small" id="st-n"></span></li>
+        </ul>
+      </div>
+      <figcaption class="fig-caption">Mapa má měřítko jeden dílek mřížky na 50 kilometrů. Vlny P běží v modelu šest kilometrů za sekundu, vlny S tři a půl, a čas je zrychlený dvanáctkrát. Přerušované kružnice kolem stanic mají poloměr vypočítaný jen z toho, o kolik sekund přišla vlna S po vlně P. Ohniskem jde hýbat tažením nebo šipkami.</figcaption>
+    </figure>
+
+    <section class="sec" aria-labelledby="h-proc">
+      <div class="prose">
+        <h2 id="h-proc">Proč se země třese</h2>
+        <p>Povrch Země tvoří několik obrovských desek, které plavou na horkém plastickém plášti. Pohybují se pomalu, asi tak rychle, jak rostou nehty. Na okrajích se o sebe třou, najíždějí na sebe nebo se od sebe odtahují.</p>
+        <p>Hladce to nejde. Desky se na styku zaseknou a zbytek se sune dál. Hornina kolem zlomu se desítky i stovky let ohýbá a hromadí napětí, jako pravítko, které pomalu ohýbáte v rukou.</p>
+        <p>Jednou napětí přeroste, co skála vydrží. Zlom povolí a obě strany uskočí do nové polohy, někdy o několik metrů za pár sekund. <span class="hl">Všechna energie nastřádaná za desítky let se uvolní naráz</span> a rozběhne se od zlomu jako vlny.</p>
+      </div>
+      <aside class="note" aria-label="Zemětřesení v číslech">
+        <span class="label">V číslech</span>
+        <dl class="facts">
+          <div><dt>6 km/s</dt><dd>běží zemskou kůrou nejrychlejší vlny</dd></div>
+          <div><dt>32×</dt><dd>víc energie znamená každý stupeň magnitudy navíc</dd></div>
+          <div><dt>9,5</dt><dd>mělo nejsilnější změřené zemětřesení, Chile 1960</dd></div>
+        </dl>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-vlny">
+      <div class="prose">
+        <h2 id="h-vlny">Dvě vlny, které závodí</h2>
+        <p>Ze zlomu vyrazí dva druhy vln najednou, ale nestejně rychle.</p>
+        <p>První jsou vlny P. Horninu střídavě stlačují a natahují ve směru, kterým běží, stejně jako se šíří zvuk. Jsou nejrychlejší, v zemské kůře urazí kolem šesti kilometrů za sekundu. Na povrchu je cítíte jako krátké zadunění a trhnutí.</p>
+        <p>Za nimi jdou vlny S. Kmitají napříč, jako vlna na rozhoupaném laně. Jsou skoro dvakrát pomalejší, zato mají větší výkyv. Teprve s nimi se dům začne opravdu houpat.</p>
+        <p>Nejpomalejší jsou vlny, které se plazí po povrchu. Mají nejdelší a největší výkyvy a nadělají nejvíc škod.</p>
+        <p>Čím dál od zlomu jste, tím větší náskok vlny P stihnou získat. Kousek od ohniska přijdou obě skoro současně. O tři sta kilometrů dál je mezi nimi víc než půl minuty.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Spusťte otřes a sledujte dvě kružnice, které se od ohniska rozbíhají. Čárkovaná vlna P doběhne ke každé stanici první. V záznamech vpravo je to malé zachvění, po kterém za chvíli přijde velký výkyv vlny S.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-seismograf">
+      <div class="prose">
+        <h2 id="h-seismograf">Jak změřit pohyb, když se hýbe všechno</h2>
+        <p>Při zemětřesení se třese země, budova i stůl s přístrojem. Čím tedy měřit, o kolik se to všechno pohnulo?</p>
+        <p>Seismograf na to používá setrvačnost. Má těžké závaží zavěšené na pružině nebo na kyvadle. Když se země prudce pohne, rám přístroje jde s ní, ale závaží zůstane chvíli stát na místě, protože ho nic nestihlo rozhýbat. Pero na závaží a papír na rámu se vůči sobě posunou a nakreslí čáru.</p>
+        <p>Dnešní přístroje místo pera měří elektricky, jak se závaží s magnetem pohybuje v cívce. Zachytí posun o miliontiny milimetru. Vidí vlny ze zemětřesení na druhé straně planety, příboj oceánu stovky kilometrů daleko i to, když na stadionu padne gól a diváci vyskočí.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Na okraj</span>
+        <p>Stejný trik si vyzkoušíte doma. Zavěste na nit těžkou matici a rychle pohněte rukou do strany a zpět. Ruka se hýbe, matice zůstane skoro na místě.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-kde">
+      <div class="prose">
+        <h2 id="h-kde">Kde to bylo</h2>
+        <p>Jedna stanice nepozná, odkud vlny přišly. Pozná ale, z jaké dálky. Stačí změřit, o kolik sekund dorazila vlna S po vlně P. V zemské kůře platí zhruba, že každá sekunda zpoždění znamená osm kilometrů.</p>
+        <p>Stanice tedy ví, že ohnisko leží někde na kružnici kolem ní. Druhá stanice má svou kružnici a ty dvě se protnou ve dvou bodech. Třetí rozhodne, který z nich je ten pravý.</p>
+        <p>Je to stejný postup, jakým telefon určuje polohu podle družic <a href="../gps/">GPS</a>, jen obráceně. Tam se z časů hledá, kde je přijímač. Tady, kde byl vysílač.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Počkejte, až vlny doběhnou ke všem třem stanicím. Kolem každé se objeví kružnice a všechny tři se protnou v ohnisku. Pak ohnisko přetáhněte jinam a zkuste to znovu.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-magnituda">
+      <div class="prose">
+        <h2 id="h-magnituda">Co znamená magnituda</h2>
+        <p>Síla zemětřesení se udává jedním číslem, magnitudou. Stupnici vymyslel v roce 1935 Američan Charles Richter a založil ji na tom, jak velký výkyv zapíše seismograf v určité vzdálenosti.</p>
+        <p>Stupnice není rovnoměrná. Každý stupeň navíc znamená desetkrát větší výkyv na záznamu a asi dvaatřicetkrát víc uvolněné energie. Zemětřesení o síle 7 tedy není o dvě pětiny silnější než pětka. Uvolní tisíckrát víc energie.</p>
+        <p>Slabých otřesů je obrovské množství. Trojek a slabších jsou na světě statisíce ročně a skoro nikdo si jich nevšimne. Sedmiček a silnějších bývá kolem patnácti za rok. Osmička přijde zhruba jednou ročně.</p>
+        <p>Magnituda říká, kolik energie se uvolnilo ve zlomu. Neříká, jak moc to zatřáslo vaším domem. To záleží i na vzdálenosti, hloubce ohniska a na tom, na čem dům stojí. Měkké naplaveniny se roztřesou mnohem víc než skála.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Posuňte magnitudu z 5 na 3. Záznamy jsou skoro rovné čáry. Pak ji vytáhněte na 7: výchylka je stokrát větší a pero v modelu narazí na okraj papíru. Skutečné přístroje se u silných otřesů zahltí stejně.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-nitro">
+      <div class="prose">
+        <h2 id="h-nitro">Rentgen planety</h2>
+        <p>Vlny ze silných zemětřesení projdou celou Zemí a cestou se lámou a odrážejí na rozhraních mezi vrstvami. Všechno, co víme o nitru planety, víme z nich. Nejhlubší vrt se dostal jen dvanáct kilometrů hluboko, do středu je to přes šest tisíc.</p>
+        <p>Nejdůležitější stopu daly vlny S. Kmitají napříč, a to jde jen v pevné látce. Kapalinou neprojdou. Na opačné straně planety, než kde se zemětřesení stalo, vlny S úplně chybějí. Něco uvnitř je tedy tekuté. Tak se na začátku 20. století přišlo na to, že Země má tekuté jádro.</p>
+        <p>V roce 1936 si dánská seismoložka Inge Lehmannová všimla slabých vln tam, kde podle výpočtů žádné být neměly. Vysvětlila to tak, že uprostřed tekutého jádra je ještě jedno, pevné. Měla pravdu.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Na okraj</span>
+        <p>Česko leží daleko od okrajů desek a silná zemětřesení tu nehrozí. Výjimkou je Chebsko, kde se země jednou za pár let roztřese sérií stovek slabých otřesů. Nejsilnější z nich, v zimě 1985, měl magnitudu 4,6 a v několika obcích poškodil domy.</p>
+        <p>Den ani hodinu zemětřesení předpovědět nejde. Jde ale získat pár sekund. Stanice blízko zlomu zachytí vlnu P a varování se rozešle rychleji, než ničivé vlny doběhnou. V Japonsku tak stihnou přibrzdit rychlovlaky.</p>
+      </aside>
+    </section>
+
+    <footer class="art-foot">
+      <a class="next" href="../letokruhy/" data-cat="priroda">
+        <span class="label">Další článek · Příroda</span>
+        <span class="t">Jak roste strom a co prozradí letokruhy</span>
+        <p>Kde v kmeni vzniká nové dřevo a jak se z letokruhů pozná suchý rok nebo stáří trámu.</p>
+      </a>
+      <a class="back" href="../">Všechna témata</a>
+    </footer>
+  </main>
+
+  <script>
+  (() => {
+    const NS = "http://www.w3.org/2000/svg";
+    function el(tag, attrs, parent) {
+      const n = document.createElementNS(NS, tag);
+      for (const k in attrs || {}) n.setAttribute(k, attrs[k]);
+      if (parent) parent.appendChild(n);
+      return n;
+    }
+    const $ = (id) => document.getElementById(id);
+    const svg = $("quake");
+    const fmt0 = new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 0 });
+
+    /* ---------- model ---------- */
+    const VP = 6, VS = 3.5, VL = 3;             // rychlosti vln v km/s; 1 jednotka mapy = 1 km
+    const KM_PER_S = 1 / (1 / VS - 1 / VP);     // kolik kilometrů znamená sekunda zpoždění S za P
+    const SPEEDUP = 12, SPAN = 150;             // zrychlení času a délka záznamu v sekundách
+    const MAP = { w: 450, h: 300 };
+    const STATIONS = [{ id: "A", x: 66, y: 62, color: "var(--sat-a)" }, { id: "B", x: 392, y: 84, color: "var(--sat-b)" }, { id: "C", x: 218, y: 262, color: "var(--sat-c)" }];
+    const s = { mag: 5, epi: { x: 262, y: 148 }, t: 0, playing: true };
+    const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const distTo = (st) => Math.hypot(st.x - s.epi.x, st.y - s.epi.y);
+    // výchylka pera v pixelech v čase tau od otřesu
+    function signal(st, tau) {
+      const d = Math.max(8, distTo(st)), tp = d / VP, ts = d / VS, tl = d / VL;
+      const size = 9 * 10 ** (s.mag - 5) * (150 / d) ** 1.1;
+      let y = 0.5 * Math.sin(tau * 2.1 + st.x) * Math.sin(tau * 0.83);                     // neklid země
+      if (tau > tp) y += 0.35 * size * Math.exp(-(tau - tp) / 5) * Math.sin(((tau - tp) / 1.3) * 2 * Math.PI);
+      if (tau > ts) y += size * Math.exp(-(tau - ts) / 12) * Math.sin(((tau - ts) / 2.6) * 2 * Math.PI + 1);
+      if (tau > tl) y += 1.2 * size * Math.min(1, (tau - tl) / 6) * Math.exp(-(tau - tl) / 22) * Math.sin(((tau - tl) / 5.5) * 2 * Math.PI);
+      return Math.max(-34, Math.min(34, y));
+    }
+
+    /* ---------- scéna ---------- */
+    const defs = el("defs", {}, svg);
+    el("rect", { x: 0, y: 0, width: MAP.w, height: MAP.h }, el("clipPath", { id: "clip-map" }, defs));
+    el("rect", { x: 0, y: 0, width: MAP.w, height: MAP.h, class: "land" }, svg);
+    for (let x = 50; x < MAP.w; x += 50) el("line", { x1: x, y1: 0, x2: x, y2: MAP.h, class: "grid" }, svg);
+    for (let y = 50; y < MAP.h; y += 50) el("line", { x1: 0, y1: y, x2: MAP.w, y2: y, class: "grid" }, svg);
+    const mapG = el("g", { "clip-path": "url(#clip-map)" }, svg);
+    const rings = STATIONS.map((st) => el("circle", { cx: st.x, cy: st.y, class: "ring", stroke: st.color, visibility: "hidden" }, mapG));
+    const frontP = el("circle", { class: "front-p" }, mapG), frontS = el("circle", { class: "front-s" }, mapG);
+    const tagP = el("text", { class: "front-tag", fill: "var(--ink-2)" }, mapG), tagS = el("text", { class: "front-tag", fill: "var(--cat)" }, mapG);
+    tagP.textContent = "P"; tagS.textContent = "S";
+    STATIONS.forEach((st) => {
+      el("path", { d: `M${st.x} ${st.y - 11}L${st.x + 10} ${st.y + 7}H${st.x - 10}Z`, fill: st.color, stroke: "var(--surface)", "stroke-width": 1.5 }, svg);
+      el("text", { x: st.x + 14, y: st.y + 6, class: "st-name", fill: st.color }, svg).textContent = st.id;
+    });
+    const epiG = el("g", {}, svg);
+    el("path", { d: "M-9 -9L9 9M-9 9L9 -9", class: "epi" }, epiG);
+    const handle = el("circle", { r: 24, id: "handle", tabindex: "0", role: "button", "aria-label": "Ohnisko zemětřesení. Posuňte ho šipkami nebo tažením." }, epiG);
+    el("circle", { r: 20, class: "focus-ring" }, epiG);
+    // záznamy
+    const TX = 476, TW = 232, ROW = [80, 174, 268];
+    el("text", { x: TX, y: 16, class: "cap" }, svg).textContent = "ZÁZNAMY SEISMOGRAFŮ";
+    const traces = STATIONS.map((st, i) => {
+      el("line", { x1: TX, y1: ROW[i], x2: TX + TW, y2: ROW[i], class: "t-base" }, svg);
+      el("text", { x: TX, y: ROW[i] - 36, class: "t-name", fill: st.color }, svg).textContent = `Stanice ${st.id}`;
+      return {
+        path: el("path", { class: "trace", stroke: st.color }, svg),
+        p: el("line", { class: "t-mark", y1: ROW[i] - 30, y2: ROW[i] + 30 }, svg), s: el("line", { class: "t-mark", y1: ROW[i] - 30, y2: ROW[i] + 30 }, svg),
+        note: el("text", { x: TX + TW, y: ROW[i] - 36, class: "t-text", style: "text-anchor:end" }, svg),
+      };
+    });
+
+    let statusKey = "";
+    function draw() {
+      const t = s.t;
+      epiG.setAttribute("transform", `translate(${s.epi.x.toFixed(1)} ${s.epi.y.toFixed(1)})`);
+      [[frontP, tagP, VP], [frontS, tagS, VS]].forEach(([c, tag, v]) => {
+        const r = v * t, on = r > 2 && r < 620;
+        c.setAttribute("cx", s.epi.x); c.setAttribute("cy", s.epi.y); c.setAttribute("r", r.toFixed(1));
+        c.setAttribute("visibility", on ? "visible" : "hidden");
+        tag.setAttribute("visibility", on && s.epi.x + r * 0.7 < MAP.w - 8 ? "visible" : "hidden");
+        tag.setAttribute("x", (s.epi.x + r * 0.71 + 4).toFixed(1)); tag.setAttribute("y", (s.epi.y - r * 0.71 - 4).toFixed(1));
+      });
+      let arrivedP = 0, arrivedS = 0;
+      STATIONS.forEach((st, i) => {
+        const d = distTo(st), tp = d / VP, ts = d / VS, tr = traces[i], pts = [];
+        for (let tau = 0; tau <= Math.min(t, SPAN); tau += 0.3) pts.push(`${(TX + (tau / SPAN) * TW).toFixed(1)} ${(ROW[i] - signal(st, tau)).toFixed(1)}`);
+        tr.path.setAttribute("d", pts.length > 1 ? "M" + pts.join("L") : "");
+        const seenP = t >= tp, seenS = t >= ts;
+        arrivedP += seenP; arrivedS += seenS;
+        [[tr.p, tp, seenP], [tr.s, ts, seenS]].forEach(([line, at, seen]) => {
+          line.setAttribute("x1", TX + (at / SPAN) * TW); line.setAttribute("x2", TX + (at / SPAN) * TW);
+          line.setAttribute("visibility", seen && at < SPAN ? "visible" : "hidden");
+        });
+        // stanice zná jen rozdíl časů; z něj spočítá vzdálenost a nakreslí kolem sebe kružnici
+        const gap = ts - tp;
+        tr.note.textContent = seenS ? `S − P = ${fmt0.format(gap)} s → ${fmt0.format(gap * KM_PER_S)} km` : seenP ? "čeká na vlnu S" : "klid";
+        rings[i].setAttribute("visibility", seenS ? "visible" : "hidden");
+        rings[i].setAttribute("r", (gap * KM_PER_S).toFixed(1));
+      });
+      const key = arrivedS === 3 ? "done" : arrivedS ? "some" : arrivedP ? "p" : "start";
+      if (key !== statusKey) {
+        statusKey = key;
+        $("status").innerHTML = {
+          start: "<strong>Zlom povolil.</strong> Od ohniska se rozbíhají dvě vlny. Čárkovaná vlna P je skoro dvakrát rychlejší než plná vlna S a s každým kilometrem jí víc utíká.",
+          p: "<strong>První stanice zachytila vlnu P.</strong> Je to jen slabé zachvění. Stanice teď ví, že se někde něco stalo, a měří, za jak dlouho přijde vlna S.",
+          some: "<strong>Dorazila vlna S.</strong> Ze zpoždění za vlnou P stanice spočítala, jak daleko ohnisko je. Směr nezná, a tak je to pro ni kružnice.",
+          done: "<strong>Tři kružnice, jeden bod.</strong> Každá stanice zná jen svou vzdálenost od ohniska. Všem třem vzdálenostem najednou vyhovuje jediné místo na mapě, a to je ohnisko.",
+        }[key];
+      }
+    }
+    function describe() {
+      const k = s.mag - 5, times = (base) => {
+        if (k === 0) return "stejná";
+        const v = base ** Math.abs(k), unit = 10 ** Math.max(0, Math.floor(Math.log10(v)) - 1);   // dvě platné číslice
+        return `${fmt0.format(v >= 10 ? Math.round(v / unit) * unit : Math.round(v * 10) / 10)}× ${k > 0 ? "větší" : "menší"}`;
+      };
+      $("mag-val").textContent = s.mag.toFixed(1).replace(".", ",");
+      $("st-amp").textContent = times(10);
+      $("st-en").textContent = times(10 ** 1.5);
+      $("st-n").textContent = ["asi 130 000", "asi 13 000", "asi 1 300", "kolem 130", "kolem 15", "jedno"][Math.min(5, Math.floor(s.mag) - 3)];
+    }
+    function shake() { s.t = still ? SPAN : 0; statusKey = ""; draw(); }
+
+    /* ---------- ovládání ---------- */
+    $("go").addEventListener("click", shake);
+    $("mag").addEventListener("input", (e) => { s.mag = Number(e.target.value); describe(); draw(); });
+    function toSvg(evt) {
+      const m = svg.getScreenCTM();
+      if (!m) return null;
+      const p = new DOMPoint(evt.clientX, evt.clientY).matrixTransform(m.inverse());
+      return { x: Math.max(14, Math.min(MAP.w - 14, p.x)), y: Math.max(14, Math.min(MAP.h - 14, p.y)) };
+    }
+    let dragging = false;
+    handle.addEventListener("pointerdown", (e) => { dragging = true; try { handle.setPointerCapture(e.pointerId); } catch (err) { /* umělý ukazatel */ } handle.style.cursor = "grabbing"; });
+    handle.addEventListener("pointermove", (e) => { if (!dragging) return; const p = toSvg(e); if (p) { s.epi = p; shake(); } });
+    const drop = () => { dragging = false; handle.style.cursor = ""; };
+    handle.addEventListener("pointerup", drop);
+    handle.addEventListener("pointercancel", drop);
+    handle.addEventListener("keydown", (e) => {
+      const d = e.shiftKey ? 40 : 10, mv = { ArrowLeft: [-d, 0], ArrowRight: [d, 0], ArrowUp: [0, -d], ArrowDown: [0, d] }[e.key];
+      if (!mv) return;
+      e.preventDefault();
+      s.epi = { x: Math.max(14, Math.min(MAP.w - 14, s.epi.x + mv[0])), y: Math.max(14, Math.min(MAP.h - 14, s.epi.y + mv[1])) };
+      shake();
+    });
+    let last = 0;
+    function frame(now) {
+      const dt = Math.min(0.1, (now - last) / 1000 || 0);
+      last = now;
+      if (!dragging && s.t < SPAN) { s.t = Math.min(SPAN, s.t + dt * SPEEDUP); draw(); }
+      requestAnimationFrame(frame);
+    }
+    describe();
+    shake();
+    if (!still) requestAnimationFrame(frame);
+  })();
+  </script>
+</body>
+</html>

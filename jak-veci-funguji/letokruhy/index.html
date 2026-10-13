@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Jak roste strom a co prozradí letokruhy</title>
+  <meta name="description" content="Kde v kmeni vzniká nové dřevo, proč má každý rok světlý a tmavý proužek a jak se z letokruhů pozná suchý rok nebo stáří trámu. S pařezem, ve kterém si můžete číst.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700&display=swap">
+  <link rel="stylesheet" href="../style.css?v=5">
+  <style>
+    #stump { border: 1px solid var(--rule); background: var(--surface); touch-action: none; }
+    .cap { fill: var(--ink-3); font: 500 11px var(--font-mono); letter-spacing: 0.08em; }
+    .axis { fill: var(--ink-3); font: 500 10.5px var(--font-mono); }
+    .bar { fill: var(--ink-3); opacity: 0.55; }
+    .bar.dry { fill: var(--warm); opacity: 1; }
+    .bar.on { fill: var(--cat); opacity: 1; }
+    .pick { fill: none; stroke: #fff; stroke-width: 3.5; }
+    .pick-in { fill: none; stroke: #0a4d5c; stroke-width: 1.6; }
+    .tag { fill: var(--ink); font: 600 12px var(--font-mono); paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
+    .scale line { stroke: var(--ink-2); stroke-width: 1.5; }
+    .scale text { fill: var(--ink-2); font: 500 11px var(--font-mono); }
+    @media (max-width: 46rem) { .cap, .axis { font-size: 15px; } .tag { font-size: 16px; } .scale text { font-size: 15px; } }
+  </style>
+</head>
+<body data-cat="priroda">
+  <header class="topbar">
+    <div class="wrap">
+      <a class="brand" href="../">Jak věci fungují</a>
+      <nav class="crumbs" aria-label="Drobečková navigace"><a href="../#priroda">Příroda</a><span aria-hidden="true">/</span><span>Jak roste strom</span></nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <header class="art-head">
+      <p class="eyebrow">Příroda</p>
+      <h1 class="display">Jak roste strom a co prozradí letokruhy</h1>
+      <p class="lede">Strom neroste jako člověk, celý najednou. Přirůstá jen na povrchu, každý rok o jednu tenkou slupku pod kůrou. Staré vrstvy zůstávají uvnitř tak, jak vznikly, a strom si v nich nese záznam každého roku svého života.</p>
+    </header>
+
+    <section class="tldr" aria-labelledby="h-zkratka">
+      <h2 class="label" id="h-zkratka">Ve zkratce</h2>
+      <ul>
+        <li>Nové dřevo vyrábí tenká vrstva živých buněk těsně pod kůrou. Všechno hlouběji je hotové a už se nemění.</li>
+        <li><span class="hl">Na jaře roste světlé řídké dřevo, koncem léta tmavé husté.</span> Dvojice proužků je jeden rok.</li>
+        <li>V dobrém roce je letokruh široký, v suchém úzký. Stromy v jednom kraji mají proto stejný vzor a dá se podle něj určit stáří dřeva na rok přesně.</li>
+      </ul>
+    </section>
+
+    <figure class="fig" id="obr1">
+      <div class="fig-head">
+        <p class="fig-num"><b>Obr. 1</b> Pařez stromu pokáceného v roce 2025</p>
+        <span class="label">Přejeďte po pařezu nebo vyberte rok</span>
+      </div>
+      <div class="fig-stage">
+        <svg id="stump" viewBox="0 0 720 360" role="img" aria-label="Průřez kmenem s letokruhy a vedle něj graf šířky letokruhu v jednotlivých letech"></svg>
+      </div>
+      <div class="fig-controls">
+        <div class="ctl ctl-grow">
+          <label class="label" for="age">Stáří stromu</label>
+          <div class="ctl-row">
+            <input type="range" id="age" min="10" max="80" step="1" value="45">
+            <output class="val" id="age-val" for="age"></output>
+          </div>
+        </div>
+        <div class="ctl">
+          <span class="label" id="lbl-site">Kde rostl</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-site" id="site-seg">
+            <button type="button" role="radio" data-v="open" aria-checked="true">Sám na louce</button>
+            <button type="button" role="radio" data-v="shade" aria-checked="false">V hustém lese</button>
+            <button type="button" role="radio" data-v="freed" aria-checked="false">V lese, který roku 1995 prořezali</button>
+          </div>
+        </div>
+        <div class="ctl ctl-grow">
+          <label class="label" for="year">Vybraný rok</label>
+          <div class="ctl-row">
+            <input type="range" id="year" min="1981" max="2025" step="1" value="2003">
+            <output class="val" id="year-val" for="year"></output>
+          </div>
+        </div>
+      </div>
+      <div class="fig-status split">
+        <p class="status" id="status" aria-live="polite"></p>
+        <ul class="stats" aria-label="Stav modelu">
+          <li><span class="n">Průměr kmene</span><span class="v" id="st-d"></span></li>
+          <li><span class="n" id="st-ring-n">Letokruh</span><span class="v" id="st-ring"></span></li>
+          <li><span class="n">Průměrný přírůstek</span><span class="v small" id="st-avg"></span></li>
+        </ul>
+      </div>
+      <figcaption class="fig-caption">Zjednodušený model jehličnatého stromu. Počasí jednotlivých let je vymyšlené, jen suché roky 1947, 1976, 2003, 2015 a 2018 odpovídají skutečným suchům ve střední Evropě. Pařez je vždy zvětšený tak, aby vyplnil obrázek, skutečnou velikost ukazuje měřítko. Oranžové sloupce v grafu jsou suché roky.</figcaption>
+    </figure>
+
+    <section class="sec" aria-labelledby="h-kambium">
+      <div class="prose">
+        <h2 id="h-kambium">Roste jen slupka pod kůrou</h2>
+        <p>Mezi dřevem a kůrou je vrstva buněk tenká jako vlas. Jmenuje se kambium a je to jediné místo, kde kmen tloustne. Její buňky se dělí na obě strany. Dovnitř odkládají nové dřevo, ven novou kůru.</p>
+        <p>Každý rok tak na kmen přibude nový plášť dřeva, navlečený na všechno, co vyrostlo předtím. Starší vrstvy se už nezmění. Střed kmene je stejně velký, jako když byl strom tenký proutek, jen ho dnes obaluje několik desítek dalších vrstev.</p>
+        <p>Do výšky roste strom zase jen na koncích větví a na vrcholu. Kmen se nenatahuje. <span class="hl">Hřebík zatlučený do kmene ve výšce očí tam bude i za padesát let,</span> jen ho strom mezitím obroste.</p>
+      </div>
+      <aside class="note" aria-label="Stromy v číslech">
+        <span class="label">V číslech</span>
+        <dl class="facts">
+          <div><dt>1–5 mm</dt><dd>bývá široký jeden letokruh</dd></div>
+          <div><dt>přes 4 800 let</dt><dd>je nejstarším žijícím stromům, borovicím v kalifornských horách</dd></div>
+          <div><dt>přes 12 000 let</dt><dd>dozadu sahá souvislá řada letokruhů ze střední Evropy</dd></div>
+        </dl>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-jaro">
+      <div class="prose">
+        <h2 id="h-jaro">Proč je vidět každý rok zvlášť</h2>
+        <p>Dřevo je svazek svislých trubiček, kterými stoupá voda od kořenů k listům. Na jaře jí strom potřebuje nejvíc, protože raší a rychle roste. Kambium proto vyrábí buňky velké, s tenkými stěnami a širokým průsvitem. Takové dřevo je řídké a světlé.</p>
+        <p>Koncem léta růst zpomalí. Nové buňky jsou malé a mají tlusté stěny. Vodu vedou hůř, zato kmen zpevňují. Tohle dřevo je husté a tmavé. Na podzim kambium práci zastaví úplně.</p>
+        <p>Další jaro začne zase velkými světlými buňkami, hned vedle loňských malých tmavých. Právě tenhle skok je ostrá čára, kterou na pařezu vidíte. Světlý a tmavý proužek dohromady jsou jeden letokruh.</p>
+        <p>Kde se roční období nestřídají, třeba v deštném pralese, strom roste pořád stejně a letokruhy nemá, nebo neodpovídají rokům.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Posouvejte stáří stromu od deseti let nahoru. Střed se nemění, nové letokruhy přibývají jen na okraji. Všimněte si, že mladý strom na louce dělá letokruhy mnohem širší než starý.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-cteni">
+      <div class="prose">
+        <h2 id="h-cteni">Deník psaný do dřeva</h2>
+        <p>Šířka letokruhu říká, jak se stromu ten rok dařilo. Když bylo vlhko a teplo, přirostl hodně. Když bylo sucho, kambium brzy přestalo pracovat a letokruh je úzký jako nitka.</p>
+        <p>Vedle počasí se do dřeva zapisuje i život stromu. Mladý strom na volném prostranství roste rychle a jeho první letokruhy jsou široké. Strom ve stínu sousedů živoří a má je husté. Když sousedy někdo vykácí nebo je vyvrátí vichřice, dostane najednou světlo a letokruhy se během pár let rozšíří několikrát.</p>
+        <p>Požár zanechá černou jizvu, kterou strom v dalších letech přerůstá. Když kmen rostl nakloněný, třeba po sesuvu svahu, jsou letokruhy na jedné straně širší, protože se strom snažil narovnat.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Vyberte V lese, který roku 1995 prořezali, a najděte ten rok na pařezu. Uvnitř jsou letokruhy namačkané, od poloviny devadesátých let se rozestoupí. Pak hledejte úzký letokruh z roku 2003.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-datovani">
+      <div class="prose">
+        <h2 id="h-datovani">Jak se podle letokruhů datuje</h2>
+        <p>Suchý rok postihne všechny stromy v kraji najednou. Každý z nich má v tom roce úzký letokruh, ať je starý nebo mladý, dub nebo borovice. Pořadí širokých a úzkých let je proto v celém kraji stejné a nikdy se neopakuje. Je to něco jako čárový kód doby.</p>
+        <p>U čerstvě pokáceného stromu známe poslední rok. Jeho vzor se dá přiložit k trámu ze staré stodoly: kde se vzory překrývají, tam trám tehdy ještě rostl jako strom. Trám sahá dál do minulosti a jeho starší část se zase přiloží k trámu ze středověkého krovu. A tak dál, od dřeva ke dřevu.</p>
+        <p>Ve střední Evropě se takhle podařilo složit souvislou řadu dlouhou přes dvanáct tisíc let, až na konec poslední doby ledové. Když dnes někdo najde starý trám, stačí změřit jeho letokruhy a najít místo, kam vzor v řadě zapadne. <span class="hl">Zjistí se tak rok, a někdy i roční období, kdy byl strom pokácen.</span></p>
+        <p>Datují se tak krovy kostelů, lodě, obrazy malované na dřevěných deskách i housle. A podle stejné řady se opravuje radiouhlíkové datování, které samo o sobě tak přesné není.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Na okraj</span>
+        <p>Kvůli letokruhům se strom kácet nemusí. Dutým vrtákem se z kmene vytáhne váleček dřeva tenký jako tužka, od kůry až do středu. Strom si ránu zalije pryskyřicí a roste dál.</p>
+      </aside>
+    </section>
+
+    <section class="sec" aria-labelledby="h-mrtve">
+      <div class="prose">
+        <h2 id="h-mrtve">Většina stromu je mrtvá</h2>
+        <p>Živé jsou na stromě listy, konce kořenů a tenká vrstva pod kůrou. Dřevo samo je z buněk, které odumřely krátce po vzniku. Zbyly z nich jen stěny, a právě ty prázdné trubičky vedou vodu.</p>
+        <p>Vodu vedou jen mladé vnější letokruhy, kterým se říká běl. Vnitřní se časem ucpou, strom do nich uloží třísloviny a pryskyřice a stane se z nich tmavší jádro. To už jen drží strom vzpřímený.</p>
+        <p>Proto může žít strom úplně dutý. Hniloba mu sežrala jádro, které k životu nepotřebuje. A proto naopak strom zahubí, když mu někdo dokola sloupne pruh kůry. Přeruší tím jedinou živou vrstvu, kterou listy posílají cukry ke kořenům.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Na okraj</span>
+        <p>Dřevo není z hlíny. Skoro všechna hmota stromu pochází ze vzduchu: z oxidu uhličitého, který listy rozloží a jehož uhlík strom zabuduje do dřeva. Z půdy bere vodu a jen trochu minerálů, tolik, kolik po spálení zbude popela.</p>
+      </aside>
+    </section>
+
+    <footer class="art-foot">
+      <a class="next" href="../kychani/" data-cat="telo">
+        <span class="label">Další článek · Lidské tělo</span>
+        <span class="t">Proč kýcháme</span>
+        <p>Co všechno se v těle stane za jedinou sekundu kýchnutí.</p>
+      </a>
+      <a class="back" href="../">Všechna témata</a>
+    </footer>
+  </main>
+
+  <script>
+  (() => {
+    const NS = "http://www.w3.org/2000/svg";
+    function el(tag, attrs, parent) {
+      const n = document.createElementNS(NS, tag);
+      for (const k in attrs || {}) n.setAttribute(k, attrs[k]);
+      if (parent) parent.appendChild(n);
+      return n;
+    }
+    const $ = (id) => document.getElementById(id);
+    const svg = $("stump");
+    const fmt1 = new Intl.NumberFormat("cs-CZ", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+    /* ---------- model ---------- */
+    const FELLED = 2025, DRY = new Set([1947, 1976, 2003, 2015, 2018]), THINNED = 1995;
+    // jak dobrý byl rok pro růst: suché roky kolem poloviny, ostatní se liší o pár desítek procent
+    function weather(year) {
+      if (DRY.has(year)) return 0.42;
+      const r = Math.abs(Math.sin(year * 12.9898) * 43758.5453) % 1;
+      return 0.8 + 0.42 * r;
+    }
+    // šířka letokruhu v mm podle stáří stromu a místa, kde roste
+    function width(site, age, year) {
+      let base;
+      if (site === "open") base = 2.1 + 3.6 * Math.exp(-age / 16);
+      else if (site === "shade" || year < THINNED) base = 0.8 + 0.7 * Math.exp(-age / 9);
+      else base = 0.9 + 2.3 * Math.min(1, (year - THINNED + 1) / 4) * Math.exp(-(year - THINNED) / 60);
+      return base * weather(year);
+    }
+    const s = { age: 45, site: "open", year: 2003, rings: [] };
+    function grow() {
+      s.rings = [];
+      let r = 0.8;                                        // dřeň uprostřed
+      for (let a = 1; a <= s.age; a++) {
+        const year = FELLED - s.age + a, w = width(s.site, a, year);
+        s.rings.push({ year, w, inner: r, outer: r + w });
+        r += w;
+      }
+      s.year = Math.max(s.rings[0].year, Math.min(FELLED, s.year));
+    }
+
+    /* ---------- scéna ---------- */
+    const C = { x: 185, y: 180, R: 150 }, G = { x: 400, y: 60, w: 296, h: 230 };
+    const woodG = el("g", {}, svg), pickG = el("g", {}, svg), scaleG = el("g", { class: "scale" }, svg), chartG = el("g", {}, svg);
+    el("text", { x: G.x, y: 26, class: "cap" }, svg).textContent = "ŠÍŘKA LETOKRUHU V JEDNOTLIVÝCH LETECH";
+    let k = 1;                                            // pixelů na milimetr
+    function draw() {
+      const R = s.rings[s.rings.length - 1].outer;
+      k = C.R / R;
+      woodG.textContent = "";
+      el("circle", { cx: C.x, cy: C.y, r: C.R + 7, fill: "#4a3424" }, woodG);                       // kůra
+      for (let i = s.rings.length - 1; i >= 0; i--) {
+        const g = s.rings[i], late = Math.max(0.7, g.w * k * 0.3);
+        el("circle", { cx: C.x, cy: C.y, r: (g.outer * k).toFixed(2), fill: "#96632f" }, woodG);    // letní tmavé dřevo
+        el("circle", { cx: C.x, cy: C.y, r: Math.max(0, g.outer * k - late).toFixed(2), fill: "#ecd09a" }, woodG);   // jarní světlé
+      }
+      // jádro: starší letokruhy uprostřed tmavnou
+      const heart = s.rings[Math.max(0, s.rings.length - 16)];
+      if (s.rings.length > 18) el("circle", { cx: C.x, cy: C.y, r: (heart.inner * k).toFixed(2), fill: "#7a4318", opacity: 0.22 }, woodG);
+      el("circle", { cx: C.x, cy: C.y, r: Math.max(1.5, 0.8 * k), fill: "#5d3a1c" }, woodG);
+      // měřítko
+      scaleG.textContent = "";
+      const unit = [1, 2, 5, 10, 20].find((cm) => cm * 10 * k >= 46) || 20, len = unit * 10 * k;
+      el("line", { x1: 24, y1: 340, x2: 24 + len, y2: 340 }, scaleG);
+      el("line", { x1: 24, y1: 335, x2: 24, y2: 345 }, scaleG);
+      el("line", { x1: 24 + len, y1: 335, x2: 24 + len, y2: 345 }, scaleG);
+      el("text", { x: 32 + len, y: 344 }, scaleG).textContent = `${unit} cm`;
+      // graf
+      chartG.textContent = "";
+      const n = s.rings.length, bw = G.w / n, max = Math.max(...s.rings.map((g) => g.w), 2);
+      [0, Math.round(max / 2), Math.round(max)].forEach((mm) => {
+        const y = G.y + G.h - (mm / max) * G.h;
+        el("line", { x1: G.x, y1: y, x2: G.x + G.w, y2: y, stroke: "var(--grid)" }, chartG);
+        el("text", { x: G.x - 6, y: y + 4, class: "axis", style: "text-anchor:end" }, chartG).textContent = `${mm} mm`;
+      });
+      s.rings.forEach((g, i) => {
+        const h = (g.w / max) * G.h;
+        el("rect", { x: (G.x + i * bw + 0.5).toFixed(1), y: (G.y + G.h - h).toFixed(1), width: Math.max(1, bw - 1).toFixed(1), height: h.toFixed(1), class: `bar${DRY.has(g.year) ? " dry" : ""}${g.year === s.year ? " on" : ""}`, "data-year": g.year }, chartG);
+      });
+      const step = n > 50 ? 20 : n > 24 ? 10 : 5;
+      s.rings.forEach((g, i) => { if (g.year % step === 0) el("text", { x: G.x + (i + 0.5) * bw, y: G.y + G.h + 18, class: "axis", style: "text-anchor:middle" }, chartG).textContent = g.year; });
+      // vybraný letokruh
+      pickG.textContent = "";
+      const g = s.rings.find((q) => q.year === s.year), mid = ((g.inner + g.outer) / 2) * k;
+      el("circle", { cx: C.x, cy: C.y, r: mid.toFixed(2), class: "pick" }, pickG);
+      el("circle", { cx: C.x, cy: C.y, r: mid.toFixed(2), class: "pick-in" }, pickG);
+      el("text", { x: C.x, y: Math.max(16, C.y - mid - 8), class: "tag", "text-anchor": "middle" }, pickG).textContent = g.year;
+    }
+
+    function render() {
+      draw();
+      const g = s.rings.find((q) => q.year === s.year), R = s.rings[s.rings.length - 1].outer, age = g.year - s.rings[0].year + 1;
+      $("age-val").textContent = `${s.age} let`;
+      $("year").min = s.rings[0].year; $("year").max = FELLED; $("year").value = s.year;
+      $("year-val").textContent = s.year;
+      $("st-d").textContent = `${fmt1.format((2 * R) / 10)} cm`;
+      $("st-ring-n").textContent = `Letokruh ${g.year}`;
+      $("st-ring").textContent = `${fmt1.format(g.w)} mm`;
+      $("st-avg").textContent = `${fmt1.format(R / s.age)} mm za rok`;
+      const was = age === 1 ? "byl 1 rok" : age < 5 ? `byly ${age} roky` : `bylo ${age} let`;
+      let status;
+      if (DRY.has(g.year)) status = `<strong>Rok ${g.year}: sucho.</strong> Stromu došla voda, kambium přestalo pracovat už v létě a letokruh je úzký. Stejně úzký ho ten rok mají všechny stromy v kraji, a právě podle takových let se dřevo datuje.`;
+      else if (s.site === "freed" && g.year >= THINNED && g.year <= THINNED + 4) status = `<strong>Rok ${g.year}: najednou světlo.</strong> Sousední stromy zmizely a tenhle dostal místo a slunce. Letokruhy se během pár let rozšířily několikrát. Lesník podle toho pozná, kdy se v lese kácelo, i po desítkách let.`;
+      else if (s.site !== "open" && (s.site === "shade" || g.year < THINNED)) status = `<strong>Rok ${g.year}: ve stínu.</strong> Strom rostl pod korunami sousedů a světla měl málo. Přirůstal pomalu a letokruhy jsou husté. Takové dřevo je pevnější a truhláři si ho cení.`;
+      else if (age <= 12) status = `<strong>Rok ${g.year}: mládí.</strong> Stromku ${was}. Mladý strom na volném místě roste nejrychleji, a navíc je kmen ještě tenký, takže stejné množství dřeva udělá silnou vrstvu.`;
+      else if (g.w > 1.12 * (s.rings.reduce((a, q) => a + q.w, 0) / s.rings.length)) status = `<strong>Rok ${g.year}: dobrý rok.</strong> Dost vláhy a tepla, strom přirostl víc než obvykle.`;
+      else status = `<strong>Rok ${g.year}: běžný rok.</strong> Stromu ${was}. Čím je kmen tlustší, tím tenčí vrstvu na něm stejné množství nového dřeva udělá, a tak se letokruhy směrem ke kůře zužují.`;
+      $("status").innerHTML = status;
+    }
+
+    /* ---------- ovládání ---------- */
+    function pickAt(evt) {
+      const m = svg.getScreenCTM();
+      if (!m) return;
+      const p = new DOMPoint(evt.clientX, evt.clientY).matrixTransform(m.inverse());
+      const bar = evt.target.closest && evt.target.closest("rect[data-year]");
+      if (bar) { s.year = Number(bar.dataset.year); render(); return; }
+      if (p.x > G.x - 4 && p.x < G.x + G.w + 4 && p.y > G.y - 10) {
+        const i = Math.max(0, Math.min(s.rings.length - 1, Math.floor(((p.x - G.x) / G.w) * s.rings.length)));
+        s.year = s.rings[i].year; render(); return;
+      }
+      const r = Math.hypot(p.x - C.x, p.y - C.y) / k;
+      if (r > s.rings[s.rings.length - 1].outer + 6 / k) return;
+      const g = s.rings.find((q) => r <= q.outer) || s.rings[s.rings.length - 1];
+      if (g.year !== s.year) { s.year = g.year; render(); }
+    }
+    svg.addEventListener("pointermove", (e) => { if (e.pointerType === "mouse" || e.buttons) pickAt(e); });
+    svg.addEventListener("pointerdown", pickAt);
+    $("age").addEventListener("input", (e) => { s.age = Number(e.target.value); grow(); render(); });
+    $("year").addEventListener("input", (e) => { s.year = Number(e.target.value); render(); });
+    $("site-seg").addEventListener("click", (e) => {
+      const b = e.target.closest("button[data-v]");
+      if (!b) return;
+      $("site-seg").querySelectorAll("button").forEach((x) => x.setAttribute("aria-checked", String(x === b)));
+      s.site = b.dataset.v;
+      grow(); render();
+    });
+    grow();
+    render();
+  })();
+  </script>
+</body>
+</html>
