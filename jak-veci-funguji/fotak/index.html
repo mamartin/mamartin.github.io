@@ -55,6 +55,7 @@
             <linearGradient id="g-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5c9bdc"/><stop offset="1" stop-color="#cfe4f5"/></linearGradient>
             <filter id="f-bg" filterUnits="userSpaceOnUse" x="-60" y="-60" width="760" height="520"><feGaussianBlur id="fe-bg" stdDeviation="1"/></filter>
             <filter id="f-ground" filterUnits="userSpaceOnUse" x="-60" y="180" width="760" height="280"><feGaussianBlur id="fe-ground" stdDeviation="0.5"/></filter>
+            <filter id="f-front" filterUnits="userSpaceOnUse" x="-60" y="120" width="760" height="340"><feGaussianBlur id="fe-front" stdDeviation="0.01"/></filter>
             <filter id="f-motion" filterUnits="userSpaceOnUse" x="-60" y="80" width="760" height="140"><feGaussianBlur id="fe-motion" stdDeviation="1 0"/></filter>
             <filter id="f-expo" filterUnits="userSpaceOnUse" x="0" y="0" width="640" height="400">
               <feGaussianBlur id="fe-shake" in="SourceGraphic" stdDeviation="0.01" result="img"/>
@@ -91,7 +92,7 @@
               <path d="M152 140q16 10 32 0M152 160q16 -10 32 0" fill="none" stroke="#fff3e0" stroke-width="3.5"/>
               <circle cx="168" cy="150" r="19" fill="none" stroke="#7d1d12" stroke-width="1.5"/>
             </g>
-            <g>
+            <g filter="url(#f-front)">
               <path d="M342 400Q346 318 420 304H482Q556 318 560 400Z" fill="#2c4a7d"/>
               <path d="M420 304Q451 332 482 304L474 296H428Z" fill="#e9eef5"/>
               <rect x="436" y="262" width="30" height="46" rx="8" fill="#dfa87f"/>
@@ -143,13 +144,20 @@
             <button type="button" role="radio" data-v="8" aria-checked="false">Večer</button>
           </div>
         </div>
+        <div class="ctl">
+          <span class="label" id="lbl-focus">Zaostřeno na</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-focus" id="focus-seg">
+            <button type="button" role="radio" data-v="front" aria-checked="true">Postavu</button>
+            <button type="button" role="radio" data-v="back" aria-checked="false">Pozadí</button>
+          </div>
+        </div>
         <button type="button" class="btn ghost" id="auto">Doladit čas a ISO</button>
       </div>
       <div class="fig-status split">
         <p class="status" id="status" aria-live="polite"></p>
         <ul class="stats" aria-label="Stav fotky">
           <li><span class="n">Expozice</span><span class="v small" id="st-ev"></span></li>
-          <li><span class="n">Pozadí</span><span class="v small" id="st-bg"></span></li>
+          <li><span class="n" id="st-bg-n">Pozadí</span><span class="v small" id="st-bg"></span></li>
           <li><span class="n">Míč v letu</span><span class="v small" id="st-move"></span></li>
         </ul>
       </div>
@@ -190,12 +198,15 @@
       <div class="prose">
         <h2 id="h-clona">Clona: co všechno bude ostré</h2>
         <p>Clonové číslo říká, kolikrát se průměr otvoru vejde do ohniskové vzdálenosti objektivu. Proto je to naopak, než by člověk čekal: malé číslo je velká díra. A proto má řada tak divné hodnoty, 2, 2,8, 4, 5,6, 8. Každé další číslo je 1,4krát větší, otvor má poloviční plochu a pustí polovinu světla.</p>
+        <p>Ostří se posouváním čočky. Pro vzdálené věci musí být blíž k čipu, pro blízké dál od něj. Foťák si správnou polohu najde sám: zkouší, při které je obraz ve vybraném místě nejostřejší.</p>
         <p>Čočka umí zaostřit jen na jednu vzdálenost. Světlo z bodu, který leží jinde, se na čipu nesejde do bodu, ale dopadne jako kolečko. Čím je otvor clony větší, tím je kužel světla širší a kolečko větší. Z bodů v pozadí jsou pak velké překrývající se skvrny.</p>
         <p>Malým otvorem projde jen úzký svazek, kolečka jsou drobná a ostře vypadá skoro všechno. Portréty se proto fotí s clonou dokořán, aby pozadí nerušilo, a krajiny s clonou přivřenou.</p>
       </div>
       <aside class="note" aria-label="Poznámka na okraj">
         <span class="label">Na okraj</span>
         <p>Stejný trik dělají oči. Kdo mhouří, zmenšuje si otvor, kterým světlo vchází, a vidí ostřeji i bez brýlí.</p>
+        <span class="label">Zkuste</span>
+        <p>Otevřete clonu na 2 a přepněte Zaostřeno na Pozadí. Dům je ostrý a postava rozmazaná. Při cloně 16 je mezi oběma volbami rozdíl sotva znát.</p>
       </aside>
     </section>
 
@@ -255,7 +266,7 @@
     const APERTURES = [2, 2.8, 4, 5.6, 8, 11, 16];                 // první má hodnotu 2 EV
     const TIMES = [8000, 4000, 2000, 1000, 500, 250, 125, 60, 30, 15, 8];   // zlomky sekundy, první má hodnotu 13 EV
     const ISOS = [100, 200, 400, 800, 1600, 3200, 6400];
-    const s = { ap: 4, sh: 4, iso: 0, light: 15 };
+    const s = { ap: 4, sh: 4, iso: 0, light: 15, focus: "front" };
     const num = (n) => String(n).replace(".", ",");
 
     // o kolik kroků je fotka světlejší (+) nebo tmavší (−), než má být
@@ -269,9 +280,12 @@
       $("iso-val").textContent = iso;
 
       const blur = Math.max(0.01, 18 / N - 1.1), smear = Math.max(0.01, 280 * t), shake = t >= 1 / 15 ? t * 30 : 0.01;
-      $("fe-bg").setAttribute("stdDeviation", blur.toFixed(2));
+      // ostré je to, na co je zaostřeno; všechno v jiné vzdálenosti rozmaže otvor clony
+      const near = s.focus === "front";
+      $("fe-bg").setAttribute("stdDeviation", (near ? blur : 0.01).toFixed(2));
       $("fe-ground").setAttribute("stdDeviation", (blur * 0.35).toFixed(2));
-      $("fe-motion").setAttribute("stdDeviation", `${smear.toFixed(2)} 0`);
+      $("fe-front").setAttribute("stdDeviation", (near ? 0.01 : blur).toFixed(2));
+      $("fe-motion").setAttribute("stdDeviation", near ? `${smear.toFixed(2)} 0` : `${Math.hypot(smear, blur).toFixed(2)} ${blur.toFixed(2)}`);
       $("fe-shake").setAttribute("stdDeviation", shake.toFixed(2));
       const gain = Math.min(32, Math.max(1 / 32, 2 ** ev));
       document.querySelectorAll(".fe-gain").forEach((f) => f.setAttribute("slope", gain.toFixed(4)));
@@ -286,7 +300,8 @@
       $("iris-label").textContent = `Otvor clony při f/${num(N)}`;
 
       $("st-ev").textContent = ev === 0 ? "správná" : `${ev > 0 ? "+" : "−"}${Math.abs(ev)} EV, ${ev > 0 ? "světlá" : "tmavá"}`;
-      $("st-bg").textContent = N <= 2.8 ? "rozmazané" : N <= 5.6 ? "měkké" : "ostré";
+      $("st-bg-n").textContent = near ? "Pozadí" : "Postava";
+      $("st-bg").textContent = N <= 2.8 ? (near ? "rozmazané" : "rozmazaná") : N <= 5.6 ? (near ? "měkké" : "měkká") : near ? "ostré" : "ostrá";
       $("st-move").textContent = TIMES[s.sh] >= 500 ? "ostrý" : TIMES[s.sh] >= 125 ? "lehce rozmazaný" : "šmouha";
 
       let status;
@@ -295,6 +310,7 @@
       else if (TIMES[s.sh] <= 15) status = "<strong>Roztřesená.</strong> Závěrka je otevřená tak dlouho, že se za tu dobu pohnula i ruka s foťákem. Neostré je všechno, nejen míč.";
       else if (s.iso >= 4) status = "<strong>Zrnitá.</strong> Světla dopadlo málo a vysoké ISO ho jen zesílilo, i s náhodnými rozdíly mezi sousedními body. Na fotce je z nich šum.";
       else if (TIMES[s.sh] <= 60) status = "<strong>Míč je šmouha.</strong> Za dobu, co byla závěrka otevřená, uletěl kus cesty a zapsal se po celé její délce. Postava se nehýbala a je ostrá.";
+      else if (N <= 2.8 && !near) status = "<strong>Zaostřeno dozadu.</strong> Ostrý je dům a stromy, postava vpředu se rozpila. Při otevřené cloně je ostrá jen úzká vrstva kolem vzdálenosti, na kterou čočka míří, a obojí se do ní nevejde. Přivřete clonu.";
       else if (N <= 2.8) status = "<strong>Portrét.</strong> Clona je dokořán. Ostré je jen to, na co je zaostřeno, a pozadí se rozpilo do barevných skvrn. Otvorem zároveň teče hodně světla, takže stačí krátký čas.";
       else if (N >= 11) status = "<strong>Všechno ostré.</strong> Malým otvorem projde jen úzký svazek světla a ostře se zobrazí postava i stromy vzadu. Světla je ale málo a musí ho dohnat čas nebo ISO.";
       else status = "<strong>Vyvážená fotka.</strong> Světla dopadlo tak akorát, pohyb je skoro zmrazený a pozadí jen lehce měkké. Zkuste teď změnit jednu hodnotu a druhou ji vyrovnat.";
@@ -319,6 +335,13 @@
       if (!b) return;
       $("light-seg").querySelectorAll("button").forEach((x) => x.setAttribute("aria-checked", String(x === b)));
       s.light = Number(b.dataset.v);
+      render();
+    });
+    $("focus-seg").addEventListener("click", (e) => {
+      const b = e.target.closest("button[data-v]");
+      if (!b) return;
+      $("focus-seg").querySelectorAll("button").forEach((x) => x.setAttribute("aria-checked", String(x === b)));
+      s.focus = b.dataset.v;
       render();
     });
     $("auto").addEventListener("click", auto);

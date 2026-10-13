@@ -107,6 +107,20 @@
             <button type="button" role="radio" data-n="3" aria-checked="true">Tři</button>
           </div>
         </div>
+        <div class="ctl">
+          <span class="label" id="lbl-geo">Družice na obloze</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-geo" id="geo-seg">
+            <button type="button" role="radio" data-v="spread" aria-checked="true">Dokola</button>
+            <button type="button" role="radio" data-v="close" aria-checked="false">Do jednoho kouta</button>
+          </div>
+        </div>
+        <div class="ctl">
+          <span class="label" id="lbl-echo">Signál družice B</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-echo" id="echo-seg">
+            <button type="button" role="radio" data-v="0" aria-checked="true">Přímý</button>
+            <button type="button" role="radio" data-v="1" aria-checked="false">Odražený</button>
+          </div>
+        </div>
         <div class="ctl ctl-grow">
           <label class="label" for="bias">Chyba hodin v telefonu</label>
           <div class="ctl-row">
@@ -128,7 +142,7 @@
           </table>
         </div>
       </div>
-      <figcaption class="fig-caption">Zjednodušeno do roviny: místo koulí jsou kružnice a družice leží v ploše mapy. Proto tu na polohu stačí o jednu družici méně než ve skutečnosti. Mřížka má oka po 200 metrech.</figcaption>
+      <figcaption class="fig-caption">Zjednodušeno do roviny: místo koulí jsou kružnice a družice leží v ploše mapy. Proto tu na polohu stačí o jednu družici méně než ve skutečnosti. Mřížka má oka po 200 metrech. Odražený signál družice B letí v modelu o 30 metrů delší cestou.</figcaption>
     </figure>
 
     <section class="sec" aria-labelledby="h-cas">
@@ -192,6 +206,21 @@
       </div>
     </section>
 
+    <section class="sec" aria-labelledby="h-presnost">
+      <div class="prose">
+        <h2 id="h-presnost">Jak přesné to je</h2>
+        <p>Telefon pod širým nebem určí polohu na tři až pět metrů. Hodiny družic za tu chybu nemůžou, ty jsou přesné dost. Dělá ji hlavně cesta signálu.</p>
+        <p>Než signál doletí k zemi, projde ionosférou, vrstvou nabitých částic vysoko nad námi, a ta ho trochu zdrží. O kolik, to se mění podle denní doby a podle toho, co zrovna dělá Slunce. Telefon zdržení odhaduje z údajů, které družice vysílají, a trefí se jen zhruba. Novější telefony proto poslouchají každou družici na dvou frekvencích. Ionosféra zdrží každou jinak a z rozdílu se dá zpoždění spočítat a odečíst.</p>
+        <p>Záleží i na tom, kde na obloze družice jsou. <span class="hl">Když jsou rozprostřené do všech stran, malá chyba ve vzdálenosti znamená malou chybu v poloze.</span> Když jsou všechny v jednom kousku nebe, třeba v úzké ulici mezi domy, protínají se kružnice pod malým úhlem a stejná chyba posune průsečík mnohem dál.</p>
+        <p>Telefon navíc nepozná, že je některé měření špatně. Odražený signál si zčásti vyloží jako chybu vlastních hodin, kružnice srovná do jednoho bodu a ukáže ho s plnou jistotou. Jen leží jinde, než stojíte.</p>
+      </div>
+      <aside class="note" aria-label="Poznámka na okraj">
+        <span class="label">Zkuste</span>
+        <p>Přepněte signál družice B na Odražený a zmáčkněte Dopočítat chybu hodin. Kružnice se sejdou, ale vedle telefonu. Pak dejte družice Do jednoho kouta: stejná chyba měření, a odhad uskočí několikrát dál.</p>
+        <p>Geodeti a zemědělské stroje se dostanou na centimetry. Přijímají k tomu opravy z pevné stanice v okolí, která svou polohu zná přesně a hlásí, o kolik se měření zrovna plete.</p>
+      </aside>
+    </section>
+
     <section class="sec" aria-labelledby="h-gnss">
       <div class="prose">
         <h2 id="h-gnss">GPS není jediný</h2>
@@ -229,7 +258,10 @@
       { id: "C", cls: "c", x: 380, y: 404 },
     ];
 
-    const state = { n: 3, bias: 0, fixed: false, k: 0, P: { x: 300, y: 236 } };
+    // dvě rozmístění družic a odraz od domu: signál družice B pak letí o 30 m delší cestou
+    const LAYOUTS = { spread: [[62, 150], [658, 110], [380, 404]], close: [[372, 40], [668, 92], [596, 300]] };
+    const ECHO = 6;
+    const state = { n: 3, bias: 0, fixed: false, k: 0, geo: "spread", echo: false, P: { x: 300, y: 236 } };
 
     const fmtM = new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 0 });
     const fmtUs = new Intl.NumberFormat("cs-CZ", { minimumFractionDigits: 2, maximumFractionDigits: 2, signDisplay: "exceptZero" });
@@ -370,7 +402,7 @@
       const beta = (state.bias * C_M_PER_US) / M_PER_UNIT;  // chyba hodin jako délka (jednotky mapy)
       const vis = SATS.slice(0, state.n);
       const trueD = SATS.map((s) => dist(s, P));
-      const rho = trueD.map((d) => d + beta);
+      const rho = trueD.map((d, i) => d + beta + (state.echo && i === 1 && state.n > 1 ? ECHO : 0));
 
       const naive = state.n === 3 ? solveXY(vis, rho.slice(0, 3)) : null;
       const full = state.n === 3 ? solveXYB(vis, rho.slice(0, 3), naive) : null;
@@ -442,6 +474,11 @@
         statusEl.innerHTML = pts.length
           ? "<strong>Dvě družice:</strong> kružnice se protínají ve dvou bodech. Telefon neví, ve kterém z nich je."
           : "<strong>Dvě družice:</strong> kvůli chybě hodin se kružnice vůbec neprotínají.";
+      } else if (state.echo) {
+        const tail = state.geo === "close" ? " Družice jsou navíc v jednom koutě oblohy, kružnice se protínají pod malým úhlem a chyba se tím násobí." : "";
+        statusEl.innerHTML = state.fixed && k > 0.999
+          ? `<strong>Telefon chybu nepozná.</strong> Odražený signál družice B letěl o ${m(ECHO)} déle. Telefon si to zčásti vyložil jako chybu hodin a kružnice srovnal do jednoho bodu. Ten ale leží ${m(errUnits)} od místa, kde opravdu stojí.${tail}`
+          : `<strong>Odražený signál.</strong> Signál družice B přiletěl oklikou přes zeď domu a jeho cesta vyšla o ${m(ECHO)} delší. Kružnice se nesejdou v jednom bodě a odhad je ${m(errUnits)} vedle.${tail}`;
       } else if (zero) {
         statusEl.innerHTML = "<strong>Tři družice:</strong> kružnice se protínají v jediném bodě. Tam je telefon.";
       } else if (state.fixed && k > 0.999) {
@@ -478,6 +515,25 @@
     });
 
     biasIn.addEventListener("input", () => { state.bias = Number(biasIn.value); render(); });
+    function bindSeg(id, apply) {
+      const g = document.getElementById(id);
+      g.addEventListener("click", (e) => {
+        const b = e.target.closest("button[data-v]");
+        if (!b) return;
+        g.querySelectorAll("button").forEach((x) => x.setAttribute("aria-checked", String(x === b)));
+        apply(b.dataset.v);
+        render();
+      });
+    }
+    bindSeg("geo-seg", (v) => {
+      state.geo = v;
+      SATS.forEach((s, i) => {
+        [s.x, s.y] = LAYOUTS[v][i];
+        rings[i].setAttribute("cx", s.x); rings[i].setAttribute("cy", s.y);
+        satG[i].setAttribute("transform", `translate(${s.x} ${s.y})`);
+      });
+    });
+    bindSeg("echo-seg", (v) => { state.echo = v === "1"; });
 
     fixBtn.addEventListener("click", () => {
       state.fixed = !state.fixed;

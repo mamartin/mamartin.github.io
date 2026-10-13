@@ -85,6 +85,14 @@
             <output class="val" id="cycle-val" for="cycle"></output>
           </div>
         </div>
+        <div class="ctl">
+          <span class="label" id="lbl-dir">Ukázat auta</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-dir" id="dir-seg">
+            <button type="button" role="radio" data-v="both" aria-checked="true">Oba směry</button>
+            <button type="button" role="radio" data-v="fwd" aria-checked="false">Jen doprava</button>
+            <button type="button" role="radio" data-v="back" aria-checked="false">Jen doleva</button>
+          </div>
+        </div>
         <button type="button" class="btn ghost" id="play">Zastavit</button>
       </div>
       <div class="fig-status split">
@@ -103,7 +111,7 @@
           <li><span class="n">Zelená svítí</span><span class="v small" id="st-g"></span></li>
         </ul>
       </div>
-      <figcaption class="fig-caption">Nahoře ulice shora, křižovatky jsou 375 metrů od sebe. Pod ní záznam: čas běží shora dolů, každý semafor má svůj sloupec a šikmé čáry jsou jízdy aut. Čím je čára strmější, tím auto jede pomaleji, svislý kus znamená stání. Sledujeme kolonu, která se rozjela z krajní křižovatky. Vlna je nastavená na 50 km/h, čas běží osmkrát rychleji a auta nejsou v měřítku.</figcaption>
+      <figcaption class="fig-caption">Nahoře ulice shora, křižovatky jsou 375 metrů od sebe. Pod ní záznam: čas běží shora dolů, každý semafor má svůj sloupec a šikmé čáry jsou jízdy aut. Čím je čára strmější, tím auto jede pomaleji, svislý kus znamená stání. Sledujeme kolonu, která se rozjela z krajní křižovatky. Když je čar moc, přepínač Ukázat auta jeden směr schová. Vlna je nastavená na 50 km/h, čas běží osmkrát rychleji a auta nejsou v měřítku.</figcaption>
     </figure>
 
     <section class="sec" aria-labelledby="h-cyklus">
@@ -167,7 +175,7 @@
       <div class="prose">
         <h2 id="h-mesto">A proč ne v celém městě</h2>
         <p>Na jedné ulici se dá vlna spočítat. Ve městě se ulice kříží a každá křižovatka patří do dvou z nich. Posun, který se hodí jedné třídě, příčné nevyhovuje. Dobře to vychází jen v pravidelné síti jednosměrek, kterou má třeba Manhattan.</p>
-        <p>Vlnu taky snadno rozbije provoz sám. Stačí, aby na jedné křižovatce zbyla z minulé zelené fronta. Kolona, která přijede s vlnou, musí počkat, až se fronta rozjede, a část jí už zelenou nestihne. Když je aut víc, než ulice pobere, žádné seřízení nepomůže.</p>
+        <p>Vlnu taky snadno rozbije provoz sám. Stačí, aby na jedné křižovatce zbyla z minulé zelené fronta. Kolona, která přijede s vlnou, musí počkat, až se fronta rozjede, a část jí už zelenou nestihne. Když je aut víc, než ulice pobere, žádné seřízení nepomůže. Jak se pak proud aut sám láme do vln, popisuje článek o <a href="../zacpa/">zácpě z ničeho</a>.</p>
         <p>A pak jsou tu ti, kdo mají přednost před plynulostí aut: chodci, kteří potřebují dost času na přejití, a tramvaje a autobusy, kterým si semafor zelenou prodlouží nebo zařadí mimo pořadí.</p>
       </div>
       <aside class="note" aria-label="Poznámka na okraj">
@@ -205,7 +213,7 @@
     const CARS = 5, HEADWAY = 2.2;    // kolona a rozestup při rozjezdu ve vteřinách
     const QUEUE = 28;                 // rozestup stojících aut v metrech (zvětšený, aby byl vidět)
     const SPEEDUP = 8;
-    const s = { mode: "wave", kmh: 50, cycle: 80, t: 0, playing: !window.matchMedia("(prefers-reduced-motion: reduce)").matches };
+    const s = { mode: "wave", kmh: 50, cycle: 80, show: "both", t: 0, playing: !window.matchMedia("(prefers-reduced-motion: reduce)").matches };
     const mod = (a, m) => ((a % m) + m) % m;
 
     function offsets() {
@@ -285,7 +293,7 @@
         el("line", { x1: lightX(i), y1: PLOT.y, x2: lightX(i), y2: PLOT.y + PLOT.h, class: "col-red" }, plotG);
         for (let m = -2; m <= 2; m++) el("line", { x1: lightX(i), y1: Y(off[i] + m * C), x2: lightX(i), y2: Y(off[i] + m * C + green()), class: "col-green" }, plotG);
       }
-      [[back, "tr-b"], [fwd, "tr-f"]].forEach(([p, cls]) => p.cars.forEach((c) => {
+      [[back, "tr-b", "fwd"], [fwd, "tr-f", "back"]].filter(([, , hide]) => s.show !== hide).forEach(([p, cls]) => p.cars.forEach((c) => {
         for (let m = -3; m <= 3; m++) el("polyline", { points: c.pts.map(([t, x]) => `${X(x).toFixed(1)},${Y(t + m * C).toFixed(1)}`).join(" "), class: cls }, plotG);
       }));
       [0, C, 2 * C].forEach((t) => el("text", { x: 38, y: Y(t) + (t ? (t === C ? 4 : 0) : 9), class: "ax", "text-anchor": "end" }, axisG).textContent = `${t} s`);
@@ -316,9 +324,10 @@
       let n = 0;
       [fwd, back].forEach((p, d) => p.cars.forEach((c) => {
         for (let m = -2; m <= 2; m++) {
-          const x = where(c.pts, s.t + m * C), r = pool[n++];
+          const x = s.show === (d ? "fwd" : "back") ? null : where(c.pts, s.t + m * C), r = pool[n++];
           if (x === null) { r.setAttribute("visibility", "hidden"); continue; }
           r.setAttribute("visibility", "visible");
+          r.setAttribute("class", d ? "car-b" : "car-f");
           r.setAttribute("x", (X(x) - 5.5).toFixed(1));
           r.setAttribute("y", d ? 53 : 73);
         }
@@ -341,6 +350,13 @@
       if (!b) return;
       $("mode-seg").querySelectorAll("button").forEach((x) => x.setAttribute("aria-checked", String(x === b)));
       s.mode = b.dataset.v;
+      rebuild();
+    });
+    $("dir-seg").addEventListener("click", (e) => {
+      const b = e.target.closest("button[data-v]");
+      if (!b) return;
+      $("dir-seg").querySelectorAll("button").forEach((x) => x.setAttribute("aria-checked", String(x === b)));
+      s.show = b.dataset.v;
       rebuild();
     });
     $("play").addEventListener("click", () => { s.playing = !s.playing; $("play").textContent = s.playing ? "Zastavit" : "Spustit"; });

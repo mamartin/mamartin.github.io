@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Jak funguje splachovací nádržka</title>
-  <meta name="description" content="Co se děje v nádržce, když zmáčknete tlačítko, proč se sama zase napustí a jak mísu vyprázdní obyčejné koleno v trubce. S řezem záchodem, který si můžete spláchnout.">
+  <meta name="description" content="Co se děje v nádržce, když zmáčknete tlačítko, proč se sama zase napustí a proč v míse vždycky zůstane stát voda. S řezem záchodem, který si můžete spláchnout.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700&display=swap">
@@ -13,6 +13,7 @@
     .wall { fill: none; stroke: var(--pin-top); stroke-width: 8; stroke-linejoin: round; stroke-linecap: round; }
     .porcelain { fill: none; stroke: var(--metal-line); stroke-width: 8; stroke-linejoin: round; stroke-linecap: round; }
     .water { fill: var(--cold); opacity: 0.3; }
+    .used { fill: #9a6b2f; }
     .stream { stroke: var(--cold); stroke-width: 5; stroke-linecap: round; opacity: 0.75; }
     .pipe { fill: none; stroke: var(--metal-line); stroke-width: 5; stroke-linecap: round; }
     .tube { fill: var(--surface); stroke: var(--metal-line); stroke-width: 2; }
@@ -46,7 +47,7 @@
       <ul>
         <li>Nádržka je zásobník. Pomalu nastřádá šest litrů vody a pak je do mísy pustí během pár sekund.</li>
         <li>Napouštění hlídá <span class="hl">plovák.</span> Stoupá s hladinou, a když je nádržka plná, zavře přívod vody.</li>
-        <li>Mísu nevyprázdní proud vody, ale koleno v odpadu. Jakmile se zaplní, začne vodu z mísy samo sát.</li>
+        <li>Mísu vypláchne proud vody z nádržky. Co v ní bylo, přetlačí přes koleno v odpadu. V koleni pak zůstane stát voda, která nepustí zápach.</li>
       </ul>
     </section>
 
@@ -76,11 +77,11 @@
         </div>
         <ul class="stats" aria-label="Stav modelu">
           <li><span class="n">V nádržce</span><span class="v" id="st-tank"></span></li>
-          <li><span class="n" id="st-bowl-n">V míse</span><span class="v" id="st-bowl"></span></li>
+          <li><span class="n" id="st-bowl-n">V míse</span><span class="v small" id="st-bowl"></span></li>
           <li><span class="n" id="st-used-n">Spotřebováno</span><span class="v" id="st-used"></span></li>
         </ul>
       </div>
-      <figcaption class="fig-caption">Schematický řez, ne v měřítku. Napouštění je oproti skutečnosti zrychlené, opravdová nádržka se plní asi minutu. Když ventil protéká, běží čas mezi dopouštěním třicetkrát rychleji, aby bylo vidět, jak hladina klesá. Červená klapka je vypouštěcí ventil, žlutá koule plovák.</figcaption>
+      <figcaption class="fig-caption">Schematický řez, ne v měřítku. Napouštění je oproti skutečnosti zrychlené, opravdová nádržka se plní asi minutu. Když ventil protéká, běží čas mezi dopouštěním třicetkrát rychleji, aby bylo vidět, jak hladina klesá. Zakalená voda v míse je ta, která tam byla před spláchnutím; jakmile se nádržka dopustí, model ji zakalí znovu. Červená klapka je vypouštěcí ventil, žlutá koule plovák.</figcaption>
     </figure>
 
     <section class="sec" aria-labelledby="h-zasobnik">
@@ -123,14 +124,15 @@
 
     <section class="sec" aria-labelledby="h-sifon">
       <div class="prose">
-        <h2 id="h-sifon">Koleno, které saje</h2>
+        <h2 id="h-sifon">Koleno, které drží vodu</h2>
         <p>Odpad z mísy nevede rovně dolů. Nejdřív stoupá, přehoupne se přes hrb a teprve pak padá do kanalizace. V prohlubni před hrbem proto stojí voda. Říká se jí vodní uzávěr a je to zátka: nepustí do koupelny zápach ze stoky.</p>
-        <p>Stejné koleno mísu i vyprazdňuje. Když do mísy vtrhne voda z nádržky, hladina stoupne a voda začne přetékat přes hrb. Je jí tolik, že zaplní celou trubku za ním. Sloupec vody, který v ní padá dolů, za sebou táhne další vodu, a ta další. Z mísy se stane <span class="hl">násoska.</span> Vysaje se skoro do dna i se vším, co v ní bylo.</p>
-        <p>Sání skončí, až hladina klesne k ústí odpadu a do trubky se dostane vzduch. To je to zachrčení na konci. Zbytek vody z nádržky pak mísu dopustí zpátky po hrb.</p>
+        <p>Když zmáčknete tlačítko, voda z nádržky vtrhne do mísy. Opláchne její stěny, strhne s sebou, co v ní bylo, a tlačí to před sebou přes hrb do odpadu. <span class="hl">Mísu nic nevysává. Nová voda z ní tu starou prostě vytlačí.</span> Hladina přitom stoupne jen o pár centimetrů, protože kolik vody přiteče, tolik jí přes hrb zase odteče.</p>
+        <p>Proto záleží na tom, kolik vody přijde a jak rychle. Pomalý pramínek by přes hrb jen přetékal a obsah mísy by nechal ležet. Šest litrů za tři sekundy ho odnese. A proto v míse po spláchnutí vždycky zůstane voda: hrb jí nedovolí odtéct, a uzávěr je tak hned zase plný.</p>
+        <p>V Americe mají mísy jiné. Koleno je v nich užší a tvarované tak, aby se při spláchnutí celé zaplnilo vodou. Sloupec, který v něm padá dolů, pak za sebou táhne vodu z mísy jako násoska a vysaje ji skoro do dna, dokud do trubky nevnikne vzduch. Proto americké záchody na konci zachrčí, stojí v nich víc vody a snáz se ucpou.</p>
       </div>
       <aside class="note" aria-label="Poznámka na okraj">
         <span class="label">Zkuste</span>
-        <p>Při spláchnutí sledujte mísu. Hladina nejdřív stoupne, a jakmile se trubka za hrbem zaplní, spadne skoro ke dnu, přestože voda z nádržky pořád přitéká.</p>
+        <p>Při spláchnutí sledujte mísu. Hladina se zvedne jen kousek nad hrb a zakalená voda se během pár sekund vymění za čistou. Pak zkuste malé spláchnutí: v míse zůstane o něco víc té staré.</p>
         <p>Stejně funguje kbelík vody vylitý do mísy. Spláchne ji i bez nádržky.</p>
       </aside>
     </section>
@@ -180,11 +182,9 @@
     /* ---------- model ---------- */
     const FULL = 6;                 // litrů v plné nádržce
     const REST = 1.5;               // litrů v míse, když hladina stojí u hrbu
-    const PRIME = 1.85;             // při tomhle množství se koleno zaplní a začne sát
-    const BREAK = 0.6;              // hladina u ústí odpadu: do trubky se dostane vzduch
     const LEAK = 0.004;             // l/s netěsnou klapkou
     const LEAK_SPEED = 30;          // kolikrát rychleji běží čas, když se jen čeká na protékání
-    const s = { tank: FULL, bowl: REST, open: false, stopAt: 0, siphon: false, filling: false, leak: false, used: 0, flow: 0, leaked: 0, leakTime: 0, topUps: 0 };
+    const s = { tank: FULL, bowl: REST, used0: 1, open: false, stopAt: 0, filling: false, leak: false, used: 0, flow: 0, leaked: 0, leakTime: 0, topUps: 0 };
 
     function flush(litres) {
       if (s.open || s.tank < 1) return;
@@ -213,19 +213,15 @@
         const q = 0.32 * Math.min(1, (FULL - s.tank) / 0.4 + 0.08);
         s.tank += q * dt; s.used += q * dt;
         if (s.tank >= FULL) { s.tank = FULL; s.filling = false; }
-        if (s.bowl < REST) { refill = 0.09; s.used += refill * dt; }   // část vody jde přepadem dopustit mísu
       }
+      // po dopuštění nádržky mísu někdo zase použil
+      if (!s.open && !s.filling && !s.leak) s.used0 = Math.min(1, s.used0 + dt / 2.5);
       // mísa a koleno
       const inflow = s.flow + refill;
-      let out;
-      if (s.siphon) {
-        out = s.bowl > BREAK ? Math.max(2.7, inflow + 0.7) : inflow;
-        if (s.bowl <= BREAK && s.flow < 0.3) s.siphon = false;
-      } else {
-        out = 3.2 * Math.max(0, s.bowl - REST) ** 1.5;                // voda přepadá přes hrb
-        if (s.bowl >= PRIME) s.siphon = true;
-      }
-      s.bowl = Math.max(0.2, s.bowl + (inflow - out) * dt);
+      const out = 7 * Math.max(0, s.bowl - REST) ** 1.5;              // voda přepadá přes hrb
+      // nová voda tu starou vytlačuje a zčásti se s ní míchá
+      s.used0 *= Math.exp((-1.5 * out * dt) / s.bowl);
+      s.bowl = Math.max(REST, s.bowl + (inflow - out) * dt);
       s.out = out;
     }
 
@@ -237,6 +233,8 @@
     const tankWater = el("rect", { x: T.x0, width: T.x1 - T.x0, class: "water" }, svg);
     const bowlWater = el("path", { class: "water" }, svg);
     const legWater = el("rect", { x: 504, width: 36, class: "water" }, svg);
+    const bowlUsed = el("path", { class: "used" }, svg);
+    const legUsed = el("rect", { x: 504, width: 36, class: "used" }, svg);
     const fallWater = el("path", { class: "water" }, svg);
     const linkWater = el("rect", { x: 228, y: 250, width: 24, height: 40, class: "water" }, svg);
     const linkWater2 = el("rect", { x: 228, y: 266, width: 124, height: 24, class: "water" }, svg);
@@ -298,8 +296,12 @@
       bowlWater.setAttribute("d", `M350 ${by.toFixed(1)} H500 V400 H420 Q350 400 350 ${Math.max(by, 330).toFixed(1)} Z`);
       legWater.setAttribute("y", Math.max(by, 310).toFixed(1)); legWater.setAttribute("height", (400 - Math.max(by, 310) - 0).toFixed(1));
       legWater.setAttribute("visibility", by < 372 ? "visible" : "hidden");
-      const falling = s.siphon || s.out > 0.02;
-      fallWater.setAttribute("d", s.siphon ? "M504 310 H576 V476 H544 V330 H504 Z" : "M536 326 H548 V476 H544 V330 H536 Z");
+      // původní voda z mísy: čím víc se jí vyměnilo, tím je průhlednější
+      bowlUsed.setAttribute("d", bowlWater.getAttribute("d"));
+      legUsed.setAttribute("y", legWater.getAttribute("y")); legUsed.setAttribute("height", legWater.getAttribute("height"));
+      bowlUsed.setAttribute("opacity", (0.4 * s.used0).toFixed(3)); legUsed.setAttribute("opacity", (0.4 * s.used0).toFixed(3));
+      const falling = s.out > 0.02, th = Math.max(4, 330 - by);
+      fallWater.setAttribute("d", `M532 ${(330 - th).toFixed(1)} H${(544 + th).toFixed(1)} V476 H544 V330 H532 Z`);
       fallWater.setAttribute("visibility", falling ? "visible" : "hidden");
       drain.setAttribute("visibility", falling ? "visible" : "hidden");
       const pouring = s.flow > 0.02;
@@ -314,7 +316,7 @@
       // protékání: tenký pramínek pod klapkou do mísy a přes hrb do odpadu
       const leaking = s.leak && !s.open && s.flow > 0;
       trickle.setAttribute("visibility", leaking ? "visible" : "hidden");
-      trickleOut.setAttribute("visibility", leaking && !s.siphon && s.bowl >= REST ? "visible" : "hidden");
+      trickleOut.setAttribute("visibility", leaking ? "visible" : "hidden");
       if (leaking) {
         trickle.setAttribute("d", `M240 246 V278 H352 V${Math.min(398, by).toFixed(1)}`);
         const off = (-(performance.now() / 22) % 13).toFixed(1);
@@ -324,6 +326,7 @@
       flap.setAttribute("transform", `translate(0 ${-lift}) rotate(${s.open ? -18 : 0} 262 237)`);
       chain.setAttribute("y2", 234 - lift);
 
+      $("st-bowl").classList.toggle("small", !s.leak);
       if (s.leak) {
         put($("st-tank"), `${fmt2.format(s.tank)} l`);
         put($("st-bowl-n"), "Uteklo do mísy");
@@ -334,22 +337,18 @@
         put($("lapse"), `čas běží ${LEAK_SPEED}× rychleji · uplynulo <b>${min} min ${String(sec).padStart(2, "0")} s</b> · plovák dopouštěl <b>${s.topUps}×</b>`, true);
       } else {
         put($("st-tank"), `${fmt1.format(s.tank)} l`);
-        put($("st-bowl-n"), "V míse");
-        put($("st-bowl"), s.siphon ? "saje" : s.bowl < REST - 0.05 ? "dopouští se" : "po hrb");
+        put($("st-bowl-n"), "Voda v míse");
+        put($("st-bowl"), s.used0 > 0.97 ? "použitá" : `z ${fmt0.format((1 - s.used0) * 100)} % nová`);
         put($("st-used-n"), "Spotřebováno");
         put($("st-used"), `${fmt1.format(s.used)} l`);
         put($("lapse"), "");
       }
 
       let status;
-      if (s.open && s.siphon) {
-        status = "<strong>Koleno saje.</strong> Trubka za hrbem je plná vody. Padající sloupec za sebou táhne vodu z mísy rychleji, než z nádržky přitéká, a hladina v míse proto klesá.";
-      } else if (s.open) {
-        status = "<strong>Klapka je nahoře.</strong> Voda se z nádržky valí do mísy a hladina v ní stoupá k hrbu kolena.";
-      } else if (s.siphon) {
-        status = "<strong>Nádržka je prázdná, koleno dosává.</strong> Jakmile se do trubky dostane vzduch, sání se přeruší.";
+      if (s.open) {
+        status = "<strong>Splachuje.</strong> Voda z nádržky se valí do mísy, strhává její obsah a tlačí ho přes hrb kolena do odpadu. Hladina v míse stoupla jen o kousek: kolik vody přiteče, tolik jí přes hrb odteče.";
       } else if (s.filling && s.tank < FULL - 0.3) {
-        status = "<strong>Napouští se.</strong> Plovák klesl s hladinou a otevřel přívod vody. Jak hladina stoupá, zvedá ho a ventil se přivírá. Mísa se mezitím dopouští po hrb.";
+        status = "<strong>Napouští se.</strong> Plovák klesl s hladinou a otevřel přívod vody. Jak hladina stoupá, zvedá ho a ventil se přivírá. V míse zůstala stát voda po hrb, tentokrát čistá.";
       } else if (s.leak && s.filling) {
         status = "<strong>Plovák dopouští.</strong> Hladina klesla tak, že plovák pootevřel přívod. Trvá to pár sekund a je slyšet jen krátké zasyčení. Tohle je jediná známka, že záchod protéká.";
       } else if (s.leak) {
@@ -383,7 +382,7 @@
       let dt = Math.min(0.1, (now - prev) / 1000);
       prev = now;
       // samotné protékání je pomalé, proto se čekání mezi dopouštěním zrychluje
-      if (s.leak && !s.open && !s.siphon && !s.filling) dt *= LEAK_SPEED;
+      if (s.leak && !s.open && !s.filling) dt *= LEAK_SPEED;
       for (; dt > 0; dt -= 0.02) step(Math.min(0.02, dt));
       render();
       requestAnimationFrame(frame);

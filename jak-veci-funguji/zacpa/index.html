@@ -74,7 +74,7 @@
           <span class="label" id="lbl-driver">Řídí</span>
           <div class="seg" role="radiogroup" aria-labelledby="lbl-driver" id="driver-seg">
             <button type="button" role="radio" data-v="human" aria-checked="true">Lidé</button>
-            <button type="button" role="radio" data-v="acc" aria-checked="false">Tempomaty s odstupem</button>
+            <button type="button" role="radio" data-v="acc" aria-checked="false">Počítače</button>
           </div>
         </div>
         <button type="button" class="btn" id="brake">Přibrzdit jedno auto</button>
@@ -95,7 +95,7 @@
       <div class="prose">
         <h2 id="h-pokus">Pokus s dvaadvaceti auty</h2>
         <p>V roce 2008 postavili japonští fyzici na parkoviště dvaadvacet aut do kruhu o obvodu 230 metrů. Řidiči dostali jediný pokyn: jeďte dokola rychlostí třicet kilometrů v hodině a držte stejný odstup.</p>
-        <p>Chvíli to šlo. Pak někdo o trochu ubral, auto za ním přibrzdilo o něco víc, a za necelou minutu na jednom místě kruhu stálo pět aut úplně. Hlouček stojících aut se pomalu posouval dokola, proti směru jízdy. Auta do něj zezadu najížděla, chvíli stála a vpředu z něj zase vyjížděla.</p>
+        <p>Chvíli to šlo. Pak někdo o trochu ubral, auto za ním přibrzdilo o něco víc, a za chvíli na jednom místě kruhu několik aut stálo úplně. Hlouček stojících aut se pomalu posouval dokola, proti směru jízdy. Auta do něj zezadu najížděla, chvíli stála a vpředu z něj zase vyjížděla.</p>
         <p>Na silnici přitom nebylo vůbec nic. Žádná překážka, žádná zatáčka, žádný důvod. Od té doby se tomu říká fantomová zácpa.</p>
       </div>
       <aside class="note" aria-label="Zácpa v číslech">
@@ -111,7 +111,7 @@
     <section class="sec" aria-labelledby="h-proc">
       <div class="prose">
         <h2 id="h-proc">Proč malé přibrzdění roste</h2>
-        <p>Řidič nevidí, co se děje deset aut před ním. Řídí se jedním autem, tím před sebou. A reaguje pozdě: než si všimne brzdových světel a přendá nohu, uplyne skoro sekunda. Za tu sekundu se mezera zmenšila víc, než by měla.</p>
+        <p>Řidič nevidí, co se děje deset aut před ním. Řídí se jedním autem, tím před sebou. A reaguje pozdě: než si všimne brzdových světel a přendá nohu, uplyne <a href="../reflex/">skoro sekunda</a>. Za tu sekundu se mezera zmenšila víc, než by měla.</p>
         <p>Aby to dohnal, musí zabrzdit o něco víc než auto před ním. Řidič za ním je na tom stejně, jen už reaguje na silnější brzdění, a tak brzdí ještě víc. Každé další auto v řadě zpomalí o kousek víc než to předchozí. <span class="hl">Vlna brzdění cestou dozadu sílí,</span> až se někdo zastaví úplně.</p>
         <p>Když jsou mezi auty velké mezery, nestane se nic. Řidič má čas, ubere plyn a vlna se utlumí. Záleží na hustotě. Pod určitou hranicí se každé zaváhání vstřebá, nad ní se každé rozroste.</p>
       </div>
@@ -152,11 +152,12 @@
         <h2 id="h-co">Co s tím nadělá jeden řidič</h2>
         <p>Vlnu živí prudké brzdění a pomalé rozjezdy. Kdo je nedělá, vlnu tlumí. Stačí držet větší odstup a v koloně jet stálou pomalou rychlostí místo střídání plynu a brzdy. Mezera před vámi pak funguje jako polštář: když auto vpředu přibrzdí, vy jen uberete plyn a za vámi už nebrzdí nikdo.</p>
         <p>Pokusy ukázaly, že k rozpuštění vlny může stačit jedno takhle řízené auto mezi dvaceti.</p>
-        <p>Adaptivní tempomat, který sám hlídá odstup, to dělá líp než člověk. Reaguje hned, nebrzdí víc, než musí, a rozjíždí se bez čekání. Kolona takových aut vlny nevytváří vůbec.</p>
+        <p>Počítač by to uměl líp než člověk. Reaguje hned, nebrzdí víc, než musí, a rozjíždí se bez čekání. Kolona aut řízených s ohledem na plynulost by vlny nevytvářela vůbec.</p>
+        <p>Dnešní adaptivní tempomaty tak daleko nejsou. Jsou laděné na pohodlí jednoho auta. Když jich při měření jelo několik za sebou, přibrzdění prvního cestou dozadu zesilovaly podobně jako lidé.</p>
       </div>
       <aside class="note" aria-label="Poznámka na okraj">
         <span class="label">Zkuste</span>
-        <p>Nechte vzniknout zácpu a přepněte řízení na tempomaty. Vlna se během minuty rozpustí a stejný počet aut jede plynule, stejnou rychlostí jako lidé před zácpou.</p>
+        <p>Nechte vzniknout zácpu a přepněte řízení na Počítače. Vlna se během minuty rozpustí a stejný počet aut jede plynule, stejnou rychlostí jako lidé před zácpou.</p>
       </aside>
     </section>
 
@@ -295,7 +296,7 @@
       const spread = (smooth.mean - smooth.min) * 3.6;
       let status;
       if (s.driver === "acc" && spread < 6) {
-        status = "<strong>Plynulý proud.</strong> Tempomaty reagují okamžitě, nebrzdí víc, než musí, a rozjíždějí se bez čekání. Vlna se nemá jak rozrůst, ani při hustotě, při které by lidé dávno stáli.";
+        status = "<strong>Plynulý proud.</strong> Počítače v modelu reagují okamžitě, nebrzdí víc, než musí, a rozjíždějí se bez čekání. Vlna se nemá jak rozrůst, ani při hustotě, při které by lidé dávno stáli.";
       } else if (smooth.min * 3.6 < 1.5) {
         status = "<strong>Zácpa z ničeho.</strong> Na jednom místě okruhu auta stojí, o kus dál jedou volně. Hlouček stojících aut se posouvá proti směru jízdy: zezadu do něj auta najíždějí, vpředu z něj vyjíždějí.";
       } else if (spread > 12) {
