@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
-import { cors, readJson, send } from "../lib/http.js";
-import { configured, save } from "../lib/store.js";
+import { cors, readJson, send } from "./_lib/http.js";
+import { configured, save } from "./_lib/store.js";
 
 const RATINGS = ["ano", "zcasti", "ne"];
 const MAX_TEXT = 2000;

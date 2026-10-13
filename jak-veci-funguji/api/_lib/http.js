@@ -1,7 +1,11 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 
-// Odkud smí formulář posílat odpovědi. Jiný web je nepošle, ani kdyby okopíroval celý formulář.
+// Odkud smí formulář posílat odpovědi: z tohohle webu samotného a z jeho starší kopie na GitHub Pages.
+// Jiný web je nepošle, ani kdyby okopíroval celý formulář.
 const ALLOWED = (process.env.ALLOWED_ORIGINS || "https://mamartin.github.io").split(",").map((s) => s.trim()).filter(Boolean);
+function sameSite(req, origin) {
+  try { return new URL(origin).host === (req.headers["x-forwarded-host"] || req.headers.host); } catch { return false; }
+}
 
 export function send(res, status, body, headers = {}) {
   res.statusCode = status;
@@ -14,7 +18,7 @@ export function send(res, status, body, headers = {}) {
 // Vrátí hlavičky pro prohlížeč, když požadavek přišel z povoleného webu, jinak null.
 export function cors(req) {
   const origin = req.headers.origin || "";
-  if (!ALLOWED.includes(origin)) return null;
+  if (!ALLOWED.includes(origin) && !sameSite(req, origin)) return null;
   return { "Access-Control-Allow-Origin": origin, Vary: "Origin", "Access-Control-Allow-Methods": "POST, OPTIONS", "Access-Control-Allow-Headers": "Content-Type", "Access-Control-Max-Age": "86400" };
 }
 

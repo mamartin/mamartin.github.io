@@ -1,8 +1,8 @@
 {
-  "name": "jak-veci-funguji-feedback",
+  "name": "jak-veci-funguji",
   "private": true,
   "version": "0.1.0",
-  "description": "Příjem a čtení zpětné vazby k článkům Jak věci fungují. Odpovědi se ukládají jako soubory do úložiště Vercel Blob.",
+  "description": "Jak věci fungují: články s interaktivními modely a příjem zpětné vazby od čtenářů (funkce pro Vercel, odpovědi jako soubory v úložišti Blob).",
   "type": "module",
   "engines": {
     "node": ">=20"

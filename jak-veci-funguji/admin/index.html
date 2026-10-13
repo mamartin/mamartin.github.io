@@ -71,7 +71,7 @@
   <script>
   (() => {
     const $ = (id) => document.getElementById(id);
-    const SITE = "https://mamartin.github.io/jak-veci-funguji/";
+    const SITE = new URL("../", location.href).href;        // administrace leží o složku níž než rozcestník
     const RATING = { ano: "srozumitelné", zcasti: "zčásti", ne: "nesrozumitelné" };
     const when = new Intl.DateTimeFormat("cs-CZ", { dateStyle: "medium", timeStyle: "short" });
     let pass = sessionStorage.getItem("jvf-admin") || "", items = [];

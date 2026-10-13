@@ -1,5 +1,5 @@
-import { isAdmin, send } from "../lib/http.js";
-import { configured, listAll, MAX_LISTED, remove } from "../lib/store.js";
+import { isAdmin, send } from "./_lib/http.js";
+import { configured, listAll, MAX_LISTED, remove } from "./_lib/store.js";
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 

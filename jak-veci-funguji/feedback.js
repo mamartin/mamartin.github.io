@@ -1,12 +1,12 @@
 /* Formulář zpětné vazby pod každým článkem. Odpověď pošle funkci na Vercelu,
    která ji uloží jako soubor. Neposílá se nic kromě toho, co čtenář vyplní, a názvu článku. */
 (() => {
-  // adresa funkce, která odpovědi přijímá; dokud je prázdná, formulář se nezobrazí
-  const ENDPOINT = "";
-  let endpoint = ENDPOINT;
-  // pro zkoušení na vlastním počítači jde adresu přepsat v úložišti prohlížeče
-  try { endpoint = localStorage.getItem("jvf-feedback-endpoint") || ENDPOINT; } catch (e) { /* úložiště nemusí být dostupné */ }
-  if (!endpoint) return;
+  // Na Vercelu běží funkce na stejné adrese jako web. Kopie na GitHub Pages funkce nemá
+  // a posílá odpovědi na adresu z REMOTE; dokud je prázdná, formulář se tam nezobrazí.
+  const REMOTE = "";
+  const onPages = location.hostname.endsWith("github.io");
+  const endpoint = onPages ? (REMOTE ? `${REMOTE.replace(/\/$/, "")}/api/feedback` : "") : "/api/feedback";
+  if (!endpoint || location.pathname.includes("/admin/")) return;
 
   const main = document.querySelector("main");
   if (!main) return;
