@@ -132,7 +132,7 @@
       <div class="fig-status">
         <p class="status" id="status" aria-live="polite"></p>
       </div>
-      <figcaption class="fig-caption">Kód je pravý, v zobrazení Kód ho přečte každý telefon. Klepnutím na čtvereček v datové části ho převrátíte, červený rámeček označuje poškození. Model umí verze 1 až 6, tedy nejvýš 134 bajtů textu.</figcaption>
+      <figcaption class="fig-caption">Kód je pravý, v zobrazení Kód ho přečte každý telefon. Klepnutím na čtvereček v datové části ho převrátíte. Poškozené čtverečky jsou červené: tmavě ty, které zčernaly, světle ty, které zbělely. Telefon je tak vidí stejně jako model. Model umí verze 1 až 6, tedy nejvýš 134 bajtů textu.</figcaption>
     </figure>
 
     <section class="sec" aria-labelledby="h-rohy">
@@ -389,8 +389,6 @@
 
     /* ---------- stav a kresba ---------- */
     const QUIET = 4, M = 10;                 // tichá zóna a velikost čtverečku v jednotkách SVG
-    // kolik opravných bajtů si norma u nejmenších kódů nechává jen na odhalení chyb
-    const RESERVED = { "1,0": 3, "1,1": 2, "1,2": 1, "1,3": 1, "2,0": 2, "3,0": 1 };
     // kód musí zůstat černý na bílé v obou režimech, barvy jsou proto pevné
     const PARTS = {
       finder: { color: "#bd3f0b", name: "rohové čtverce" },
@@ -402,7 +400,7 @@
       pad: { color: "#8a919b", name: "výplň" },
       ec: { color: "#08754f", name: "opravné bajty" },
     };
-    const BAD = "#cc3125";
+    const BAD = "#cc3125", BAD_DARK = "#7a140f", BAD_LIGHT = "#ffc9c1";
 
     const svg = document.getElementById("qr");
     const textIn = document.getElementById("text");
@@ -444,10 +442,14 @@
         if (state.view === "parts") {
           const color = PARTS[partAt(q, x, y)].color;
           el("rect", { x: px, y: py, width: M, height: M, fill: color, "fill-opacity": on ? 1 : 0.14 }, svg);
+        } else if (hurt) {
+          // poškozený čtvereček je celý červený, ale tak tmavý nebo světlý, aby ho čtečka viděla stejně jako my:
+          // zčernalý jako černý, zbělený jako bílý. Rámeček by z dálky splynul a bílé čtverečky by zase ztmavly.
+          el("rect", { x: px, y: py, width: M + 0.3, height: M + 0.3, fill: on ? BAD_DARK : BAD_LIGHT }, svg);
         } else if (on) {
           el("rect", { x: px, y: py, width: M + 0.3, height: M + 0.3, fill: "#000" }, svg);
         }
-        if (hurt) marks.push([px, py]);
+        if (hurt && state.view === "parts") marks.push([px, py]);
       }
       marks.forEach(([px, py]) => el("rect", { x: px + 1, y: py + 1, width: M - 2, height: M - 2, fill: "none", stroke: BAD, "stroke-width": 2 }, svg));
     }
@@ -460,7 +462,7 @@
         const c = q.cwAt[y][x];
         if (c >= 0) hit[q.codewords[c].block].add(c);
       });
-      const limit = Math.floor((q.nEc - (RESERVED[`${q.version},${q.level}`] || 0)) / 2);
+      const limit = Math.floor(q.nEc / 2);    // na jeden chybný bajt padnou dva opravné
       const bad = hit.map((set) => set.size);
       return { bad, limit, worst: bad.indexOf(Math.max(...bad)) };
     }
