@@ -110,7 +110,8 @@ function sharedParts() {
   const strut = new THREE.BoxGeometry(0.06, 0.26, 0.18);
   const headlight = new THREE.BoxGeometry(0.46, 0.12, 0.12);
   const taillight = new THREE.BoxGeometry(0.52, 0.11, 0.06);
-  const paintGeo = mergeGeometries([bodyGeo, placed(wing, 0, 1.13, -1.98)]);
+  const paintGeo = bodyGeo;
+  const wingGeo = placed(wing, 0, 1.13, -1.98);
   const darkGeo = mergeGeometries([
     placed(strut, -0.56, 0.99, -1.95),
     placed(strut, 0.56, 0.99, -1.95),
@@ -171,7 +172,7 @@ function sharedParts() {
   })();
 
   shared = {
-    paintGeo, cabinGeo, darkGeo, headGeo, tailGeo, tire, rimGeo, stripeGeo,
+    paintGeo, wingGeo, cabinGeo, darkGeo, headGeo, tailGeo, tire, rimGeo, stripeGeo,
     numberGeo: new THREE.PlaneGeometry(0.62, 0.62).rotateX(-Math.PI / 2),
     blob: new THREE.PlaneGeometry(2.7, 5.4).rotateX(-Math.PI / 2),
     beam: new THREE.PlaneGeometry(9, 26).rotateX(-Math.PI / 2),
@@ -213,6 +214,8 @@ function formulaParts() {
     box(0.4, 0.32, 1.3, 0.52, 0.36, -0.35), // bočnice
     box(0.4, 0.32, 1.3, -0.52, 0.36, -0.35),
     box(0.3, 0.32, 0.5, 0, 0.82, -0.72), // airbox nad hlavou
+  ]);
+  const wingGeo = mergeGeometries([
     box(1.9, 0.045, 0.42, 0, 0.16, 2.2, -0.08), // přední křídlo
     box(1.3, 0.06, 0.4, 0, 1.0, -2.15, 0.12), // zadní křídlo
     box(1.3, 0.04, 0.22, 0, 0.84, -2.2, 0.2),
@@ -251,24 +254,30 @@ function formulaParts() {
     ]),
   });
   formula = {
-    paintGeo, accentGeo, darkGeo, helmetGeo, visorGeo, headGeo, tailGeo,
+    paintGeo, wingGeo, accentGeo, darkGeo, helmetGeo, visorGeo, headGeo, tailGeo,
     front: wheel(0.36, 0.34), rear: wheel(0.42, 0.46),
     helmetMat: new THREE.MeshStandardMaterial({ color: 0xf4f1e8, roughness: 0.25, metalness: 0.3 }),
   };
   return formula;
 }
 
-function numberMaterial(n) {
+const luminance = (hex) => {
+  const c = new THREE.Color(hex);
+  return 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
+};
+
+function numberMaterial(n, bg = 0xf4f4f0) {
   const P = sharedParts();
-  if (P.numberMats.has(n)) return P.numberMats.get(n);
+  const key = `${n}|${bg}`;
+  if (P.numberMats.has(key)) return P.numberMats.get(key);
   const c = document.createElement('canvas');
   c.width = c.height = 128;
   const g = c.getContext('2d');
-  g.fillStyle = '#f4f4f0';
+  g.fillStyle = '#' + bg.toString(16).padStart(6, '0');
   g.beginPath();
   g.arc(64, 64, 60, 0, Math.PI * 2);
   g.fill();
-  g.fillStyle = '#111317';
+  g.fillStyle = luminance(bg) > 0.45 ? '#111317' : '#f4f4f0';
   g.font = 'italic 700 74px "Chakra Petch", "Arial Narrow", sans-serif';
   g.textAlign = 'center';
   g.textBaseline = 'middle';
@@ -277,39 +286,65 @@ function numberMaterial(n) {
   t.colorSpace = THREE.SRGBColorSpace;
   t.anisotropy = 4;
   const mat = new THREE.MeshBasicMaterial({ map: t, transparent: true, polygonOffset: true, polygonOffsetFactor: -2 });
-  P.numberMats.set(n, mat);
+  P.numberMats.set(key, mat);
   return mat;
 }
 
-export function createCarMesh(color, { ghost = false, night = false, number = null, kind = 'car', accent = null } = {}) {
+// typ laku karoserie a křídel
+export const FINISHES = {
+  gloss: { roughness: 0.3, metalness: 0.45 },
+  metal: { roughness: 0.2, metalness: 0.85 },
+  matte: { roughness: 0.78, metalness: 0.05 },
+};
+
+// livery: vlastní barvy dílů (wings, trim, rims, tires, cockpit, plate) a lak (finish); null = výchozí
+export function createCarMesh(color, {
+  ghost = false, night = false, number = null, kind = 'car', accent = null, livery = {},
+} = {}) {
   const P = sharedParts();
   const F = kind === 'formula' ? formulaParts() : null;
   const root = new THREE.Group();
   const tilt = new THREE.Group();
   root.add(tilt);
 
-  const paint = new THREE.MeshStandardMaterial({ color, roughness: 0.3, metalness: 0.45, envMapIntensity: 1.2 });
+  const L = ghost ? {} : livery;
+  const finish = FINISHES[L.finish] ?? FINISHES.gloss;
+  // vlastní barva dílu dostane vlastní materiál, jinak sdílený výchozí
+  const own = (hex, fallback, roughness, metalness) => (hex == null ? fallback : new THREE.MeshStandardMaterial({ color: hex, roughness, metalness }));
+  const paint = new THREE.MeshStandardMaterial({ color, ...finish, envMapIntensity: 1.2 });
   const tail = new THREE.MeshBasicMaterial({ color: 0x6a0a08, toneMapped: false });
-  let mats = { paint, tail, glass: P.glassMat, dark: P.darkMat, tire: P.tireMat, rim: P.rimMat, head: P.headMat };
+  let mats = {
+    paint,
+    tail,
+    wing: L.wings == null ? paint : new THREE.MeshStandardMaterial({ color: L.wings, ...finish, envMapIntensity: 1.2 }),
+    glass: F ? P.glassMat : own(L.cockpit, P.glassMat, 0.08, 0.9),
+    helmet: F ? own(L.cockpit, F.helmetMat, 0.25, 0.3) : null,
+    dark: own(L.trim, P.darkMat, 0.6, 0.2),
+    tire: own(L.tires, P.tireMat, 0.92, 0),
+    rim: own(L.rims, P.rimMat, 0.3, 0.85),
+    head: P.headMat,
+  };
   if (ghost) {
     const g = (c) => new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.32, depthWrite: false });
     mats = { paint: g(color), tail: g(0xff3322), glass: g(0x9fd8ff), dark: g(0x333333), tire: g(0x222222), rim: g(0xaaaaaa), head: g(0xffffff) };
+    mats.wing = mats.paint;
+    mats.helmet = mats.head;
   }
-  const c = new THREE.Color(color);
-  const lum = 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
-  let stripeMat = ghost ? mats.dark : lum > 0.45 ? P.stripeDark : P.stripeLight;
+  let stripeMat = ghost ? mats.dark : luminance(color) > 0.45 ? P.stripeDark : P.stripeLight;
   if (accent != null && !ghost) stripeMat = new THREE.MeshStandardMaterial({ color: accent, roughness: 0.35, metalness: 0.3 });
 
   const bodyMesh = new THREE.Mesh(F ? F.paintGeo : P.paintGeo, mats.paint);
-  const cabinMesh = F ? new THREE.Mesh(F.helmetGeo, ghost ? mats.head : F.helmetMat) : new THREE.Mesh(P.cabinGeo, mats.glass);
+  const cabinMesh = F ? new THREE.Mesh(F.helmetGeo, mats.helmet) : new THREE.Mesh(P.cabinGeo, mats.glass);
+  const wingMesh = new THREE.Mesh(F ? F.wingGeo : P.wingGeo, mats.wing);
   tilt.add(
     bodyMesh,
     cabinMesh,
+    wingMesh,
     new THREE.Mesh(F ? F.darkGeo : P.darkGeo, mats.dark),
     new THREE.Mesh(F ? F.headGeo : P.headGeo, mats.head),
     new THREE.Mesh(F ? F.tailGeo : P.tailGeo, mats.tail),
   );
-  if (F) tilt.add(new THREE.Mesh(F.accentGeo, stripeMat), new THREE.Mesh(F.visorGeo, mats.glass));
+  if (F) tilt.add(new THREE.Mesh(F.accentGeo, stripeMat), new THREE.Mesh(F.visorGeo, ghost ? mats.glass : P.glassMat));
 
   const wheels = [];
   const wheelPos = F
@@ -331,7 +366,7 @@ export function createCarMesh(color, { ghost = false, night = false, number = nu
   if (!ghost) {
     if (!F) tilt.add(new THREE.Mesh(P.stripeGeo, stripeMat));
     if (number != null) {
-      const plate = new THREE.Mesh(P.numberGeo, numberMaterial(number));
+      const plate = new THREE.Mesh(P.numberGeo, numberMaterial(number, L.plate ?? undefined));
       if (F) {
         plate.position.set(0, 0.585, 1.25);
         plate.rotation.x = 0.06;
@@ -343,7 +378,7 @@ export function createCarMesh(color, { ghost = false, night = false, number = nu
     blob.position.y = 0.04;
     blob.renderOrder = 1;
     root.add(blob);
-    bodyMesh.castShadow = cabinMesh.castShadow = true;
+    bodyMesh.castShadow = cabinMesh.castShadow = wingMesh.castShadow = true;
   }
   let beam = null;
   if (night && !ghost) {
@@ -372,6 +407,7 @@ export function disposeCarMesh(mesh) {
 export class Car {
   constructor(track, {
     color = 0xd7263d, name = 'Hráč', number = null, isPlayer = false, night = false, ghost = false, biome = {}, kind = 'car', accent = null,
+    livery = {},
   } = {}) {
     this.track = track;
     this.name = name;
@@ -381,7 +417,7 @@ export class Car {
     this.biome = biome;
     this.kind = VEHICLES[kind] ? kind : 'car';
     this.spec = VEHICLES[this.kind];
-    this.mesh = createCarMesh(color, { ghost, night, number, kind: this.kind, accent });
+    this.mesh = createCarMesh(color, { ghost, night, number, kind: this.kind, accent, livery });
     this.controls = { throttle: 0, brake: 0, steer: 0, handbrake: false, nitro: false };
     this.proj = {};
     this.reset(0, 0);

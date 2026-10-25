@@ -54,7 +54,7 @@ export class Race {
   constructor({
     track, biome, mode = 'race', laps = 3, difficulty = 'medium', playerColor = 0xd7263d, playerColors = null,
     humans = 1, night = false, opponents = null, playerKinds = [], playerNames = [], opponentNames = [], opponentKind = 'car',
-    playerAccents = [],
+    playerAccents = [], playerLiveries = [],
   }) {
     this.track = track;
     this.biome = biome;
@@ -85,12 +85,12 @@ export class Race {
       const info = isPlayer
         ? {
           name: playerNames[h] || (humans > 1 ? `Hráč ${h + 1}` : 'Ty'), color: colors[h] ?? colors[0],
-          number: PLAYER_NUMBERS[h], kind: playerKinds[h], accent: playerAccents[h],
+          number: PLAYER_NUMBERS[h], kind: playerKinds[h], accent: playerAccents[h], livery: playerLiveries[h],
         }
         : { ...pool[ai % pool.length], name: opponentNames[ai] || pool[ai % pool.length].name, kind: opponentKind };
       if (!isPlayer) ai++;
       const car = new Car(track, {
-        color: info.color, name: info.name, number: info.number, isPlayer, night, biome, kind: info.kind, accent: info.accent,
+        color: info.color, name: info.name, number: info.number, isPlayer, night, biome, kind: info.kind, accent: info.accent, livery: info.livery,
       });
       const g = track.gridSlot(mode === 'race' ? slot : 2);
       car.reset(g.s, g.lat);

@@ -182,6 +182,27 @@ function playerColors() {
 }
 const playerAccents = () => [colorOf(S.accent, ACCENT_COLORS, null), colorOf(S.accent2, ACCENT_COLORS, null)];
 
+// díly vozu s vlastní barvou; výchozí barva pro náhled ve vzorku (null = jako karoserie)
+const LIVERY_PARTS = [
+  { key: 'wings', name: { car: 'Zadní křídlo', formula: 'Křídla' }, def: null },
+  { key: 'cockpit', name: { car: 'Okna', formula: 'Helma jezdce' }, def: { car: 0x0c131c, formula: 0xf4f1e8 } },
+  { key: 'trim', name: { car: 'Nárazníky a detaily', formula: 'Podvozek a haló' }, def: 0x15171b },
+  { key: 'rims', name: 'Disky', def: 0xc9ccd1 },
+  { key: 'tires', name: 'Pneumatiky', def: 0x151515 },
+  { key: 'plate', name: 'Štítek s číslem', def: 0xf4f4f0 },
+];
+const FINISH_NAMES = { gloss: 'Lesk', metal: 'Metalíza', matte: 'Mat' };
+const liveryKey = (i) => (i === 0 ? 'livery' : 'livery2');
+// nastavení ukládá barvy jako '#rrggbb', model chce čísla
+function playerLiveries() {
+  return [0, 1].map((i) => {
+    const src = S[liveryKey(i)] || {};
+    const out = { finish: FINISH_NAMES[src.finish] ? src.finish : 'gloss' };
+    for (const p of LIVERY_PARTS) out[p.key] = customHex(src[p.key]);
+    return out;
+  });
+}
+
 const playerKinds = () => [S.vehicle || 'car', S.vehicle2 || 'car'];
 // soupeři jezdí to, co si vybral hráč 1
 const opponentKind = () => playerKinds()[0];
@@ -319,10 +340,11 @@ function buildShowcase() {
     const h = race ? slot - 3 : 0;
     const isPlayer = h >= 0 && h < humans;
     const info = isPlayer
-      ? { color: colors[h], number: PLAYER_NUMBERS[h], kind: playerKinds()[h], accent: playerAccents()[h] }
+      ? { color: colors[h], number: PLAYER_NUMBERS[h], kind: playerKinds()[h], accent: playerAccents()[h], livery: playerLiveries()[h] }
       : { ...pool[ai++ % pool.length], kind: opponentKind() };
     const car = new Car(w.track, {
       color: info.color, number: info.number, night: w.biome.night, biome: w.biome, isPlayer, kind: info.kind, accent: info.accent,
+      livery: info.livery,
     });
     const g = w.track.gridSlot(race ? slot : 2);
     car.reset(g.s, g.lat);
@@ -511,9 +533,86 @@ function refreshMenu() {
     picker.style.background = custom ? S[key] : '';
     picker.querySelector('input').value = hexCss(custom ? customHex(S[key]) : cur ?? 0xf2f2ee);
   }
+  for (const i of [0, 1]) refreshLivery(i, colors[i]);
 }
 
 const hexCss = (hex) => '#' + hex.toString(16).padStart(6, '0');
+
+// rozbalovací editor barev jednotlivých dílů a laku
+function setLivery(i, patch, save = true) {
+  const k = liveryKey(i);
+  const next = { ...(S[k] || {}), ...patch };
+  for (const key of Object.keys(next)) if (next[key] == null) delete next[key];
+  S[k] = next;
+  if (save) store.save();
+  refreshMenu();
+  queueShowcase();
+}
+
+function fillLivery(box, i) {
+  const seg = document.createElement('div');
+  seg.className = 'seg small lv-finish';
+  seg.setAttribute('role', 'radiogroup');
+  seg.setAttribute('aria-label', 'Lak');
+  for (const [f, name] of Object.entries(FINISH_NAMES)) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.setAttribute('role', 'radio');
+    b.dataset.finish = f;
+    b.textContent = name;
+    b.addEventListener('click', () => setLivery(i, { finish: f === 'gloss' ? null : f }));
+    seg.appendChild(b);
+  }
+  const finishRow = document.createElement('div');
+  finishRow.className = 'lv-row lv-finish-row';
+  finishRow.innerHTML = '<span class="lv-name">Lak</span>';
+  finishRow.appendChild(seg);
+  box.appendChild(finishRow);
+  for (const p of LIVERY_PARTS) {
+    const row = document.createElement('div');
+    row.className = 'lv-row';
+    row.dataset.part = p.key;
+    row.innerHTML = `<span class="lv-name"></span><label class="lv-color"><input type="color"></label>
+      <button type="button" class="lv-reset">Výchozí</button>`;
+    const input = row.querySelector('input');
+    input.addEventListener('input', () => setLivery(i, { [p.key]: input.value }, false));
+    input.addEventListener('change', () => setLivery(i, { [p.key]: input.value }));
+    row.querySelector('.lv-reset').addEventListener('click', () => setLivery(i, { [p.key]: null }));
+    box.appendChild(row);
+  }
+  const reset = document.createElement('button');
+  reset.type = 'button';
+  reset.className = 'btn lv-reset-all';
+  reset.textContent = 'Vrátit vše na výchozí';
+  reset.addEventListener('click', () => {
+    S[liveryKey(i)] = {};
+    store.save();
+    refreshMenu();
+    queueShowcase();
+  });
+  box.appendChild(reset);
+}
+
+function refreshLivery(i, body) {
+  const box = $(i === 0 ? 'livery' : 'livery2');
+  if (!box.children.length) fillLivery(box, i);
+  const kind = playerKinds()[i];
+  const src = S[liveryKey(i)] || {};
+  const finish = FINISH_NAMES[src.finish] ? src.finish : 'gloss';
+  for (const b of box.querySelector('.lv-finish').children) b.setAttribute('aria-checked', String(b.dataset.finish === finish));
+  for (const p of LIVERY_PARTS) {
+    const row = box.querySelector(`[data-part="${p.key}"]`);
+    const name = typeof p.name === 'string' ? p.name : p.name[kind];
+    const def = p.def == null ? body : typeof p.def === 'number' ? p.def : p.def[kind];
+    const own = customHex(src[p.key]);
+    row.querySelector('.lv-name').textContent = name;
+    const input = row.querySelector('input');
+    input.setAttribute('aria-label', name);
+    input.value = hexCss(own ?? def);
+    row.querySelector('.lv-color').style.background = hexCss(own ?? def);
+    row.querySelector('.lv-reset').hidden = own == null;
+  }
+}
 
 // vzorky barev: paleta, u doplňkové barvy „automaticky“, nakonec vlastní barva z pickeru
 function fillSwatches(sw, key, list) {
@@ -763,7 +862,7 @@ async function startRaceInner() {
     track: w.track, biome: w.biome, mode: raceMode(), laps: S.laps, difficulty: S.difficulty,
     playerColors: playerColors().slice(0, humans), playerKinds: playerKinds(), playerNames: playerNames(),
     opponentNames: G.cup ? (G.cup.names ??= opponentNames()) : opponentNames(), opponentKind: opponentKind(),
-    playerAccents: playerAccents(), humans, night: w.biome.night,
+    playerAccents: playerAccents(), playerLiveries: playerLiveries(), humans, night: w.biome.night,
   });
   for (const c of race.cars) {
     scene.add(c.mesh.root);
