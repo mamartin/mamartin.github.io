@@ -1,0 +1,66 @@
+# Každé ráno stáhne podklady pro AI dashboard, nechá Clauda napsat shrnutí dne
+# a uloží obojí do dashboard/data/ai. Push pak nasadí GitHub Pages.
+# Claude běží na předplatném: secret CLAUDE_CODE_OAUTH_TOKEN z `claude setup-token`.
+name: "Dashboard: AI dnes"
+
+on:
+  schedule:
+    - cron: "7 5 * * *" # 05:07 UTC = 6:07 v zimě, 7:07 v létě
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+
+concurrency:
+  group: dashboard-ai
+  cancel-in-progress: false
+
+jobs:
+  ai:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Stáhnout podklady
+        run: node scripts/dashboard/ai-stahni.mjs
+      - name: Shrnutí dne (Claude)
+        # Když AI krok selže (limit, prošlý token), data se uloží i tak
+        # a stránka ukáže poslední platné shrnutí.
+        continue-on-error: true
+        timeout-minutes: 15
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # Vlastní token místo Claude GitHub App – commit dělá až další krok.
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: "Přečti scripts/dashboard/ai-pokyny.md a postupuj přesně podle něj."
+          claude_args: |
+            --model sonnet
+            --max-turns 20
+            --allowedTools "Read,Write,WebFetch"
+      - name: Kontrola a archiv
+        run: node scripts/dashboard/ai-over.mjs
+      - name: Uložit data
+        run: |
+          git add dashboard/data/ai
+          if git diff --cached --quiet; then
+            echo "Beze změny."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Dashboard AI: data $(TZ=Europe/Prague date +%F)"
+          # Mezitím mohl přibýt commit s kódem → nejdřív ho stáhnout.
+          git pull --rebase
+          git push
+      - name: Nasadit Pages
+        # Push s GITHUB_TOKEN nemusí build Pages spustit sám, proto o něj požádat.
+        run: |
+          curl -fsS -X POST \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/pages/builds" || echo "::warning::Build Pages se nepodařilo vyžádat."
