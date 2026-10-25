@@ -20,6 +20,27 @@ export const CAR = {
   steerSpeedK: 15,
   halfWidth: 1.0,
   halfLength: 2.25,
+  offDragMul: 1,
+  rearZ: 1.3,
+  rearX: 0.86,
+};
+
+// typy vozů: formule drží víc v zatáčkách a líp zrychluje, mimo asfalt ale trpí
+export const VEHICLES = {
+  car: CAR,
+  formula: {
+    ...CAR,
+    wheelbase: 3.0,
+    accel: 14.6,
+    vmax: 62.5,
+    grip: 26.5,
+    steerMax: 0.6,
+    halfWidth: 1.05,
+    halfLength: 2.35,
+    offDragMul: 1.35,
+    rearZ: 1.45,
+    rearX: 0.88,
+  },
 };
 
 const TWO_PI = Math.PI * 2;
@@ -170,6 +191,73 @@ function sharedParts() {
   return shared;
 }
 
+// formule: úzký monokok, nos s křídlem, otevřená kola, jezdec v helmě
+let formula = null;
+function formulaParts() {
+  if (formula) return formula;
+  const taper = (rTop, rBot, len, seg = 10) => new THREE.CylinderGeometry(rTop, rBot, len, seg).rotateX(Math.PI / 2);
+  const box = (w, h, d, x, y, z, rx = 0) => placed(new THREE.BoxGeometry(w, h, d), x, y, z, rx);
+
+  // nos se zužuje dopředu (+z), mírně skloněný k zemi
+  const nose = taper(0.13, 0.3, 1.6).scale(1, 0.62, 1);
+  nose.rotateX(0.06);
+  nose.translate(0, 0.4, 1.45);
+  // kryt motoru se zužuje dozadu
+  const engine = taper(0.3, 0.12, 1.5).scale(0.85, 1, 1);
+  engine.rotateX(Math.PI);
+  engine.translate(0, 0.6, -1.3);
+  const paintGeo = mergeGeometries([
+    ni(nose),
+    ni(engine),
+    box(0.66, 0.4, 1.9, 0, 0.44, -0.15), // monokok
+    box(0.4, 0.32, 1.3, 0.52, 0.36, -0.35), // bočnice
+    box(0.4, 0.32, 1.3, -0.52, 0.36, -0.35),
+    box(0.3, 0.32, 0.5, 0, 0.82, -0.72), // airbox nad hlavou
+    box(1.9, 0.045, 0.42, 0, 0.16, 2.2, -0.08), // přední křídlo
+    box(1.3, 0.06, 0.4, 0, 1.0, -2.15, 0.12), // zadní křídlo
+    box(1.3, 0.04, 0.22, 0, 0.84, -2.2, 0.2),
+  ]);
+  const accentGeo = mergeGeometries([
+    box(0.04, 0.22, 0.5, 0.95, 0.22, 2.2), // bočnice křídel
+    box(0.04, 0.22, 0.5, -0.95, 0.22, 2.2),
+    box(0.05, 0.42, 0.56, 0.66, 0.86, -2.17),
+    box(0.05, 0.42, 0.56, -0.66, 0.86, -2.17),
+    box(0.36, 0.1, 0.06, 0, 0.82, -0.47), // sání airboxu
+  ]);
+  const halo = new THREE.TorusGeometry(0.3, 0.035, 6, 14, Math.PI).rotateX(-Math.PI / 2);
+  halo.translate(0, 0.86, -0.28);
+  const darkGeo = mergeGeometries([
+    box(0.46, 0.04, 0.7, 0, 0.645, -0.2), // otvor kokpitu
+    box(1.5, 0.05, 3.1, 0, 0.13, -0.3), // podlaha
+    box(0.08, 0.3, 0.12, 0, 0.75, -2.05), // držák zadního křídla
+    box(0.04, 0.24, 0.04, 0, 0.75, 0.0), // sloupek haló
+    ni(halo),
+    // ramena zavěšení
+    box(0.62, 0.04, 0.06, 0.6, 0.42, 1.5), box(0.62, 0.04, 0.06, -0.6, 0.42, 1.5),
+    box(0.62, 0.04, 0.06, 0.6, 0.32, 1.62), box(0.62, 0.04, 0.06, -0.6, 0.32, 1.62),
+    box(0.5, 0.04, 0.06, 0.62, 0.46, -1.42), box(0.5, 0.04, 0.06, -0.62, 0.46, -1.42),
+    box(0.5, 0.04, 0.06, 0.62, 0.34, -1.52), box(0.5, 0.04, 0.06, -0.62, 0.34, -1.52),
+  ]);
+  const helmetGeo = new THREE.SphereGeometry(0.17, 14, 10);
+  helmetGeo.translate(0, 0.78, -0.32);
+  const visorGeo = box(0.26, 0.07, 0.1, 0, 0.8, -0.18);
+  const headGeo = mergeGeometries([box(0.18, 0.06, 0.06, 0.52, 0.42, 0.33), box(0.18, 0.06, 0.06, -0.52, 0.42, 0.33)]);
+  const tailGeo = box(0.16, 0.12, 0.05, 0, 0.5, -2.3);
+  const wheel = (r, w) => ({
+    tire: new THREE.CylinderGeometry(r, r, w, 20).rotateZ(Math.PI / 2),
+    rim: mergeGeometries([
+      ni(new THREE.CylinderGeometry(r * 0.62, r * 0.62, w + 0.02, 12).rotateZ(Math.PI / 2)),
+      ni(new THREE.BoxGeometry(w + 0.03, 0.06, r * 1.1)),
+    ]),
+  });
+  formula = {
+    paintGeo, accentGeo, darkGeo, helmetGeo, visorGeo, headGeo, tailGeo,
+    front: wheel(0.36, 0.34), rear: wheel(0.42, 0.46),
+    helmetMat: new THREE.MeshStandardMaterial({ color: 0xf4f1e8, roughness: 0.25, metalness: 0.3 }),
+  };
+  return formula;
+}
+
 function numberMaterial(n) {
   const P = sharedParts();
   if (P.numberMats.has(n)) return P.numberMats.get(n);
@@ -193,8 +281,9 @@ function numberMaterial(n) {
   return mat;
 }
 
-export function createCarMesh(color, { ghost = false, night = false, number = null } = {}) {
+export function createCarMesh(color, { ghost = false, night = false, number = null, kind = 'car' } = {}) {
   const P = sharedParts();
+  const F = kind === 'formula' ? formulaParts() : null;
   const root = new THREE.Group();
   const tilt = new THREE.Group();
   root.add(tilt);
@@ -206,27 +295,32 @@ export function createCarMesh(color, { ghost = false, night = false, number = nu
     const g = (c) => new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.32, depthWrite: false });
     mats = { paint: g(color), tail: g(0xff3322), glass: g(0x9fd8ff), dark: g(0x333333), tire: g(0x222222), rim: g(0xaaaaaa), head: g(0xffffff) };
   }
+  const c = new THREE.Color(color);
+  const lum = 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
+  const stripeMat = ghost ? mats.dark : lum > 0.45 ? P.stripeDark : P.stripeLight;
 
-  const bodyMesh = new THREE.Mesh(P.paintGeo, mats.paint);
-  const cabinMesh = new THREE.Mesh(P.cabinGeo, mats.glass);
+  const bodyMesh = new THREE.Mesh(F ? F.paintGeo : P.paintGeo, mats.paint);
+  const cabinMesh = F ? new THREE.Mesh(F.helmetGeo, ghost ? mats.head : F.helmetMat) : new THREE.Mesh(P.cabinGeo, mats.glass);
   tilt.add(
     bodyMesh,
     cabinMesh,
-    new THREE.Mesh(P.darkGeo, mats.dark),
-    new THREE.Mesh(P.headGeo, mats.head),
-    new THREE.Mesh(P.tailGeo, mats.tail),
+    new THREE.Mesh(F ? F.darkGeo : P.darkGeo, mats.dark),
+    new THREE.Mesh(F ? F.headGeo : P.headGeo, mats.head),
+    new THREE.Mesh(F ? F.tailGeo : P.tailGeo, mats.tail),
   );
+  if (F) tilt.add(new THREE.Mesh(F.accentGeo, stripeMat), new THREE.Mesh(F.visorGeo, mats.glass));
 
   const wheels = [];
-  const wheelPos = [
-    [0.86, 1.35, true], [-0.86, 1.35, true], [0.86, -1.3, false], [-0.86, -1.3, false],
-  ];
+  const wheelPos = F
+    ? [[0.88, 1.55, true], [-0.88, 1.55, true], [0.9, -1.45, false], [-0.9, -1.45, false]]
+    : [[0.86, 1.35, true], [-0.86, 1.35, true], [0.86, -1.3, false], [-0.86, -1.3, false]];
   for (const [x, z, front] of wheelPos) {
+    const geo = F ? (front ? F.front : F.rear) : { tire: P.tire, rim: P.rimGeo };
     const pivot = new THREE.Group();
-    pivot.position.set(x, 0.36, z);
+    pivot.position.set(x, geo.tire.parameters.radiusTop, z);
     const spin = new THREE.Group();
-    const tireMesh = new THREE.Mesh(P.tire, mats.tire);
-    spin.add(tireMesh, new THREE.Mesh(P.rimGeo, mats.rim));
+    const tireMesh = new THREE.Mesh(geo.tire, mats.tire);
+    spin.add(tireMesh, new THREE.Mesh(geo.rim, mats.rim));
     pivot.add(spin);
     tilt.add(pivot);
     wheels.push({ pivot, spin, front });
@@ -234,12 +328,14 @@ export function createCarMesh(color, { ghost = false, night = false, number = nu
   }
 
   if (!ghost) {
-    const c = new THREE.Color(color);
-    const lum = 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
-    tilt.add(new THREE.Mesh(P.stripeGeo, lum > 0.45 ? P.stripeDark : P.stripeLight));
+    if (!F) tilt.add(new THREE.Mesh(P.stripeGeo, stripeMat));
     if (number != null) {
       const plate = new THREE.Mesh(P.numberGeo, numberMaterial(number));
-      plate.position.set(0, 1.386, -0.36);
+      if (F) {
+        plate.position.set(0, 0.585, 1.25);
+        plate.rotation.x = 0.06;
+        plate.scale.setScalar(0.5);
+      } else plate.position.set(0, 1.386, -0.36);
       tilt.add(plate);
     }
     const blob = new THREE.Mesh(P.blob, P.blobMat);
@@ -263,6 +359,7 @@ export function disposeCarMesh(mesh) {
   const sharedMats = new Set([
     P.tireMat, P.rimMat, P.darkMat, P.glassMat, P.headMat, P.stripeLight, P.stripeDark, P.blobMat, P.beamMat, ...P.numberMats.values(),
   ]);
+  if (formula) sharedMats.add(formula.helmetMat);
   mesh.root.traverse((o) => {
     if (o.material && !sharedMats.has(o.material)) o.material.dispose();
   });
@@ -272,14 +369,18 @@ export function disposeCarMesh(mesh) {
 // --- fyzika ---------------------------------------------------------------
 
 export class Car {
-  constructor(track, { color = 0xd7263d, name = 'Hráč', number = null, isPlayer = false, night = false, ghost = false, biome = {} } = {}) {
+  constructor(track, {
+    color = 0xd7263d, name = 'Hráč', number = null, isPlayer = false, night = false, ghost = false, biome = {}, kind = 'car',
+  } = {}) {
     this.track = track;
     this.name = name;
     this.color = color;
     this.number = number;
     this.isPlayer = isPlayer;
     this.biome = biome;
-    this.mesh = createCarMesh(color, { ghost, night, number });
+    this.kind = VEHICLES[kind] ? kind : 'car';
+    this.spec = VEHICLES[this.kind];
+    this.mesh = createCarMesh(color, { ghost, night, number, kind: this.kind });
     this.controls = { throttle: 0, brake: 0, steer: 0, handbrake: false, nitro: false };
     this.proj = {};
     this.reset(0, 0);
@@ -323,6 +424,7 @@ export class Car {
 
   step(dt) {
     this.savePrev();
+    const V = this.spec;
     const c = this.controls;
     const tr = this.track;
     const P = this.proj;
@@ -330,7 +432,7 @@ export class Car {
     this.surface = tr.surfaceAt(P.lat);
     const off = this.surface === SURF_OFF;
     const gripMul = off ? biome.offGrip ?? 0.6 : (this.surface === SURF_CURB ? 0.95 : 1) * (biome.roadGrip ?? 1);
-    const dragMul = off ? biome.offDrag ?? 3 : 1;
+    const dragMul = off ? (biome.offDrag ?? 3) * V.offDragMul : 1;
     const topMul = off ? 0.6 : 1;
 
     let throttle = c.throttle, brake = c.brake, steerIn = c.steer;
@@ -351,7 +453,7 @@ export class Car {
     // řízení: plynulé dotažení vstupu, rychlejší návrat na střed
     const rate = Math.abs(steerIn) < Math.abs(this.steer) || Math.sign(steerIn) !== Math.sign(this.steer) ? 7 : 3.6;
     this.steer += clamp(steerIn - this.steer, -rate * dt, rate * dt);
-    const steerMax = CAR.steerMax / (1 + speed / CAR.steerSpeedK);
+    const steerMax = V.steerMax / (1 + speed / V.steerSpeedK);
     const delta = this.steer * steerMax;
 
     // nitro
@@ -362,7 +464,7 @@ export class Car {
     }
 
     const hardBrakeTurn = brake > 0.5 && vLong > 18 && Math.abs(this.steer) > 0.5;
-    const baseGrip = CAR.grip * gripMul;
+    const baseGrip = V.grip * gripMul;
     const grip = baseGrip * (handbrake ? 0.8 : 1) * (hardBrakeTurn ? 0.85 : 1);
     // strop rychlosti otáčení: úměrný vychýlení volantu (plynulé pro gamepad)
     const yawLimit = ((baseGrip * (handbrake ? 2.0 : 1.12)) / Math.max(speed, 4)) * Math.min(1, Math.abs(this.steer) * 1.05 + 0.02);
@@ -372,7 +474,7 @@ export class Car {
     if (speed > 1.5 && vLong > 0) beta = angleDiff(this.hd, Math.atan2(vx, vz));
     this.slip = Math.abs(beta);
 
-    let wTarget = ((-vLong * Math.tan(delta)) / CAR.wheelbase) * (handbrake ? 1.6 : 1);
+    let wTarget = ((-vLong * Math.tan(delta)) / V.wheelbase) * (handbrake ? 1.6 : 1);
     wTarget = clamp(wTarget, -yawLimit, yawLimit);
     wTarget += beta * (handbrake ? 1.5 : 3.2);
     if (this.spinTimer > 0) wTarget = 7 * Math.sign(this.yawRate || 1);
@@ -384,20 +486,20 @@ export class Car {
     // podélná síla
     let a = 0;
     if (throttle > 0) {
-      if (vLong < -1) a += CAR.brake * throttle;
+      if (vLong < -1) a += V.brake * throttle;
       else {
-        const vm = CAR.vmax * topMul * (this.nitroActive ? CAR.nitroVmax : 1);
+        const vm = V.vmax * topMul * (this.nitroActive ? V.nitroVmax : 1);
         const r = Math.max(0, vLong) / vm;
-        a += CAR.accel * throttle * Math.max(0, 1 - r * r);
-        if (this.nitroActive) a += CAR.nitroAccel * Math.max(0, 1 - r);
+        a += V.accel * throttle * Math.max(0, 1 - r * r);
+        if (this.nitroActive) a += V.nitroAccel * Math.max(0, 1 - r);
       }
     }
     if (brake > 0) {
-      if (vLong > 1) a -= CAR.brake * brake;
-      else if (vLong > -CAR.reverseMax) a -= CAR.reverseAccel * brake * (1 + vLong / CAR.reverseMax);
+      if (vLong > 1) a -= V.brake * brake;
+      else if (vLong > -V.reverseMax) a -= V.reverseAccel * brake * (1 + vLong / V.reverseMax);
     }
     if (handbrake && vLong > 0) a -= 3.5;
-    const resist = CAR.roll * dragMul + CAR.drag * vLong * vLong * (off ? 1.6 : 1);
+    const resist = V.roll * dragMul + V.drag * vLong * vLong * (off ? 1.6 : 1);
     if (Math.abs(vLong) > 0.05) a -= Math.sign(vLong) * resist;
     this.aLong = a;
     const nsin = Math.sin(this.hd), ncos = Math.cos(this.hd);
@@ -451,8 +553,9 @@ export class Car {
   }
 
   collideWalls() {
+    const V = this.spec;
     const P = this.proj;
-    const lim = this.track.edge - CAR.halfWidth - 0.1;
+    const lim = this.track.edge - V.halfWidth - 0.1;
     const a = Math.abs(P.lat);
     this.impact = 0;
     if (a <= lim) return;
@@ -481,14 +584,16 @@ export class Car {
   // pozice zadních kol pro stopy pneumatik
   rearWheels(outL, outR) {
     const sin = Math.sin(this.hd), cos = Math.cos(this.hd);
-    const bx = this.x - sin * 1.3, bz = this.z - cos * 1.3;
+    const { rearZ, rearX } = this.spec;
+    const bx = this.x - sin * rearZ, bz = this.z - cos * rearZ;
     const rx = -cos, rz = sin;
-    outL[0] = bx - rx * 0.86; outL[1] = this.y; outL[2] = bz - rz * 0.86;
-    outR[0] = bx + rx * 0.86; outR[1] = this.y; outR[2] = bz + rz * 0.86;
+    outL[0] = bx - rx * rearX; outL[1] = this.y; outL[2] = bz - rz * rearX;
+    outR[0] = bx + rx * rearX; outR[1] = this.y; outR[2] = bz + rz * rearX;
   }
 
   // vykreslení s interpolací mezi kroky fyziky
   render(alpha) {
+    const V = this.spec;
     const m = this.mesh;
     const x = lerp(this.px, this.x, alpha);
     const z = lerp(this.pz, this.z, alpha);
@@ -498,7 +603,7 @@ export class Car {
     m.root.rotation.y = hd;
     m.tilt.rotation.x = this.pitch;
     m.tilt.rotation.z = this.roll;
-    const steerVis = this.steer * (CAR.steerMax / (1 + this.speed / 30));
+    const steerVis = this.steer * (V.steerMax / (1 + this.speed / 30));
     for (const w of m.wheels) {
       w.spin.rotation.x = this.wheelRot;
       if (w.front) w.pivot.rotation.y = -steerVis;

@@ -28,7 +28,7 @@ export const COUNTDOWN = 3.6;
 export class Race {
   constructor({
     track, biome, mode = 'race', laps = 3, difficulty = 'medium', playerColor = 0xd7263d, playerColors = null,
-    humans = 1, night = false, opponents = null,
+    humans = 1, night = false, opponents = null, playerKinds = [],
   }) {
     this.track = track;
     this.biome = biome;
@@ -57,9 +57,9 @@ export class Race {
       const h = slot - firstHuman;
       const isPlayer = h >= 0 && h < humans;
       const info = isPlayer
-        ? { name: humans > 1 ? `Hráč ${h + 1}` : 'Ty', color: colors[h] ?? colors[0], number: PLAYER_NUMBERS[h] }
+        ? { name: humans > 1 ? `Hráč ${h + 1}` : 'Ty', color: colors[h] ?? colors[0], number: PLAYER_NUMBERS[h], kind: playerKinds[h] }
         : pool[ai++ % pool.length];
-      const car = new Car(track, { color: info.color, name: info.name, number: info.number, isPlayer, night, biome });
+      const car = new Car(track, { color: info.color, name: info.name, number: info.number, isPlayer, night, biome, kind: info.kind });
       const g = track.gridSlot(mode === 'race' ? slot : 2);
       car.reset(g.s, g.lat);
       car.nitro = 0.35;

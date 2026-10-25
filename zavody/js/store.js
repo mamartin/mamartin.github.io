@@ -8,6 +8,7 @@ const DEFAULTS = {
   laps: 3,
   difficulty: 'medium',
   color: 0,
+  vehicle: 'car',
   quality: null,
   sound: true,
   music: true,

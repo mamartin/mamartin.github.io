@@ -178,6 +178,8 @@ function playerColors() {
   return [PLAYER_COLORS[a].hex, PLAYER_COLORS[b].hex];
 }
 
+const playerKinds = () => [S.vehicle || 'car', S.vehicle2 || 'car'];
+
 // závodní režim bez šampionátu ('race' | 'time')
 const raceMode = () => (S.mode === 'time' ? 'time' : 'race');
 // trať, která se má právě jet (v šampionátu podle kola)
@@ -293,8 +295,8 @@ function buildShowcase() {
   for (let slot = 0; slot < count; slot++) {
     const h = race ? slot - 3 : 0;
     const isPlayer = h >= 0 && h < humans;
-    const info = isPlayer ? { color: colors[h], number: PLAYER_NUMBERS[h] } : pool[ai++ % pool.length];
-    const car = new Car(w.track, { color: info.color, number: info.number, night: w.biome.night, biome: w.biome, isPlayer });
+    const info = isPlayer ? { color: colors[h], number: PLAYER_NUMBERS[h], kind: playerKinds()[h] } : pool[ai++ % pool.length];
+    const car = new Car(w.track, { color: info.color, number: info.number, night: w.biome.night, biome: w.biome, isPlayer, kind: info.kind });
     const g = w.track.gridSlot(race ? slot : 2);
     car.reset(g.s, g.lat);
     car.step(0);
@@ -427,7 +429,12 @@ function refreshMenu() {
   $('players-opt').hidden = S.mode === 'time' || isTouch;
   for (const b of $('players-seg').children) b.setAttribute('aria-checked', String(+b.dataset.players === (S.players || 1)));
   $('color2-opt').hidden = !two;
-  $('color1-label').textContent = two ? 'Barva hráče 1' : 'Barva auta';
+  $('vehicle2-opt').hidden = !two;
+  $('vehicle1-label').textContent = two ? 'Vůz hráče 1' : 'Vůz';
+  for (const [id, key] of [['vehicle-seg', 'vehicle'], ['vehicle2-seg', 'vehicle2']]) {
+    for (const b of $(id).children) b.setAttribute('aria-checked', String(b.dataset.vehicle === (S[key] || 'car')));
+  }
+  $('color1-label').textContent = two ? 'Barva hráče 1' : 'Barva vozu';
   $('keys-2p').hidden = !two;
   $('diff-opt').hidden = S.mode === 'time';
   $('weapons-opt').hidden = S.mode === 'time';
@@ -500,6 +507,16 @@ function bindMenu() {
       store.save();
       refreshMenu();
     });
+  }
+  for (const [id, key] of [['vehicle-seg', 'vehicle'], ['vehicle2-seg', 'vehicle2']]) {
+    for (const b of $(id).children) {
+      b.addEventListener('click', () => {
+        S[key] = b.dataset.vehicle;
+        store.save();
+        refreshMenu();
+        if (G.world && G.screen === 'menu') buildShowcase();
+      });
+    }
   }
   for (const b of $('players-seg').children) {
     b.addEventListener('click', () => {
@@ -651,7 +668,7 @@ async function startRaceInner() {
   const humans = humanCount();
   const race = new Race({
     track: w.track, biome: w.biome, mode: raceMode(), laps: S.laps, difficulty: S.difficulty,
-    playerColors: playerColors().slice(0, humans), humans, night: w.biome.night,
+    playerColors: playerColors().slice(0, humans), playerKinds: playerKinds(), humans, night: w.biome.night,
   });
   for (const c of race.cars) {
     scene.add(c.mesh.root);
@@ -678,7 +695,7 @@ async function startRaceInner() {
     const data = store.ghost(w.def.id);
     if (data && data.frames && data.frames.length > 8) {
       G.ghost = new GhostPlayer(data);
-      G.ghostMesh = createCarMesh(0x9fd8ff, { ghost: true });
+      G.ghostMesh = createCarMesh(0x9fd8ff, { ghost: true, kind: race.player.kind });
       G.ghostMesh.root.visible = false;
       scene.add(G.ghostMesh.root);
     }
@@ -854,7 +871,7 @@ function processEvents() {
         if (race.mode === 'time' && (!G.ghost || e.lapTime < G.ghost.data.time)) {
           G.ghost = new GhostPlayer(ghost);
           if (!G.ghostMesh) {
-            G.ghostMesh = createCarMesh(0x9fd8ff, { ghost: true });
+            G.ghostMesh = createCarMesh(0x9fd8ff, { ghost: true, kind: race.player.kind });
             scene.add(G.ghostMesh.root);
           }
         }
