@@ -7,7 +7,7 @@ import { Terrain } from './terrain.js';
 import { buildScenery, buildSky, buildLights } from './scenery.js';
 import { randomTrackDef, buildCenterline, validateCenterline } from './trackmath.js';
 import { Car, createCarMesh, disposeCarMesh } from './car.js';
-import { Race, PLAYER_COLORS, OPPONENTS, PLAYER_NUMBERS } from './race.js';
+import { Race, PLAYER_COLORS, OPPONENTS, PLAYER_NUMBERS, F1_TEAMS } from './race.js';
 import { CameraRig } from './camera.js';
 import { Effects } from './effects.js';
 import { Input } from './input.js';
@@ -179,6 +179,12 @@ function playerColors() {
 }
 
 const playerKinds = () => [S.vehicle || 'car', S.vehicle2 || 'car'];
+// vybraná jména jezdců F1 (prázdné = výchozí „Ty“ / „Hráč 2“), dva hráči nesmí mít stejné
+function playerNames() {
+  const a = S.driver || '';
+  const b = S.driver2 || '';
+  return [a, b === a ? '' : b];
+}
 
 // závodní režim bez šampionátu ('race' | 'time')
 const raceMode = () => (S.mode === 'time' ? 'time' : 'race');
@@ -430,6 +436,10 @@ function refreshMenu() {
   for (const b of $('players-seg').children) b.setAttribute('aria-checked', String(+b.dataset.players === (S.players || 1)));
   $('color2-opt').hidden = !two;
   $('vehicle2-opt').hidden = !two;
+  $('driver2-opt').hidden = !two;
+  $('driver1-label').textContent = two ? 'Jezdec hráče 1' : 'Jezdec';
+  $('driver-select').value = playerNames()[0];
+  $('driver2-select').value = playerNames()[1];
   $('vehicle1-label').textContent = two ? 'Vůz hráče 1' : 'Vůz';
   for (const [id, key] of [['vehicle-seg', 'vehicle'], ['vehicle2-seg', 'vehicle2']]) {
     for (const b of $(id).children) b.setAttribute('aria-checked', String(b.dataset.vehicle === (S[key] || 'car')));
@@ -517,6 +527,21 @@ function bindMenu() {
         if (G.world && G.screen === 'menu') buildShowcase();
       });
     }
+  }
+  for (const [id, key, none] of [['driver-select', 'driver', 'Ty (bez jména)'], ['driver2-select', 'driver2', 'Hráč 2 (bez jména)']]) {
+    const sel = $(id);
+    sel.add(new Option(none, ''));
+    for (const t of F1_TEAMS) {
+      const group = document.createElement('optgroup');
+      group.label = t.team;
+      for (const d of t.drivers) group.appendChild(new Option(d, d));
+      sel.appendChild(group);
+    }
+    sel.addEventListener('change', () => {
+      S[key] = sel.value;
+      store.save();
+      refreshMenu();
+    });
   }
   for (const b of $('players-seg').children) {
     b.addEventListener('click', () => {
@@ -668,7 +693,7 @@ async function startRaceInner() {
   const humans = humanCount();
   const race = new Race({
     track: w.track, biome: w.biome, mode: raceMode(), laps: S.laps, difficulty: S.difficulty,
-    playerColors: playerColors().slice(0, humans), playerKinds: playerKinds(), humans, night: w.biome.night,
+    playerColors: playerColors().slice(0, humans), playerKinds: playerKinds(), playerNames: playerNames(), humans, night: w.biome.night,
   });
   for (const c of race.cars) {
     scene.add(c.mesh.root);

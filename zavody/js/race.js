@@ -11,6 +11,21 @@ export const OPPONENTS = [
   { name: 'Radek Pedál', color: 0x8e44ad, number: 5 },
   { name: 'Mirka Vítr', color: 0xe8e8e8, number: 88 },
 ];
+// jezdci Formule 1 (sezóna 2026), hráč si může jedno jméno vypůjčit
+export const F1_TEAMS = [
+  { team: 'McLaren', drivers: ['Lando Norris', 'Oscar Piastri'] },
+  { team: 'Ferrari', drivers: ['Charles Leclerc', 'Lewis Hamilton'] },
+  { team: 'Red Bull', drivers: ['Max Verstappen', 'Isack Hadjar'] },
+  { team: 'Mercedes', drivers: ['George Russell', 'Kimi Antonelli'] },
+  { team: 'Aston Martin', drivers: ['Fernando Alonso', 'Lance Stroll'] },
+  { team: 'Williams', drivers: ['Alex Albon', 'Carlos Sainz'] },
+  { team: 'Racing Bulls', drivers: ['Liam Lawson', 'Arvid Lindblad'] },
+  { team: 'Alpine', drivers: ['Pierre Gasly', 'Franco Colapinto'] },
+  { team: 'Haas', drivers: ['Esteban Ocon', 'Oliver Bearman'] },
+  { team: 'Audi', drivers: ['Nico Hülkenberg', 'Gabriel Bortoleto'] },
+  { team: 'Cadillac', drivers: ['Sergio Pérez', 'Valtteri Bottas'] },
+];
+
 export const PLAYER_NUMBER = 7;
 export const PLAYER_NUMBERS = [7, 8];
 
@@ -28,7 +43,7 @@ export const COUNTDOWN = 3.6;
 export class Race {
   constructor({
     track, biome, mode = 'race', laps = 3, difficulty = 'medium', playerColor = 0xd7263d, playerColors = null,
-    humans = 1, night = false, opponents = null, playerKinds = [],
+    humans = 1, night = false, opponents = null, playerKinds = [], playerNames = [],
   }) {
     this.track = track;
     this.biome = biome;
@@ -57,7 +72,7 @@ export class Race {
       const h = slot - firstHuman;
       const isPlayer = h >= 0 && h < humans;
       const info = isPlayer
-        ? { name: humans > 1 ? `Hráč ${h + 1}` : 'Ty', color: colors[h] ?? colors[0], number: PLAYER_NUMBERS[h], kind: playerKinds[h] }
+        ? { name: playerNames[h] || (humans > 1 ? `Hráč ${h + 1}` : 'Ty'), color: colors[h] ?? colors[0], number: PLAYER_NUMBERS[h], kind: playerKinds[h] }
         : pool[ai++ % pool.length];
       const car = new Car(track, { color: info.color, name: info.name, number: info.number, isPlayer, night, biome, kind: info.kind });
       const g = track.gridSlot(mode === 'race' ? slot : 2);

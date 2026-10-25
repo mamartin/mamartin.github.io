@@ -254,6 +254,29 @@ button:focus-visible, summary:focus-visible { outline: 2px solid var(--amber); o
 .cup-caption { margin: 6px 0 4px; }
 .keys-2p strong { color: var(--paper); font-weight: 600; }
 .colors-row .swatches { gap: 6px; }
+.drivers-row { grid-template-columns: 1fr; }
+.drivers-row:has(> .opt:not([hidden]) + .opt:not([hidden])) { grid-template-columns: 1fr 1fr; }
+.pick {
+  width: 100%;
+  min-width: 0;
+  max-width: 300px;
+  padding: 9px 34px 9px 14px;
+  border: 0;
+  border-radius: 0;
+  background: var(--panel-hi) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23f3f5f8' stroke-width='2'/%3E%3C/svg%3E") no-repeat right 14px center;
+  color: var(--paper);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-style: italic;
+  font-size: 15px;
+  appearance: none;
+  -webkit-appearance: none;
+  clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+  cursor: pointer;
+}
+.pick:hover { background-color: #24365a; }
+.pick:focus-visible { outline: 2px solid var(--paper); outline-offset: -4px; }
+.pick option, .pick optgroup { background: var(--panel-solid); color: var(--paper); font-style: normal; }
 .colors-row .swatch { width: 28px; height: 28px; }
 .res-tables { display: grid; gap: 14px; min-width: 0; }
 .dialog.cup { width: min(1000px, 100%); }
