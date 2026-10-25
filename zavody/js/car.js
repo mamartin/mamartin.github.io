@@ -281,7 +281,7 @@ function numberMaterial(n) {
   return mat;
 }
 
-export function createCarMesh(color, { ghost = false, night = false, number = null, kind = 'car' } = {}) {
+export function createCarMesh(color, { ghost = false, night = false, number = null, kind = 'car', accent = null } = {}) {
   const P = sharedParts();
   const F = kind === 'formula' ? formulaParts() : null;
   const root = new THREE.Group();
@@ -297,7 +297,8 @@ export function createCarMesh(color, { ghost = false, night = false, number = nu
   }
   const c = new THREE.Color(color);
   const lum = 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
-  const stripeMat = ghost ? mats.dark : lum > 0.45 ? P.stripeDark : P.stripeLight;
+  let stripeMat = ghost ? mats.dark : lum > 0.45 ? P.stripeDark : P.stripeLight;
+  if (accent != null && !ghost) stripeMat = new THREE.MeshStandardMaterial({ color: accent, roughness: 0.35, metalness: 0.3 });
 
   const bodyMesh = new THREE.Mesh(F ? F.paintGeo : P.paintGeo, mats.paint);
   const cabinMesh = F ? new THREE.Mesh(F.helmetGeo, ghost ? mats.head : F.helmetMat) : new THREE.Mesh(P.cabinGeo, mats.glass);
@@ -370,7 +371,7 @@ export function disposeCarMesh(mesh) {
 
 export class Car {
   constructor(track, {
-    color = 0xd7263d, name = 'Hráč', number = null, isPlayer = false, night = false, ghost = false, biome = {}, kind = 'car',
+    color = 0xd7263d, name = 'Hráč', number = null, isPlayer = false, night = false, ghost = false, biome = {}, kind = 'car', accent = null,
   } = {}) {
     this.track = track;
     this.name = name;
@@ -380,7 +381,7 @@ export class Car {
     this.biome = biome;
     this.kind = VEHICLES[kind] ? kind : 'car';
     this.spec = VEHICLES[this.kind];
-    this.mesh = createCarMesh(color, { ghost, night, number, kind: this.kind });
+    this.mesh = createCarMesh(color, { ghost, night, number, kind: this.kind, accent });
     this.controls = { throttle: 0, brake: 0, steer: 0, handbrake: false, nitro: false };
     this.proj = {};
     this.reset(0, 0);

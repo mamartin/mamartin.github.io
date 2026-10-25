@@ -7,7 +7,7 @@ import { Terrain } from './terrain.js';
 import { buildScenery, buildSky, buildLights } from './scenery.js';
 import { randomTrackDef, buildCenterline, validateCenterline } from './trackmath.js';
 import { Car, createCarMesh, disposeCarMesh } from './car.js';
-import { Race, PLAYER_COLORS, OPPONENTS, PLAYER_NUMBERS, F1_TEAMS } from './race.js';
+import { Race, PLAYER_COLORS, ACCENT_COLORS, OPPONENTS, PLAYER_NUMBERS, F1_TEAMS } from './race.js';
 import { CameraRig } from './camera.js';
 import { Effects } from './effects.js';
 import { Input } from './input.js';
@@ -171,19 +171,36 @@ function randomDef(seed) {
 
 // počet lidských hráčů (dva jen v závodě/šampionátu a ne na dotykovém zařízení)
 const humanCount = () => (raceMode() === 'race' && S.players === 2 && !isTouch ? 2 : 1);
+// barva v nastavení: index do palety, vlastní '#rrggbb' z pickeru, u doplňkové i null (automaticky)
+const customHex = (v) => (typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v) ? parseInt(v.slice(1), 16) : null);
+const colorOf = (v, list, fallback) => customHex(v) ?? (Number.isInteger(v) ? list[v % list.length].hex : fallback);
 function playerColors() {
-  const a = S.color % PLAYER_COLORS.length;
-  let b = (S.color2 ?? 1) % PLAYER_COLORS.length;
-  if (b === a) b = (a + 1) % PLAYER_COLORS.length;
-  return [PLAYER_COLORS[a].hex, PLAYER_COLORS[b].hex];
+  const a = colorOf(S.color, PLAYER_COLORS, PLAYER_COLORS[0].hex);
+  let b = colorOf(S.color2, PLAYER_COLORS, PLAYER_COLORS[1].hex);
+  if (b === a) b = PLAYER_COLORS.find((c) => c.hex !== a).hex;
+  return [a, b];
 }
+const playerAccents = () => [colorOf(S.accent, ACCENT_COLORS, null), colorOf(S.accent2, ACCENT_COLORS, null)];
 
 const playerKinds = () => [S.vehicle || 'car', S.vehicle2 || 'car'];
+// soupeři jezdí to, co si vybral hráč 1
+const opponentKind = () => playerKinds()[0];
 // vybraná jména jezdců F1 (prázdné = výchozí „Ty“ / „Hráč 2“), dva hráči nesmí mít stejné
 function playerNames() {
   const a = S.driver || '';
   const b = S.driver2 || '';
   return [a, b === a ? '' : b];
+}
+
+// soupeři dostanou náhodná jména jezdců F1, kromě těch, která mají hráči
+function opponentNames() {
+  const taken = playerNames();
+  const names = F1_TEAMS.flatMap((t) => t.drivers).filter((d) => !taken.includes(d));
+  for (let i = names.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [names[i], names[j]] = [names[j], names[i]];
+  }
+  return names;
 }
 
 // závodní režim bez šampionátu ('race' | 'time')
@@ -301,8 +318,12 @@ function buildShowcase() {
   for (let slot = 0; slot < count; slot++) {
     const h = race ? slot - 3 : 0;
     const isPlayer = h >= 0 && h < humans;
-    const info = isPlayer ? { color: colors[h], number: PLAYER_NUMBERS[h], kind: playerKinds()[h] } : pool[ai++ % pool.length];
-    const car = new Car(w.track, { color: info.color, number: info.number, night: w.biome.night, biome: w.biome, isPlayer, kind: info.kind });
+    const info = isPlayer
+      ? { color: colors[h], number: PLAYER_NUMBERS[h], kind: playerKinds()[h], accent: playerAccents()[h] }
+      : { ...pool[ai++ % pool.length], kind: opponentKind() };
+    const car = new Car(w.track, {
+      color: info.color, number: info.number, night: w.biome.night, biome: w.biome, isPlayer, kind: info.kind, accent: info.accent,
+    });
     const g = w.track.gridSlot(race ? slot : 2);
     car.reset(g.s, g.lat);
     car.step(0);
@@ -445,6 +466,7 @@ function refreshMenu() {
     for (const b of $(id).children) b.setAttribute('aria-checked', String(b.dataset.vehicle === (S[key] || 'car')));
   }
   $('color1-label').textContent = two ? 'Barva hráče 1' : 'Barva vozu';
+  $('accent1-label').textContent = two ? 'Doplňková barva hráče 1' : 'Doplňková barva';
   $('keys-2p').hidden = !two;
   $('diff-opt').hidden = S.mode === 'time';
   $('weapons-opt').hidden = S.mode === 'time';
@@ -473,29 +495,75 @@ function refreshMenu() {
   const mt = $('music-toggle');
   mt.setAttribute('aria-pressed', String(S.music !== false));
   mt.querySelector('em').textContent = S.music !== false ? 'Zapnuto' : 'Vypnuto';
-  for (const [id, key] of [['swatches', 'color'], ['swatches2', 'color2']]) {
+  const colors = playerColors(), accents = playerAccents();
+  for (const [id, key, list, cur] of [
+    ['swatches', 'color', PLAYER_COLORS, colors[0]], ['swatches2', 'color2', PLAYER_COLORS, colors[1]],
+    ['accents', 'accent', ACCENT_COLORS, accents[0]], ['accents2', 'accent2', ACCENT_COLORS, accents[1]],
+  ]) {
     const sw = $(id);
-    if (!sw.children.length) {
-      PLAYER_COLORS.forEach((c, i) => {
-        const b = document.createElement('button');
-        b.type = 'button';
-        b.className = 'swatch';
-        b.setAttribute('role', 'radio');
-        b.setAttribute('aria-label', c.name);
-        b.title = c.name;
-        b.style.background = '#' + c.hex.toString(16).padStart(6, '0');
-        b.addEventListener('click', () => {
-          S[key] = i;
-          store.save();
-          refreshMenu();
-          if (G.world && G.screen === 'menu') buildShowcase();
-        });
-        sw.appendChild(b);
-      });
+    if (!sw.children.length) fillSwatches(sw, key, list);
+    const custom = customHex(S[key]) != null;
+    for (const b of sw.children) {
+      const on = b.dataset.kind === 'custom' ? custom : !custom && (b.dataset.kind === 'auto' ? cur == null : +b.dataset.hex === cur);
+      b.setAttribute('aria-checked', String(on));
     }
-    const cur = key === 'color' ? S.color : PLAYER_COLORS.findIndex((c) => c.hex === playerColors()[1]);
-    [...sw.children].forEach((b, i) => b.setAttribute('aria-checked', String(i === cur)));
+    const picker = sw.querySelector('.swatch-custom');
+    picker.style.background = custom ? S[key] : '';
+    picker.querySelector('input').value = hexCss(custom ? customHex(S[key]) : cur ?? 0xf2f2ee);
   }
+}
+
+const hexCss = (hex) => '#' + hex.toString(16).padStart(6, '0');
+
+// vzorky barev: paleta, u doplňkové barvy „automaticky“, nakonec vlastní barva z pickeru
+function fillSwatches(sw, key, list) {
+  const choose = (v, save = true) => {
+    S[key] = v;
+    if (save) store.save();
+    refreshMenu();
+    queueShowcase();
+  };
+  const swatch = (label, kind, onClick) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'swatch' + (kind === 'auto' ? ' swatch-auto' : '');
+    b.dataset.kind = kind;
+    b.setAttribute('role', 'radio');
+    b.setAttribute('aria-label', label);
+    b.title = label;
+    b.addEventListener('click', onClick);
+    sw.appendChild(b);
+    return b;
+  };
+  if (list === ACCENT_COLORS) swatch('Automaticky', 'auto', () => choose(null));
+  list.forEach((c, i) => {
+    const b = swatch(c.name, 'preset', () => choose(i));
+    b.dataset.hex = c.hex;
+    b.style.background = hexCss(c.hex);
+  });
+  const custom = document.createElement('label');
+  custom.className = 'swatch swatch-custom';
+  custom.dataset.kind = 'custom';
+  custom.setAttribute('role', 'radio');
+  custom.title = 'Vlastní barva';
+  const input = document.createElement('input');
+  input.type = 'color';
+  input.setAttribute('aria-label', 'Vlastní barva');
+  input.addEventListener('input', () => choose(input.value, false));
+  input.addEventListener('change', () => choose(input.value));
+  custom.appendChild(input);
+  sw.appendChild(custom);
+}
+
+// přestavba aut v menu nejvýš jednou za snímek (picker barvy posílá hodně změn)
+let showcaseQueued = false;
+function queueShowcase() {
+  if (showcaseQueued) return;
+  showcaseQueued = true;
+  requestAnimationFrame(() => {
+    showcaseQueued = false;
+    if (G.world && G.screen === 'menu') buildShowcase();
+  });
 }
 
 function bindMenu() {
@@ -693,7 +761,9 @@ async function startRaceInner() {
   const humans = humanCount();
   const race = new Race({
     track: w.track, biome: w.biome, mode: raceMode(), laps: S.laps, difficulty: S.difficulty,
-    playerColors: playerColors().slice(0, humans), playerKinds: playerKinds(), playerNames: playerNames(), humans, night: w.biome.night,
+    playerColors: playerColors().slice(0, humans), playerKinds: playerKinds(), playerNames: playerNames(),
+    opponentNames: G.cup ? (G.cup.names ??= opponentNames()) : opponentNames(), opponentKind: opponentKind(),
+    playerAccents: playerAccents(), humans, night: w.biome.night,
   });
   for (const c of race.cars) {
     scene.add(c.mesh.root);

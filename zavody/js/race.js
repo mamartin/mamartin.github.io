@@ -38,12 +38,23 @@ export const PLAYER_COLORS = [
   { name: 'Černá', hex: 0x1d1f24 },
 ];
 
+// doplňková barva (pruhy, křídla); null = automaticky kontrastní
+export const ACCENT_COLORS = [
+  { name: 'Bílá', hex: 0xf2f2ee },
+  { name: 'Černá', hex: 0x16181d },
+  { name: 'Zlatá', hex: 0xd4a72c },
+  { name: 'Stříbrná', hex: 0xb8bec7 },
+  { name: 'Červená', hex: 0xd7263d },
+  { name: 'Modrá', hex: 0x2c6fd1 },
+];
+
 export const COUNTDOWN = 3.6;
 
 export class Race {
   constructor({
     track, biome, mode = 'race', laps = 3, difficulty = 'medium', playerColor = 0xd7263d, playerColors = null,
-    humans = 1, night = false, opponents = null, playerKinds = [], playerNames = [],
+    humans = 1, night = false, opponents = null, playerKinds = [], playerNames = [], opponentNames = [], opponentKind = 'car',
+    playerAccents = [],
   }) {
     this.track = track;
     this.biome = biome;
@@ -72,9 +83,15 @@ export class Race {
       const h = slot - firstHuman;
       const isPlayer = h >= 0 && h < humans;
       const info = isPlayer
-        ? { name: playerNames[h] || (humans > 1 ? `Hráč ${h + 1}` : 'Ty'), color: colors[h] ?? colors[0], number: PLAYER_NUMBERS[h], kind: playerKinds[h] }
-        : pool[ai++ % pool.length];
-      const car = new Car(track, { color: info.color, name: info.name, number: info.number, isPlayer, night, biome, kind: info.kind });
+        ? {
+          name: playerNames[h] || (humans > 1 ? `Hráč ${h + 1}` : 'Ty'), color: colors[h] ?? colors[0],
+          number: PLAYER_NUMBERS[h], kind: playerKinds[h], accent: playerAccents[h],
+        }
+        : { ...pool[ai % pool.length], name: opponentNames[ai] || pool[ai % pool.length].name, kind: opponentKind };
+      if (!isPlayer) ai++;
+      const car = new Car(track, {
+        color: info.color, name: info.name, number: info.number, isPlayer, night, biome, kind: info.kind, accent: info.accent,
+      });
       const g = track.gridSlot(mode === 'race' ? slot : 2);
       car.reset(g.s, g.lat);
       car.nitro = 0.35;

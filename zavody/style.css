@@ -278,6 +278,7 @@ button:focus-visible, summary:focus-visible { outline: 2px solid var(--amber); o
 .pick:focus-visible { outline: 2px solid var(--paper); outline-offset: -4px; }
 .pick option, .pick optgroup { background: var(--panel-solid); color: var(--paper); font-style: normal; }
 .colors-row .swatch { width: 28px; height: 28px; }
+.colors-row .swatches + .label { margin-top: 6px; }
 .res-tables { display: grid; gap: 14px; min-width: 0; }
 .dialog.cup { width: min(1000px, 100%); }
 @media (min-width: 900px) {
@@ -316,6 +317,15 @@ button:focus-visible, summary:focus-visible { outline: 2px solid var(--amber); o
   clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
 }
 .swatch[aria-checked='true'] { border-color: var(--paper); outline-color: var(--paper); }
+.swatch-auto { background: linear-gradient(135deg, #f2f2ee 50%, #16181d 50%); }
+.swatch-custom {
+  position: relative;
+  display: block;
+  background: conic-gradient(#e8392c, #f2c230, #1f9d55, #2c6fd1, #8e44ad, #e8392c);
+  cursor: pointer;
+}
+.swatch-custom input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: 0; padding: 0; }
+.swatch-custom:focus-within { border-color: var(--paper); }
 
 .toggle {
   display: inline-flex;
