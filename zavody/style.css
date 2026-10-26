@@ -231,6 +231,23 @@ button:focus-visible, summary:focus-visible { outline: 2px solid var(--amber); o
 .track-card .tc-reroll:hover { border-color: var(--amber); }
 
 .cup-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; counter-reset: cup; }
+#cup-seg { margin-bottom: 4px; }
+/* medaile: barevná tečka a název */
+.medal { white-space: nowrap; font-weight: 600; }
+.medal::before {
+  content: '';
+  display: inline-block;
+  width: 0.7em;
+  height: 0.7em;
+  margin-right: 0.3em;
+  border-radius: 50%;
+  vertical-align: -0.05em;
+  background: var(--medal);
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.25);
+}
+.medal.gold { --medal: #e9c13b; color: #f2d36b; }
+.medal.silver { --medal: #c3c9d1; color: #dfe3e8; }
+.medal.bronze { --medal: #c27a45; color: #e0a273; }
 .cup-list li {
   counter-increment: cup;
   display: grid;
@@ -1131,3 +1148,4 @@ body:not(.items-on) .touch-right .t-item { display: none; }
   .loading-bar span { animation: none; width: 100%; }
   .center-msg, .sub-msg { transition: none; }
 }
+.badge .medal { color: var(--ink); }

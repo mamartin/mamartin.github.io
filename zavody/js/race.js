@@ -130,6 +130,9 @@ export class Race {
     car.startPress = null;
     car.startHeld = false;
     car.startPending = false;
+    car.sector = -1; // úsek kola (0–2), -1 = ještě před první čárou
+    car.sectorStart = 0;
+    car.sectorTimes = [];
     car.wrongWay = 0;
     car.lastWheels = null;
   }
@@ -297,6 +300,22 @@ export class Race {
     else if (ds > L / 2) ds -= L;
     car.progress += ds;
     car.lastS = s;
+
+    // sektory: kolo rozdělené na třetiny, čas každé třetiny
+    if (!car.finished && car.progress >= 0) {
+      const pos = car.progress - Math.floor(car.progress / L) * L;
+      const sec = Math.min(2, Math.floor((pos / L) * 3));
+      if (car.sector === -1) {
+        car.sector = sec;
+        car.sectorStart = this.time;
+      } else if (sec === (car.sector + 1) % 3) {
+        const time = this.time - car.sectorStart;
+        car.sectorTimes[car.sector] = time;
+        this.emit('sector', { car, index: car.sector, time });
+        car.sector = sec;
+        car.sectorStart = this.time;
+      }
+    }
 
     const done = Math.floor(car.progress / L);
     if (done > car.lap && !car.finished) {

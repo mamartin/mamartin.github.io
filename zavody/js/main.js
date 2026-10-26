@@ -7,6 +7,7 @@ import { Terrain } from './terrain.js';
 import { buildScenery, buildSky, buildLights, buildRain } from './scenery.js';
 import { randomTrackDef, buildCenterline, validateCenterline } from './trackmath.js';
 import { Car, createCarMesh, disposeCarMesh } from './car.js';
+import { medalFor, nextMedal, hasReference, referenceLap } from './medals.js';
 import { Race, OPPONENTS, PLAYER_NUMBERS, F1_TEAMS } from './race.js';
 import {
   Garage, playerColors as colorsOf, playerAccents as accentsOf, playerLiveries as liveriesOf, playerKinds as kindsOf,
@@ -25,7 +26,14 @@ import { Post } from './post.js';
 import { TrackEditor, customToDef, decodeTrack, checkDef } from './editor.js';
 
 const STEP = 1 / 120;
-const CUP_TRACKS = ['sumava', 'kanon', 'serpentiny', 'mesto'];
+// šampionáty: čtyři závody za sebou; bouřkový se jede v dešti
+const CUPS = [
+  { id: 'classic', name: 'Klasický pohár', tracks: ['sumava', 'kanon', 'serpentiny', 'mesto'] },
+  { id: 'reverse', name: 'Obrácený pohár', tracks: ['mesto~r', 'serpentiny~r', 'kanon~r', 'sumava~r'] },
+  { id: 'storm', name: 'Bouřkový pohár', tracks: ['kanon', 'sumava~r', 'mesto', 'serpentiny~r'], rain: true },
+];
+const currentCup = () => CUPS.find((c) => c.id === S.cup) || CUPS[0];
+const cupTracks = () => currentCup().tracks;
 const CUP_POINTS = [10, 6, 4, 3, 2, 1];
 const $ = (id) => document.getElementById(id);
 
@@ -223,9 +231,28 @@ function currentLooks() {
 // závodní režim bez šampionátu ('race' | 'time')
 const raceMode = () => (S.mode === 'time' ? 'time' : 'race');
 // trať, která se má právě jet (v šampionátu podle kola)
-const currentTrackId = () => (S.mode === 'cup' ? CUP_TRACKS[G.cup ? G.cup.round : 0] : S.track + (S.reverse ? REV : ''));
+const currentTrackId = () => (S.mode === 'cup' ? cupTracks()[G.cup ? G.cup.round : 0] : S.track + (S.reverse ? REV : ''));
 
-const wantsRain = (def) => S.weather === 'rain' && def.biome !== 'winter';
+// prší podle volby v menu, v bouřkovém poháru a v deštivé denní výzvě (na zimní trati sněží)
+const wantsRain = (def) => (def.rain || S.weather === 'rain' || (S.mode === 'cup' && currentCup().rain)) && def.biome !== 'winter';
+
+// nejlepší umístění v šampionátu (klasický má kvůli starším uložením vlastní místo)
+function cupRecord(id) {
+  if (id === 'classic') return (store.records.cup ??= {});
+  store.records.cups ??= {};
+  return (store.records.cups[id] ??= {});
+}
+
+// denní výzva: každý den jiná vygenerovaná trať, pro všechny stejná, občas v dešti
+function dailyDef() {
+  const d = new Date();
+  const day = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+  const def = randomDef((day * 7919 + 104729) % 999999937);
+  return {
+    ...def, id: `daily-${day}`, name: 'Denní výzva', subtitle: `${d.getDate()}. ${d.getMonth() + 1}. · ${BIOMES[def.biome].name}`,
+    rain: new RNG(day).next() < 0.35, daily: true,
+  };
+}
 
 // obrácená varianta trati: stejné body v opačném pořadí (start zůstává uprostřed rovinky),
 // vlastní id kvůli rekordům a ghostům
@@ -238,6 +265,7 @@ function reverseDef(def) {
 function trackDef(id) {
   if (id && id.endsWith(REV)) return reverseDef(trackDef(baseId(id)));
   if (id === 'random') return randomDef(S.randomSeed);
+  if (id === 'daily') return dailyDef();
   if (id && id.startsWith('custom-')) {
     const t = store.getCustom(id);
     if (t) return customToDef(t);
@@ -402,10 +430,15 @@ function openEditor(track) {
   editor.open(track || null);
 }
 
+// popisek trati: délka (u denní výzvy datum a počasí), rekord a medaile podle vozu hráče 1
 function trackMeta(def, track) {
-  const rec = store.record(def.id + (S.reverse ? REV : ''), playerKinds()[0]);
+  const kind = playerKinds()[0];
+  const rec = store.record(def.id + (S.reverse ? REV : ''), kind);
   const km = (track.L / 1000).toFixed(2).replace('.', ',');
-  return `${km} km · ${rec.lap ? 'rekord ' + formatTime(rec.lap) : 'bez rekordu'}`;
+  const head = def.daily ? `${def.subtitle}${def.rain && def.biome !== 'winter' ? ' · déšť' : ''}` : `${km} km`;
+  if (!rec.lap) return { text: `${head} · bez rekordu` };
+  const medal = hasReference(def, kind) ? medalFor(def, kind, rec.lap) : null;
+  return { text: `${head} · rekord ${formatTime(rec.lap)}`, medal };
 }
 
 function buildTrackList() {
@@ -414,6 +447,7 @@ function buildTrackList() {
   menuTracks.length = 0;
   const defs = [
     ...TRACKS.map((t) => ({ def: t, id: t.id })),
+    { def: dailyDef(), id: 'daily' },
     { def: randomDef(S.randomSeed), id: 'random' },
     ...store.custom.map((t) => ({ def: customToDef(t), id: t.id, custom: t })),
   ];
@@ -479,9 +513,29 @@ function refreshTrackMeta() {
     if (!tr) continue;
     if (m.id === 'random') m.meta.textContent = `${(tr.L / 1000).toFixed(2).replace('.', ',')} km · ${m.def.subtitle}`;
     else if (m.custom && !m.custom.valid) m.meta.textContent = 'rozpracovaná, dokonči v editoru';
-    else m.meta.textContent = trackMeta(m.def, tr);
+    else {
+      const { text, medal } = trackMeta(m.def, tr);
+      m.meta.textContent = text;
+      if (medal) m.meta.insertAdjacentHTML('beforeend', ` · <span class="medal ${medal.id}">${medal.name}</span>`);
+    }
     m.btn.setAttribute('aria-label', `${m.def.name}, ${m.meta.textContent}`);
   }
+  warmMedals();
+}
+
+// limity medailí se počítají simulací; v menu po jedné trati na pozadí, ať se neseká
+let warmTimer = 0;
+function warmMedals() {
+  clearTimeout(warmTimer);
+  const kind = playerKinds()[0];
+  const todo = menuTracks.find((m) => m.track && !(m.custom && !m.custom.valid) && m.id !== 'random' && !hasReference(m.def, kind)
+    && store.record(m.def.id + (S.reverse ? REV : ''), kind).lap);
+  if (!todo) return;
+  warmTimer = setTimeout(() => {
+    if (G.screen !== 'menu') return;
+    referenceLap(todo.def, kind);
+    refreshTrackMeta();
+  }, 400);
 }
 
 async function selectTrack(id, force = false) {
@@ -524,16 +578,17 @@ function refreshMenu() {
   $('cup-block').hidden = S.mode !== 'cup';
   $('mode-hint').textContent = {
     race: 'Ty proti pěti soupeřům. Drift plní nitro, krabice s otazníkem dávají power-upy.',
-    cup: 'Čtyři závody za sebou. Body za umístění 10, 6, 4, 3, 2, 1 a vítězí nejvíc bodů.',
+    cup: `${currentCup().name}: čtyři závody za sebou${currentCup().rain ? ' v dešti' : ''}. Body za umístění 10, 6, 4, 3, 2, 1 a vítězí nejvíc bodů.`,
     time: 'Sám na trati proti průhlednému ghostu svého nejlepšího kola.',
   }[S.mode];
   if (S.mode === 'cup') {
-    $('cup-list').innerHTML = CUP_TRACKS.map((id) => {
-      const def = TRACKS.find((t) => t.id === id);
+    for (const b of $('cup-seg').children) b.setAttribute('aria-checked', String(b.dataset.cup === currentCup().id));
+    $('cup-list').innerHTML = cupTracks().map((id) => {
+      const def = trackDef(id);
       const rec = store.record(id, playerKinds()[0]);
       return `<li><span class="cl-name">${def.name}</span><span class="cl-meta">${rec.lap ? 'rekord ' + formatTime(rec.lap) : 'bez rekordu'}</span></li>`;
     }).join('');
-    const best = store.records.cup?.best;
+    const best = cupRecord(currentCup().id).best;
     $('cup-best').textContent = best ? `Tvoje nejlepší celkové umístění: ${best}. místo.` : 'Šampionát jsi ještě nedokončil.';
   }
   const wt = $('weapons-toggle');
@@ -686,6 +741,16 @@ function bindMenu() {
       } else if (G.world) buildShowcase();
     });
   }
+  for (const b of $('cup-seg').children) {
+    b.addEventListener('click', async () => {
+      if (currentCup().id === b.dataset.cup) return;
+      S.cup = b.dataset.cup;
+      store.save();
+      refreshMenu();
+      await loadWorld(currentTrackId());
+      G.screen = 'menu';
+    });
+  }
   for (const b of $('weather-seg').children) {
     b.addEventListener('click', async () => {
       if ((S.weather || 'dry') === b.dataset.weather) return;
@@ -798,7 +863,7 @@ function bindMenu() {
   $('menu-btn').addEventListener('click', () => toMenu());
   $('again-btn').addEventListener('click', () => {
     if (G.cup) {
-      if (G.cup.round < CUP_TRACKS.length - 1) {
+      if (G.cup.round < cupTracks().length - 1) {
         G.cup.round++;
         G.cup.awarded = false;
       } else G.cup = newCup();
@@ -927,7 +992,7 @@ async function startRaceInner() {
   if (fromMenu) rig.flyTo(race.player);
   else for (const r of rigs) r.snap();
   w.track.setStartLights(0);
-  if (G.cup) for (const h of G.huds) h.sub(`Šampionát · závod ${G.cup.round + 1}/${CUP_TRACKS.length} · ${w.def.name}`, 3.2);
+  if (G.cup) for (const h of G.huds) h.sub(`Šampionát · závod ${G.cup.round + 1}/${cupTracks().length} · ${w.def.name}`, 3.2);
   if (!isTouch && (S.racesStarted || 0) < 3) {
     if (humans === 1) {
       hud.sub('<kbd>W</kbd> plyn · <kbd>A</kbd><kbd>D</kbd> zatáčení · <kbd>Mezerník</kbd> drift · <kbd>Shift</kbd> nitro' + (G.pickups ? ' · <kbd>F</kbd> power-up' : ''), 5, 'help');
@@ -1072,6 +1137,13 @@ function processEvents() {
       audio.beep(true);
       w.track.setStartLights(0, true);
       G.lightsOff = 2.5;
+    } else if (e.type === 'sector' && e.car.isPlayer) {
+      const { prev, better } = store.submitSector(w.def.id, e.car.kind, e.index, e.time);
+      // třetí sektor končí v cíli kola, tam už je hláška o kole
+      if (e.index < 2) {
+        const d = prev == null ? '' : ` <span class="${better ? 'good' : 'bad'}">${formatDelta(e.time - prev)}</span>`;
+        hudOf(e.car).sub(`Sektor ${e.index + 1} · ${formatTime(e.time)}${d}`, 1.8);
+      }
     } else if (e.type === 'start' && e.car.isPlayer) {
       const perfect = e.quality === 'perfect';
       hudOf(e.car).sub(perfect ? '<span class="good">Perfektní start!</span>' : '<span class="bad">Předčasný start</span> · kola se protáčejí', 2);
@@ -1164,12 +1236,24 @@ function processEvents() {
 function saveResults() {
   const race = G.race;
   const out = {};
+  // medaile hráče 1: limity podle trati po směru, lepší medaile než dosud = odznak
+  const def = trackDef(baseId(currentTrackId()));
+  const p = race.player;
+  const prevLap = store.record(G.world.def.id, p.kind).lap;
   for (const car of race.players) {
     const res = store.submit(G.world.def.id, {
       lap: car.bestLap, race: car.finished ? car.finishTime : null, laps: race.laps, mode: race.mode,
     }, car.kind);
     if (res.lap) out.lap = true;
     if (res.race) out.race = true;
+  }
+  const lap = store.record(G.world.def.id, p.kind).lap;
+  // náhodné tratě se mění, medaile mají jen pevné tratě a denní výzva
+  if (lap && (!def.random || def.daily)) {
+    const before = medalFor(def, p.kind, prevLap);
+    const now = medalFor(def, p.kind, lap);
+    if (now && now !== before) out.medal = now;
+    out.next = nextMedal(def, p.kind, lap);
   }
   return out;
 }
@@ -1182,7 +1266,7 @@ function showResults() {
   const lapsTxt = `${race.laps} ${race.laps === 1 ? 'kolo' : race.laps < 5 ? 'kola' : 'kol'}`;
   const cup = G.cup;
   $('res-track').textContent = cup
-    ? `Šampionát · závod ${cup.round + 1}/${CUP_TRACKS.length} · ${w.def.name}`
+    ? `Šampionát · závod ${cup.round + 1}/${cupTracks().length} · ${w.def.name}`
     : `${w.def.name} · ${lapsTxt}`;
   const rows = race.cars
     .map((c) => ({ c, t: race.estimateFinish(c) }))
@@ -1201,6 +1285,8 @@ function showResults() {
   }
   if (G.results?.lap) badges.push('Nový rekord kola');
   if (G.results?.race) badges.push('Nový rekord závodu');
+  if (G.results?.medal) badges.push(`<span class="medal ${G.results.medal.id}">Medaile: ${G.results.medal.name}</span>`);
+  if (G.results?.next) badges.push(`Na ${G.results.next.name.toLowerCase()} chybí ${G.results.next.gap.toFixed(2).replace('.', ',')} s`);
   renderCup(rows, badges);
   $('res-badges').innerHTML = badges.map((b) => `<span class="badge">${b}</span>`).join('');
   $('res-body').innerHTML = rows
@@ -1236,7 +1322,7 @@ function renderCup(rows, badges) {
     cup.colors = cup.colors || {};
     for (const { c } of rows) cup.colors[c.name] = c.color;
   }
-  const last = cup.round === CUP_TRACKS.length - 1;
+  const last = cup.round === cupTracks().length - 1;
   const table = Object.entries(cup.points).sort((a, b) => b[1] - a[1]);
   const humanNames = G.race.players.map((c) => c.name);
   const placeOf = (name) => table.findIndex(([n]) => n === name) + 1;
@@ -1253,8 +1339,8 @@ function renderCup(rows, badges) {
   if (last) {
     if (humanNames.length === 1) {
       $('res-title').textContent = `Šampionát: ${myPlace}. místo`;
-      if (myPlace === 1) badges.unshift('Mistr Turbo Okruhu');
-      const rec = (store.records.cup = store.records.cup || {});
+      if (myPlace === 1) badges.unshift(`Vítěz: ${currentCup().name}`);
+      const rec = cupRecord(currentCup().id);
       if (!rec.best || myPlace < rec.best) {
         rec.best = myPlace;
         store.save();
@@ -1262,11 +1348,11 @@ function renderCup(rows, badges) {
     } else {
       const best = humanNames.reduce((a, b) => (placeOf(a) < placeOf(b) ? a : b));
       $('res-title').textContent = `${best} vyhrál souboj o šampionát`;
-      if (placeOf(best) === 1) badges.unshift(`Mistr Turbo Okruhu: ${best}`);
+      if (placeOf(best) === 1) badges.unshift(`${currentCup().name}: vyhrál ${best}`);
     }
     again.textContent = 'Nový šampionát';
   } else {
-    const next = TRACKS.find((t) => t.id === CUP_TRACKS[cup.round + 1]);
+    const next = trackDef(cupTracks()[cup.round + 1]);
     again.textContent = `Další závod: ${next.name}`;
   }
 }

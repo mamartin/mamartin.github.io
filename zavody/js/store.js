@@ -97,6 +97,20 @@ export class Store {
     return out;
   }
 
+  // nejlepší časy sektorů; vrací předchozí nejlepší (pro rozdíl) a zda se zlepšil
+  submitSector(trackId, kind, index, time) {
+    const key = recordKey(trackId, kind);
+    const r = (this.records[key] = this.records[key] || {});
+    r.sectors = r.sectors || [];
+    const prev = r.sectors[index] ?? null;
+    const better = prev == null || time < prev;
+    if (better) {
+      r.sectors[index] = time;
+      this.save();
+    }
+    return { prev, better };
+  }
+
   ghost(trackId, kind = 'car') {
     return read(GHOST_KEY + recordKey(trackId, kind));
   }
