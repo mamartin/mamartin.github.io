@@ -113,11 +113,17 @@
       <section class="menu-block options drivers-row">
         <div class="opt">
           <h2 class="label" id="driver1-label">Jezdec</h2>
-          <select class="pick" id="driver-select" aria-label="Jméno jezdce"></select>
+          <div class="driver-pick" id="driver-pick" data-key="driver">
+            <button type="button" class="pick" aria-haspopup="listbox" aria-expanded="false" aria-label="Jméno jezdce"><span class="pick-name"></span><span class="pick-team"></span></button>
+            <div class="pick-pop" role="listbox" aria-label="Jméno jezdce" hidden></div>
+          </div>
         </div>
         <div class="opt" id="driver2-opt" hidden>
           <h2 class="label">Jezdec hráče 2</h2>
-          <select class="pick" id="driver2-select" aria-label="Jméno jezdce hráče 2"></select>
+          <div class="driver-pick" id="driver2-pick" data-key="driver2">
+            <button type="button" class="pick" aria-haspopup="listbox" aria-expanded="false" aria-label="Jméno jezdce hráče 2"><span class="pick-name"></span><span class="pick-team"></span></button>
+            <div class="pick-pop" role="listbox" aria-label="Jméno jezdce hráče 2" hidden></div>
+          </div>
         </div>
       </section>
 

@@ -458,8 +458,7 @@ function refreshMenu() {
   for (const b of $('players-seg').children) b.setAttribute('aria-checked', String(+b.dataset.players === (S.players || 1)));
   $('driver2-opt').hidden = !two;
   $('driver1-label').textContent = two ? 'Jezdec hráče 1' : 'Jezdec';
-  $('driver-select').value = playerNames()[0];
-  $('driver2-select').value = playerNames()[1];
+  playerNames().forEach((name, i) => refreshDriverPick($(i === 0 ? 'driver-pick' : 'driver2-pick'), name, playerNames()[1 - i]));
   for (const card of document.querySelectorAll('.car-card')) {
     const i = +card.dataset.player;
     card.hidden = i > 0 && !two;
@@ -497,6 +496,83 @@ function refreshMenu() {
   const mt = $('music-toggle');
   mt.setAttribute('aria-pressed', String(S.music !== false));
   mt.querySelector('em').textContent = S.music !== false ? 'Zapnuto' : 'Vypnuto';
+}
+
+// výběr jezdce: tlačítko s rozbalovacím seznamem jezdců F1 po týmech (místo systémového selectu)
+function bindDriverPick(root, noneLabel) {
+  const key = root.dataset.key;
+  const btn = root.querySelector('.pick');
+  const pop = root.querySelector('.pick-pop');
+  const option = (name, label) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'pick-opt';
+    b.setAttribute('role', 'option');
+    b.dataset.name = name;
+    b.textContent = label;
+    b.addEventListener('click', () => {
+      S[key] = name;
+      store.save();
+      close(true);
+      refreshMenu();
+    });
+    pop.appendChild(b);
+  };
+  option('', noneLabel);
+  for (const t of F1_TEAMS) {
+    const h = document.createElement('div');
+    h.className = 'pick-team-head';
+    h.textContent = t.team;
+    pop.appendChild(h);
+    for (const d of t.drivers) option(d, d);
+  }
+  const options = () => [...pop.querySelectorAll('.pick-opt:not(:disabled)')];
+  const close = (focus) => {
+    if (pop.hidden) return;
+    pop.hidden = true;
+    btn.setAttribute('aria-expanded', 'false');
+    document.removeEventListener('pointerdown', outside, true);
+    if (focus) btn.focus();
+  };
+  const outside = (e) => {
+    if (!root.contains(e.target)) close(false);
+  };
+  btn.addEventListener('click', () => {
+    if (!pop.hidden) return close(true);
+    // otevřít nahoru, když pod tlačítkem není místo
+    const r = btn.getBoundingClientRect();
+    root.classList.toggle('up', innerHeight - r.bottom < 330 && r.top > innerHeight - r.bottom);
+    pop.hidden = false;
+    btn.setAttribute('aria-expanded', 'true');
+    document.addEventListener('pointerdown', outside, true);
+    const cur = pop.querySelector('.pick-opt[aria-selected="true"]') || options()[0];
+    cur.scrollIntoView({ block: 'center' });
+    cur.focus();
+  });
+  pop.addEventListener('keydown', (e) => {
+    const list = options();
+    const i = list.indexOf(document.activeElement);
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const next = list[Math.max(0, Math.min(list.length - 1, i + (e.key === 'ArrowDown' ? 1 : -1)))];
+      next.focus();
+      next.scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'Escape') {
+      e.stopPropagation();
+      close(true);
+    } else if (e.key === 'Tab') close(false);
+  });
+}
+
+function refreshDriverPick(root, name, other) {
+  const team = F1_TEAMS.find((t) => t.drivers.includes(name));
+  root.querySelector('.pick-name').textContent = name || root.querySelector('.pick-opt').textContent;
+  root.querySelector('.pick-team').textContent = team ? team.team : '';
+  for (const b of root.querySelectorAll('.pick-opt')) {
+    b.setAttribute('aria-selected', String(b.dataset.name === name));
+    // jméno, které má druhý hráč, nejde vybrat
+    b.disabled = !!b.dataset.name && b.dataset.name === other && humanCount() === 2;
+  }
 }
 
 // přestavba aut v menu nejvýš jednou za snímek (picker barvy posílá hodně změn)
@@ -567,21 +643,8 @@ function bindMenu() {
     });
   }
   for (const card of document.querySelectorAll('.car-card')) card.addEventListener('click', () => openGarage(+card.dataset.player));
-  for (const [id, key, none] of [['driver-select', 'driver', 'Ty (bez jména)'], ['driver2-select', 'driver2', 'Hráč 2 (bez jména)']]) {
-    const sel = $(id);
-    sel.add(new Option(none, ''));
-    for (const t of F1_TEAMS) {
-      const group = document.createElement('optgroup');
-      group.label = t.team;
-      for (const d of t.drivers) group.appendChild(new Option(d, d));
-      sel.appendChild(group);
-    }
-    sel.addEventListener('change', () => {
-      S[key] = sel.value;
-      store.save();
-      refreshMenu();
-    });
-  }
+  bindDriverPick($('driver-pick'), 'Ty (bez jména)');
+  bindDriverPick($('driver2-pick'), 'Hráč 2 (bez jména)');
   for (const b of $('players-seg').children) {
     b.addEventListener('click', () => {
       S.players = +b.dataset.players;
