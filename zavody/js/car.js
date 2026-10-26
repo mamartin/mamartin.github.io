@@ -56,87 +56,235 @@ function placed(geo, x, y, z, rx = 0) {
   return ni(g);
 }
 
-// dvojitý závodní pruh po horních plochách karoserie (z, y úseků profilu)
-const STRIPE_SEGMENTS = [
-  [-2.2, 0.91, -1.5, 0.97],
-  [-0.9, 1.35, 0.12, 1.38],
-  [0.9, 0.93, 1.85, 0.77],
-  [1.85, 0.77, 2.22, 0.61],
-];
+// lineární průběh hodnoty podle z: tab([[z, v], ...])(z)
+function tab(points) {
+  return (z) => {
+    if (z <= points[0][0]) return points[0][1];
+    for (let i = 1; i < points.length; i++) {
+      const [z1, v1] = points[i];
+      if (z <= z1) {
+        const [z0, v0] = points[i - 1];
+        return v0 + ((v1 - v0) * (z - z0)) / (z1 - z0);
+      }
+    }
+    return points[points.length - 1][1];
+  };
+}
+
+const range = (z0, z1, step) => {
+  const n = Math.max(1, Math.round((z1 - z0) / step));
+  return Array.from({ length: n + 1 }, (_, i) => z0 + ((z1 - z0) * i) / n);
+};
+
+// výšky bodů řezu nesmí klesat (jinak by se plocha překroutila)
+function rising(pts) {
+  for (let i = 1; i < pts.length; i++) if (pts[i][1] < pts[i - 1][1]) pts[i][1] = pts[i - 1][1];
+  return pts;
+}
+
+// těleso z příčných řezů: half(z) vrací pravou polovinu řezu (x ≥ 0) od spodního středu
+// k hornímu; levá polovina se zrcadlí, konce se zavřou víčky. Hladké normály.
+function loft(zs, half, caps = true) {
+  const rings = zs.map((z) => {
+    const h = half(z);
+    return [...h, ...h.slice(1, -1).reverse().map(([x, y]) => [-x, y])].map(([x, y]) => [x, y, z]);
+  });
+  const n = rings[0].length;
+  const pos = [];
+  const idx = [];
+  for (const r of rings) for (const p of r) pos.push(...p);
+  for (let i = 0; i < rings.length - 1; i++) {
+    for (let k = 0; k < n; k++) {
+      const a = i * n + k, b = i * n + ((k + 1) % n), a2 = a + n, b2 = b + n;
+      idx.push(a, b, a2, b, b2, a2);
+    }
+  }
+  if (caps) {
+    for (const [r, front] of [[rings[rings.length - 1], true], [rings[0], false]]) {
+      const base = pos.length / 3;
+      let cx = 0, cy = 0;
+      for (const p of r) {
+        pos.push(...p);
+        cx += p[0] / n;
+        cy += p[1] / n;
+      }
+      pos.push(cx, cy, r[0][2]);
+      const c = base + n;
+      for (let k = 0; k < n; k++) {
+        const a = base + k, b = base + ((k + 1) % n);
+        if (front) idx.push(c, a, b);
+        else idx.push(c, b, a);
+      }
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array((pos.length / 3) * 2), 2));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  return ni(g);
+}
+
+// tenký pás po povrchu (pruhy): mezi |x0| a |x1| na obou stranách, ve výšce yOf(z), lícem nahoru
+function ribbon(zs, x0, x1, yOf) {
+  const pos = [];
+  const idx = [];
+  for (const side of [1, -1]) {
+    const base = pos.length / 3;
+    for (const z of zs) {
+      const y = yOf(z);
+      pos.push(side * x0, y, z, side * x1, y, z);
+    }
+    for (let i = 0; i < zs.length - 1; i++) {
+      const a = base + i * 2, b = a + 1, a2 = a + 2, b2 = a + 3;
+      if (side > 0) idx.push(a, a2, b, b, a2, b2);
+      else idx.push(a, b, a2, b, b2, a2);
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array((pos.length / 3) * 2), 2));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  return ni(g);
+}
+
+// trámek mezi dvěma body (sloupky, ramena zavěšení, držáky)
+const _up = new THREE.Vector3(0, 0, 1);
+function beam(p0, p1, w, h) {
+  const a = new THREE.Vector3(...p0), b = new THREE.Vector3(...p1);
+  const dir = b.clone().sub(a);
+  const g = new THREE.BoxGeometry(w, h, dir.length());
+  g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(_up, dir.normalize()));
+  g.translate((a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2);
+  return ni(g);
+}
+
+const box = (w, h, d, x, y, z, rx = 0) => placed(new THREE.BoxGeometry(w, h, d), x, y, z, rx);
+const mirrorX = (fn) => [fn(1), fn(-1)];
+
+// kolo: zaoblená pneumatika (s tmavou zadní deskou disku a brzdovým kotoučem), paprskový disk
+// s límcem a třmen (tire/rim se točí, accent – třmen a proužek na boku pneumatiky – jen zatáčí)
+function wheelParts(r, w, { sideRing = false } = {}) {
+  const prof = [
+    [r * 0.68, -w / 2], [r * 0.9, -w / 2], [r * 0.98, -w / 2 + 0.03], [r, -w / 2 + 0.07],
+    [r, w / 2 - 0.07], [r * 0.98, w / 2 - 0.03], [r * 0.9, w / 2], [r * 0.68, w / 2],
+  ].map(([x, y]) => new THREE.Vector2(x, y));
+  const lathe = ni(new THREE.LatheGeometry(prof, 20).rotateZ(Math.PI / 2));
+  lathe.deleteAttribute('uv');
+  lathe.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(lathe.attributes.position.count * 2), 2));
+  const tire = mergeGeometries([
+    lathe,
+    ni(new THREE.CylinderGeometry(r * 0.66, r * 0.66, 0.02, 16).rotateZ(Math.PI / 2)),
+    ni(new THREE.CylinderGeometry(r * 0.5, r * 0.5, w * 0.55, 14).rotateZ(Math.PI / 2)),
+  ]);
+  const face = (sx) => {
+    const x = sx * (w / 2 - 0.035);
+    const out = [];
+    for (let k = 0; k < 5; k++) {
+      const g = new THREE.BoxGeometry(0.035, 0.07, r * 0.52).translate(0, 0, r * 0.36);
+      g.rotateX((k * Math.PI * 2) / 5).translate(x, 0, 0);
+      out.push(ni(g));
+    }
+    out.push(ni(new THREE.TorusGeometry(r * 0.645, 0.02, 3, 16).rotateY(Math.PI / 2).translate(sx * (w / 2 - 0.02), 0, 0)));
+    return out;
+  };
+  const rim = mergeGeometries([
+    ...face(1), ...face(-1),
+    ni(new THREE.CylinderGeometry(r * 0.14, r * 0.14, w - 0.04, 8).rotateZ(Math.PI / 2)),
+  ]);
+  const accent = mergeGeometries([
+    ...mirrorX((sx) => box(0.07, r * 0.3, r * 0.24, sx * (w / 2 - 0.09), r * 0.33, -r * 0.2)),
+    ...(sideRing ? mirrorX((sx) => ni(new THREE.TorusGeometry(r * 0.82, 0.013, 3, 22).rotateY(Math.PI / 2).translate(sx * (w / 2 + 0.002), 0, 0))) : []),
+  ]);
+  return { tire, rim, accent, r };
+}
+
+// auto: profil a půdorys karoserie podle z (předek je +z)
+const CAR_TOP = tab([[-2.28, 0.74], [-2.2, 0.84], [-2.0, 0.9], [-1.5, 0.93], [0.9, 0.91], [1.6, 0.82], [2.1, 0.7], [2.32, 0.56]]);
+const CAR_BOTTOM = tab([[-2.28, 0.36], [-2.12, 0.26], [2.1, 0.24], [2.32, 0.3]]);
+const CAR_WIDTH = tab([[-2.28, 0.78], [-2.18, 0.88], [-1.9, 0.92], [1.9, 0.92], [2.2, 0.86], [2.32, 0.74]]);
+const CAR_ROOF = tab([[-1.5, 0.9], [-0.88, 1.29], [-0.6, 1.33], [0.1, 1.33], [0.95, 0.9]]);
+const CAR_WHEELS = [1.35, -1.3];
+
+function carBodyHalf(z) {
+  const yb = CAR_BOTTOM(z), yt = CAR_TOP(z), h = yt - yb;
+  let ws = CAR_WIDTH(z);
+  // vyboulené blatníky a vykrojené podběhy kol
+  let yn = yb;
+  for (const zw of CAR_WHEELS) {
+    const dz = z - zw;
+    ws += 0.035 * Math.max(0, 1 - (dz / 0.75) ** 2);
+    if (Math.abs(dz) < 0.44) yn = Math.max(yn, 0.33 + Math.sqrt(0.44 * 0.44 - dz * dz));
+  }
+  const notch = yn > yb;
+  const wl = notch ? 0.6 : ws - 0.06;
+  return rising([
+    [0, yb], [wl, yb], [wl, yn],
+    [ws - 0.06, Math.max(yb, yn)],
+    [ws, Math.max(yb + 0.28 * h, yn)],
+    [ws + 0.012, Math.max(yb + 0.5 * h, yn)],
+    [ws - 0.03, Math.max(yb + 0.82 * h, yn)],
+    [ws - 0.17, yt - 0.012],
+    [ws - 0.36, yt],
+    [0, yt + 0.012],
+  ]);
+}
 
 let shared = null;
 function sharedParts() {
   if (shared) return shared;
-  const body = new THREE.Shape();
-  body.moveTo(-2.0, 0.26);
-  body.lineTo(-2.2, 0.32);
-  body.lineTo(-2.26, 0.58);
-  body.lineTo(-2.2, 0.86);
-  body.lineTo(-1.5, 0.92);
-  body.lineTo(0.8, 0.88);
-  body.lineTo(1.85, 0.72);
-  body.lineTo(2.22, 0.56);
-  body.lineTo(2.3, 0.4);
-  body.lineTo(2.16, 0.26);
-  body.lineTo(1.8, 0.26);
-  body.absarc(1.35, 0.3, 0.45, 0, Math.PI, false);
-  body.lineTo(-0.85, 0.26);
-  body.absarc(-1.3, 0.3, 0.45, 0, Math.PI, false);
-  body.lineTo(-2.0, 0.26);
-  const bodyW = 1.8;
-  const bodyGeo = new THREE.ExtrudeGeometry(body, {
-    depth: bodyW, bevelEnabled: true, bevelThickness: 0.07, bevelSize: 0.05, bevelSegments: 3, curveSegments: 10,
+  // kolem kol husté řezy (oblouk podběhu), jinde řidší
+  const nearWheel = (z) => CAR_WHEELS.some((zw) => Math.abs(z - zw) < 0.5);
+  const zs = [...range(-2.28, 2.32, 0.08).filter((z) => !nearWheel(z)), ...CAR_WHEELS.flatMap((zw) => range(zw - 0.48, zw + 0.48, 0.045))]
+    .sort((p, q) => p - q);
+  const bodyGeo = loft(zs, carBodyHalf);
+  // prosklená kabina se zužuje nahoru, střecha a sloupky jsou v barvě karoserie
+  const WB = 0.78, WT = 0.6;
+  const cabinGeo = loft(range(-1.5, 0.95, 0.07), (z) => {
+    const yr = CAR_ROOF(z);
+    return rising([[0, 0.86], [WB, 0.86], [WB - 0.02, 0.93], [WT + 0.05, yr - 0.07], [WT, yr - 0.01], [WT - 0.15, yr], [0, yr + 0.01]]);
+  }, false);
+  const roof = loft(range(-0.8, 0.05, 0.05), (z) => {
+    const yr = CAR_ROOF(z);
+    return [[0, yr - 0.02], [WT - 0.04, yr - 0.02], [WT + 0.012, yr - 0.005], [WT - 0.1, yr + 0.016], [0, yr + 0.024]];
   });
-  bodyGeo.rotateY(-Math.PI / 2);
-  bodyGeo.translate(bodyW / 2, 0, 0);
-  bodyGeo.computeVertexNormals();
-  bodyGeo.clearGroups();
+  const pillars = mirrorX((sx) => [
+    beam([sx * (WB - 0.01), 0.92, 0.9], [sx * (WT + 0.02), CAR_ROOF(0.05) - 0.01, 0.05], 0.07, 0.05),
+    beam([sx * (WB - 0.005), 0.93, -0.36], [sx * (WT + 0.025), CAR_ROOF(-0.36) - 0.02, -0.36], 0.06, 0.1),
+    beam([sx * (WB - 0.01), 0.92, -1.42], [sx * (WT + 0.02), CAR_ROOF(-0.8) - 0.01, -0.8], 0.14, 0.05),
+  ]).flat();
+  const mirrors = mirrorX((sx) => box(0.16, 0.1, 0.12, sx * 0.92, 1.0, 0.72));
+  const paintGeo = mergeGeometries([bodyGeo, roof, ...pillars, ...mirrors]);
 
-  const cabin = new THREE.Shape();
-  cabin.moveTo(-1.5, 0.86);
-  cabin.lineTo(-0.9, 1.28);
-  cabin.lineTo(0.12, 1.31);
-  cabin.lineTo(0.9, 0.86);
-  cabin.lineTo(-1.5, 0.86);
-  const cabW = 1.44;
-  const cabinGeo = new THREE.ExtrudeGeometry(cabin, {
-    depth: cabW, bevelEnabled: true, bevelThickness: 0.1, bevelSize: 0.07, bevelSegments: 3, curveSegments: 4,
-  });
-  cabinGeo.rotateY(-Math.PI / 2);
-  cabinGeo.translate(cabW / 2, 0, 0);
-  cabinGeo.computeVertexNormals();
-
-  const wing = new THREE.BoxGeometry(1.86, 0.05, 0.4);
-  const strut = new THREE.BoxGeometry(0.06, 0.26, 0.18);
-  const headlight = new THREE.BoxGeometry(0.46, 0.12, 0.12);
-  const taillight = new THREE.BoxGeometry(0.52, 0.11, 0.06);
-  const paintGeo = bodyGeo;
-  const wingGeo = placed(wing, 0, 1.13, -1.98);
+  const hoodSlope = Math.atan2(CAR_TOP(0.9) - CAR_TOP(1.6), 0.7);
+  const noseSlope = Math.atan2(CAR_TOP(2.1) - CAR_TOP(2.32), 0.22);
+  const wingGeo = mergeGeometries([box(1.86, 0.05, 0.4, 0, 1.13, -1.98, 0.06), box(1.7, 0.035, 0.16, 0, 1.17, -2.17, 0.35)]);
   const darkGeo = mergeGeometries([
-    placed(strut, -0.56, 0.99, -1.95),
-    placed(strut, 0.56, 0.99, -1.95),
-    placed(new THREE.BoxGeometry(1.84, 0.06, 0.34), 0, 0.25, 2.12),
-    placed(new THREE.BoxGeometry(1.6, 0.16, 0.2), 0, 0.34, -2.2),
+    ...mirrorX((sx) => box(0.06, 0.26, 0.18, sx * 0.56, 0.99, -1.95)), // držáky křídla
+    ...mirrorX((sx) => box(0.03, 0.16, 0.38, sx * 0.94, 1.13, -2.03)), // bočnice křídla
+    ...mirrorX((sx) => box(0.12, 0.03, 0.04, sx * 0.82, 0.97, 0.74)), // ramena zrcátek
+    ...mirrorX((sx) => box(0.08, 0.08, 1.5, sx * 0.9, 0.29, 0.02)), // prahy
+    ...mirrorX((sx) => box(0.2, 0.02, 0.3, sx * 0.3, CAR_TOP(1.45) + 0.004, 1.45, hoodSlope)), // větráky v kapotě
+    box(1.66, 0.04, 0.26, 0, 0.25, 2.2), // spoiler pod nárazníkem
+    box(0.92, 0.12, 0.06, 0, 0.41, 2.31), // mřížka
+    box(1.6, 0.16, 0.2, 0, 0.42, -2.2), // zadní nárazník
+    box(1.3, 0.1, 0.28, 0, 0.31, -2.2), // difuzor
+    ...[-0.36, 0, 0.36].map((x) => box(0.03, 0.14, 0.3, x, 0.3, -2.2)),
   ]);
-  const headGeo = mergeGeometries([placed(headlight, -0.58, 0.6, 2.17, -0.45), placed(headlight, 0.58, 0.6, 2.17, -0.45)]);
-  const tailGeo = mergeGeometries([placed(taillight, -0.58, 0.74, -2.26), placed(taillight, 0.58, 0.74, -2.26)]);
-  const tire = new THREE.CylinderGeometry(0.36, 0.36, 0.3, 18).rotateZ(Math.PI / 2);
-  const rimGeo = mergeGeometries([
-    ni(new THREE.CylinderGeometry(0.23, 0.23, 0.32, 10).rotateZ(Math.PI / 2)),
-    ni(new THREE.BoxGeometry(0.33, 0.06, 0.4)),
+  const chromeGeo = mergeGeometries(mirrorX((sx) => ni(new THREE.CylinderGeometry(0.055, 0.055, 0.2, 12).rotateX(Math.PI / 2).translate(sx * 0.42, 0.33, -2.3))));
+  const headGeo = mergeGeometries(mirrorX((sx) => box(0.36, 0.05, 0.16, sx * 0.55, CAR_TOP(2.21) + 0.01, 2.21, noseSlope)));
+  const tailGeo = mergeGeometries([
+    ...mirrorX((sx) => box(0.5, 0.1, 0.05, sx * 0.52, 0.64, -2.29)),
+    box(0.56, 0.03, 0.04, 0, 0.64, -2.295),
   ]);
-  const stripeBox = new THREE.BoxGeometry(0.17, 0.014, 1);
-  const stripeParts = [];
-  for (const [z0, y0, z1, y1] of STRIPE_SEGMENTS) {
-    const len = Math.hypot(z1 - z0, y1 - y0);
-    const ang = Math.atan2(y1 - y0, z1 - z0);
-    for (const x of [-0.14, 0.14]) {
-      const g = stripeBox.clone().scale(1, 1, len).rotateX(-ang).translate(x, (y0 + y1) / 2 + 0.006, (z0 + z1) / 2);
-      stripeParts.push(ni(g));
-    }
-  }
-  const stripeGeo = mergeGeometries(stripeParts);
-  [wing, strut, headlight, taillight, stripeBox].forEach((g) => g.dispose());
+  // dvojitý pruh přes kapotu, střechu a kufr
+  const stripeGeo = mergeGeometries([
+    ribbon(range(0.92, 2.27, 0.05), 0.05, 0.2, (z) => CAR_TOP(z) + 0.016),
+    ribbon(range(-0.78, 0.03, 0.05), 0.05, 0.2, (z) => CAR_ROOF(z) + 0.03),
+    ribbon(range(-2.22, -1.52, 0.05), 0.05, 0.2, (z) => CAR_TOP(z) + 0.016),
+  ]);
+  const wheel = wheelParts(0.36, 0.3);
 
   const blobTex = (() => {
     const c = document.createElement('canvas');
@@ -172,13 +320,15 @@ function sharedParts() {
   })();
 
   shared = {
-    paintGeo, wingGeo, cabinGeo, darkGeo, headGeo, tailGeo, tire, rimGeo, stripeGeo,
+    paintGeo, wingGeo, cabinGeo, darkGeo, chromeGeo, headGeo, tailGeo, wheel, stripeGeo,
+    plate: { y: CAR_ROOF(-0.36) + 0.032, z: -0.36, rx: 0, scale: 1 },
     numberGeo: new THREE.PlaneGeometry(0.62, 0.62).rotateX(-Math.PI / 2),
     blob: new THREE.PlaneGeometry(2.7, 5.4).rotateX(-Math.PI / 2),
     beam: new THREE.PlaneGeometry(9, 26).rotateX(-Math.PI / 2),
     tireMat: new THREE.MeshStandardMaterial({ color: 0x151515, roughness: 0.92, metalness: 0 }),
     rimMat: new THREE.MeshStandardMaterial({ color: 0xc9ccd1, roughness: 0.3, metalness: 0.85 }),
     darkMat: new THREE.MeshStandardMaterial({ color: 0x15171b, roughness: 0.6, metalness: 0.2 }),
+    chromeMat: new THREE.MeshStandardMaterial({ color: 0xd9dce0, roughness: 0.22, metalness: 0.95 }),
     glassMat: new THREE.MeshStandardMaterial({ color: 0x0c131c, roughness: 0.08, metalness: 0.9 }),
     headMat: new THREE.MeshBasicMaterial({ color: new THREE.Color(0xfff4dd).multiplyScalar(2.4), toneMapped: false }),
     stripeLight: new THREE.MeshStandardMaterial({ color: 0xf2f2ee, roughness: 0.35, metalness: 0.3 }),
@@ -192,70 +342,101 @@ function sharedParts() {
   return shared;
 }
 
-// formule: úzký monokok, nos s křídlem, otevřená kola, jezdec v helmě
+// formule: monokok s bočnicemi zúženými dozadu, tvarovaný nos, vícedílná křídla,
+// ploutev na krytu motoru, haló a jezdec v helmě; průběhy rozměrů podle z (předek je +z)
+const F_SIDE_W = tab([[-2.05, 0.14], [-1.6, 0.2], [-1.15, 0.36], [-0.75, 0.6], [0.15, 0.62], [0.42, 0.58], [0.5, 0.33], [0.8, 0.3]]);
+const F_SIDE_TOP = tab([[-2.05, 0.36], [-1.2, 0.42], [-0.6, 0.5], [0.42, 0.5], [0.5, 0.53], [0.8, 0.55]]);
+const F_SPINE_W = tab([[-2.05, 0.12], [-1.2, 0.17], [-0.6, 0.21], [0.0, 0.29], [0.8, 0.28]]);
+const F_SPINE_TOP = tab([[-2.05, 0.42], [-1.6, 0.6], [-1.0, 0.8], [-0.78, 0.95], [-0.52, 0.95], [-0.44, 0.7], [-0.3, 0.64], [0.8, 0.6]]);
+const F_NOSE_Y = tab([[0.75, 0.42], [1.6, 0.36], [2.32, 0.3]]);
+const F_NOSE_W = tab([[0.75, 0.27], [1.5, 0.2], [2.2, 0.13], [2.32, 0.06]]);
+const F_NOSE_H = tab([[0.75, 0.19], [1.5, 0.13], [2.2, 0.09], [2.32, 0.04]]);
+const noseTop = (z) => F_NOSE_Y(z) + F_NOSE_H(z);
+
 let formula = null;
 function formulaParts() {
   if (formula) return formula;
-  const taper = (rTop, rBot, len, seg = 10) => new THREE.CylinderGeometry(rTop, rBot, len, seg).rotateX(Math.PI / 2);
-  const box = (w, h, d, x, y, z, rx = 0) => placed(new THREE.BoxGeometry(w, h, d), x, y, z, rx);
+  const yb = 0.16;
+  const body = loft(range(-2.05, 0.8, 0.06), (z) => {
+    const sw = F_SIDE_W(z), st = F_SIDE_TOP(z), cw = F_SPINE_W(z), ct = F_SPINE_TOP(z);
+    return rising([
+      [0, yb], [sw * 0.85, yb], [sw, yb + 0.08], [sw, st - 0.05], [sw - 0.06, st],
+      [cw + 0.02, st + 0.01], [cw, ct - 0.06], [cw * 0.6, ct], [0, ct + 0.01],
+    ]);
+  });
+  const nose = loft(range(0.75, 2.32, 0.07), (z) => {
+    const yc = F_NOSE_Y(z), w = F_NOSE_W(z), h = F_NOSE_H(z);
+    const pts = [];
+    for (let k = 0; k <= 8; k++) {
+      const a = -Math.PI / 2 + (k * Math.PI) / 8;
+      const c = Math.cos(a);
+      pts.push([k === 0 || k === 8 ? 0 : w * Math.pow(Math.abs(c), 0.7), yc + h * Math.sin(a)]);
+    }
+    return pts;
+  });
+  // ploutev na krytu motoru
+  const fin = new THREE.Shape();
+  fin.moveTo(-0.8, 0.85);
+  fin.lineTo(-0.82, 0.96);
+  fin.lineTo(-1.98, 0.8);
+  fin.lineTo(-1.98, 0.42);
+  fin.lineTo(-1.2, 0.66);
+  fin.lineTo(-0.8, 0.85);
+  const finGeo = new THREE.ExtrudeGeometry(fin, { depth: 0.024, bevelEnabled: false });
+  finGeo.rotateY(-Math.PI / 2);
+  finGeo.translate(0.012, 0, 0);
+  const mirrors = mirrorX((sx) => box(0.15, 0.075, 0.1, sx * 0.5, 0.73, 0.3));
+  const paintGeo = mergeGeometries([body, nose, ni(finGeo), ...mirrors]);
 
-  // nos se zužuje dopředu (+z), mírně skloněný k zemi
-  const nose = taper(0.13, 0.3, 1.6).scale(1, 0.62, 1);
-  nose.rotateX(0.06);
-  nose.translate(0, 0.4, 1.45);
-  // kryt motoru se zužuje dozadu
-  const engine = taper(0.3, 0.12, 1.5).scale(0.85, 1, 1);
-  engine.rotateX(Math.PI);
-  engine.translate(0, 0.6, -1.3);
-  const paintGeo = mergeGeometries([
-    ni(nose),
-    ni(engine),
-    box(0.66, 0.4, 1.9, 0, 0.44, -0.15), // monokok
-    box(0.4, 0.32, 1.3, 0.52, 0.36, -0.35), // bočnice
-    box(0.4, 0.32, 1.3, -0.52, 0.36, -0.35),
-    box(0.3, 0.32, 0.5, 0, 0.82, -0.72), // airbox nad hlavou
-  ]);
   const wingGeo = mergeGeometries([
-    box(1.9, 0.045, 0.42, 0, 0.16, 2.2, -0.08), // přední křídlo
-    box(1.3, 0.06, 0.4, 0, 1.0, -2.15, 0.12), // zadní křídlo
-    box(1.3, 0.04, 0.22, 0, 0.84, -2.2, 0.2),
+    box(1.86, 0.035, 0.36, 0, 0.13, 2.12, -0.05), // přední křídlo: hlavní plocha
+    ...mirrorX((sx) => box(0.63, 0.03, 0.2, sx * 0.62, 0.19, 1.98, 0.35)), // klapky
+    ...mirrorX((sx) => box(0.6, 0.03, 0.16, sx * 0.63, 0.25, 1.88, 0.62)),
+    box(1.2, 0.05, 0.36, 0, 0.94, -2.12, 0.12), // zadní křídlo
+    box(1.2, 0.035, 0.22, 0, 1.06, -2.27, 0.48), // klapka DRS
+    box(0.9, 0.03, 0.2, 0, 0.5, -2.12, 0.15), // spodní křídlo
   ]);
   const accentGeo = mergeGeometries([
-    box(0.04, 0.22, 0.5, 0.95, 0.22, 2.2), // bočnice křídel
-    box(0.04, 0.22, 0.5, -0.95, 0.22, 2.2),
-    box(0.05, 0.42, 0.56, 0.66, 0.86, -2.17),
-    box(0.05, 0.42, 0.56, -0.66, 0.86, -2.17),
-    box(0.36, 0.1, 0.06, 0, 0.82, -0.47), // sání airboxu
+    ...mirrorX((sx) => box(0.03, 0.26, 0.56, sx * 0.94, 0.22, 2.06)), // bočnice předního křídla
+    ...mirrorX((sx) => box(0.035, 0.52, 0.62, sx * 0.62, 0.84, -2.15)), // bočnice zadního křídla
+    box(0.3, 0.09, 0.05, 0, 0.88, -0.5), // sání airboxu
   ]);
-  const halo = new THREE.TorusGeometry(0.3, 0.035, 6, 14, Math.PI).rotateX(-Math.PI / 2);
-  halo.translate(0, 0.86, -0.28);
+  // haló: oblouk nad hlavou jezdce, nohy do monokoku a středový sloupek
+  const halo = new THREE.TorusGeometry(0.29, 0.032, 6, 16, Math.PI).rotateX(Math.PI / 2).translate(0, 0.9, -0.34);
   const darkGeo = mergeGeometries([
-    box(0.46, 0.04, 0.7, 0, 0.645, -0.2), // otvor kokpitu
-    box(1.5, 0.05, 3.1, 0, 0.13, -0.3), // podlaha
-    box(0.08, 0.3, 0.12, 0, 0.75, -2.05), // držák zadního křídla
-    box(0.04, 0.24, 0.04, 0, 0.75, 0.0), // sloupek haló
+    box(0.44, 0.04, 0.72, 0, 0.635, -0.08), // okraj kokpitu
+    box(1.5, 0.04, 3.0, 0, 0.13, -0.3), // podlaha
+    ...mirrorX((sx) => box(0.26, 0.2, 0.04, sx * 0.47, 0.38, 0.47)), // sání bočnic
+    box(0.05, 0.44, 0.12, 0, 0.72, -2.04), // držák zadního křídla
+    box(0.12, 0.04, 0.08, 0, 0.975, -0.64), // kamera na airboxu
+    box(1.0, 0.16, 0.3, 0, 0.23, -2.08, -0.35), // difuzor
+    ...[-0.3, 0, 0.3].map((x) => box(0.025, 0.2, 0.3, x, 0.24, -2.08, -0.35)),
+    ...mirrorX((sx) => box(0.03, 0.14, 0.2, sx * 0.1, 0.22, 2.0)), // držáky předního křídla
     ni(halo),
-    // ramena zavěšení
-    box(0.62, 0.04, 0.06, 0.6, 0.42, 1.5), box(0.62, 0.04, 0.06, -0.6, 0.42, 1.5),
-    box(0.62, 0.04, 0.06, 0.6, 0.32, 1.62), box(0.62, 0.04, 0.06, -0.6, 0.32, 1.62),
-    box(0.5, 0.04, 0.06, 0.62, 0.46, -1.42), box(0.5, 0.04, 0.06, -0.62, 0.46, -1.42),
-    box(0.5, 0.04, 0.06, 0.62, 0.34, -1.52), box(0.5, 0.04, 0.06, -0.62, 0.34, -1.52),
+    ...mirrorX((sx) => beam([sx * 0.29, 0.9, -0.34], [sx * 0.26, 0.64, -0.44], 0.05, 0.05)),
+    beam([0, 0.9, -0.05], [0, 0.62, 0.08], 0.05, 0.04),
+    ...mirrorX((sx) => beam([sx * 0.3, 0.63, 0.25], [sx * 0.46, 0.72, 0.3], 0.03, 0.03)), // ramena zrcátek
+    // zavěšení: horní a spodní ramena, táhla
+    ...mirrorX((sx) => [
+      beam([sx * 0.24, 0.48, 1.42], [sx * 0.76, 0.44, 1.55], 0.04, 0.03),
+      beam([sx * 0.24, 0.46, 1.7], [sx * 0.76, 0.44, 1.55], 0.04, 0.03),
+      beam([sx * 0.22, 0.3, 1.45], [sx * 0.76, 0.28, 1.55], 0.04, 0.03),
+      beam([sx * 0.22, 0.3, 1.72], [sx * 0.76, 0.28, 1.55], 0.04, 0.03),
+      beam([sx * 0.18, 0.5, -1.3], [sx * 0.7, 0.5, -1.45], 0.04, 0.03),
+      beam([sx * 0.16, 0.48, -1.62], [sx * 0.7, 0.5, -1.45], 0.04, 0.03),
+      beam([sx * 0.16, 0.3, -1.3], [sx * 0.7, 0.3, -1.45], 0.04, 0.03),
+      beam([sx * 0.15, 0.3, -1.62], [sx * 0.7, 0.3, -1.45], 0.04, 0.03),
+    ]).flat(),
   ]);
-  const helmetGeo = new THREE.SphereGeometry(0.17, 14, 10);
+  const helmetGeo = new THREE.SphereGeometry(0.17, 18, 12);
   helmetGeo.translate(0, 0.78, -0.32);
   const visorGeo = box(0.26, 0.07, 0.1, 0, 0.8, -0.18);
-  const headGeo = mergeGeometries([box(0.18, 0.06, 0.06, 0.52, 0.42, 0.33), box(0.18, 0.06, 0.06, -0.52, 0.42, 0.33)]);
-  const tailGeo = box(0.16, 0.12, 0.05, 0, 0.5, -2.3);
-  const wheel = (r, w) => ({
-    tire: new THREE.CylinderGeometry(r, r, w, 20).rotateZ(Math.PI / 2),
-    rim: mergeGeometries([
-      ni(new THREE.CylinderGeometry(r * 0.62, r * 0.62, w + 0.02, 12).rotateZ(Math.PI / 2)),
-      ni(new THREE.BoxGeometry(w + 0.03, 0.06, r * 1.1)),
-    ]),
-  });
+  const headGeo = mergeGeometries(mirrorX((sx) => box(0.05, 0.025, 0.1, sx * 0.115, F_NOSE_Y(2.1), 2.1)));
+  const tailGeo = box(0.14, 0.1, 0.04, 0, 0.34, -2.08);
   formula = {
     paintGeo, wingGeo, accentGeo, darkGeo, helmetGeo, visorGeo, headGeo, tailGeo,
-    front: wheel(0.36, 0.34), rear: wheel(0.42, 0.46),
+    front: wheelParts(0.36, 0.34, { sideRing: true }), rear: wheelParts(0.42, 0.46, { sideRing: true }),
+    plate: { y: noseTop(1.25) + 0.012, z: 1.25, rx: Math.atan2(noseTop(0.75) - noseTop(2.0), 1.25), scale: 0.45 },
     helmetMat: new THREE.MeshStandardMaterial({ color: 0xf4f1e8, roughness: 0.25, metalness: 0.3 }),
   };
   return formula;
@@ -345,19 +526,20 @@ export function createCarMesh(color, {
     new THREE.Mesh(F ? F.tailGeo : P.tailGeo, mats.tail),
   );
   if (F) tilt.add(new THREE.Mesh(F.accentGeo, stripeMat), new THREE.Mesh(F.visorGeo, ghost ? mats.glass : P.glassMat));
+  else tilt.add(new THREE.Mesh(P.chromeGeo, ghost ? mats.rim : P.chromeMat));
 
   const wheels = [];
   const wheelPos = F
     ? [[0.88, 1.55, true], [-0.88, 1.55, true], [0.9, -1.45, false], [-0.9, -1.45, false]]
     : [[0.86, 1.35, true], [-0.86, 1.35, true], [0.86, -1.3, false], [-0.86, -1.3, false]];
   for (const [x, z, front] of wheelPos) {
-    const geo = F ? (front ? F.front : F.rear) : { tire: P.tire, rim: P.rimGeo };
+    const geo = F ? (front ? F.front : F.rear) : P.wheel;
     const pivot = new THREE.Group();
-    pivot.position.set(x, geo.tire.parameters.radiusTop, z);
+    pivot.position.set(x, geo.r, z);
     const spin = new THREE.Group();
     const tireMesh = new THREE.Mesh(geo.tire, mats.tire);
     spin.add(tireMesh, new THREE.Mesh(geo.rim, mats.rim));
-    pivot.add(spin);
+    pivot.add(spin, new THREE.Mesh(geo.accent, stripeMat));
     tilt.add(pivot);
     wheels.push({ pivot, spin, front });
     if (!ghost) tireMesh.castShadow = true;
@@ -367,11 +549,10 @@ export function createCarMesh(color, {
     if (!F) tilt.add(new THREE.Mesh(P.stripeGeo, stripeMat));
     if (number != null) {
       const plate = new THREE.Mesh(P.numberGeo, numberMaterial(number, L.plate ?? undefined));
-      if (F) {
-        plate.position.set(0, 0.585, 1.25);
-        plate.rotation.x = 0.06;
-        plate.scale.setScalar(0.5);
-      } else plate.position.set(0, 1.386, -0.36);
+      const at = (F || P).plate;
+      plate.position.set(0, at.y, at.z);
+      plate.rotation.x = at.rx;
+      plate.scale.setScalar(at.scale);
       tilt.add(plate);
     }
     const blob = new THREE.Mesh(P.blob, P.blobMat);
@@ -380,20 +561,20 @@ export function createCarMesh(color, {
     root.add(blob);
     bodyMesh.castShadow = cabinMesh.castShadow = wingMesh.castShadow = true;
   }
-  let beam = null;
+  let lightBeam = null;
   if (night && !ghost) {
-    beam = new THREE.Mesh(P.beam, P.beamMat);
-    beam.position.set(0, 0.06, 15);
-    root.add(beam);
+    lightBeam = new THREE.Mesh(P.beam, P.beamMat);
+    lightBeam.position.set(0, 0.06, 15);
+    root.add(lightBeam);
   }
-  return { root, tilt, wheels, mats, beam };
+  return { root, tilt, wheels, mats, beam: lightBeam };
 }
 
 // uvolní materiály patřící jen tomuto autu (sdílené geometrie a materiály zůstávají)
 export function disposeCarMesh(mesh) {
   const P = sharedParts();
   const sharedMats = new Set([
-    P.tireMat, P.rimMat, P.darkMat, P.glassMat, P.headMat, P.stripeLight, P.stripeDark, P.blobMat, P.beamMat, ...P.numberMats.values(),
+    P.tireMat, P.rimMat, P.darkMat, P.chromeMat, P.glassMat, P.headMat, P.stripeLight, P.stripeDark, P.blobMat, P.beamMat, ...P.numberMats.values(),
   ]);
   if (formula) sharedMats.add(formula.helmetMat);
   mesh.root.traverse((o) => {
