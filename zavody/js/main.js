@@ -7,7 +7,11 @@ import { Terrain } from './terrain.js';
 import { buildScenery, buildSky, buildLights } from './scenery.js';
 import { randomTrackDef, buildCenterline, validateCenterline } from './trackmath.js';
 import { Car, createCarMesh, disposeCarMesh } from './car.js';
-import { Race, PLAYER_COLORS, ACCENT_COLORS, OPPONENTS, PLAYER_NUMBERS, F1_TEAMS } from './race.js';
+import { Race, OPPONENTS, PLAYER_NUMBERS, F1_TEAMS } from './race.js';
+import {
+  Garage, playerColors as colorsOf, playerAccents as accentsOf, playerLiveries as liveriesOf, playerKinds as kindsOf,
+  partColor, kindName, hexCss,
+} from './garage.js';
 import { CameraRig } from './camera.js';
 import { Effects } from './effects.js';
 import { Input } from './input.js';
@@ -63,6 +67,8 @@ const audio = new AudioEngine();
 audio.muted = !S.sound;
 const music = new Music(audio);
 music.enabled = S.music !== false;
+const ENGINE_VOLUME = { low: 0.5, mid: 0.8, high: 1.1 };
+audio.engineVolume = ENGINE_VOLUME[S.engine] ?? ENGINE_VOLUME.mid;
 // zvuk smí začít až po prvním kliknutí nebo klávese
 function unlockAudio() {
   audio.init();
@@ -171,39 +177,11 @@ function randomDef(seed) {
 
 // počet lidských hráčů (dva jen v závodě/šampionátu a ne na dotykovém zařízení)
 const humanCount = () => (raceMode() === 'race' && S.players === 2 && !isTouch ? 2 : 1);
-// barva v nastavení: index do palety, vlastní '#rrggbb' z pickeru, u doplňkové i null (automaticky)
-const customHex = (v) => (typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v) ? parseInt(v.slice(1), 16) : null);
-const colorOf = (v, list, fallback) => customHex(v) ?? (Number.isInteger(v) ? list[v % list.length].hex : fallback);
-function playerColors() {
-  const a = colorOf(S.color, PLAYER_COLORS, PLAYER_COLORS[0].hex);
-  let b = colorOf(S.color2, PLAYER_COLORS, PLAYER_COLORS[1].hex);
-  if (b === a) b = PLAYER_COLORS.find((c) => c.hex !== a).hex;
-  return [a, b];
-}
-const playerAccents = () => [colorOf(S.accent, ACCENT_COLORS, null), colorOf(S.accent2, ACCENT_COLORS, null)];
-
-// díly vozu s vlastní barvou; výchozí barva pro náhled ve vzorku (null = jako karoserie)
-const LIVERY_PARTS = [
-  { key: 'wings', name: { car: 'Zadní křídlo', formula: 'Křídla' }, def: null },
-  { key: 'cockpit', name: { car: 'Okna', formula: 'Helma jezdce' }, def: { car: 0x0c131c, formula: 0xf4f1e8 } },
-  { key: 'trim', name: { car: 'Nárazníky a detaily', formula: 'Podvozek a haló' }, def: 0x15171b },
-  { key: 'rims', name: 'Disky', def: 0xc9ccd1 },
-  { key: 'tires', name: 'Pneumatiky', def: 0x151515 },
-  { key: 'plate', name: 'Štítek s číslem', def: 0xf4f4f0 },
-];
-const FINISH_NAMES = { gloss: 'Lesk', metal: 'Metalíza', matte: 'Mat' };
-const liveryKey = (i) => (i === 0 ? 'livery' : 'livery2');
-// nastavení ukládá barvy jako '#rrggbb', model chce čísla
-function playerLiveries() {
-  return [0, 1].map((i) => {
-    const src = S[liveryKey(i)] || {};
-    const out = { finish: FINISH_NAMES[src.finish] ? src.finish : 'gloss' };
-    for (const p of LIVERY_PARTS) out[p.key] = customHex(src[p.key]);
-    return out;
-  });
-}
-
-const playerKinds = () => [S.vehicle || 'car', S.vehicle2 || 'car'];
+// typ a barvy vozů hráčů (upravují se v garáži)
+const playerColors = () => colorsOf(S);
+const playerAccents = () => accentsOf(S);
+const playerLiveries = () => liveriesOf(S);
+const playerKinds = () => kindsOf(S);
 // soupeři jezdí to, co si vybral hráč 1
 const opponentKind = () => playerKinds()[0];
 // vybraná jména jezdců F1 (prázdné = výchozí „Ty“ / „Hráč 2“), dva hráči nesmí mít stejné
@@ -346,6 +324,7 @@ function buildShowcase() {
       color: info.color, number: info.number, night: w.biome.night, biome: w.biome, isPlayer, kind: info.kind, accent: info.accent,
       livery: info.livery,
     });
+    if (isPlayer) car.humanIndex = h;
     const g = w.track.gridSlot(race ? slot : 2);
     car.reset(g.s, g.lat);
     car.step(0);
@@ -477,18 +456,18 @@ function refreshMenu() {
   const two = humanCount() === 2;
   $('players-opt').hidden = S.mode === 'time' || isTouch;
   for (const b of $('players-seg').children) b.setAttribute('aria-checked', String(+b.dataset.players === (S.players || 1)));
-  $('color2-opt').hidden = !two;
-  $('vehicle2-opt').hidden = !two;
   $('driver2-opt').hidden = !two;
   $('driver1-label').textContent = two ? 'Jezdec hráče 1' : 'Jezdec';
   $('driver-select').value = playerNames()[0];
   $('driver2-select').value = playerNames()[1];
-  $('vehicle1-label').textContent = two ? 'Vůz hráče 1' : 'Vůz';
-  for (const [id, key] of [['vehicle-seg', 'vehicle'], ['vehicle2-seg', 'vehicle2']]) {
-    for (const b of $(id).children) b.setAttribute('aria-checked', String(b.dataset.vehicle === (S[key] || 'car')));
+  for (const card of document.querySelectorAll('.car-card')) {
+    const i = +card.dataset.player;
+    card.hidden = i > 0 && !two;
+    card.querySelector('.car-chips').innerHTML = ['body', 'accent', 'wings']
+      .map((k) => `<i style="background:${hexCss(partColor(S, i, k).hex)}"></i>`).join('');
+    card.querySelector('strong').textContent = kindName(playerKinds()[i]);
+    card.querySelector('em').textContent = two ? `Hráč ${i + 1} · barvy a typ vozu` : 'Barvy a typ vozu';
   }
-  $('color1-label').textContent = two ? 'Barva hráče 1' : 'Barva vozu';
-  $('accent1-label').textContent = two ? 'Doplňková barva hráče 1' : 'Doplňková barva';
   $('keys-2p').hidden = !two;
   $('diff-opt').hidden = S.mode === 'time';
   $('weapons-opt').hidden = S.mode === 'time';
@@ -514,144 +493,10 @@ function refreshMenu() {
   const st = $('sound-toggle');
   st.setAttribute('aria-pressed', String(S.sound));
   st.querySelector('em').textContent = S.sound ? 'Zapnuto' : 'Vypnuto';
+  for (const b of $('engine-seg').children) b.setAttribute('aria-checked', String(b.dataset.engine === (S.engine || 'mid')));
   const mt = $('music-toggle');
   mt.setAttribute('aria-pressed', String(S.music !== false));
   mt.querySelector('em').textContent = S.music !== false ? 'Zapnuto' : 'Vypnuto';
-  const colors = playerColors(), accents = playerAccents();
-  for (const [id, key, list, cur] of [
-    ['swatches', 'color', PLAYER_COLORS, colors[0]], ['swatches2', 'color2', PLAYER_COLORS, colors[1]],
-    ['accents', 'accent', ACCENT_COLORS, accents[0]], ['accents2', 'accent2', ACCENT_COLORS, accents[1]],
-  ]) {
-    const sw = $(id);
-    if (!sw.children.length) fillSwatches(sw, key, list);
-    const custom = customHex(S[key]) != null;
-    for (const b of sw.children) {
-      const on = b.dataset.kind === 'custom' ? custom : !custom && (b.dataset.kind === 'auto' ? cur == null : +b.dataset.hex === cur);
-      b.setAttribute('aria-checked', String(on));
-    }
-    const picker = sw.querySelector('.swatch-custom');
-    picker.style.background = custom ? S[key] : '';
-    picker.querySelector('input').value = hexCss(custom ? customHex(S[key]) : cur ?? 0xf2f2ee);
-  }
-  for (const i of [0, 1]) refreshLivery(i, colors[i]);
-}
-
-const hexCss = (hex) => '#' + hex.toString(16).padStart(6, '0');
-
-// rozbalovací editor barev jednotlivých dílů a laku
-function setLivery(i, patch, save = true) {
-  const k = liveryKey(i);
-  const next = { ...(S[k] || {}), ...patch };
-  for (const key of Object.keys(next)) if (next[key] == null) delete next[key];
-  S[k] = next;
-  if (save) store.save();
-  refreshMenu();
-  queueShowcase();
-}
-
-function fillLivery(box, i) {
-  const seg = document.createElement('div');
-  seg.className = 'seg small lv-finish';
-  seg.setAttribute('role', 'radiogroup');
-  seg.setAttribute('aria-label', 'Lak');
-  for (const [f, name] of Object.entries(FINISH_NAMES)) {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.setAttribute('role', 'radio');
-    b.dataset.finish = f;
-    b.textContent = name;
-    b.addEventListener('click', () => setLivery(i, { finish: f === 'gloss' ? null : f }));
-    seg.appendChild(b);
-  }
-  const finishRow = document.createElement('div');
-  finishRow.className = 'lv-row lv-finish-row';
-  finishRow.innerHTML = '<span class="lv-name">Lak</span>';
-  finishRow.appendChild(seg);
-  box.appendChild(finishRow);
-  for (const p of LIVERY_PARTS) {
-    const row = document.createElement('div');
-    row.className = 'lv-row';
-    row.dataset.part = p.key;
-    row.innerHTML = `<span class="lv-name"></span><label class="lv-color"><input type="color"></label>
-      <button type="button" class="lv-reset">Výchozí</button>`;
-    const input = row.querySelector('input');
-    input.addEventListener('input', () => setLivery(i, { [p.key]: input.value }, false));
-    input.addEventListener('change', () => setLivery(i, { [p.key]: input.value }));
-    row.querySelector('.lv-reset').addEventListener('click', () => setLivery(i, { [p.key]: null }));
-    box.appendChild(row);
-  }
-  const reset = document.createElement('button');
-  reset.type = 'button';
-  reset.className = 'btn lv-reset-all';
-  reset.textContent = 'Vrátit vše na výchozí';
-  reset.addEventListener('click', () => {
-    S[liveryKey(i)] = {};
-    store.save();
-    refreshMenu();
-    queueShowcase();
-  });
-  box.appendChild(reset);
-}
-
-function refreshLivery(i, body) {
-  const box = $(i === 0 ? 'livery' : 'livery2');
-  if (!box.children.length) fillLivery(box, i);
-  const kind = playerKinds()[i];
-  const src = S[liveryKey(i)] || {};
-  const finish = FINISH_NAMES[src.finish] ? src.finish : 'gloss';
-  for (const b of box.querySelector('.lv-finish').children) b.setAttribute('aria-checked', String(b.dataset.finish === finish));
-  for (const p of LIVERY_PARTS) {
-    const row = box.querySelector(`[data-part="${p.key}"]`);
-    const name = typeof p.name === 'string' ? p.name : p.name[kind];
-    const def = p.def == null ? body : typeof p.def === 'number' ? p.def : p.def[kind];
-    const own = customHex(src[p.key]);
-    row.querySelector('.lv-name').textContent = name;
-    const input = row.querySelector('input');
-    input.setAttribute('aria-label', name);
-    input.value = hexCss(own ?? def);
-    row.querySelector('.lv-color').style.background = hexCss(own ?? def);
-    row.querySelector('.lv-reset').hidden = own == null;
-  }
-}
-
-// vzorky barev: paleta, u doplňkové barvy „automaticky“, nakonec vlastní barva z pickeru
-function fillSwatches(sw, key, list) {
-  const choose = (v, save = true) => {
-    S[key] = v;
-    if (save) store.save();
-    refreshMenu();
-    queueShowcase();
-  };
-  const swatch = (label, kind, onClick) => {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'swatch' + (kind === 'auto' ? ' swatch-auto' : '');
-    b.dataset.kind = kind;
-    b.setAttribute('role', 'radio');
-    b.setAttribute('aria-label', label);
-    b.title = label;
-    b.addEventListener('click', onClick);
-    sw.appendChild(b);
-    return b;
-  };
-  if (list === ACCENT_COLORS) swatch('Automaticky', 'auto', () => choose(null));
-  list.forEach((c, i) => {
-    const b = swatch(c.name, 'preset', () => choose(i));
-    b.dataset.hex = c.hex;
-    b.style.background = hexCss(c.hex);
-  });
-  const custom = document.createElement('label');
-  custom.className = 'swatch swatch-custom';
-  custom.dataset.kind = 'custom';
-  custom.setAttribute('role', 'radio');
-  custom.title = 'Vlastní barva';
-  const input = document.createElement('input');
-  input.type = 'color';
-  input.setAttribute('aria-label', 'Vlastní barva');
-  input.addEventListener('input', () => choose(input.value, false));
-  input.addEventListener('change', () => choose(input.value));
-  custom.appendChild(input);
-  sw.appendChild(custom);
 }
 
 // přestavba aut v menu nejvýš jednou za snímek (picker barvy posílá hodně změn)
@@ -661,8 +506,44 @@ function queueShowcase() {
   showcaseQueued = true;
   requestAnimationFrame(() => {
     showcaseQueued = false;
-    if (G.world && G.screen === 'menu') buildShowcase();
+    if (G.world && (G.screen === 'menu' || G.screen === 'garage')) buildShowcase();
   });
+}
+
+// --- garáž ---------------------------------------------------------------------------
+
+const garage = new Garage({ store, onChange: () => { refreshMenu(); queueShowcase(); }, onClose: () => closeGarage() });
+
+function openGarage(player) {
+  if (G.screen !== 'menu') return;
+  G.screen = 'garage';
+  $('menu').hidden = true;
+  garage.open(player, humanCount());
+  document.activeElement?.blur();
+}
+
+// v garáži jde vůz otáčet tažením po scéně
+let dragX = null;
+const gameCanvas = $('game');
+gameCanvas.addEventListener('pointerdown', (e) => {
+  if (G.screen !== 'garage') return;
+  dragX = e.clientX;
+  gameCanvas.setPointerCapture(e.pointerId);
+});
+gameCanvas.addEventListener('pointermove', (e) => {
+  if (dragX == null) return;
+  rig.orbitAngle += (e.clientX - dragX) * 0.008;
+  dragX = e.clientX;
+  G.garageIdle = 0;
+});
+for (const ev of ['pointerup', 'pointercancel']) gameCanvas.addEventListener(ev, () => (dragX = null));
+
+function closeGarage() {
+  garage.close();
+  G.screen = 'menu';
+  $('menu').hidden = false;
+  if (G.world) for (const c of G.world.showcase) c.mesh.root.visible = true;
+  refreshMenu();
 }
 
 function bindMenu() {
@@ -685,16 +566,7 @@ function bindMenu() {
       refreshMenu();
     });
   }
-  for (const [id, key] of [['vehicle-seg', 'vehicle'], ['vehicle2-seg', 'vehicle2']]) {
-    for (const b of $(id).children) {
-      b.addEventListener('click', () => {
-        S[key] = b.dataset.vehicle;
-        store.save();
-        refreshMenu();
-        if (G.world && G.screen === 'menu') buildShowcase();
-      });
-    }
-  }
+  for (const card of document.querySelectorAll('.car-card')) card.addEventListener('click', () => openGarage(+card.dataset.player));
   for (const [id, key, none] of [['driver-select', 'driver', 'Ty (bez jména)'], ['driver2-select', 'driver2', 'Hráč 2 (bez jména)']]) {
     const sel = $(id);
     sel.add(new Option(none, ''));
@@ -750,6 +622,14 @@ function bindMenu() {
     store.save();
     refreshMenu();
   });
+  for (const b of $('engine-seg').children) {
+    b.addEventListener('click', () => {
+      S.engine = b.dataset.engine;
+      audio.engineVolume = ENGINE_VOLUME[S.engine];
+      store.save();
+      refreshMenu();
+    });
+  }
   $('music-toggle').addEventListener('click', () => {
     S.music = S.music === false;
     audio.init();
@@ -994,6 +874,10 @@ function handleKeys(pressed) {
       audio.setMuted(!S.sound);
       store.save();
       refreshMenu();
+    }
+    if (G.screen === 'garage') {
+      if (code === 'Escape' || btn === 'B') closeGarage();
+      continue;
     }
     if (G.screen === 'menu') {
       const free = !document.activeElement || document.activeElement === document.body;
@@ -1428,6 +1312,18 @@ function frame(now) {
           showResults();
         }
       }
+    }
+  } else if (G.screen === 'garage') {
+    // garáž: kamera u vozu hráče, ostatní auta schovaná; vůz se posune vedle panelu
+    const target = w.showcase.find((c) => c.isPlayer && c.humanIndex === garage.player) || w.showcase.find((c) => c.isPlayer);
+    for (const c of w.showcase) c.mesh.root.visible = c === target;
+    if (target) {
+      const panel = $('garage').firstElementChild;
+      const wide = innerWidth > 720;
+      const offX = wide ? panel.offsetWidth / innerWidth : 0;
+      const offY = wide ? 0 : Math.min(0.75, 1 - panel.offsetTop / innerHeight);
+      G.garageIdle = (G.garageIdle || 0) + dt;
+      rig.garage(dt, target, offX, offY, G.garageIdle > 2.5);
     }
   } else {
     // menu: pomalý oblet kolem startovního roštu

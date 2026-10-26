@@ -28,49 +28,74 @@ export class GearBox {
   }
 }
 
+// Motor: měkká vlna s rychle slábnoucími vyššími harmonickými, sub-bas a pulzování
+// spalování. Žádný pilový/obdélníkový signál ani rezonanční filtr, které bzučí a unavují.
+let engineWave = null;
+function softWave(ctx) {
+  if (engineWave) return engineWave;
+  const amps = [0, 1, 0.5, 0.28, 0.16, 0.09, 0.05, 0.03, 0.018, 0.01];
+  engineWave = ctx.createPeriodicWave(new Float32Array(amps.length), Float32Array.from(amps));
+  return engineWave;
+}
+
 class EngineVoice {
   constructor(ctx, out, level) {
     this.ctx = ctx;
     this.level = level;
+    const wave = softWave(ctx);
     this.o1 = ctx.createOscillator();
-    this.o1.type = 'sawtooth';
-    this.o2 = ctx.createOscillator();
-    this.o2.type = 'square';
-    this.o3 = ctx.createOscillator();
-    this.o3.type = 'sawtooth';
-    this.o3.detune.value = 12;
-    const g1 = ctx.createGain(), g2 = ctx.createGain(), g3 = ctx.createGain();
-    g1.gain.value = 0.5;
-    g2.gain.value = 0.32;
-    g3.gain.value = 0.18;
+    this.o1.setPeriodicWave(wave);
+    this.sub = ctx.createOscillator();
+    this.sub.type = 'sine';
+    this.half = ctx.createOscillator();
+    this.half.setPeriodicWave(wave);
+    const g1 = ctx.createGain(), gSub = ctx.createGain(), gHalf = ctx.createGain();
+    g1.gain.value = 0.55;
+    gSub.gain.value = 0.5;
+    gHalf.gain.value = 0.14;
+    // pulzování spalování: amplitudová modulace v rytmu válců dodá motoru život místo stálého tónu
+    this.lfo = ctx.createOscillator();
+    this.lfo.type = 'sine';
+    const depth = ctx.createGain();
+    depth.gain.value = 0.18;
+    this.pulse = ctx.createGain();
+    this.pulse.gain.value = 0.82;
+    this.lfo.connect(depth).connect(this.pulse.gain);
     this.shaper = ctx.createWaveShaper();
     const curve = new Float32Array(256);
     for (let i = 0; i < 256; i++) {
       const x = (i / 255) * 2 - 1;
-      curve[i] = Math.tanh(x * 2.2);
+      curve[i] = Math.tanh(x * 1.2);
     }
     this.shaper.curve = curve;
+    // dva mírné dolní propusti za sebou: strmě uříznou výšky bez rezonanční špičky
     this.filter = ctx.createBiquadFilter();
     this.filter.type = 'lowpass';
-    this.filter.Q.value = 2.5;
+    this.filter.Q.value = 0.5;
+    this.filter2 = ctx.createBiquadFilter();
+    this.filter2.type = 'lowpass';
+    this.filter2.Q.value = 0.5;
     this.gain = ctx.createGain();
     this.gain.gain.value = 0;
-    this.o1.connect(g1).connect(this.shaper);
-    this.o2.connect(g2).connect(this.shaper);
-    this.o3.connect(g3).connect(this.shaper);
-    this.shaper.connect(this.filter).connect(this.gain).connect(out);
-    this.o1.start();
-    this.o2.start();
-    this.o3.start();
+    this.o1.connect(g1).connect(this.pulse);
+    this.sub.connect(gSub).connect(this.pulse);
+    this.half.connect(gHalf).connect(this.pulse);
+    this.pulse.connect(this.shaper).connect(this.filter).connect(this.filter2).connect(this.gain).connect(out);
+    for (const o of [this.o1, this.sub, this.half, this.lfo]) o.start();
   }
   set(rpm, throttle, vol) {
     const t = this.ctx.currentTime;
-    const f = (rpm / 60) * 2;
-    this.o1.frequency.setTargetAtTime(f, t, 0.02);
-    this.o2.frequency.setTargetAtTime(f * 0.5, t, 0.02);
-    this.o3.frequency.setTargetAtTime(f * 2.01, t, 0.02);
-    this.filter.frequency.setTargetAtTime(280 + throttle * 1500 + rpm * 0.22, t, 0.04);
-    this.gain.gain.setTargetAtTime(vol * this.level * (0.5 + 0.5 * throttle), t, 0.05);
+    const f = (rpm / 60) * 1.6;
+    this.o1.frequency.setTargetAtTime(f, t, 0.04);
+    this.sub.frequency.setTargetAtTime(f * 0.5, t, 0.04);
+    this.half.frequency.setTargetAtTime(f * 1.5, t, 0.04);
+    this.lfo.frequency.setTargetAtTime(f * 0.25, t, 0.04);
+    const cut = 220 + rpm * 0.13 + throttle * 520;
+    this.filter.frequency.setTargetAtTime(cut, t, 0.06);
+    this.filter2.frequency.setTargetAtTime(cut * 1.3, t, 0.06);
+    // ve vysokých otáčkách trochu ubrat, aby nepískal
+    const high = 1 - 0.3 * clamp((rpm - 4800) / 2800, 0, 1);
+    this.gain.gain.setTargetAtTime(vol * this.level * (0.55 + 0.45 * throttle) * high, t, 0.06);
   }
 }
 
@@ -79,6 +104,7 @@ export class AudioEngine {
     this.ctx = null;
     this.muted = false;
     this.volume = 0.8;
+    this.engineVolume = 1;
   }
 
   init() {
@@ -100,11 +126,11 @@ export class AudioEngine {
     const d = this.noiseBuf.getChannelData(0);
     for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
 
-    this.player = new EngineVoice(ctx, this.master, 0.3);
-    this.rival = new EngineVoice(ctx, this.master, 0.16);
+    this.player = new EngineVoice(ctx, this.master, 0.26);
+    this.rival = new EngineVoice(ctx, this.master, 0.12);
     this.skid = this.loopNoise('bandpass', 950, 1.4);
     this.wind = this.loopNoise('lowpass', 520, 0.7);
-    this.nitro = this.loopNoise('highpass', 1600, 0.8);
+    this.nitro = this.loopNoise('bandpass', 1300, 0.7);
     this.offroad = this.loopNoise('lowpass', 260, 1.0);
   }
 
@@ -126,7 +152,7 @@ export class AudioEngine {
 
   // dva hráči: druhý motor hraje stejně nahlas jako první
   setDuo(on) {
-    if (this.rival) this.rival.level = on ? 0.3 : 0.16;
+    if (this.rival) this.rival.level = on ? 0.26 : 0.12;
   }
 
   setMuted(m) {
@@ -138,13 +164,14 @@ export class AudioEngine {
   update(s) {
     if (!this.ctx) return;
     const t = this.ctx.currentTime;
-    this.player.set(s.rpm, s.throttle, s.active ? 1 : 0);
+    const ev = this.engineVolume;
+    this.player.set(s.rpm, s.throttle, s.active ? ev : 0);
     const rv = s.rivalDist != null ? clamp(1 / (1 + s.rivalDist / 10), 0, 1) : 0;
-    this.rival.set(s.rivalRpm ?? 3000, 0.8, s.active ? rv : 0);
-    this.skid.g.gain.setTargetAtTime(s.active ? clamp(s.skid, 0, 1) * 0.28 : 0, t, 0.05);
+    this.rival.set(s.rivalRpm ?? 3000, 0.8, s.active ? rv * ev : 0);
+    this.skid.g.gain.setTargetAtTime(s.active ? clamp(s.skid, 0, 1) * 0.22 : 0, t, 0.05);
     this.skid.f.frequency.setTargetAtTime(700 + clamp(s.speed, 0, 50) * 12, t, 0.1);
     this.wind.g.gain.setTargetAtTime(s.active ? clamp(s.speed / 60, 0, 1.3) * 0.13 : 0, t, 0.1);
-    this.nitro.g.gain.setTargetAtTime(s.active && s.nitro ? 0.16 : 0, t, 0.05);
+    this.nitro.g.gain.setTargetAtTime(s.active && s.nitro ? 0.1 : 0, t, 0.05);
     this.offroad.g.gain.setTargetAtTime(s.active && s.offroad ? clamp(s.speed / 30, 0, 1) * 0.32 : 0, t, 0.08);
   }
 

@@ -94,20 +94,19 @@
         </div>
       </section>
 
-      <section class="menu-block options">
-        <div class="opt">
-          <h2 class="label" id="vehicle1-label">Vůz</h2>
-          <div class="seg small" id="vehicle-seg" role="radiogroup" aria-label="Vůz">
-            <button type="button" role="radio" data-vehicle="car">Auto</button>
-            <button type="button" role="radio" data-vehicle="formula">Formule</button>
-          </div>
-        </div>
-        <div class="opt" id="vehicle2-opt" hidden>
-          <h2 class="label">Vůz hráče 2</h2>
-          <div class="seg small" id="vehicle2-seg" role="radiogroup" aria-label="Vůz hráče 2">
-            <button type="button" role="radio" data-vehicle="car">Auto</button>
-            <button type="button" role="radio" data-vehicle="formula">Formule</button>
-          </div>
+      <section class="menu-block" id="car-block">
+        <h2 class="label">Vůz</h2>
+        <div class="car-cards">
+          <button type="button" class="car-card" data-player="0">
+            <span class="car-chips"></span>
+            <span class="car-text"><strong></strong><em></em></span>
+            <span class="car-go">Garáž ›</span>
+          </button>
+          <button type="button" class="car-card" data-player="1" hidden>
+            <span class="car-chips"></span>
+            <span class="car-text"><strong></strong><em></em></span>
+            <span class="car-go">Garáž ›</span>
+          </button>
         </div>
       </section>
 
@@ -122,28 +121,6 @@
         </div>
       </section>
 
-      <section class="menu-block options colors-row">
-        <div class="opt">
-          <h2 class="label" id="color1-label">Barva vozu</h2>
-          <div class="swatches" id="swatches" role="radiogroup" aria-label="Barva vozu"></div>
-          <h2 class="label" id="accent1-label">Doplňková barva</h2>
-          <div class="swatches" id="accents" role="radiogroup" aria-label="Doplňková barva"></div>
-          <details class="livery">
-            <summary>Další barvy a lak</summary>
-            <div class="livery-box" id="livery" data-player="1"></div>
-          </details>
-        </div>
-        <div class="opt" id="color2-opt" hidden>
-          <h2 class="label">Barva hráče 2</h2>
-          <div class="swatches" id="swatches2" role="radiogroup" aria-label="Barva hráče 2"></div>
-          <h2 class="label">Doplňková barva hráče 2</h2>
-          <div class="swatches" id="accents2" role="radiogroup" aria-label="Doplňková barva hráče 2"></div>
-          <details class="livery">
-            <summary>Další barvy a lak</summary>
-            <div class="livery-box" id="livery2" data-player="2"></div>
-          </details>
-        </div>
-      </section>
       <p class="hint keys-2p" id="keys-2p" hidden>
         <strong>Hráč 1</strong> WASD, drift mezerník, nitro levý Shift, power-up E.
         <strong>Hráč 2</strong> šipky, drift klávesa vpravo od tečky, nitro pravý Shift, power-up tečka, návrat na trať Enter.
@@ -185,8 +162,60 @@
             <h2 class="label">Hudba</h2>
             <button type="button" class="toggle" id="music-toggle" aria-pressed="true" aria-label="Hudba"><span></span><em>Zapnuto</em></button>
           </div>
+          <div class="opt">
+            <h2 class="label">Hlasitost motoru</h2>
+            <div class="seg small" id="engine-seg" role="radiogroup" aria-label="Hlasitost motoru">
+              <button type="button" role="radio" data-engine="low">Tichý</button>
+              <button type="button" role="radio" data-engine="mid">Střední</button>
+              <button type="button" role="radio" data-engine="high">Hlasitý</button>
+            </div>
+          </div>
         </div>
       </details>
+    </div>
+  </div>
+
+  <!-- Garáž -->
+  <div id="garage" class="screen menu garage" hidden>
+    <div class="menu-panel garage-panel">
+      <header class="garage-head">
+        <button type="button" class="btn" id="gar-back">‹ Hotovo</button>
+        <h1 class="garage-title">Garáž</h1>
+      </header>
+      <div class="seg small" id="gar-player" role="radiogroup" aria-label="Hráč" hidden>
+        <button type="button" role="radio" data-player="0">Hráč 1</button>
+        <button type="button" role="radio" data-player="1">Hráč 2</button>
+      </div>
+      <section class="menu-block">
+        <h2 class="label">Typ vozu</h2>
+        <div class="seg" id="gar-vehicle" role="radiogroup" aria-label="Typ vozu">
+          <button type="button" role="radio" data-vehicle="car">Auto</button>
+          <button type="button" role="radio" data-vehicle="formula">Formule</button>
+        </div>
+      </section>
+      <div class="gar-tabs" id="gar-mode" role="radiogroup" aria-label="Úprava">
+        <button type="button" role="radio" data-mode="basic">Základ</button>
+        <button type="button" role="radio" data-mode="detail">Detail</button>
+      </div>
+      <section class="menu-block" id="gar-basic">
+        <h2 class="label">Barva vozu</h2>
+        <div class="swatches gar-swatches" id="gar-colors" role="radiogroup" aria-label="Barva vozu"></div>
+        <p class="hint">Ostatní díly k barvě ladí samy. Každý díl zvlášť obarvíš v záložce Detail.</p>
+        <h2 class="label">Hotové designy</h2>
+        <div class="designs" id="gar-designs"></div>
+      </section>
+      <section class="menu-block" id="gar-detail" hidden>
+        <div class="parts" id="gar-parts" role="radiogroup" aria-label="Díl vozu"></div>
+        <div class="gar-part-head">
+          <h2 class="label">Barva: <span id="gar-part-label"></span></h2>
+          <button type="button" class="lv-reset" id="gar-part-reset">Výchozí</button>
+        </div>
+        <div class="swatches gar-swatches" id="gar-palette" role="radiogroup" aria-label="Barva dílu"></div>
+        <h2 class="label">Lak</h2>
+        <div class="seg small" id="gar-finish" role="radiogroup" aria-label="Lak"></div>
+        <button type="button" class="btn lv-reset-all" id="gar-reset">Vrátit díly na výchozí</button>
+      </section>
+      <p class="hint gar-drag">Vůz otočíš tažením myší nebo prstem.</p>
     </div>
   </div>
 

@@ -110,6 +110,27 @@ export class CameraRig {
     this.applyShake(dt);
   }
 
+  // garáž: bližší oblet kolem vozu; offX/offY posunou vůz ve výřezu (zlomek poloviny šířky/výšky),
+  // aby ho nezakrýval panel
+  garage(dt, car, offX = 0, offY = 0, spin = true) {
+    if (spin) this.orbitAngle += dt * 0.22;
+    const a = this.orbitAngle, R = 8.6;
+    const tx = car.x + Math.cos(a) * R, tz = car.z + Math.sin(a) * R;
+    const k = Math.min(1, dt * 4);
+    this.pos.x += (tx - this.pos.x) * k;
+    this.pos.z += (tz - this.pos.z) * k;
+    this.pos.y += (car.y + 2.7 - this.pos.y) * k;
+    this.fov += (46 - this.fov) * Math.min(1, dt * 3);
+    const dx = car.x - this.pos.x, dz = car.z - this.pos.z;
+    const dist = Math.hypot(dx, dz) || R;
+    const halfH = Math.tan((this.fov * Math.PI) / 360) * dist;
+    const halfW = halfH * this.camera.aspect;
+    // pravý vektor pohledu ve vodorovné rovině; pohled doleva = vůz se posune doprava
+    const rx = -dz / dist, rz = dx / dist;
+    this.look.set(car.x - rx * offX * halfW, car.y + 0.5 - offY * halfH, car.z - rz * offX * halfW);
+    this.applyShake(dt);
+  }
+
   applyShake(dt) {
     const cam = this.camera;
     cam.position.copy(this.pos);
