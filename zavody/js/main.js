@@ -1,10 +1,10 @@
 // Turbo Okruh – vstupní bod: renderer, menu, závod a herní smyčka.
 import * as THREE from 'three';
 import { TRACKS } from './tracks.js';
-import { BIOMES } from './biomes.js';
+import { BIOMES, wetBiome } from './biomes.js';
 import { Track, SURF_OFF } from './track.js';
 import { Terrain } from './terrain.js';
-import { buildScenery, buildSky, buildLights } from './scenery.js';
+import { buildScenery, buildSky, buildLights, buildRain } from './scenery.js';
 import { randomTrackDef, buildCenterline, validateCenterline } from './trackmath.js';
 import { Car, createCarMesh, disposeCarMesh } from './car.js';
 import { Race, OPPONENTS, PLAYER_NUMBERS, F1_TEAMS } from './race.js';
@@ -223,9 +223,20 @@ function currentLooks() {
 // závodní režim bez šampionátu ('race' | 'time')
 const raceMode = () => (S.mode === 'time' ? 'time' : 'race');
 // trať, která se má právě jet (v šampionátu podle kola)
-const currentTrackId = () => (S.mode === 'cup' ? CUP_TRACKS[G.cup ? G.cup.round : 0] : S.track);
+const currentTrackId = () => (S.mode === 'cup' ? CUP_TRACKS[G.cup ? G.cup.round : 0] : S.track + (S.reverse ? REV : ''));
+
+const wantsRain = (def) => S.weather === 'rain' && def.biome !== 'winter';
+
+// obrácená varianta trati: stejné body v opačném pořadí (start zůstává uprostřed rovinky),
+// vlastní id kvůli rekordům a ghostům
+const REV = '~r';
+const baseId = (id) => (id && id.endsWith(REV) ? id.slice(0, -REV.length) : id);
+function reverseDef(def) {
+  return { ...def, id: def.id + REV, name: `${def.name} (obráceně)`, points: [def.points[0], ...def.points.slice(1).reverse()] };
+}
 
 function trackDef(id) {
+  if (id && id.endsWith(REV)) return reverseDef(trackDef(baseId(id)));
   if (id === 'random') return randomDef(S.randomSeed);
   if (id && id.startsWith('custom-')) {
     const t = store.getCustom(id);
@@ -279,8 +290,11 @@ async function loadWorld(id) {
   // mezitím si hráč vybral jinou trať
   if (token !== loadToken) return G.world;
   disposeWorld();
-  const def = trackDef(id);
-  const biome = BIOMES[def.biome];
+  // déšť (na zimní trati místo něj padá sníh)
+  const baseDef = trackDef(id);
+  const wet = wantsRain(baseDef);
+  const def = wet ? { ...baseDef, wet: true } : baseDef;
+  const biome = wet ? wetBiome(BIOMES[def.biome]) : BIOMES[def.biome];
   const track = new Track(def);
   const terrain = new Terrain(track, def.biome, { seed: def.seed, lake: def.lake, cell: S.quality === 'low' ? 11 : 8 });
   const group = new THREE.Group();
@@ -314,7 +328,11 @@ async function loadWorld(id) {
   const effects = new Effects(scene, S.quality);
   effects.setView(camera, renderer.domElement.height, scene.fog);
 
-  G.world = { def, biome, track, terrain, group, sky, lights, effects, envRT, showcase: [], crowd: scenery.extra.crowd, snow: scenery.extra.snow };
+  const rain = wet ? buildRain(S.quality === 'low' ? 1500 : S.quality === 'medium' ? 2600 : 4000) : null;
+  if (rain) group.add(rain.points);
+  G.world = {
+    def, biome, track, terrain, group, sky, lights, effects, envRT, showcase: [], crowd: scenery.extra.crowd, snow: scenery.extra.snow, rain, wet,
+  };
   setupPost();
   buildShowcase();
   $('loading').hidden = true;
@@ -359,7 +377,7 @@ const menuTracks = [];
 const editor = new TrackEditor({
   store,
   onDrive: (track) => {
-    if (G.world && G.world.def.id === track.id) G.forceReload = true;
+    if (G.world && baseId(G.world.def.id) === track.id) G.forceReload = true;
     S.track = track.id;
     if (S.mode === 'cup') S.mode = 'race';
     store.save();
@@ -372,7 +390,8 @@ const editor = new TrackEditor({
     $('menu').hidden = false;
     if (deletedId && S.track === deletedId) S.track = 'sumava';
     buildTrackList();
-    const reload = (track && G.world && G.world.def.id === track.id) || (deletedId && G.world && G.world.def.id === deletedId);
+    const shown = G.world && baseId(G.world.def.id);
+    const reload = (track && shown === track.id) || (deletedId && shown === deletedId);
     if (reload) await selectTrack(currentTrackId(), true);
   },
 });
@@ -384,7 +403,7 @@ function openEditor(track) {
 }
 
 function trackMeta(def, track) {
-  const rec = store.record(def.id, playerKinds()[0]);
+  const rec = store.record(def.id + (S.reverse ? REV : ''), playerKinds()[0]);
   const km = (track.L / 1000).toFixed(2).replace('.', ',');
   return `${km} km · ${rec.lap ? 'rekord ' + formatTime(rec.lap) : 'bez rekordu'}`;
 }
@@ -470,7 +489,7 @@ async function selectTrack(id, force = false) {
   S.track = id;
   store.save();
   refreshMenu();
-  await loadWorld(id);
+  await loadWorld(currentTrackId());
   G.screen = 'menu';
 }
 
@@ -478,6 +497,10 @@ function refreshMenu() {
   for (const m of menuTracks) m.btn.setAttribute('aria-checked', String(m.id === S.track));
   for (const b of $('mode-seg').children) b.setAttribute('aria-checked', String(b.dataset.mode === S.mode));
   for (const b of $('diff-seg').children) b.setAttribute('aria-checked', String(b.dataset.diff === S.difficulty));
+  for (const b of $('dir-seg').children) b.setAttribute('aria-checked', String((b.dataset.dir === 'rev') === !!S.reverse));
+  for (const b of $('weather-seg').children) b.setAttribute('aria-checked', String(b.dataset.weather === (S.weather || 'dry')));
+  const winter = trackDef(currentTrackId()).biome === 'winter';
+  $('weather-hint').hidden = !(winter && S.weather === 'rain');
   for (const b of $('quality-seg').children) b.setAttribute('aria-checked', String(b.dataset.q === S.quality));
   $('laps-value').textContent = S.laps;
   const two = humanCount() === 2;
@@ -663,6 +686,28 @@ function bindMenu() {
       } else if (G.world) buildShowcase();
     });
   }
+  for (const b of $('weather-seg').children) {
+    b.addEventListener('click', async () => {
+      if ((S.weather || 'dry') === b.dataset.weather) return;
+      S.weather = b.dataset.weather;
+      store.save();
+      refreshMenu();
+      await loadWorld(currentTrackId());
+      G.screen = 'menu';
+    });
+  }
+  for (const b of $('dir-seg').children) {
+    b.addEventListener('click', async () => {
+      const rev = b.dataset.dir === 'rev';
+      if (!!S.reverse === rev) return;
+      S.reverse = rev;
+      store.save();
+      refreshMenu();
+      refreshTrackMeta();
+      await loadWorld(currentTrackId());
+      G.screen = 'menu';
+    });
+  }
   for (const b of $('diff-seg').children) {
     b.addEventListener('click', () => {
       S.difficulty = b.dataset.diff;
@@ -820,7 +865,7 @@ async function startRaceInner() {
     openEditor(custom);
     return;
   }
-  if (!G.world || G.forceReload || G.world.def.id !== trackDef(trackId).id) {
+  if (!G.world || G.forceReload || G.world.def.id !== trackDef(trackId).id || G.world.wet !== wantsRain(trackDef(trackId))) {
     G.forceReload = false;
     await loadWorld(trackId);
   }
@@ -1234,6 +1279,7 @@ function emitEffects(dt) {
   const w = G.world;
   const fx = w.effects;
   const smokeCol = w.biome.night ? [0.5, 0.52, 0.58] : [0.82, 0.82, 0.8];
+  const sprayCol = w.biome.night ? [0.45, 0.5, 0.56] : [0.7, 0.75, 0.8];
   const cams = race.players.length > 1 ? [camera, camera2] : [camera];
   for (const car of race.cars) {
     const far = cams.every((c) => (car.x - c.position.x) ** 2 + (car.z - c.position.z) ** 2 > 170 * 170);
@@ -1261,6 +1307,12 @@ function emitEffects(dt) {
         }
       }
     } else car.lastWheels = null;
+    // na mokru zvedají kola za sebou spršku vody
+    if (w.wet && !far && car.speed > 12 && car.surface !== SURF_OFF && Math.random() < dt * 18) {
+      const amt = clamp((car.speed - 12) / 40, 0.2, 0.75);
+      fx.tireSmoke(wl[0], wl[1], wl[2], car.vx, car.vz, amt, sprayCol);
+      fx.tireSmoke(wr[0], wr[1], wr[2], car.vx, car.vz, amt, sprayCol);
+    }
     if (!far && car.surface === SURF_OFF && car.speed > 6 && Math.random() < dt * 30) {
       fx.dust(wl[0], wl[1], wl[2], car.vx, car.vz, w.biome.dust);
       fx.dust(wr[0], wr[1], wr[2], car.vx, car.vz, w.biome.dust);
@@ -1396,6 +1448,7 @@ function frame(now) {
         skid: Math.max(...humans.map(skidOf)),
         nitro: humans.some((c) => c.nitroActive),
         offroad: humans.some((c) => c.surface === SURF_OFF),
+        rain: w.wet,
         rivalDist,
         rivalRpm,
         kind: p.kind,
@@ -1442,6 +1495,7 @@ function frame(now) {
 
   w.effects.update(dt);
   if (w.snow) w.snow.update(dt);
+  if (w.rain) w.rain.update(dt);
   renderViews(w);
 }
 
@@ -1480,6 +1534,7 @@ function renderViews(w) {
     w.sky.position.copy(camera.position);
     w.effects.setView(camera, renderer.domElement.height, scene.fog);
     if (w.snow) w.snow.setView(camera, renderer.domElement.height);
+    if (w.rain) w.rain.setView(camera);
     if (G.post) G.post.render();
     else renderer.render(scene, camera);
     return;
@@ -1500,6 +1555,7 @@ function renderViews(w) {
     w.sky.position.copy(cam.position);
     w.effects.setView(cam, h2 * renderer.getPixelRatio(), scene.fog);
     if (w.snow) w.snow.setView(cam, h2 * renderer.getPixelRatio());
+    if (w.rain) w.rain.setView(cam);
     const y = i === 0 ? H - h2 : 0;
     renderer.setViewport(0, y, W, h2);
     renderer.setScissor(0, y, W, h2);

@@ -158,6 +158,7 @@ export class AudioEngine {
     this.wind = this.loopNoise('lowpass', 520, 0.7);
     this.nitro = this.loopNoise('bandpass', 1300, 0.7);
     this.offroad = this.loopNoise('lowpass', 260, 1.0);
+    this.rain = this.loopNoise('bandpass', 1700, 0.35);
   }
 
   loopNoise(type, freq, q) {
@@ -201,6 +202,8 @@ export class AudioEngine {
     this.wind.g.gain.setTargetAtTime(s.active ? clamp(s.speed / 60, 0, 1.3) * 0.13 : 0, t, 0.1);
     this.nitro.g.gain.setTargetAtTime(s.active && s.nitro ? 0.1 : 0, t, 0.05);
     this.offroad.g.gain.setTargetAtTime(s.active && s.offroad ? clamp(s.speed / 30, 0, 1) * 0.32 : 0, t, 0.08);
+    // šum deště: tichý podklad, s rychlostí trochu zesílí (kapky na kapotě)
+    this.rain.g.gain.setTargetAtTime(s.active && s.rain ? 0.035 + clamp(s.speed / 60, 0, 1) * 0.03 : 0, t, 0.3);
   }
 
   silence() {

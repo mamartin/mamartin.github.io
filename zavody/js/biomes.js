@@ -90,3 +90,32 @@ export const BIOMES = {
     dust: [0.35, 0.35, 0.38],
   },
 };
+
+// déšť: zatažená obloha, bližší šedá mlha, slabé slunce, tmavší mokrý asfalt a menší přilnavost
+const mixHex = (a, b, t) => {
+  const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16);
+  const ch = (sh) => Math.round(((pa >> sh) & 255) * (1 - t) + ((pb >> sh) & 255) * t);
+  return '#' + ((ch(16) << 16) | (ch(8) << 8) | ch(0)).toString(16).padStart(6, '0');
+};
+
+export const WET_GRIP = 0.82;
+
+export function wetBiome(b) {
+  // v noci míříme k tmavým šedým, aby se obloha nerozsvítila
+  const grey = b.night
+    ? { top: '#1a1e24', horizon: '#2c3239', bottom: '#1e2226', fog: '#242a30', clouds: '#3a4048' }
+    : { top: '#5d6670', horizon: '#8f979e', bottom: '#5b6166', fog: '#8a9298', clouds: '#9aa1a8' };
+  return {
+    ...b,
+    wet: true,
+    sky: { top: mixHex(b.sky.top, grey.top, 0.65), horizon: mixHex(b.sky.horizon, grey.horizon, 0.6), bottom: mixHex(b.sky.bottom, grey.bottom, 0.5), glow: b.sky.glow * 0.25 },
+    sun: { ...b.sun, intensity: b.sun.intensity * 0.4 },
+    hemi: { ...b.hemi, intensity: b.hemi.intensity * 0.9 },
+    fog: { color: mixHex(b.fog.color, grey.fog, 0.6), near: b.fog.near * 0.45, far: b.fog.far * 0.55 },
+    exposure: b.exposure * 0.92,
+    clouds: b.clouds && mixHex(b.clouds, grey.clouds, 0.6),
+    roadGrip: (b.roadGrip ?? 1) * WET_GRIP,
+    offGrip: (b.offGrip ?? 0.6) * 0.85,
+    track: { ...b.track, asphalt: mixHex(b.track.asphalt, '#1c1e22', 0.45), wet: true },
+  };
+}

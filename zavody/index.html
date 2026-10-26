@@ -52,6 +52,10 @@
       <section class="menu-block" id="track-block">
         <h2 class="label">Trať</h2>
         <div class="tracks" id="track-list" role="radiogroup" aria-label="Trať"></div>
+        <div class="seg small" id="dir-seg" role="radiogroup" aria-label="Směr jízdy">
+          <button type="button" role="radio" data-dir="fwd">Normální směr</button>
+          <button type="button" role="radio" data-dir="rev">Obráceně</button>
+        </div>
         <button type="button" class="new-track" id="new-track">+ Postavit vlastní trať</button>
       </section>
 
@@ -77,6 +81,14 @@
             <button type="button" role="radio" data-diff="medium">Střední</button>
             <button type="button" role="radio" data-diff="hard">Těžcí</button>
           </div>
+        </div>
+        <div class="opt" id="weather-opt">
+          <h2 class="label">Počasí</h2>
+          <div class="seg small" id="weather-seg" role="radiogroup" aria-label="Počasí">
+            <button type="button" role="radio" data-weather="dry">Sucho</button>
+            <button type="button" role="radio" data-weather="rain">Déšť</button>
+          </div>
+          <p class="hint" id="weather-hint" hidden>Na zimní trati místo deště sněží.</p>
         </div>
       </section>
 
@@ -246,7 +258,7 @@
       </div>
       <canvas class="minimap" width="200" height="200" aria-label="Mapa trati"></canvas>
       <canvas class="speedo" width="240" height="240" aria-label="Tachometr"></canvas>
-      <div class="draft-tag" aria-hidden="true"><span>Háček</span><i></i></div>
+      <div class="draft-tag" aria-hidden="true"><span>Slipstream</span><i></i></div>
       <div class="center-msg" aria-live="polite"></div>
       <div class="sub-msg"></div>
       <div class="player-tag" hidden></div>

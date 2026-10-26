@@ -629,7 +629,7 @@ export class Car {
     this.ghostTimer = 0;
     this.spinTimer = 0;
     this.shield = 0;
-    this.draft = 0; // háček za jiným autem (0–1)
+    this.draft = 0; // slipstream za jiným autem (0–1)
     this.launchBoost = 0; // perfektní start: zbývající čas extra tahu
     this.launchPenalty = 0; // předčasný start: zbývající čas protáčení kol
     this.track.project(this.x, this.z, -1, this.proj);
@@ -714,7 +714,7 @@ export class Car {
     if (throttle > 0) {
       if (vLong < -1) a += V.brake * throttle;
       else {
-        // v háčku je menší odpor, takže i vyšší maximálka
+        // ve slipstreamu je menší odpor, takže i vyšší maximálka
         const vm = V.vmax * topMul * (this.nitroActive ? V.nitroVmax : 1) * (1 + 0.06 * this.draft);
         const r = Math.max(0, vLong) / vm;
         a += V.accel * throttle * Math.max(0, 1 - r * r);

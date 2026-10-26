@@ -273,6 +273,62 @@ export function buildSnow(count) {
   };
 }
 
+// déšť: čárky padající šikmo, ukotvené ve světě a zabalené do krychle kolem kamery;
+// oba konce čárky mají stejný základ, aby se při přechodu přes okraj krychle nerozpadla
+export function buildRain(count) {
+  const B = 90;
+  const pos = new Float32Array(count * 6);
+  const tip = new Float32Array(count * 2);
+  const seed = new Float32Array(count * 2);
+  const rng = new RNG(47);
+  for (let i = 0; i < count; i++) {
+    const x = rng.range(0, B), y = rng.range(0, B), z = rng.range(0, B), s = rng.next();
+    pos.set([x, y, z, x, y, z], i * 6);
+    tip[i * 2 + 1] = 1;
+    seed[i * 2] = seed[i * 2 + 1] = s;
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  g.setAttribute('tip', new THREE.BufferAttribute(tip, 1));
+  g.setAttribute('seed', new THREE.BufferAttribute(seed, 1));
+  const mat = new THREE.ShaderMaterial({
+    uniforms: { uCam: { value: new THREE.Vector3() }, uTime: { value: 0 }, uBox: { value: B } },
+    vertexShader: /* glsl */ `
+      attribute float tip; attribute float seed;
+      uniform vec3 uCam; uniform float uTime; uniform float uBox;
+      varying float vA;
+      void main() {
+        vec3 vel = vec3(2.5, -24.0 - seed * 6.0, 1.2);
+        vec3 p = position + vel * uTime;
+        p = mod(p - uCam + uBox * 0.5, uBox) - uBox * 0.5 + uCam;
+        p -= normalize(vel) * tip * (0.5 + seed * 0.4);
+        vec4 mv = modelViewMatrix * vec4(p, 1.0);
+        vA = smoothstep(uBox * 0.5, uBox * 0.2, length(p - uCam)) * smoothstep(0.4, 1.5, -mv.z) * (1.0 - tip * 0.6);
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: /* glsl */ `
+      varying float vA;
+      void main() {
+        if (vA <= 0.0) discard;
+        gl_FragColor = vec4(0.8, 0.86, 0.92, vA * 0.6);
+      }`,
+    transparent: true,
+    depthWrite: false,
+  });
+  const lines = new THREE.LineSegments(g, mat);
+  lines.frustumCulled = false;
+  lines.renderOrder = 4;
+  return {
+    points: lines,
+    update(dt) {
+      mat.uniforms.uTime.value += dt;
+    },
+    setView(camera) {
+      mat.uniforms.uCam.value.copy(camera.position);
+    },
+  };
+}
+
 function broadleafGeometry() {
   const parts = [
     colored(new THREE.CylinderGeometry(0.16, 0.24, 3.2, 6).translate(0, 1.6, 0), '#d8d2c4'),

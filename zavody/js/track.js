@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { buildCenterline, smoothCircular } from './trackmath.js';
 import { clamp, angleDiff, RNG } from './rng.js';
-import { BIOMES } from './biomes.js';
+import { BIOMES, WET_GRIP } from './biomes.js';
 
 export const SURF_ROAD = 0, SURF_CURB = 1, SURF_OFF = 2;
 
@@ -18,7 +18,7 @@ export class Track {
     this.curbMask = this.computeCurbs();
     this.buildRacingLine();
     // AI počítá s přilnavostí povrchu (na sněhu jede opatrněji)
-    this.roadGrip = BIOMES[def.biome]?.roadGrip ?? 1;
+    this.roadGrip = (BIOMES[def.biome]?.roadGrip ?? 1) * (def.wet ? WET_GRIP : 1);
     this.speedProfile = this.computeSpeedProfile(22 * this.roadGrip, 19 * this.roadGrip, 60);
     this.profiles = new Map([['car', this.speedProfile]]);
   }
@@ -208,7 +208,10 @@ export class Track {
         [0, v0, 1, v0, 1, v1, 0, v1],
       );
     }
-    const roadMat = new THREE.MeshLambertMaterial({ map: roadTex, color: 0xffffff });
+    // mokrý asfalt se leskne (odráží oblohu), suchý je matný
+    const roadMat = style.wet
+      ? new THREE.MeshStandardMaterial({ map: roadTex, color: 0xffffff, roughness: 0.3, metalness: 0.2 })
+      : new THREE.MeshLambertMaterial({ map: roadTex, color: 0xffffff });
     const roadMesh = new THREE.Mesh(road.build(), roadMat);
     roadMesh.receiveShadow = true;
     group.add(roadMesh);

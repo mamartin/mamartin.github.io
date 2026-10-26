@@ -181,7 +181,7 @@ export class HUD {
     this.set(this.time, 'time', running ? formatTime(p.finished ? p.finishTime : race.time) : '0:00,00');
     this.set(this.lapTime, 'laptime', running && !p.finished ? formatTime(race.time - p.lapStart) : '–');
     this.set(this.best, 'best', formatTime(p.bestLap));
-    // háček: štítek nad tachometrem se sílou úbytku odporu
+    // slipstream: štítek nad tachometrem se sílou úbytku odporu
     const draft = Math.round(p.draft * 20) / 20;
     if (this.cache.draft !== draft) {
       this.cache.draft = draft;

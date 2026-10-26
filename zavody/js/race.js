@@ -259,7 +259,7 @@ export class Race {
     this.emit('start', { car, quality });
   }
 
-  // háček: do 30 m za jiným autem a v jeho stopě klesá odpor vzduchu (víc, čím blíž a přesněji)
+  // slipstream: do 30 m za jiným autem a v jeho stopě klesá odpor vzduchu (víc, čím blíž a přesněji)
   updateDraft(dt) {
     const L = this.track.L;
     for (const car of this.cars) {

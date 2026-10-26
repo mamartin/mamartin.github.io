@@ -1,11 +1,13 @@
-// AI řidič: sleduje ideální stopu, brzdí podle rychlostního profilu trati, předjíždí.
+// AI řidič: sleduje ideální stopu, brzdí podle rychlostního profilu trati, předjíždí,
+// brání pozici a občas udělá chybu.
 import { clamp, angleDiff, RNG } from './rng.js';
 import { CAR } from './car.js';
 
+// mistakes = šance na chybu za sekundu jízdy, defend = jak důrazně brání pozici (0–1)
 export const DIFFICULTY = {
-  easy: { label: 'Lehká', corner: 0.8, top: 0.82, reaction: 0.34, noise: 0.05, nitro: false, variance: 0.04 },
-  medium: { label: 'Střední', corner: 0.93, top: 0.92, reaction: 0.24, noise: 0.03, nitro: false, variance: 0.035 },
-  hard: { label: 'Těžká', corner: 1.04, top: 1.0, reaction: 0.16, noise: 0.012, nitro: true, variance: 0.025 },
+  easy: { label: 'Lehká', corner: 0.8, top: 0.82, reaction: 0.34, noise: 0.05, nitro: false, variance: 0.04, mistakes: 0.05, defend: 0 },
+  medium: { label: 'Střední', corner: 0.93, top: 0.92, reaction: 0.24, noise: 0.03, nitro: false, variance: 0.035, mistakes: 0.03, defend: 0.6 },
+  hard: { label: 'Těžká', corner: 1.04, top: 1.0, reaction: 0.16, noise: 0.012, nitro: true, variance: 0.025, mistakes: 0.012, defend: 1 },
 };
 
 export class AIDriver {
@@ -15,11 +17,14 @@ export class AIDriver {
     this.diff = DIFFICULTY[diffKey] ?? DIFFICULTY.medium;
     // formule projede zatáčky rychleji než auto, AI s tím musí počítat
     this.profile = track.speedProfileFor(car.kind, car.spec.grip / CAR.grip, car.spec.vmax / CAR.vmax);
-    const rng = new RNG(seed);
+    const rng = (this.rng = new RNG(seed));
     this.pref = rng.range(-0.45, 0.45) * Math.max(0, track.hw - 3.5);
     this.skill = 1 + rng.range(-this.diff.variance, this.diff.variance);
     this.phase = rng.range(0, 100);
     this.avoid = 0;
+    this.defend = 0;
+    this.mistake = 0;
+    this.mistakeKind = null;
     this.time = 0;
     this.stuck = 0;
     this.wrong = 0;
@@ -54,7 +59,8 @@ export class AIDriver {
     const kA = tr.indexAt(s + Ld);
     const line = tr.racingLat[kA];
     const W = tr.hw - 1.5;
-    let lat = line + this.pref * (1 - Math.abs(line) / Math.max(1, tr.hw - 2)) + this.avoid;
+    const baseLat = line + this.pref * (1 - Math.abs(line) / Math.max(1, tr.hw - 2)) + this.avoid;
+    let lat = baseLat + this.defend;
     lat = clamp(lat, -W, W);
     const tgt = tr.sampleAt(s + Ld, lat, this.tmp);
     const desired = Math.atan2(tgt.x - car.x, tgt.z - car.z);
@@ -71,8 +77,17 @@ export class AIDriver {
     const k2 = tr.indexAt(s + look + speed * 0.5);
     vt = Math.min(vt, this.profile[k2] * corner * 1.08 * this.rubber);
 
+    // --- chyby: občas přežene nájezd do zatáčky (vyletí ven) nebo zaváhá na plynu
+    if (this.mistake > 0) this.mistake -= dt;
+    else if (this.time > 4 && speed > 20 && this.rng.chance(this.diff.mistakes * dt)) {
+      this.mistakeKind = this.rng.chance(0.6) ? 'late' : 'lift';
+      this.mistake = this.mistakeKind === 'late' ? 1.6 : 0.9;
+    }
+    if (this.mistake > 0 && this.mistakeKind === 'late') vt *= 1.13;
+
     // --- ostatní auta
     let targetAvoid = 0;
+    let defendLat = null;
     let lift = 1;
     const L = tr.L;
     for (const o of cars) {
@@ -80,6 +95,8 @@ export class AIDriver {
       let ds = o.proj.s - s;
       if (ds < -L / 2) ds += L;
       else if (ds > L / 2) ds -= L;
+      // někdo se tlačí zezadu: přesunout se před něj (jen jeden plynulý přesun, žádné kličkování)
+      if (ds > -14 && ds < -2.5 && o.speed > speed - 2 && Math.abs(o.proj.lat - P.lat) < 4) defendLat = o.proj.lat;
       if (ds <= 0 || ds > 18) continue;
       const dl = o.proj.lat - P.lat;
       if (Math.abs(dl) > 3.2) continue;
@@ -91,6 +108,10 @@ export class AIDriver {
       if (ds < 8 && Math.abs(dl) < 2.3 && o.speed < speed) lift = Math.min(lift, 0.35);
     }
     this.avoid += (clamp(targetAvoid, -W, W) - this.avoid) * Math.min(1, dt * 2.2);
+    // brání jen na rovince, v zatáčce jede ideální stopu
+    const straight = Math.abs(tr.kappaS[kA]) < 0.006;
+    const wantDefend = defendLat != null && straight && targetAvoid === 0 ? clamp(defendLat - baseLat, -2.2, 2.2) * this.diff.defend : 0;
+    this.defend += (wantDefend - this.defend) * Math.min(1, dt * 1.2);
 
     let throttle = 0, brake = 0;
     const dv = vt - speed;
@@ -98,6 +119,7 @@ export class AIDriver {
     else if (dv > -1.5) throttle = clamp(0.35 + dv * 0.3, 0, 1);
     else brake = clamp(-dv / 7, 0.25, 1);
     throttle *= lift;
+    if (this.mistake > 0 && this.mistakeKind === 'lift') throttle *= 0.35;
 
     let nitro = false;
     if (this.diff.nitro && car.nitro > 0.4 && speed > 28 && dv > 6 && Math.abs(tr.kappaS[tr.indexAt(s + 50)]) < 0.004) nitro = true;
