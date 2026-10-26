@@ -1,6 +1,6 @@
 // Garáž: typ a barvy vozu na samostatné obrazovce. Základ = jedna barva nebo hotový design,
 // detail = barva každého dílu zvlášť a typ laku.
-import { PLAYER_COLORS, ACCENT_COLORS } from './race.js';
+import { PLAYER_COLORS, ACCENT_COLORS, PLAYER_NUMBERS } from './race.js';
 
 export const PALETTE = [
   { name: 'Červená', hex: 0xd7263d },
@@ -57,11 +57,19 @@ const colorOf = (v, list, fallback) => customHex(v) ?? (Number.isInteger(v) ? li
 export const hexCss = (hex) => '#' + hex.toString(16).padStart(6, '0');
 const luminance = (hex) => 0.2126 * ((hex >> 16) & 255) / 255 + 0.7152 * ((hex >> 8) & 255) / 255 + 0.0722 * (hex & 255) / 255;
 const keysOf = (i) => (i === 0
-  ? { color: 'color', accent: 'accent', livery: 'livery', vehicle: 'vehicle' }
-  : { color: 'color2', accent: 'accent2', livery: 'livery2', vehicle: 'vehicle2' });
+  ? { color: 'color', accent: 'accent', livery: 'livery', vehicle: 'vehicle', number: 'number' }
+  : { color: 'color2', accent: 'accent2', livery: 'livery2', vehicle: 'vehicle2', number: 'number2' });
 const label = (name, kind) => (typeof name === 'string' ? name : name[kind]);
 
 export const playerKinds = (S) => [S.vehicle || 'car', S.vehicle2 || 'car'];
+
+// startovní čísla 1–99; dva hráči nesmí mít stejné
+export function playerNumbers(S) {
+  const a = S.number || PLAYER_NUMBERS[0];
+  let b = S.number2 || PLAYER_NUMBERS[1];
+  if (b === a) b = (a % 99) + 1;
+  return [a, b];
+}
 
 export function playerColors(S) {
   const a = colorOf(S.color, PLAYER_COLORS, PLAYER_COLORS[0].hex);
@@ -125,6 +133,14 @@ export class Garage {
         this.changed();
       });
     }
+    for (const [id, step] of [['gar-num-minus', -1], ['gar-num-plus', 1]]) {
+      this.el(id).addEventListener('click', () => {
+        const k = keysOf(this.player).number;
+        this.S[k] = ((playerNumbers(this.S)[this.player] - 1 + step + 99) % 99) + 1;
+        this.changed();
+      });
+    }
+    this.el('gar-random').addEventListener('click', () => this.randomDesign());
     for (const b of this.el('gar-mode').children) {
       b.addEventListener('click', () => {
         this.mode = b.dataset.mode;
@@ -256,6 +272,19 @@ export class Garage {
     this.changed();
   }
 
+  // náhodný, ale sladěný design: karoserie z palety, kontrastní doplňky, křídla, disky a lak
+  randomDesign() {
+    const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+    const body = pick(PALETTE).hex;
+    const contrast = PALETTE.filter((c) => Math.abs(luminance(c.hex) - luminance(body)) > 0.35);
+    const accent = pick(contrast.length ? contrast : PALETTE).hex;
+    const livery = { finish: pick(['gloss', 'gloss', 'metal', 'matte']) };
+    if (Math.random() < 0.5) livery.wings = Math.random() < 0.6 ? accent : 0x1d1f24;
+    livery.rims = pick([0xc9ccd1, 0x1d1f24, 0xd4a72c, accent]);
+    if (Math.random() < 0.3) livery.plate = accent;
+    this.applyDesign({ color: body, accent, livery });
+  }
+
   // zaškrtne v paletě aktuální barvu a obarví vzorek vlastní barvy
   markPalette(box, hex, own) {
     const preset = own && PALETTE.some((c) => c.hex === hex);
@@ -277,6 +306,7 @@ export class Garage {
     for (const b of this.el('gar-vehicle').children) b.setAttribute('aria-checked', String(b.dataset.vehicle === kind));
     for (const b of this.el('gar-mode').children) b.setAttribute('aria-checked', String(b.dataset.mode === this.mode));
     this.el('gar-basic').hidden = this.mode !== 'basic';
+    this.el('gar-number').textContent = String(playerNumbers(S)[i]);
     this.el('gar-detail').hidden = this.mode !== 'detail';
 
     const body = partColor(S, i, 'body').hex;

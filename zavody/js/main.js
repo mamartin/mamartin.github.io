@@ -8,9 +8,10 @@ import { buildScenery, buildSky, buildLights, buildRain } from './scenery.js';
 import { randomTrackDef, buildCenterline, validateCenterline } from './trackmath.js';
 import { Car, createCarMesh, disposeCarMesh } from './car.js';
 import { medalFor, nextMedal, hasReference, referenceLap } from './medals.js';
-import { Race, OPPONENTS, PLAYER_NUMBERS, F1_TEAMS } from './race.js';
+import { ReplayRecorder, ReplayPlayer } from './replay.js';
+import { Race, OPPONENTS, F1_TEAMS } from './race.js';
 import {
-  Garage, playerColors as colorsOf, playerAccents as accentsOf, playerLiveries as liveriesOf, playerKinds as kindsOf,
+  Garage, playerColors as colorsOf, playerAccents as accentsOf, playerLiveries as liveriesOf, playerKinds as kindsOf, playerNumbers as numbersOf,
   partColor, kindName, hexCss, DESIGNS,
 } from './garage.js';
 import { CameraRig } from './camera.js';
@@ -382,7 +383,7 @@ function buildShowcase() {
     const h = race ? slot - 3 : 0;
     const isPlayer = h >= 0 && h < humans;
     const info = isPlayer
-      ? { color: colors[h], number: PLAYER_NUMBERS[h], kind: playerKinds()[h], accent: playerAccents()[h], livery: playerLiveries()[h] }
+      ? { color: colors[h], number: numbersOf(S)[h], kind: playerKinds()[h], accent: playerAccents()[h], livery: playerLiveries()[h] }
       : { ...pool[ai % pool.length], ...currentLooks()[ai++], kind: opponentKind() };
     const car = new Car(w.track, {
       color: info.color, number: info.number, night: w.biome.night, biome: w.biome, isPlayer, kind: info.kind, accent: info.accent,
@@ -623,6 +624,21 @@ function bindDriverPick(root, noneLabel) {
     });
     pop.appendChild(b);
   };
+  // vlastní jméno: krátký text bez znaků, které by šly do HTML výsledků
+  const form = document.createElement('form');
+  form.className = 'pick-custom';
+  form.innerHTML = '<input type="text" maxlength="18" placeholder="Vlastní jméno" aria-label="Vlastní jméno" autocomplete="off" spellcheck="false"><button type="submit">OK</button>';
+  const input = form.querySelector('input');
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = input.value.replace(/[<>&"]/g, '').replace(/\s+/g, ' ').trim();
+    if (!name) return;
+    S[key] = name;
+    store.save();
+    close(true);
+    refreshMenu();
+  });
+  pop.appendChild(form);
   option('', noneLabel);
   for (const t of F1_TEAMS) {
     const h = document.createElement('div');
@@ -650,13 +666,14 @@ function bindDriverPick(root, noneLabel) {
     pop.hidden = false;
     btn.setAttribute('aria-expanded', 'true');
     document.addEventListener('pointerdown', outside, true);
-    const cur = pop.querySelector('.pick-opt[aria-selected="true"]') || options()[0];
+    const cur = pop.querySelector('.pick-opt[aria-selected="true"]') || (input.value ? input : options()[0]);
     cur.scrollIntoView({ block: 'center' });
     cur.focus();
   });
   pop.addEventListener('keydown', (e) => {
     const list = options();
     const i = list.indexOf(document.activeElement);
+    if (document.activeElement === input && e.key !== 'ArrowDown' && e.key !== 'Escape') return;
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       e.preventDefault();
       const next = list[Math.max(0, Math.min(list.length - 1, i + (e.key === 'ArrowDown' ? 1 : -1)))];
@@ -671,6 +688,8 @@ function bindDriverPick(root, noneLabel) {
 
 function refreshDriverPick(root, name, other) {
   const team = F1_TEAMS.find((t) => t.drivers.includes(name));
+  const input = root.querySelector('.pick-custom input');
+  if (document.activeElement !== input) input.value = name && !team ? name : '';
   root.querySelector('.pick-name').textContent = name || root.querySelector('.pick-opt').textContent;
   root.querySelector('.pick-team').textContent = team ? team.team : '';
   for (const b of root.querySelectorAll('.pick-opt')) {
@@ -884,9 +903,118 @@ function startFromMenu() {
   return startRace();
 }
 
+// --- instalace na plochu a hra offline ----------------------------------------------
+
+// mezipaměť pro hru offline se registruje hned, i kdyby se hra nespustila
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+  // knihovny a písma z CDN, které stránka načetla (i později, např. postprocessing), ať jsou i offline
+  const cdn = /^https:\/\/(cdn\.jsdelivr\.net|fonts\.googleapis\.com|fonts\.gstatic\.com)\//;
+  const offerCdn = () => navigator.serviceWorker.ready.then((reg) => {
+    const urls = performance.getEntriesByType('resource').map((e) => e.name).filter((u) => cdn.test(u));
+    reg.active?.postMessage({ type: 'cache', urls });
+  });
+  offerCdn();
+  setTimeout(offerCdn, 15000);
+}
+
+function bindInstall() {
+  // prohlížeče s vlastní nabídkou instalace (Chrome, Edge, Android) ji pustí přes tlačítko v menu
+  let prompt = null;
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    prompt = e;
+    $('install-btn').hidden = false;
+  });
+  $('install-btn').addEventListener('click', async () => {
+    if (!prompt) return;
+    prompt.prompt();
+    await prompt.userChoice.catch(() => null);
+    prompt = null;
+    $('install-btn').hidden = true;
+  });
+  window.addEventListener('appinstalled', () => ($('install-btn').hidden = true));
+}
+
+// --- záznam závodu --------------------------------------------------------------------
+
+function startReplay() {
+  if (!G.race || !G.replayRec) return;
+  G.replay = new ReplayPlayer(G.replayRec, G.race.cars, G.world.track, G.world.terrain);
+  G.screen = 'replay';
+  $('results').hidden = true;
+  hudRoot.hidden = true;
+  if (G.ghostMesh) G.ghostMesh.root.visible = false;
+  audio.silence();
+  $('replay').hidden = false;
+  refreshReplayUI(true);
+}
+
+function stopReplay() {
+  if (!G.replay) return;
+  G.replay.restore();
+  G.replay = null;
+  $('replay').hidden = true;
+  G.screen = 'race';
+  hudRoot.hidden = false;
+  for (const r of rigs) r.snap();
+  $('results').hidden = false;
+  $('replay-btn').focus();
+}
+
+function toggleReplay() {
+  const r = G.replay;
+  if (!r) return;
+  if (!r.playing && r.t >= r.duration) r.seek(0);
+  r.playing = !r.playing;
+  refreshReplayUI(true);
+}
+
+const clock = (t) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
+
+function refreshReplayUI(full = false) {
+  const r = G.replay;
+  if (!r) return;
+  $('rp-time').textContent = `${clock(r.t)} / ${clock(r.duration)}`;
+  if (!G.seeking) $('rp-seek').value = String(Math.round((r.t / Math.max(r.duration, 0.01)) * 1000));
+  const play = $('rp-play');
+  const label = r.playing ? 'Pauza' : 'Přehrát';
+  if (play.textContent !== label) play.textContent = label;
+  if (!full) return;
+  for (const b of $('rp-speed').children) b.setAttribute('aria-checked', String(+b.dataset.speed === r.speed));
+  for (const b of $('rp-cam').children) b.setAttribute('aria-checked', String(b.dataset.cam === r.cam));
+  for (const b of $('rp-follow').children) b.setAttribute('aria-checked', String(b.dataset.follow === r.follow));
+}
+
+function bindReplay() {
+  $('replay-btn').addEventListener('click', startReplay);
+  $('rp-exit').addEventListener('click', stopReplay);
+  $('rp-play').addEventListener('click', toggleReplay);
+  const seek = $('rp-seek');
+  seek.addEventListener('input', () => {
+    G.seeking = true;
+    if (G.replay) G.replay.seek((seek.value / 1000) * G.replay.duration);
+  });
+  seek.addEventListener('change', () => (G.seeking = false));
+  for (const [id, key, num] of [['rp-speed', 'speed', true], ['rp-cam', 'cam', false], ['rp-follow', 'follow', false]]) {
+    for (const b of $(id).children) {
+      b.addEventListener('click', () => {
+        if (!G.replay) return;
+        G.replay[key] = num ? +b.dataset[key] : b.dataset[key];
+        G.replay.cut = true;
+        refreshReplayUI(true);
+      });
+    }
+  }
+}
+
 function clearRace() {
   const r = G.race;
   if (!r) return;
+  if (G.replay) {
+    G.replay = null;
+    $('replay').hidden = true;
+  }
   for (const c of r.cars) {
     if (c.headlight) c.headlight.dispose?.();
     disposeCarMesh(c.mesh);
@@ -944,7 +1072,7 @@ async function startRaceInner() {
     playerColors: playerColors().slice(0, humans), playerKinds: playerKinds(), playerNames: playerNames(),
     opponentNames: G.cup ? (G.cup.names ??= opponentNames()) : opponentNames(), opponentKind: opponentKind(),
     opponentLooks: G.cup ? currentLooks() : (G.looks = opponentLooks()),
-    playerAccents: playerAccents(), playerLiveries: playerLiveries(), humans, night: w.biome.night,
+    playerAccents: playerAccents(), playerLiveries: playerLiveries(), playerNumbers: numbersOf(S), humans, night: w.biome.night,
   });
   for (const c of race.cars) {
     scene.add(c.mesh.root);
@@ -966,6 +1094,8 @@ async function startRaceInner() {
   G.waitOthers = 0;
   G.wantUse = [false, false];
   G.recorder = new GhostRecorder();
+  G.replayRec = new ReplayRecorder(race.cars);
+  G.recording = true;
   G.ghost = null;
   if (raceMode() === 'time') {
     const data = store.ghost(w.def.id, race.player.kind);
@@ -1079,6 +1209,11 @@ function handleKeys(pressed) {
     }
     if (G.screen === 'garage') {
       if (code === 'Escape' || btn === 'B') closeGarage();
+      continue;
+    }
+    if (G.screen === 'replay') {
+      if (code === 'Escape' || btn === 'B') stopReplay();
+      if ((code === 'Space' && document.activeElement?.tagName !== 'BUTTON') || btn === 'A') toggleReplay();
       continue;
     }
     if (G.screen === 'menu') {
@@ -1299,6 +1434,8 @@ function showResults() {
         `<td class="num">${formatTime(c.bestLap)}</td></tr>`;
     })
     .join('');
+  G.recording = false;
+  $('replay-btn').hidden = !G.replayRec || G.replayRec.duration < 3;
   $('results').hidden = false;
   $('again-btn').focus();
 }
@@ -1456,6 +1593,7 @@ function frame(now) {
       while (G.acc >= STEP && steps < 1200) {
         race.step(STEP, ctrls);
         if (humans.length === 1 && race.state === 'running' && !p.finished) G.recorder.sample(STEP, p);
+        if (G.recording && race.state !== 'countdown') G.replayRec.sample(STEP);
         G.acc -= STEP;
         steps++;
       }
@@ -1559,6 +1697,11 @@ function frame(now) {
         }
       }
     }
+  } else if (G.screen === 'replay' && G.replay) {
+    G.replay.update(dt);
+    G.replay.updateCamera(dt, camera, rig);
+    emitEffects(dt);
+    refreshReplayUI();
   } else if (G.screen === 'garage') {
     // garáž: kamera u vozu hráče, ostatní auta schovaná; vůz se posune vedle panelu
     const target = w.showcase.find((c) => c.isPlayer && c.humanIndex === garage.player) || w.showcase.find((c) => c.isPlayer);
@@ -1688,6 +1831,8 @@ async function boot() {
   }
   importSharedTrack();
   bindMenu();
+  bindReplay();
+  bindInstall();
   buildTrackList();
   await loadWorld(currentTrackId());
   G.screen = 'menu';

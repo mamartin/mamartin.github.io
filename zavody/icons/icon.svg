@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#0b1220"/>
+  <g transform="translate(256 256) scale(0.8) translate(-256 -282)">
+    <g transform="translate(30 0) skewX(-12)" fill="#f3f5f8">
+      <rect x="96" y="120" width="170" height="44"/>
+      <rect x="159" y="120" width="44" height="208"/>
+      <path fill-rule="evenodd" d="M300 120h96a40 40 0 0 1 40 40v128a40 40 0 0 1-40 40h-96a40 40 0 0 1-40-40V160a40 40 0 0 1 40-40zm6 44v120h84V164z"/>
+    </g>
+    <g fill="#e8392c">
+      <path d="M118 360h300l-12 24H106z"/>
+      <path d="M150 400h220l-12 24H138z"/>
+      <path d="M182 440h140l-12 24H170z"/>
+    </g>
+  </g>
+</svg>
