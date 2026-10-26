@@ -1,4 +1,4 @@
-// Vstupy: klávesnice (jeden nebo dva hráči), gamepady a dotyková tlačítka.
+// Vstupy: klávesnice (jeden nebo dva hráči), gamepady, dotyková tlačítka a náklon telefonu.
 
 // Rozložení kláves. Sólo hráč může používat obě poloviny klávesnice.
 export const KEYMAP = {
@@ -25,6 +25,7 @@ export class Input {
     this.touch = { left: 0, right: 0, gas: 0, brake: 0, nitro: 0, drift: 0, item: 0 };
     this.enabled = true;
     this.padPrev = {};
+    this.tilt = { on: false, angle: null, zero: 0, invert: false };
     window.addEventListener('keydown', (e) => {
       if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
       if (GAME_KEYS.has(e.code) && this.enabled) e.preventDefault();
@@ -56,6 +57,49 @@ export class Input {
       b.addEventListener('lostpointercapture', off);
       b.addEventListener('contextmenu', (e) => e.preventDefault());
     }
+  }
+
+  // --- náklon: telefon jako volant ---
+  // Úhel otočení v rovině displeje: tíže z orientace zařízení (β, γ) převedená do souřadnic
+  // displeje podle jeho natočení; 0° = telefon rovně, kladně = doprava.
+  onOrientation(e) {
+    if (e.beta == null || e.gamma == null) return;
+    const rad = Math.PI / 180;
+    const b = e.beta * rad, g = e.gamma * rad;
+    const gx = Math.cos(b) * Math.sin(g), gy = -Math.sin(b);
+    const th = ((screen.orientation?.angle ?? window.orientation ?? 0) * rad);
+    const sx = gx * Math.cos(th) - gy * Math.sin(th);
+    const sy = gx * Math.sin(th) + gy * Math.cos(th);
+    this.tilt.angle = Math.atan2(sx, -sy) / rad;
+  }
+
+  // zapnutí náklonu; na iPhonu musí přijít z kliknutí (žádost o povolení senzorů)
+  async setTilt(on) {
+    if (on && typeof DeviceOrientationEvent !== 'undefined' && DeviceOrientationEvent.requestPermission) {
+      const res = await DeviceOrientationEvent.requestPermission().catch(() => 'denied');
+      if (res !== 'granted') return false;
+    }
+    if (on && !this.orientHandler) {
+      this.orientHandler = (e) => this.onOrientation(e);
+      window.addEventListener('deviceorientation', this.orientHandler);
+    }
+    this.tilt.on = on;
+    return true;
+  }
+
+  // současná poloha telefonu = rovně
+  centerTilt() {
+    if (this.tilt.angle != null) this.tilt.zero = this.tilt.angle;
+  }
+
+  tiltSteer() {
+    const t = this.tilt;
+    if (!t.on || t.angle == null) return null;
+    let a = t.angle - t.zero;
+    a = ((a + 540) % 360) - 180;
+    if (Math.abs(a) < 2) return 0;
+    const v = Math.max(-1, Math.min(1, (a - Math.sign(a) * 2) / 26));
+    return t.invert ? -v : v;
   }
 
   // Jednorázové stisky od posledního volání: kódy kláves a "Pad<i>:<tlačítko>".
@@ -119,6 +163,8 @@ export class Input {
       const t = this.touch;
       throttle = Math.max(throttle, t.gas);
       brake = Math.max(brake, t.brake);
+      const tilt = this.tiltSteer();
+      if (tilt != null) steer = tilt;
       if (t.left || t.right) steer = t.right - t.left;
       handbrake = handbrake || !!t.drift;
       nitro = nitro || !!t.nitro;

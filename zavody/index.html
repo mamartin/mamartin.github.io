@@ -199,6 +199,25 @@
               <button type="button" role="radio" data-engine="high">Hlasitý</button>
             </div>
           </div>
+          <div class="opt">
+            <h2 class="label">Hlášky komentátora</h2>
+            <button type="button" class="toggle" id="voice-toggle" aria-pressed="true" aria-label="Hlášky komentátora"><span></span><em>Zapnuto</em></button>
+          </div>
+          <div class="opt touch-only">
+            <h2 class="label">Zatáčení</h2>
+            <div class="seg small" id="steer-seg" role="radiogroup" aria-label="Zatáčení">
+              <button type="button" role="radio" data-steer="buttons">Tlačítka</button>
+              <button type="button" role="radio" data-steer="tilt">Náklon</button>
+            </div>
+          </div>
+          <div class="opt touch-only" id="invert-opt">
+            <h2 class="label">Obrátit náklon</h2>
+            <button type="button" class="toggle" id="invert-toggle" aria-pressed="true" aria-label="Obrátit náklon"><span></span><em>Zapnuto</em></button>
+          </div>
+          <div class="opt touch-only">
+            <h2 class="label">Vibrace</h2>
+            <button type="button" class="toggle" id="haptics-toggle" aria-pressed="true" aria-label="Vibrace"><span></span><em>Zapnuto</em></button>
+          </div>
         </div>
       </details>
     </div>

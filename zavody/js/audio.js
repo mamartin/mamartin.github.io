@@ -3,6 +3,15 @@ import { clamp } from './rng.js';
 
 const GEAR_TOPS = [0, 13, 22, 31, 40, 49, 75];
 
+// otáčky podle rychlosti bez stavu (pro motory soupeřů)
+export function rpmForSpeed(speed, throttle = 0.8) {
+  let g = 1;
+  while (g < 6 && speed > GEAR_TOPS[g]) g++;
+  const lo = g === 1 ? 0 : GEAR_TOPS[g - 1] * 0.62;
+  const t = clamp((speed - lo) / (GEAR_TOPS[g] - lo), 0, 1);
+  return 1000 + t * 6600 + throttle * 250;
+}
+
 export class GearBox {
   constructor() {
     this.gear = 1;
@@ -131,6 +140,8 @@ export class AudioEngine {
     this.muted = false;
     this.volume = 0.8;
     this.engineVolume = 1;
+    this.voiceOn = true;
+    this.csVoice = null;
   }
 
   init() {
@@ -153,7 +164,14 @@ export class AudioEngine {
     for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
 
     this.player = new EngineVoice(ctx, this.master, 0.26);
-    this.rival = new EngineVoice(ctx, this.master, 0.12);
+    // motory soupeřů: tři hlasy, každý s vlastním stereo posunem
+    this.rivals = [0, 1, 2].map(() => {
+      const pan = ctx.createStereoPanner();
+      pan.connect(this.master);
+      const v = new EngineVoice(ctx, pan, 0.12);
+      v.pan = pan;
+      return v;
+    });
     this.skid = this.loopNoise('bandpass', 950, 1.4);
     this.wind = this.loopNoise('lowpass', 520, 0.7);
     this.nitro = this.loopNoise('bandpass', 1300, 0.7);
@@ -177,9 +195,9 @@ export class AudioEngine {
     return { src, f, g };
   }
 
-  // dva hráči: druhý motor hraje stejně nahlas jako první
+  // dva hráči: první „soupeřův“ motor patří hráči 2 a hraje stejně nahlas jako hráč 1
   setDuo(on) {
-    if (this.rival) this.rival.level = on ? 0.26 : 0.12;
+    if (this.rivals) this.rivals[0].level = on ? 0.26 : 0.12;
   }
 
   setMuted(m) {
@@ -193,10 +211,14 @@ export class AudioEngine {
     const t = this.ctx.currentTime;
     const ev = this.engineVolume;
     this.player.setKind(s.kind);
-    this.rival.setKind(s.rivalKind);
     this.player.set(s.rpm, s.throttle, s.active ? ev : 0);
-    const rv = s.rivalDist != null ? clamp(1 / (1 + s.rivalDist / 10), 0, 1) : 0;
-    this.rival.set(s.rivalRpm ?? 3000, 0.8, s.active ? rv * ev : 0);
+    // soupeři: hlasitost podle vzdálenosti, Dopplerův posun výšky, strana podle kamery
+    this.rivals.forEach((v, i) => {
+      const r = s.rivals?.[i];
+      v.setKind(r?.kind);
+      v.set(r ? r.rpm * r.pitch : 3000, 0.8, s.active && r ? r.vol * ev : 0);
+      v.pan.pan.setTargetAtTime(r ? r.pan : 0, t, 0.05);
+    });
     this.skid.g.gain.setTargetAtTime(s.active ? clamp(s.skid, 0, 1) * 0.22 : 0, t, 0.05);
     this.skid.f.frequency.setTargetAtTime(700 + clamp(s.speed, 0, 50) * 12, t, 0.1);
     this.wind.g.gain.setTargetAtTime(s.active ? clamp(s.speed / 60, 0, 1.3) * 0.13 : 0, t, 0.1);
@@ -229,9 +251,9 @@ export class AudioEngine {
     o.stop(t + dur + 0.05);
   }
 
-  burst(dur, type, freq, peak, sweepTo) {
+  burst(dur, type, freq, peak, sweepTo, when = 0) {
     if (!this.ctx) return;
-    const t = this.ctx.currentTime;
+    const t = this.ctx.currentTime + when;
     const src = this.ctx.createBufferSource();
     src.buffer = this.noiseBuf;
     const f = this.ctx.createBiquadFilter();
@@ -268,6 +290,66 @@ export class AudioEngine {
 
   wheelspin() {
     this.burst(0.9, 'bandpass', 1100, 0.22, 700);
+  }
+
+  // řazení: krátké cvaknutí převodovky
+  shift() {
+    this.burst(0.09, 'lowpass', 700, 0.09);
+    this.tone(95, 0.06, 'sine', 0.12);
+  }
+
+  // prskání z výfuku po ubrání plynu ve vysokých otáčkách
+  backfire(count) {
+    for (let i = 0; i < count; i++) {
+      const when = i * (0.07 + Math.random() * 0.08);
+      this.burst(0.07, 'bandpass', 500 + Math.random() * 400, 0.22, 200, when);
+      this.tone(60 + Math.random() * 30, 0.08, 'sine', 0.22, when);
+    }
+  }
+
+  // fanoušci v cíli: šum s vlnícím se jásotem, nástup a pozvolné doznění
+  crowd() {
+    if (!this.ctx) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    const src = ctx.createBufferSource();
+    src.buffer = this.noiseBuf;
+    src.loop = true;
+    const f = ctx.createBiquadFilter();
+    f.type = 'bandpass';
+    f.frequency.value = 1300;
+    f.Q.value = 0.6;
+    const wobble = ctx.createGain();
+    wobble.gain.value = 0.75;
+    const lfo = ctx.createOscillator();
+    lfo.frequency.value = 5.5;
+    const depth = ctx.createGain();
+    depth.gain.value = 0.25;
+    lfo.connect(depth).connect(wobble.gain);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.16, t + 0.5);
+    g.gain.setValueAtTime(0.16, t + 1.3);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 3.6);
+    src.connect(f).connect(wobble).connect(g).connect(this.master);
+    src.start(t, Math.random());
+    lfo.start(t);
+    src.stop(t + 3.7);
+    lfo.stop(t + 3.7);
+  }
+
+  // hlášky komentátora přes syntézu řeči, jen s českým hlasem (jinak mlčí)
+  say(text) {
+    const synth = window.speechSynthesis;
+    if (!synth || !this.voiceOn || this.muted) return;
+    if (!this.csVoice) this.csVoice = synth.getVoices().find((v) => (v.lang || '').toLowerCase().startsWith('cs')) || null;
+    if (!this.csVoice) return;
+    synth.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.voice = this.csVoice;
+    u.lang = this.csVoice.lang;
+    u.rate = 1.08;
+    u.volume = Math.min(1, this.volume + 0.1);
+    synth.speak(u);
   }
 
   fanfare() {

@@ -17,7 +17,7 @@ import {
 import { CameraRig } from './camera.js';
 import { Effects } from './effects.js';
 import { Input } from './input.js';
-import { AudioEngine, GearBox, Music } from './audio.js';
+import { AudioEngine, GearBox, Music, rpmForSpeed } from './audio.js';
 import { HUD, formatTime, formatDelta, trackOutline } from './hud.js';
 import { Store } from './store.js';
 import { GhostRecorder, GhostPlayer } from './ghost.js';
@@ -91,6 +91,11 @@ const hudTemplate = hudRoot.querySelector('.hud-view');
 const huds = [new HUD(hudTemplate)];
 const hud = huds[0];
 const gearboxes = [new GearBox(), new GearBox()];
+const camRight = new THREE.Vector3();
+audio.voiceOn = S.voice !== false;
+input.tilt.invert = !!S.tiltInvert;
+// náklon zapnutý z minula: senzory se zapnou při prvním dotyku (iPhone chce povolení z gesta)
+if (S.steer === 'tilt' && isTouch) window.addEventListener('pointerdown', () => input.setTilt(true), { once: true });
 const pmrem = new THREE.PMREMGenerator(renderer);
 
 const G = {
@@ -602,6 +607,19 @@ function refreshMenu() {
   const mt = $('music-toggle');
   mt.setAttribute('aria-pressed', String(S.music !== false));
   mt.querySelector('em').textContent = S.music !== false ? 'Zapnuto' : 'Vypnuto';
+  for (const [id, on] of [['voice-toggle', S.voice !== false], ['invert-toggle', !!S.tiltInvert], ['haptics-toggle', S.haptics !== false]]) {
+    $(id).setAttribute('aria-pressed', String(on));
+    $(id).querySelector('em').textContent = on ? 'Zapnuto' : 'Vypnuto';
+  }
+  const tilt = S.steer === 'tilt';
+  for (const b of $('steer-seg').children) b.setAttribute('aria-checked', String((b.dataset.steer === 'tilt') === tilt));
+  $('invert-opt').hidden = !tilt;
+  document.body.classList.toggle('tilt-steer', tilt && isTouch);
+}
+
+// vibrace telefonu (Android; iPhone vibrace z prohlížeče nepodporuje)
+function buzz(pattern) {
+  if (isTouch && S.haptics !== false && navigator.vibrate) navigator.vibrate(pattern);
 }
 
 // výběr jezdce: tlačítko s rozbalovacím seznamem jezdců F1 po týmech (místo systémového selectu)
@@ -846,6 +864,38 @@ function bindMenu() {
     b.addEventListener('click', () => {
       S.engine = b.dataset.engine;
       audio.engineVolume = ENGINE_VOLUME[S.engine];
+      store.save();
+      refreshMenu();
+    });
+  }
+  $('voice-toggle').addEventListener('click', () => {
+    S.voice = S.voice === false;
+    audio.voiceOn = S.voice;
+    store.save();
+    refreshMenu();
+  });
+  $('invert-toggle').addEventListener('click', () => {
+    S.tiltInvert = !S.tiltInvert;
+    input.tilt.invert = S.tiltInvert;
+    store.save();
+    refreshMenu();
+  });
+  $('haptics-toggle').addEventListener('click', () => {
+    S.haptics = S.haptics === false;
+    store.save();
+    refreshMenu();
+    buzz(30);
+  });
+  for (const b of $('steer-seg').children) {
+    b.addEventListener('click', async () => {
+      const tilt = b.dataset.steer === 'tilt';
+      // náklon potřebuje povolení senzorů (na iPhonu jen z kliknutí)
+      if (tilt && !(await input.setTilt(true))) {
+        $('mode-hint').textContent = 'Prohlížeč nepovolil čtení náklonu telefonu.';
+        return;
+      }
+      if (!tilt) input.setTilt(false);
+      S.steer = tilt ? 'tilt' : 'buttons';
       store.save();
       refreshMenu();
     });
@@ -1259,6 +1309,7 @@ function processEvents() {
   for (const e of race.events) {
     if (e.type === 'count') {
       each((h) => h.message(String(e.value), '', 0.9));
+      if (e.value === 3) input.centerTilt();
       // prvních pár závodů napovíme, jak na perfektní start
       if (e.value === 3 && (S.startTips || 0) < 3) {
         S.startTips = (S.startTips || 0) + 1;
@@ -1284,6 +1335,7 @@ function processEvents() {
       hudOf(e.car).sub(perfect ? '<span class="good">Perfektní start!</span>' : '<span class="bad">Předčasný start</span> · kola se protáčejí', 2);
       if (perfect) audio.perfectStart();
       else audio.wheelspin();
+      buzz(perfect ? 25 : [40, 30, 40]);
     } else if (e.type === 'lap' && e.car.isPlayer) {
       const car = e.car;
       const h = hudOf(car);
@@ -1310,7 +1362,10 @@ function processEvents() {
         }
       }
       if (!car.finished) {
-        if (e.lap === race.laps - 1) h.message('Poslední kolo', 'warn', 1.6);
+        if (e.lap === race.laps - 1) {
+          h.message('Poslední kolo', 'warn', 1.6);
+          if (car === p) audio.say('Poslední kolo');
+        }
         else if (e.best && e.lap > 1) h.message('Nejlepší kolo', 'warn', 1.4);
         h.sub(html, 3);
         audio.chime();
@@ -1319,6 +1374,8 @@ function processEvents() {
       const place = e.car.place;
       hudOf(e.car).message(race.mode === 'race' ? `${place}. místo` : 'Cíl', place === 1 || race.mode !== 'race' ? 'go' : '', 3);
       audio.fanfare();
+      audio.crowd();
+      if (e.car === p) audio.say(race.mode === 'race' ? `Cíl. ${['První', 'Druhé', 'Třetí', 'Čtvrté', 'Páté', 'Šesté'][place - 1] ?? place + '.'} místo` : 'Cíl');
       if (race.mode !== 'race' || place <= 3) w.effects.confetti(e.car.x, e.car.y, e.car.z);
       if (race.players.every((c) => c.finished)) {
         G.resultsTimer = 3.2;
@@ -1334,6 +1391,7 @@ function processEvents() {
         if (!car.isPlayer) continue;
         audio.impact(e.strength);
         rigs[car.humanIndex].addShake(Math.min(0.8, e.strength * 0.06));
+        buzz(Math.min(60, 15 + e.strength * 4));
       }
     } else if (e.type === 'respawn' && e.car.isPlayer) {
       hudOf(e.car).sub('Zpět na trati', 1.2);
@@ -1352,6 +1410,7 @@ function processEvents() {
         if (near(e.x, e.z) > 0.05) audio.explosion();
         if (e.target.isPlayer) {
           rigs[e.target.humanIndex].addShake(1.1);
+          buzz([90, 50, 90]);
           hudOf(e.target).message('Zásah!', 'warn', 1.2);
         }
         if (e.by && e.by.isPlayer && e.by !== e.target) hudOf(e.by).sub(`Trefa · ${e.target.name}`, 1.6);
@@ -1420,7 +1479,10 @@ function showResults() {
   }
   if (G.results?.lap) badges.push('Nový rekord kola');
   if (G.results?.race) badges.push('Nový rekord závodu');
-  if (G.results?.medal) badges.push(`<span class="medal ${G.results.medal.id}">Medaile: ${G.results.medal.name}</span>`);
+  if (G.results?.medal) {
+    badges.push(`<span class="medal ${G.results.medal.id}">Medaile: ${G.results.medal.name}</span>`);
+    audio.say({ gold: 'Zlatá medaile', silver: 'Stříbrná medaile', bronze: 'Bronzová medaile' }[G.results.medal.id]);
+  }
   if (G.results?.next) badges.push(`Na ${G.results.next.name.toLowerCase()} chybí ${G.results.next.gap.toFixed(2).replace('.', ',')} s`);
   renderCup(rows, badges);
   $('res-badges').innerHTML = badges.map((b) => `<span class="badge">${b}</span>`).join('');
@@ -1554,6 +1616,7 @@ function emitEffects(dt) {
       if (car.isPlayer) {
         audio.impact(car.impact);
         rigs[car.humanIndex].addShake(Math.min(0.9, car.impact * 0.05));
+        buzz(Math.min(70, 10 + car.impact * 4));
       }
     }
   }
@@ -1643,26 +1706,38 @@ function frame(now) {
       // zvuk: hráč 1 hlavní motor; druhý motor patří hráči 2, nebo nejbližšímu soupeři
       const onGrid = race.state === 'countdown';
       const rpm = gearboxes[0].update(dt, Math.abs(p.vLong), p.controls.throttle, onGrid);
-      let rivalDist = null, rivalRpm = 0, rivalKind = 'car';
+      // motory soupeřů: hráč 2 a nejbližší auta; hlasitost podle vzdálenosti, stereo podle kamery,
+      // výška podle Dopplera (přibližující se auto zní výš, vzdalující níž)
+      const rivals = [];
       if (humans.length > 1) {
         const q = humans[1];
-        rivalDist = 0;
-        rivalKind = q.kind;
-        rivalRpm = gearboxes[1].update(dt, Math.abs(q.vLong), q.controls.throttle, onGrid);
-      } else {
-        let rd = Infinity, rival = null;
-        for (const c of race.cars) {
-          if (c === p) continue;
-          const d = Math.hypot(c.x - p.x, c.z - p.z);
-          if (d < rd) { rd = d; rival = c; }
-        }
-        if (rival) {
-          rivalDist = rd;
-          rivalRpm = 2400 + ((rival.speed * 97) % 4200);
-          rivalKind = rival.kind;
-        }
+        rivals.push({ rpm: gearboxes[1].update(dt, Math.abs(q.vLong), q.controls.throttle, onGrid), kind: q.kind, vol: 1, pan: 0, pitch: 1 });
+      }
+      camRight.setFromMatrixColumn(camera.matrixWorld, 0);
+      const near = race.cars
+        .filter((c) => c !== p && !humans.includes(c))
+        .map((c) => ({ c, d: Math.hypot(c.x - p.x, c.z - p.z) }))
+        .sort((a, b) => a.d - b.d)
+        .slice(0, 3 - rivals.length);
+      for (const { c, d } of near) {
+        const ux = (c.x - p.x) / Math.max(d, 0.1), uz = (c.z - p.z) / Math.max(d, 0.1);
+        const pitch = clamp((343 + p.vx * ux + p.vz * uz) / (343 + c.vx * ux + c.vz * uz), 0.85, 1.2);
+        rivals.push({
+          rpm: onGrid ? 1100 + c.controls.throttle * 2000 : rpmForSpeed(c.speed, c.controls.throttle), kind: c.kind,
+          vol: clamp(1 / (1 + d / 10), 0, 1), pan: clamp(ux * camRight.x + uz * camRight.z, -1, 1) * 0.8, pitch,
+        });
       }
       audio.setDuo(humans.length > 1);
+
+      // řazení nahoru a prskání z výfuku při ubrání plynu ve vysokých otáčkách
+      const gear = gearboxes[0].gear;
+      if (race.state === 'running' && gear > (G.lastGear ?? gear) && p.speed > 5) audio.shift();
+      G.lastGear = gear;
+      const thr = p.controls.throttle;
+      if ((G.lastThrottle ?? 0) > 0.7 && thr < 0.2 && rpm > 4800 && race.state === 'running' && !p.finished) {
+        audio.backfire(1 + Math.floor(Math.random() * 3));
+      }
+      G.lastThrottle = thr;
       const skidOf = (c) => (c.skidding ? clamp(c.slip * 3 + (c.controls.handbrake ? 0.3 : 0), 0, 1) : 0);
       audio.update({
         active: $('results').hidden,
@@ -1673,10 +1748,8 @@ function frame(now) {
         nitro: humans.some((c) => c.nitroActive),
         offroad: humans.some((c) => c.surface === SURF_OFF),
         rain: w.wet,
-        rivalDist,
-        rivalRpm,
+        rivals,
         kind: p.kind,
-        rivalKind,
       });
 
       humans.forEach((c, i) => {

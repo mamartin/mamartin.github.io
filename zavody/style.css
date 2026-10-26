@@ -1215,3 +1215,5 @@ body:not(.items-on) .touch-right .t-item { display: none; }
 }
 .pick-custom button:hover { background: #24365a; }
 #gar-random { justify-self: start; }
+body:not(.touch-ui) .touch-only { display: none; }
+body.tilt-steer .touch-left { display: none; }
