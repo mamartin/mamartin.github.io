@@ -38,10 +38,18 @@ function softWave(ctx) {
   return engineWave;
 }
 
+// hlas motoru podle vozu: auto hluboce vrčí, formule je vyšší a hladší s jemným kvílením
+// (pořád jen měkké vlny, žádné ostré harmonické)
+const VOICES = {
+  car: { pitch: 1.6, sub: 0.5, half: 0.14, whine: 0, depth: 0.18, bright: 1 },
+  formula: { pitch: 2.15, sub: 0.22, half: 0.05, whine: 0.16, depth: 0.08, bright: 1.3 },
+};
+
 class EngineVoice {
   constructor(ctx, out, level) {
     this.ctx = ctx;
     this.level = level;
+    this.voice = VOICES.car;
     const wave = softWave(ctx);
     this.o1 = ctx.createOscillator();
     this.o1.setPeriodicWave(wave);
@@ -49,15 +57,17 @@ class EngineVoice {
     this.sub.type = 'sine';
     this.half = ctx.createOscillator();
     this.half.setPeriodicWave(wave);
-    const g1 = ctx.createGain(), gSub = ctx.createGain(), gHalf = ctx.createGain();
+    this.whine = ctx.createOscillator();
+    this.whine.type = 'sine';
+    const g1 = ctx.createGain();
     g1.gain.value = 0.55;
-    gSub.gain.value = 0.5;
-    gHalf.gain.value = 0.14;
+    this.gSub = ctx.createGain();
+    this.gHalf = ctx.createGain();
+    this.gWhine = ctx.createGain();
     // pulzování spalování: amplitudová modulace v rytmu válců dodá motoru život místo stálého tónu
     this.lfo = ctx.createOscillator();
     this.lfo.type = 'sine';
-    const depth = ctx.createGain();
-    depth.gain.value = 0.18;
+    const depth = (this.depth = ctx.createGain());
     this.pulse = ctx.createGain();
     this.pulse.gain.value = 0.82;
     this.lfo.connect(depth).connect(this.pulse.gain);
@@ -78,19 +88,35 @@ class EngineVoice {
     this.gain = ctx.createGain();
     this.gain.gain.value = 0;
     this.o1.connect(g1).connect(this.pulse);
-    this.sub.connect(gSub).connect(this.pulse);
-    this.half.connect(gHalf).connect(this.pulse);
+    this.sub.connect(this.gSub).connect(this.pulse);
+    this.half.connect(this.gHalf).connect(this.pulse);
+    this.whine.connect(this.gWhine).connect(this.pulse);
     this.pulse.connect(this.shaper).connect(this.filter).connect(this.filter2).connect(this.gain).connect(out);
-    for (const o of [this.o1, this.sub, this.half, this.lfo]) o.start();
+    for (const o of [this.o1, this.sub, this.half, this.whine, this.lfo]) o.start();
+    this.setKind('car');
+  }
+
+  setKind(kind) {
+    const v = VOICES[kind] || VOICES.car;
+    if (v === this.voice && this.kindSet) return;
+    this.voice = v;
+    this.kindSet = true;
+    const t = this.ctx.currentTime;
+    this.gSub.gain.setTargetAtTime(v.sub, t, 0.05);
+    this.gHalf.gain.setTargetAtTime(v.half, t, 0.05);
+    this.gWhine.gain.setTargetAtTime(v.whine, t, 0.05);
+    this.depth.gain.setTargetAtTime(v.depth, t, 0.05);
   }
   set(rpm, throttle, vol) {
     const t = this.ctx.currentTime;
-    const f = (rpm / 60) * 1.6;
+    const v = this.voice;
+    const f = (rpm / 60) * v.pitch;
     this.o1.frequency.setTargetAtTime(f, t, 0.04);
     this.sub.frequency.setTargetAtTime(f * 0.5, t, 0.04);
     this.half.frequency.setTargetAtTime(f * 1.5, t, 0.04);
+    this.whine.frequency.setTargetAtTime(f * 2, t, 0.04);
     this.lfo.frequency.setTargetAtTime(f * 0.25, t, 0.04);
-    const cut = 220 + rpm * 0.13 + throttle * 520;
+    const cut = (220 + rpm * 0.13 + throttle * 520) * v.bright;
     this.filter.frequency.setTargetAtTime(cut, t, 0.06);
     this.filter2.frequency.setTargetAtTime(cut * 1.3, t, 0.06);
     // ve vysokých otáčkách trochu ubrat, aby nepískal
@@ -165,6 +191,8 @@ export class AudioEngine {
     if (!this.ctx) return;
     const t = this.ctx.currentTime;
     const ev = this.engineVolume;
+    this.player.setKind(s.kind);
+    this.rival.setKind(s.rivalKind);
     this.player.set(s.rpm, s.throttle, s.active ? ev : 0);
     const rv = s.rivalDist != null ? clamp(1 / (1 + s.rivalDist / 10), 0, 1) : 0;
     this.rival.set(s.rivalRpm ?? 3000, 0.8, s.active ? rv * ev : 0);

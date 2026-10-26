@@ -18,8 +18,17 @@ export class Track {
     this.curbMask = this.computeCurbs();
     this.buildRacingLine();
     // AI počítá s přilnavostí povrchu (na sněhu jede opatrněji)
-    const roadGrip = BIOMES[def.biome]?.roadGrip ?? 1;
-    this.speedProfile = this.computeSpeedProfile(22 * roadGrip, 19 * roadGrip, 60);
+    this.roadGrip = BIOMES[def.biome]?.roadGrip ?? 1;
+    this.speedProfile = this.computeSpeedProfile(22 * this.roadGrip, 19 * this.roadGrip, 60);
+    this.profiles = new Map([['car', this.speedProfile]]);
+  }
+
+  // rychlostní profil pro jiný typ vozu: přilnavost a maximálka poměrem k autu
+  speedProfileFor(kind, gripMul = 1, vmaxMul = 1) {
+    if (!this.profiles.has(kind)) {
+      this.profiles.set(kind, this.computeSpeedProfile(22 * this.roadGrip * gripMul, 19 * this.roadGrip, 60 * vmaxMul));
+    }
+    return this.profiles.get(kind);
   }
 
   // --- dotazy -------------------------------------------------------------

@@ -1,5 +1,6 @@
 // AI řidič: sleduje ideální stopu, brzdí podle rychlostního profilu trati, předjíždí.
 import { clamp, angleDiff, RNG } from './rng.js';
+import { CAR } from './car.js';
 
 export const DIFFICULTY = {
   easy: { label: 'Lehká', corner: 0.8, top: 0.82, reaction: 0.34, noise: 0.05, nitro: false, variance: 0.04 },
@@ -12,6 +13,8 @@ export class AIDriver {
     this.car = car;
     this.track = track;
     this.diff = DIFFICULTY[diffKey] ?? DIFFICULTY.medium;
+    // formule projede zatáčky rychleji než auto, AI s tím musí počítat
+    this.profile = track.speedProfileFor(car.kind, car.spec.grip / CAR.grip, car.spec.vmax / CAR.vmax);
     const rng = new RNG(seed);
     this.pref = rng.range(-0.45, 0.45) * Math.max(0, track.hw - 3.5);
     this.skill = 1 + rng.range(-this.diff.variance, this.diff.variance);
@@ -63,10 +66,10 @@ export class AIDriver {
     const look = speed * this.diff.reaction + 2;
     const k = tr.indexAt(s + look);
     const corner = this.diff.corner * this.skill;
-    let vt = Math.min(tr.speedProfile[k] * corner, 70 * this.diff.top * this.skill) * this.rubber;
+    let vt = Math.min(this.profile[k] * corner, 70 * this.diff.top * this.skill) * this.rubber;
     // kus před námi: nejpomalejší místo v brzdné dráze
     const k2 = tr.indexAt(s + look + speed * 0.5);
-    vt = Math.min(vt, tr.speedProfile[k2] * corner * 1.08 * this.rubber);
+    vt = Math.min(vt, this.profile[k2] * corner * 1.08 * this.rubber);
 
     // --- ostatní auta
     let targetAvoid = 0;

@@ -10,7 +10,7 @@ import { Car, createCarMesh, disposeCarMesh } from './car.js';
 import { Race, OPPONENTS, PLAYER_NUMBERS, F1_TEAMS } from './race.js';
 import {
   Garage, playerColors as colorsOf, playerAccents as accentsOf, playerLiveries as liveriesOf, playerKinds as kindsOf,
-  partColor, kindName, hexCss,
+  partColor, kindName, hexCss, DESIGNS,
 } from './garage.js';
 import { CameraRig } from './camera.js';
 import { Effects } from './effects.js';
@@ -202,6 +202,24 @@ function opponentNames() {
   return names;
 }
 
+// soupeři jezdí v hotových designech z garáže (náhodně, kromě barev hráčů);
+// v šampionátu zůstávají stejné, v menu se drží do dalšího startu
+function opponentLooks() {
+  const taken = playerColors().slice(0, humanCount());
+  const looks = DESIGNS.filter((d) => !taken.includes(d.color)).map(({ color, accent, livery }) => ({ color, accent, livery: livery || {} }));
+  for (let i = looks.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [looks[i], looks[j]] = [looks[j], looks[i]];
+  }
+  return looks;
+}
+function currentLooks() {
+  if (G.cup) return (G.cup.looks ??= opponentLooks());
+  const taken = playerColors().slice(0, humanCount());
+  if (!G.looks || G.looks.some((l) => taken.includes(l.color))) G.looks = opponentLooks();
+  return G.looks;
+}
+
 // závodní režim bez šampionátu ('race' | 'time')
 const raceMode = () => (S.mode === 'time' ? 'time' : 'race');
 // trať, která se má právě jet (v šampionátu podle kola)
@@ -319,7 +337,7 @@ function buildShowcase() {
     const isPlayer = h >= 0 && h < humans;
     const info = isPlayer
       ? { color: colors[h], number: PLAYER_NUMBERS[h], kind: playerKinds()[h], accent: playerAccents()[h], livery: playerLiveries()[h] }
-      : { ...pool[ai++ % pool.length], kind: opponentKind() };
+      : { ...pool[ai % pool.length], ...currentLooks()[ai++], kind: opponentKind() };
     const car = new Car(w.track, {
       color: info.color, number: info.number, night: w.biome.night, biome: w.biome, isPlayer, kind: info.kind, accent: info.accent,
       livery: info.livery,
@@ -366,7 +384,7 @@ function openEditor(track) {
 }
 
 function trackMeta(def, track) {
-  const rec = store.record(def.id);
+  const rec = store.record(def.id, playerKinds()[0]);
   const km = (track.L / 1000).toFixed(2).replace('.', ',');
   return `${km} km · ${rec.lap ? 'rekord ' + formatTime(rec.lap) : 'bez rekordu'}`;
 }
@@ -427,15 +445,24 @@ function buildTrackList() {
   }
   requestAnimationFrame(() => {
     for (const m of menuTracks) {
-      const tr = new Track(m.def);
-      trackOutline(tr, m.canvas, { pad: 6, color: '#f3f5f8', width: 2.4 });
-      if (m.id === 'random') m.meta.textContent = `${(tr.L / 1000).toFixed(2).replace('.', ',')} km · ${m.def.subtitle}`;
-      else if (m.custom && !m.custom.valid) m.meta.textContent = 'rozpracovaná, dokonči v editoru';
-      else m.meta.textContent = trackMeta(m.def, tr);
-      m.btn.setAttribute('aria-label', `${m.def.name}, ${m.meta.textContent}`);
+      m.track = new Track(m.def);
+      trackOutline(m.track, m.canvas, { pad: 6, color: '#f3f5f8', width: 2.4 });
     }
+    refreshTrackMeta();
   });
   refreshMenu();
+}
+
+// délka a rekord u tratí v menu (rekord podle vozu hráče 1)
+function refreshTrackMeta() {
+  for (const m of menuTracks) {
+    const tr = m.track;
+    if (!tr) continue;
+    if (m.id === 'random') m.meta.textContent = `${(tr.L / 1000).toFixed(2).replace('.', ',')} km · ${m.def.subtitle}`;
+    else if (m.custom && !m.custom.valid) m.meta.textContent = 'rozpracovaná, dokonči v editoru';
+    else m.meta.textContent = trackMeta(m.def, tr);
+    m.btn.setAttribute('aria-label', `${m.def.name}, ${m.meta.textContent}`);
+  }
 }
 
 async function selectTrack(id, force = false) {
@@ -480,7 +507,7 @@ function refreshMenu() {
   if (S.mode === 'cup') {
     $('cup-list').innerHTML = CUP_TRACKS.map((id) => {
       const def = TRACKS.find((t) => t.id === id);
-      const rec = store.record(id);
+      const rec = store.record(id, playerKinds()[0]);
       return `<li><span class="cl-name">${def.name}</span><span class="cl-meta">${rec.lap ? 'rekord ' + formatTime(rec.lap) : 'bez rekordu'}</span></li>`;
     }).join('');
     const best = store.records.cup?.best;
@@ -620,6 +647,7 @@ function closeGarage() {
   $('menu').hidden = false;
   if (G.world) for (const c of G.world.showcase) c.mesh.root.visible = true;
   refreshMenu();
+  refreshTrackMeta();
 }
 
 function bindMenu() {
@@ -805,6 +833,7 @@ async function startRaceInner() {
     track: w.track, biome: w.biome, mode: raceMode(), laps: S.laps, difficulty: S.difficulty,
     playerColors: playerColors().slice(0, humans), playerKinds: playerKinds(), playerNames: playerNames(),
     opponentNames: G.cup ? (G.cup.names ??= opponentNames()) : opponentNames(), opponentKind: opponentKind(),
+    opponentLooks: G.cup ? currentLooks() : (G.looks = opponentLooks()),
     playerAccents: playerAccents(), playerLiveries: playerLiveries(), humans, night: w.biome.night,
   });
   for (const c of race.cars) {
@@ -829,7 +858,7 @@ async function startRaceInner() {
   G.recorder = new GhostRecorder();
   G.ghost = null;
   if (raceMode() === 'time') {
-    const data = store.ghost(w.def.id);
+    const data = store.ghost(w.def.id, race.player.kind);
     if (data && data.frames && data.frames.length > 8) {
       G.ghost = new GhostPlayer(data);
       G.ghostMesh = createCarMesh(0x9fd8ff, { ghost: true, kind: race.player.kind });
@@ -1006,8 +1035,8 @@ function processEvents() {
         // ghost nejlepšího kola
         const ghost = G.recorder.finish(e.lapTime);
         G.recorder.reset();
-        const stored = store.ghost(w.def.id);
-        if (!stored || e.lapTime < stored.time) store.saveGhost(w.def.id, ghost);
+        const stored = store.ghost(w.def.id, car.kind);
+        if (!stored || e.lapTime < stored.time) store.saveGhost(w.def.id, ghost, car.kind);
         // v časovce jezdíme hned proti nejlepšímu kolu
         if (race.mode === 'time' && (!G.ghost || e.lapTime < G.ghost.data.time)) {
           G.ghost = new GhostPlayer(ghost);
@@ -1082,7 +1111,7 @@ function saveResults() {
   for (const car of race.players) {
     const res = store.submit(G.world.def.id, {
       lap: car.bestLap, race: car.finished ? car.finishTime : null, laps: race.laps, mode: race.mode,
-    });
+    }, car.kind);
     if (res.lap) out.lap = true;
     if (res.race) out.race = true;
   }
@@ -1327,10 +1356,11 @@ function frame(now) {
       // zvuk: hráč 1 hlavní motor; druhý motor patří hráči 2, nebo nejbližšímu soupeři
       const onGrid = race.state === 'countdown';
       const rpm = gearboxes[0].update(dt, Math.abs(p.vLong), p.controls.throttle, onGrid);
-      let rivalDist = null, rivalRpm = 0;
+      let rivalDist = null, rivalRpm = 0, rivalKind = 'car';
       if (humans.length > 1) {
         const q = humans[1];
         rivalDist = 0;
+        rivalKind = q.kind;
         rivalRpm = gearboxes[1].update(dt, Math.abs(q.vLong), q.controls.throttle, onGrid);
       } else {
         let rd = Infinity, rival = null;
@@ -1342,6 +1372,7 @@ function frame(now) {
         if (rival) {
           rivalDist = rd;
           rivalRpm = 2400 + ((rival.speed * 97) % 4200);
+          rivalKind = rival.kind;
         }
       }
       audio.setDuo(humans.length > 1);
@@ -1356,6 +1387,8 @@ function frame(now) {
         offroad: humans.some((c) => c.surface === SURF_OFF),
         rivalDist,
         rivalRpm,
+        kind: p.kind,
+        rivalKind,
       });
 
       humans.forEach((c, i) => {

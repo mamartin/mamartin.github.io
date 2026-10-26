@@ -35,6 +35,9 @@ function write(key, value) {
   }
 }
 
+// rekordy a ghost zvlášť pro každý typ vozu; auto má původní klíč (starší uložení)
+const recordKey = (trackId, kind) => (kind && kind !== 'car' ? `${trackId}@${kind}` : trackId);
+
 export class Store {
   constructor() {
     const data = read(KEY) || {};
@@ -70,13 +73,14 @@ export class Store {
     this.save();
   }
 
-  record(trackId) {
-    return this.records[trackId] || {};
+  record(trackId, kind = 'car') {
+    return this.records[recordKey(trackId, kind)] || {};
   }
 
   // vrací, co se zlepšilo
-  submit(trackId, { lap, race, laps, mode }) {
-    const r = (this.records[trackId] = this.records[trackId] || {});
+  submit(trackId, { lap, race, laps, mode }, kind = 'car') {
+    const key = recordKey(trackId, kind);
+    const r = (this.records[key] = this.records[key] || {});
     const out = {};
     if (lap && isFinite(lap) && (!r.lap || lap < r.lap)) {
       r.lap = lap;
@@ -93,11 +97,11 @@ export class Store {
     return out;
   }
 
-  ghost(trackId) {
-    return read(GHOST_KEY + trackId);
+  ghost(trackId, kind = 'car') {
+    return read(GHOST_KEY + recordKey(trackId, kind));
   }
 
-  saveGhost(trackId, ghost) {
-    return write(GHOST_KEY + trackId, ghost);
+  saveGhost(trackId, ghost, kind = 'car') {
+    return write(GHOST_KEY + recordKey(trackId, kind), ghost);
   }
 }

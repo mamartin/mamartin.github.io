@@ -40,7 +40,7 @@ const PARTS = [
   ...LIVERY_PARTS,
 ];
 
-const DESIGNS = [
+export const DESIGNS = [
   { name: 'Klasika', color: 0xd7263d, accent: 0xf2f2ee },
   { name: 'Půlnoc', color: 0x1d1f24, accent: 0xd4a72c, livery: { rims: 0xd4a72c, finish: 'metal' } },
   { name: 'Ledovec', color: 0xf2f2ee, accent: 0x2c6fd1, livery: { wings: 0x2c6fd1, rims: 0x1d1f24 } },
