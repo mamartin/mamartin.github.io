@@ -257,6 +257,16 @@ export class AudioEngine {
     this.tone(1175, 0.4, 'triangle', 0.2, 0.12);
   }
 
+  // perfektní start: krátké stoupající zahvízdnutí; předčasný: kvílení protočených kol
+  perfectStart() {
+    this.tone(660, 0.12, 'triangle', 0.16);
+    this.tone(990, 0.3, 'triangle', 0.16, 0.08);
+  }
+
+  wheelspin() {
+    this.burst(0.9, 'bandpass', 1100, 0.22, 700);
+  }
+
   fanfare() {
     [523, 659, 784, 1046, 784, 1046].forEach((f, i) => this.tone(f, i === 5 ? 0.8 : 0.18, 'triangle', 0.22, i * 0.13));
   }

@@ -629,6 +629,9 @@ export class Car {
     this.ghostTimer = 0;
     this.spinTimer = 0;
     this.shield = 0;
+    this.draft = 0; // háček za jiným autem (0–1)
+    this.launchBoost = 0; // perfektní start: zbývající čas extra tahu
+    this.launchPenalty = 0; // předčasný start: zbývající čas protáčení kol
     this.track.project(this.x, this.z, -1, this.proj);
     this.savePrev();
   }
@@ -655,6 +658,11 @@ export class Car {
 
     let throttle = c.throttle, brake = c.brake, steerIn = c.steer;
     let handbrake = c.handbrake;
+    // předčasný start: kola se protáčejí a vůz skoro nejede
+    if (this.launchPenalty > 0) {
+      this.launchPenalty -= dt;
+      throttle *= 0.3;
+    }
     if (this.spinTimer > 0) {
       // zasažené auto: bez kontroly, točí se
       this.spinTimer -= dt;
@@ -706,10 +714,12 @@ export class Car {
     if (throttle > 0) {
       if (vLong < -1) a += V.brake * throttle;
       else {
-        const vm = V.vmax * topMul * (this.nitroActive ? V.nitroVmax : 1);
+        // v háčku je menší odpor, takže i vyšší maximálka
+        const vm = V.vmax * topMul * (this.nitroActive ? V.nitroVmax : 1) * (1 + 0.06 * this.draft);
         const r = Math.max(0, vLong) / vm;
         a += V.accel * throttle * Math.max(0, 1 - r * r);
         if (this.nitroActive) a += V.nitroAccel * Math.max(0, 1 - r);
+        if (this.launchBoost > 0) a += 7 * throttle * Math.max(0, 1 - r);
       }
     }
     if (brake > 0) {
@@ -717,7 +727,8 @@ export class Car {
       else if (vLong > -V.reverseMax) a -= V.reverseAccel * brake * (1 + vLong / V.reverseMax);
     }
     if (handbrake && vLong > 0) a -= 3.5;
-    const resist = V.roll * dragMul + V.drag * vLong * vLong * (off ? 1.6 : 1);
+    if (this.launchBoost > 0) this.launchBoost -= dt;
+    const resist = V.roll * dragMul + V.drag * vLong * vLong * (off ? 1.6 : 1) * (1 - 0.5 * this.draft);
     if (Math.abs(vLong) > 0.05) a -= Math.sign(vLong) * resist;
     this.aLong = a;
     const nsin = Math.sin(this.hd), ncos = Math.cos(this.hd);
@@ -765,7 +776,8 @@ export class Car {
     this.roll += (targetRoll - this.roll) * Math.min(1, dt * 8);
     this.wheelRot += (this.vLong * dt) / 0.36;
 
-    this.skidding = this.speed > 6 && ((this.slip > 0.14 && this.vLong > 0) || (handbrake && this.speed > 4) || (brake > 0.85 && this.vLong > 16));
+    this.skidding = (this.launchPenalty > 0 && c.throttle > 0.3)
+      || (this.speed > 6 && ((this.slip > 0.14 && this.vLong > 0) || (handbrake && this.speed > 4) || (brake > 0.85 && this.vLong > 16)));
     if (this.ghostTimer > 0) this.ghostTimer -= dt;
     if (this.shield > 0) this.shield -= dt;
   }

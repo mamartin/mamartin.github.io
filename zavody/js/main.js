@@ -1014,6 +1014,12 @@ function processEvents() {
   for (const e of race.events) {
     if (e.type === 'count') {
       each((h) => h.message(String(e.value), '', 0.9));
+      // prvních pár závodů napovíme, jak na perfektní start
+      if (e.value === 3 && (S.startTips || 0) < 3) {
+        S.startTips = (S.startTips || 0) + 1;
+        store.save();
+        each((h) => h.sub('Plyn přidej až na poslední světlo – perfektní start', 2.6));
+      }
       audio.beep(false);
       w.track.setStartLights([0, 5, 4, 2][e.value] ?? 0);
     } else if (e.type === 'go') {
@@ -1021,6 +1027,11 @@ function processEvents() {
       audio.beep(true);
       w.track.setStartLights(0, true);
       G.lightsOff = 2.5;
+    } else if (e.type === 'start' && e.car.isPlayer) {
+      const perfect = e.quality === 'perfect';
+      hudOf(e.car).sub(perfect ? '<span class="good">Perfektní start!</span>' : '<span class="bad">Předčasný start</span> · kola se protáčejí', 2);
+      if (perfect) audio.perfectStart();
+      else audio.wheelspin();
     } else if (e.type === 'lap' && e.car.isPlayer) {
       const car = e.car;
       const h = hudOf(car);
@@ -1254,7 +1265,7 @@ function emitEffects(dt) {
       fx.dust(wl[0], wl[1], wl[2], car.vx, car.vz, w.biome.dust);
       fx.dust(wr[0], wr[1], wr[2], car.vx, car.vz, w.biome.dust);
     }
-    if (car.nitroActive && !far) {
+    if ((car.nitroActive || car.launchBoost > 0) && !far) {
       const s = Math.sin(car.hd), c = Math.cos(car.hd);
       const bx = car.x - s * 2.35, bz = car.z - c * 2.35;
       const rx = -c, rz = s;

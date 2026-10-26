@@ -625,6 +625,7 @@ kbd {
 .hud.split .pause-btn { top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2; }
 .hud.split .hud-view[data-view='0'] .minimap,
 .hud.split .hud-view[data-view='0'] .speedo { bottom: calc(var(--gut) + 2px); }
+.hud.split .hud-view[data-view='0'] .draft-tag { bottom: calc(var(--gut) + 6px + var(--speedo)); }
 .hud-left {
   position: absolute;
   top: calc(var(--gut) + var(--safe-t));
@@ -746,6 +747,32 @@ kbd {
   width: var(--speedo);
   height: var(--speedo);
 }
+.draft-tag {
+  position: absolute;
+  right: calc(var(--gut) + var(--safe-r));
+  bottom: calc(var(--gut) + var(--safe-b) + var(--speedo) + 4px);
+  width: var(--speedo);
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.2s, transform 0.2s;
+  pointer-events: none;
+}
+.draft-tag.on { opacity: 1; transform: none; }
+.draft-tag span {
+  padding: 2px 10px;
+  background: rgba(10, 17, 31, 0.62);
+  color: #6ec6f0;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.draft-tag i { display: block; width: 46%; height: 3px; background: #6ec6f0; transform-origin: left; transform: scaleX(0); transition: transform 0.15s; }
 .center-msg {
   position: absolute;
   left: 0;
@@ -831,9 +858,11 @@ body.touch-ui .tower, body.touch-ui .pos-label { display: none; }
 body.touch-ui .pause-btn { left: calc(var(--gut) + var(--safe-l)); transform: none; top: calc(var(--gut) + 11vmin + 10px + var(--safe-t)); }
 body.touch-ui .minimap { bottom: auto; top: calc(var(--gut) + 11cqmin + 56px + var(--safe-t)); opacity: 0.9; }
 body.touch-ui .speedo { right: 50%; transform: translateX(50%); bottom: calc(var(--gut) + var(--safe-b)); }
+body.touch-ui .draft-tag { right: 50%; margin-right: calc(var(--speedo) / -2); }
 @media (orientation: portrait) {
   body.touch-ui .hud-view { --speedo: clamp(88px, 24cqmin, 130px); }
   body.touch-ui .speedo { top: calc(var(--gut) + var(--safe-t)); bottom: auto; right: auto; left: 37%; transform: translateX(-50%); }
+  body.touch-ui .draft-tag { top: calc(var(--gut) + var(--safe-t) + var(--speedo) + 4px); bottom: auto; right: auto; left: 37%; margin: 0 0 0 calc(var(--speedo) / -2); }
   body.touch-ui .t-row.total { display: none; }
   body.touch-ui .rotate-hint { display: block; }
 }

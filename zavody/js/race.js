@@ -49,6 +49,10 @@ export const ACCENT_COLORS = [
 ];
 
 export const COUNTDOWN = 3.6;
+// perfektní start: plyn přidaný nejdřív tolik sekund před zhasnutím, nebo nejpozději tolik po něm
+const START_EARLY = 0.6, START_LATE = 0.25;
+// šance AI na perfektní start podle obtížnosti (10 % aut startuje předčasně)
+const AI_PERFECT = { easy: 0.1, medium: 0.25, hard: 0.45 };
 
 export class Race {
   constructor({
@@ -123,6 +127,9 @@ export class Race {
     car.finished = false;
     car.finishTime = 0;
     car.place = 0;
+    car.startPress = null;
+    car.startHeld = false;
+    car.startPending = false;
     car.wrongWay = 0;
     car.lastWheels = null;
   }
@@ -158,6 +165,7 @@ export class Race {
         this.state = 'running';
         this.time = 0;
         this.emit('go');
+        this.judgeStarts();
       }
     } else {
       this.time += dt;
@@ -171,6 +179,12 @@ export class Race {
         // na roštu: jen „túrování“ motoru, auta stojí
         const c = car.controls;
         c.throttle = mine ? mine.throttle : 0;
+        // kdy hráč naposledy přidal plyn (pro vyhodnocení startu)
+        if (mine) {
+          const on = mine.throttle > 0.5;
+          if (on && !car.startHeld) car.startPress = this.clock;
+          car.startHeld = on;
+        }
         c.brake = 1;
         c.steer = mine ? mine.steer : 0;
         c.handbrake = true;
@@ -197,10 +211,18 @@ export class Race {
             car.controls.throttle *= 0.55;
             car.controls.nitro = false;
           }
-        } else Object.assign(car.controls, mine);
+        } else {
+          Object.assign(car.controls, mine);
+          // plyn přidaný těsně po zhasnutí se ještě počítá jako perfektní start
+          if (car.startPending) {
+            if (mine.throttle > 0.5 && this.time <= START_LATE) this.setStart(car, 'perfect');
+            if (this.time > START_LATE) car.startPending = false;
+          }
+        }
       }
     }
 
+    if (racing) this.updateDraft(dt);
     for (const car of this.cars) {
       if (!racing) {
         // na roštu jen natáčení kol a otáčky
@@ -215,6 +237,47 @@ export class Race {
     if (racing) for (const car of this.cars) this.updateProgress(car, dt);
     this.updatePlaces();
     if (racing) this.trackLeader();
+  }
+
+  judgeStarts() {
+    for (const car of this.cars) {
+      if (car.isPlayer) {
+        if (car.startHeld) this.setStart(car, COUNTDOWN - car.startPress <= START_EARLY ? 'perfect' : 'early');
+        else car.startPending = true;
+      } else {
+        const r = Math.random();
+        if (r < (AI_PERFECT[this.difficulty] ?? 0.25)) this.setStart(car, 'perfect');
+        else if (r > 0.9) this.setStart(car, 'early');
+      }
+    }
+  }
+
+  setStart(car, quality) {
+    car.startPending = false;
+    if (quality === 'perfect') car.launchBoost = 1.3;
+    else car.launchPenalty = 1.1;
+    this.emit('start', { car, quality });
+  }
+
+  // háček: do 30 m za jiným autem a v jeho stopě klesá odpor vzduchu (víc, čím blíž a přesněji)
+  updateDraft(dt) {
+    const L = this.track.L;
+    for (const car of this.cars) {
+      let target = 0;
+      if (car.speed > 15) {
+        for (const o of this.cars) {
+          if (o === car || o.ghostTimer > 0 || o.speed < 12) continue;
+          let ds = o.proj.s - car.proj.s;
+          if (ds < -L / 2) ds += L;
+          else if (ds > L / 2) ds -= L;
+          if (ds < 3 || ds > 30) continue;
+          const dl = Math.abs(o.proj.lat - car.proj.lat);
+          if (dl > 1.8) continue;
+          target = Math.max(target, (1 - (ds - 3) / 27) * Math.sqrt(1 - dl / 1.8));
+        }
+      }
+      car.draft += (target - car.draft) * Math.min(1, dt * (target > car.draft ? 2.5 : 4));
+    }
   }
 
   rubberFor(car) {

@@ -81,6 +81,8 @@ export class HUD {
     this.itemIcon = q('.item-icon');
     this.itemKey = q('.item-slot em');
     this.tag = q('.player-tag');
+    this.draftTag = q('.draft-tag');
+    this.draftBar = q('.draft-tag i');
     this.msgTimer = 0;
     this.subTimer = 0;
     this.cache = {};
@@ -179,6 +181,13 @@ export class HUD {
     this.set(this.time, 'time', running ? formatTime(p.finished ? p.finishTime : race.time) : '0:00,00');
     this.set(this.lapTime, 'laptime', running && !p.finished ? formatTime(race.time - p.lapStart) : '–');
     this.set(this.best, 'best', formatTime(p.bestLap));
+    // háček: štítek nad tachometrem se sílou úbytku odporu
+    const draft = Math.round(p.draft * 20) / 20;
+    if (this.cache.draft !== draft) {
+      this.cache.draft = draft;
+      this.draftTag.classList.toggle('on', draft > 0.05);
+      this.draftBar.style.transform = `scaleX(${draft})`;
+    }
 
     // věž
     const st = race.standings || race.cars;
