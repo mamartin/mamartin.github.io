@@ -1,11 +1,8 @@
 // Hra offline: vlastní soubory jdou ze sítě (novinky se projeví hned) a při výpadku
 // z mezipaměti; knihovny a písma z CDN mají pevnou verzi, ty jdou rovnou z mezipaměti.
+// Moduly hry seznam nepotřebují: stránka po načtení pošle adresy všeho, co stáhla.
 const CACHE = 'turbo-okruh-v1';
-const CORE = [
-  './', 'index.html', 'style.css', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png',
-  ...['ai', 'audio', 'biomes', 'camera', 'car', 'editor', 'effects', 'garage', 'ghost', 'hud', 'input', 'main', 'medals',
-    'pickups', 'post', 'race', 'replay', 'rng', 'scenery', 'store', 'terrain', 'track', 'trackmath', 'tracks'].map((m) => `js/${m}.js`),
-];
+const CORE = ['./', 'index.html', 'style.css', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(CORE)).then(() => self.skipWaiting()));
@@ -19,7 +16,7 @@ self.addEventListener('activate', (e) => {
   );
 });
 
-// stránka posílá adresy knihoven z CDN, které už načetla; uložíme ty, co ještě nemáme
+// stránka posílá adresy souborů, které už načetla; uložíme ty, co ještě nemáme
 self.addEventListener('message', (e) => {
   if (e.data?.type !== 'cache' || !Array.isArray(e.data.urls)) return;
   e.waitUntil(caches.open(CACHE).then(async (c) => {
