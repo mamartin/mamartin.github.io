@@ -416,6 +416,10 @@
   <!-- Záznam závodu -->
   <div id="replay" class="screen replay" hidden>
     <div class="rp-top"><span class="rp-tag">Záznam</span><span class="rp-time" id="rp-time"></span></div>
+    <div class="rp-side">
+      <canvas class="rp-map" id="rp-map" aria-label="Mapa trati s auty"></canvas>
+      <ol class="rp-order" id="rp-order" aria-label="Pořadí"></ol>
+    </div>
     <div class="rp-bar">
       <button type="button" class="btn" id="rp-play">Pauza</button>
       <input type="range" id="rp-seek" min="0" max="1000" value="0" aria-label="Posun v záznamu">

@@ -110,7 +110,9 @@ export class ReplayPlayer {
     });
   }
 
+  // sledovaný vůz: hráč, vedoucí, nebo konkrétní auto (index)
   target() {
+    if (typeof this.follow === 'number') return this.cars[this.follow] || this.cars[0];
     if (this.follow === 'leader') return this.cars.reduce((a, b) => (b.progress > a.progress ? b : a));
     return this.cars.find((c) => c.isPlayer) || this.cars[0];
   }

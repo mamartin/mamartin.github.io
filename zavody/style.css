@@ -1217,3 +1217,48 @@ body:not(.items-on) .touch-right .t-item { display: none; }
 #gar-random { justify-self: start; }
 body:not(.touch-ui) .touch-only { display: none; }
 body.tilt-steer .touch-left { display: none; }
+
+/* záznam: mapa trati s auty a průběžné pořadí */
+.rp-side {
+  pointer-events: auto;
+  position: absolute;
+  top: calc(var(--gut, 16px) + var(--safe-t));
+  right: calc(var(--gut, 16px) + var(--safe-r));
+  width: 210px;
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(6px);
+}
+.rp-map { width: 190px; height: 190px; justify-self: center; }
+.rp-order { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; }
+.rp-order button {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 18px auto 1fr;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border: 0;
+  background: none;
+  color: var(--paper);
+  font: 600 14px var(--font-body);
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+.rp-order button:hover { background: var(--panel-hi); }
+.rp-order button.me { font-weight: 700; }
+.rp-order button.on { background: var(--paper); color: var(--ink); }
+.rp-order .chip { width: 5px; height: 14px; }
+.rp-pos { font-family: var(--font-display); font-style: italic; font-weight: 700; text-align: right; }
+/* na malé obrazovce jen menší mapa bez pořadí */
+@media (max-width: 720px) {
+  .rp-side { width: auto; padding: 6px; }
+  .rp-map { width: 120px; height: 120px; }
+  .rp-order { display: none; }
+}
