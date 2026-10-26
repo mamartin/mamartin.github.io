@@ -90,6 +90,7 @@
             <button type="button" role="radio" data-diff="easy">Lehcí</button>
             <button type="button" role="radio" data-diff="medium">Střední</button>
             <button type="button" role="radio" data-diff="hard">Těžcí</button>
+            <button type="button" role="radio" data-diff="expert">Nejtěžší</button>
           </div>
         </div>
         <div class="opt" id="weather-opt">
@@ -245,7 +246,7 @@
         <h2 class="label">Startovní číslo</h2>
         <div class="stepper">
           <button type="button" id="gar-num-minus" aria-label="Menší číslo">−</button>
-          <output id="gar-number">7</output>
+          <input type="text" id="gar-number" inputmode="numeric" pattern="[0-9]*" maxlength="2" value="7" aria-label="Startovní číslo (1–99)" autocomplete="off">
           <button type="button" id="gar-num-plus" aria-label="Větší číslo">+</button>
         </div>
       </section>

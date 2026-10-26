@@ -140,6 +140,25 @@ export class Garage {
         this.changed();
       });
     }
+    // číslo jde i napsat: ukládá se hned, jakmile je platné (1–99), po opuštění pole se srovná
+    const num = this.el('gar-number');
+    num.addEventListener('input', () => {
+      num.value = num.value.replace(/\D/g, '').slice(0, 2);
+      const v = parseInt(num.value, 10);
+      if (v >= 1 && v <= 99) {
+        this.S[keysOf(this.player).number] = v;
+        this.changed();
+      }
+    });
+    num.addEventListener('focus', () => num.select());
+    num.addEventListener('blur', () => (num.value = String(playerNumbers(this.S)[this.player])));
+    num.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') num.blur();
+      else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        this.el(e.key === 'ArrowUp' ? 'gar-num-plus' : 'gar-num-minus').click();
+      }
+    });
     this.el('gar-random').addEventListener('click', () => this.randomDesign());
     for (const b of this.el('gar-mode').children) {
       b.addEventListener('click', () => {
@@ -306,7 +325,9 @@ export class Garage {
     for (const b of this.el('gar-vehicle').children) b.setAttribute('aria-checked', String(b.dataset.vehicle === kind));
     for (const b of this.el('gar-mode').children) b.setAttribute('aria-checked', String(b.dataset.mode === this.mode));
     this.el('gar-basic').hidden = this.mode !== 'basic';
-    this.el('gar-number').textContent = String(playerNumbers(S)[i]);
+    // pole s číslem nepřepisovat, dokud do něj hráč píše
+    const num = this.el('gar-number');
+    if (document.activeElement !== num) num.value = String(playerNumbers(S)[i]);
     this.el('gar-detail').hidden = this.mode !== 'detail';
 
     const body = partColor(S, i, 'body').hex;

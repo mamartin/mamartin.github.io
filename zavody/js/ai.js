@@ -3,11 +3,15 @@
 import { clamp, angleDiff, RNG } from './rng.js';
 import { CAR } from './car.js';
 
-// mistakes = šance na chybu za sekundu jízdy, defend = jak důrazně brání pozici (0–1)
+// corner = rychlost v zatáčkách proti rychlostnímu profilu trati, mistakes = šance na chybu
+// za sekundu jízdy, defend = jak důrazně brání pozici (0–1), nitroRegen = dobíjení nitra za
+// sekundu (náhrada za drift, kterým si nitro plní hráč); reference = pevná úroveň pro medaile
 export const DIFFICULTY = {
-  easy: { label: 'Lehká', corner: 0.8, top: 0.82, reaction: 0.34, noise: 0.05, nitro: false, variance: 0.04, mistakes: 0.05, defend: 0 },
-  medium: { label: 'Střední', corner: 0.93, top: 0.92, reaction: 0.24, noise: 0.03, nitro: false, variance: 0.035, mistakes: 0.03, defend: 0.6 },
-  hard: { label: 'Těžká', corner: 1.04, top: 1.0, reaction: 0.16, noise: 0.012, nitro: true, variance: 0.025, mistakes: 0.012, defend: 1 },
+  easy: { label: 'Lehká', corner: 0.8, top: 0.82, reaction: 0.34, noise: 0.05, nitro: false, variance: 0.04, mistakes: 0.05, defend: 0, nitroRegen: 0 },
+  medium: { label: 'Střední', corner: 0.93, top: 0.92, reaction: 0.24, noise: 0.03, nitro: false, variance: 0.035, mistakes: 0.03, defend: 0.6, nitroRegen: 0 },
+  hard: { label: 'Těžká', corner: 1.12, top: 1.0, reaction: 0.12, noise: 0.01, nitro: true, variance: 0.02, mistakes: 0.006, defend: 1, nitroRegen: 0.03 },
+  expert: { label: 'Nejtěžší', corner: 1.16, top: 1.0, reaction: 0.1, noise: 0.008, nitro: true, variance: 0.015, mistakes: 0.003, defend: 1, nitroRegen: 0.05 },
+  reference: { label: 'Medaile', corner: 1.04, top: 1.0, reaction: 0.16, noise: 0.012, nitro: true, variance: 0.025, mistakes: 0, defend: 1, nitroRegen: 0 },
 };
 
 export class AIDriver {
@@ -121,6 +125,7 @@ export class AIDriver {
     throttle *= lift;
     if (this.mistake > 0 && this.mistakeKind === 'lift') throttle *= 0.35;
 
+    if (this.diff.nitroRegen) car.nitro = Math.min(1, car.nitro + dt * this.diff.nitroRegen);
     let nitro = false;
     if (this.diff.nitro && car.nitro > 0.4 && speed > 28 && dv > 6 && Math.abs(tr.kappaS[tr.indexAt(s + 50)]) < 0.004) nitro = true;
 

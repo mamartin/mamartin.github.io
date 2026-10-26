@@ -52,7 +52,14 @@ export const COUNTDOWN = 3.6;
 // perfektní start: plyn přidaný nejdřív tolik sekund před zhasnutím, nebo nejpozději tolik po něm
 const START_EARLY = 0.6, START_LATE = 0.25;
 // šance AI na perfektní start podle obtížnosti (10 % aut startuje předčasně)
-const AI_PERFECT = { easy: 0.1, medium: 0.25, hard: 0.45 };
+const AI_PERFECT = { easy: 0.1, medium: 0.25, hard: 0.5, expert: 0.65 };
+// vyrovnávání: o kolik AI ve vedení zpomalí a o kolik víc tlačí, když hráč ujíždí
+const RUBBER = {
+  easy: { ahead: 0.09, behind: 0.04 },
+  medium: { ahead: 0.07, behind: 0.06 },
+  hard: { ahead: 0.02, behind: 0.08 },
+  expert: { ahead: 0, behind: 0.1 },
+};
 
 export class Race {
   constructor({
@@ -148,8 +155,8 @@ export class Race {
     return Math.max(0, Math.ceil(COUNTDOWN - t));
   }
 
-  setAutopilot(on, car = this.player) {
-    if (on && !this.autopilots.has(car)) this.autopilots.set(car, new AIDriver(car, this.track, 'hard', 4242 + (car.humanIndex || 0)));
+  setAutopilot(on, car = this.player, diffKey = 'hard') {
+    if (on && !this.autopilots.has(car)) this.autopilots.set(car, new AIDriver(car, this.track, diffKey, 4242 + (car.humanIndex || 0)));
     if (!on) this.autopilots.delete(car);
   }
 
@@ -288,8 +295,9 @@ export class Race {
     if (this.mode !== 'race' || !racing.length) return 1;
     const human = Math.max(...racing.map((p) => p.progress));
     const gap = car.progress - human; // + = AI vepředu
-    if (gap > 0) return 1 - clamp((gap - 60) / 400, 0, 0.07);
-    return 1 + clamp((-gap - 90) / 500, 0, 0.06);
+    const rb = RUBBER[this.difficulty] ?? RUBBER.medium;
+    if (gap > 0) return 1 - clamp((gap - 60) / 400, 0, rb.ahead);
+    return 1 + clamp((-gap - 90) / 500, 0, rb.behind);
   }
 
   updateProgress(car, dt) {

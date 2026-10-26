@@ -1,4 +1,4 @@
-// Medaile za nejlepší kolo. Limity vychází z letmého kola autopilota (těžká AI bez chyb)
+// Medaile za nejlepší kolo. Limity vychází z letmého kola autopilota (pevná úroveň AI bez chyb)
 // na suché trati, které se spočítá krátkou simulací bez vykreslování a uloží do mezipaměti.
 import { Race } from './race.js';
 import { Track } from './track.js';
@@ -52,7 +52,7 @@ export function referenceLap(def, kind) {
   const key = keyOf(def, kind);
   if (cache[key] == null) {
     const race = new Race({ track: new Track(def), biome: BIOMES[def.biome], mode: 'time', laps: 2, playerKinds: [kind] });
-    race.setAutopilot(true);
+    race.setAutopilot(true, race.player, 'reference');
     const pilot = race.autopilot;
     pilot.diff = { ...pilot.diff, mistakes: 0 };
     const idle = { throttle: 0, brake: 0, steer: 0, handbrake: false, nitro: false };

@@ -467,7 +467,7 @@ button:focus-visible, summary:focus-visible { outline: 2px solid var(--amber); o
   clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
 }
 .stepper button:hover { background: #24365a; }
-.stepper output {
+.stepper output, .stepper input {
   min-width: 40px;
   text-align: center;
   font-family: var(--font-display);
@@ -1262,3 +1262,14 @@ body.tilt-steer .touch-left { display: none; }
   .rp-map { width: 120px; height: 120px; }
   .rp-order { display: none; }
 }
+.stepper input {
+  width: 56px;
+  padding: 2px 0;
+  border: 1px solid var(--line);
+  background: var(--ink);
+  color: var(--paper);
+}
+.stepper input:focus-visible { outline: 2px solid var(--paper); outline-offset: -2px; }
+/* obtížnost má čtyři tlačítka: celý řádek, Kola a Počasí vedle sebe nad ní */
+.options { grid-auto-flow: row dense; }
+#diff-opt { grid-column: 1 / -1; }
