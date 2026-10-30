@@ -1,5 +1,5 @@
 {
-  "stazeno": "2026-10-29T11:24:03.498Z",
+  "stazeno": "2026-10-30T11:16:28.030Z",
   "zdroje": [
     {
       "id": "openai",
@@ -16,7 +16,7 @@
       "url": "https://raw.githubusercontent.com/Olshansk/rss-feeds/main/feeds/feed_anthropic_news.xml",
       "poznamka": "neoficiální feed (Anthropic RSS nemá)",
       "ok": true,
-      "pocet": 4
+      "pocet": 3
     },
     {
       "id": "deepmind",
@@ -40,7 +40,7 @@
       "typ": "lab",
       "url": "https://huggingface.co/blog/feed.xml",
       "ok": true,
-      "pocet": 3
+      "pocet": 7
     },
     {
       "id": "verge",
@@ -64,7 +64,7 @@
       "typ": "media",
       "url": "https://simonwillison.net/atom/everything/",
       "ok": true,
-      "pocet": 9
+      "pocet": 11
     },
     {
       "id": "hn",
@@ -72,7 +72,7 @@
       "typ": "data",
       "url": "https://news.ycombinator.com",
       "ok": true,
-      "pocet": 12
+      "pocet": 19
     },
     {
       "id": "hf-modely",
@@ -94,10 +94,213 @@
   "clanky": [
     {
       "zdroj": "verge",
+      "nazev": "Maine’s data center revolt will decide who controls the Senate",
+      "url": "https://www.theverge.com/ai-artificial-intelligence/1021080/maine-senate-race-susan-collins-ai-data-centers",
+      "datum": "2026-10-30T11:00:00.000Z",
+      "popis": "Maine Sen. Susan Collins, a Republican, was midway through defending her record during the final debate of the midterms when an audience member cut her short. \"I'm terrified,\" a man shouted. \"AI data centers are destroying our climate. They are poisoning our water.\" Collins brushed off the outburst, tying the man to her Democratic challenger, […]"
+    },
+    {
+      "zdroj": "verge",
+      "nazev": "Wikipedia’s operator says a bad AI copyright ruling could threaten the open web",
+      "url": "https://www.theverge.com/policy/1022880/wikipedia-openai-new-york-times-copyright",
+      "datum": "2026-10-30T09:00:00.000Z",
+      "popis": "The Wikimedia Foundation is staking out a middle ground in a group of landmark AI copyright cases, pushing courts to legally protect large language models (LLMs) training on copyrighted work - but not chatbots regurgitating that work to users. An overly black-and-white ruling, it says, could either deprive Wikipedians of useful AI-based tools or endanger […]"
+    },
+    {
+      "zdroj": "techcrunch",
+      "nazev": "You don’t need to believe in a god to get a religious exemption from using AI at work",
+      "url": "https://techcrunch.com/2026/10/29/you-dont-need-to-believe-in-a-god-to-get-a-religious-exemption-from-using-ai-at-work/",
+      "datum": "2026-10-30T01:20:48.000Z",
+      "popis": "David Durman, a University of Kentucky administrator, recently earned a religious exemption from using AI in the workplace."
+    },
+    {
+      "zdroj": "techcrunch",
+      "nazev": "AWS will be a $1T business, Jassy says — but first, it will spend big",
+      "url": "https://techcrunch.com/2026/10/29/aws-will-be-a-1t-business-jassy-says-but-first-it-will-spend-big/",
+      "datum": "2026-10-29T23:42:22.000Z",
+      "popis": "Amazon wants to be the king of AI cloud computing and become the first $1 trillion revenue business. But to do that it will have to continue on its capex spending spree, its CEO said Thursday."
+    },
+    {
+      "zdroj": "willison",
+      "nazev": "API credits benefit for eligible ChatGPT subscriptions",
+      "url": "https://simonwillison.net/2026/Oct/29/api-credits/",
+      "datum": "2026-10-29T22:48:29.000Z",
+      "popis": "API credits benefit for eligible ChatGPT subscriptions Earlier this month Anthropic announced a generous new benefit for their Max and Team subscriptions: $100, $200, and $500 per month subscribers would get the equivalent quantity of (expiring) credits to use with the Anthropic API. OpenAI have now launched pretty much exactly the same deal: if you have a $100, $200, or $500 subscription plan…"
+    },
+    {
+      "zdroj": "techcrunch",
+      "nazev": "As search traffic dries up, Reddit announces it’s shifting to a logged-in experience",
+      "url": "https://techcrunch.com/2026/10/29/as-search-traffic-dries-up-reddit-announces-its-shifting-to-a-logged-in-experience/",
+      "datum": "2026-10-29T20:08:31.000Z",
+      "popis": "As AI transforms how people find information online, Reddit is rethinking its open-web roots to protect its audience and business."
+    },
+    {
+      "zdroj": "techcrunch",
+      "nazev": "Rivian expands joint venture with VW to include AI assistant",
+      "url": "https://techcrunch.com/2026/10/29/rivian-expands-joint-venture-with-vw-to-include-ai-assistant/",
+      "datum": "2026-10-29T20:05:47.000Z",
+      "popis": "Rivian doesn't disclose if the value of its $5.8 billion joint venture will expand as a result."
+    },
+    {
+      "zdroj": "techcrunch",
+      "nazev": "OpenAI-backed Thrive Holdings acquires ADT",
+      "url": "https://techcrunch.com/2026/10/29/openai-backed-thrive-holdings-acquires-adt/",
+      "datum": "2026-10-29T19:56:19.000Z",
+      "popis": "OpenAI-backed Thrive Holdings is buying ADT in a $15.3 billion deal, with plans to bring AI to the home security business."
+    },
+    {
+      "zdroj": "techcrunch",
+      "nazev": "Meta quietly launches an AI fashion app called Style Sketch",
+      "url": "https://techcrunch.com/2026/10/29/meta-quietly-launches-an-ai-fashion-app-called-style-sketch/",
+      "datum": "2026-10-29T19:14:36.000Z",
+      "popis": "The app connects to Instagram to build a virtual closet from photos you’ve already shared, or lets you add items manually by snapping a photo, recording a quick video, or uploading images from your camera roll."
+    },
+    {
+      "zdroj": "verge",
+      "nazev": "You can generate and edit Google Docs files directly in Gemini chats now",
+      "url": "https://www.theverge.com/ai-artificial-intelligence/1022519/google-gemini-file-editing-documents-pdfs",
+      "datum": "2026-10-29T18:45:31.000Z",
+      "popis": "Now you can generate, preview, and edit PDFs, Google Docs, Google Sheets, slide decks, Markdown files, TXT files, and code directly within Google Gemini. The new file editing capabilities are available starting today for all Gemini users, and while PDF previews/editing works on both the web and mobile, all other file formats are only in […]"
+    },
+    {
+      "zdroj": "techcrunch",
+      "nazev": "Granola crunches up a dictation feature to compete with Wispr",
+      "url": "https://techcrunch.com/2026/10/29/granola-crunches-up-a-dictation-feature-to-compete-with-wispr/",
+      "datum": "2026-10-29T17:54:38.000Z",
+      "popis": "Uno reverse! After Wispr added meeting notes to its dictation app, Granola is adding dictation to its meeting notetaker. The voice AI wars are getting interesting."
+    },
+    {
+      "zdroj": "willison",
+      "nazev": "Building a multiplayer game world with autonomous Fable-class models",
+      "url": "https://simonwillison.net/2026/Oct/29/how-i-built-the-most-ai-pilled-company-in-the-world/",
+      "datum": "2026-10-29T17:00:26.000Z",
+      "popis": "How I Built the Most AI-Pilled Company in the World Don't be put off by the clickbait headline, this piece by Jacob Sansbury describing how they are building Spawn is a fascinating exploration of the bleeding edge of what's possible with agentic engineering against frontier models. Spawn is a massively multiplayer gaming environment where players can use prompts (to the in-game agent, Savi) to…"
+    },
+    {
+      "zdroj": "openai",
+      "nazev": "An updated Model Spec for more capable and beneficial AI",
+      "url": "https://openai.com/index/updated-model-spec",
+      "datum": "2026-10-29T17:00:00.000Z",
+      "popis": "OpenAI’s updated Model Spec outlines five core values to guide more capable AI toward sound judgment, human agency, and faithfulness to human intent."
+    },
+    {
+      "zdroj": "techcrunch",
+      "nazev": "Mistral releases weights for its trillion-parameter AI model, targeting cybersecurity",
+      "url": "https://techcrunch.com/2026/10/29/mistral-releases-weights-for-its-trillion-parameter-ai-model-targeting-cybersecurity/",
+      "datum": "2026-10-29T17:00:00.000Z",
+      "popis": "Mistral says its new model can afford organizations a kind of control over its cyber defenses that closed models can't."
+    },
+    {
+      "zdroj": "techcrunch",
+      "nazev": "US investigated Chinese spy plot aimed at Nvidia CEO",
+      "url": "https://techcrunch.com/2026/10/29/u-s-investigated-chinese-spy-plot-aimed-at-nvidia-ceo/",
+      "datum": "2026-10-29T16:42:32.000Z",
+      "popis": "A top executive of a Singapore AI cloud company that was accused of illegally selling Nvidia chips to China could also have been a Chinese spy, sources have told the New York Times."
+    },
+    {
+      "zdroj": "techcrunch",
+      "nazev": "Ex-Palantir execs launch Dream with $17M from a16z to build AI world models for construction",
+      "url": "https://techcrunch.com/2026/10/29/ex-palantir-execs-launch-dream-with-17m-from-a16z-to-build-ai-world-models-for-construction/",
+      "datum": "2026-10-29T16:21:00.000Z",
+      "popis": "Dream is grounded in real physics and construction standards. Just as LLMs learn from text, Dream's world model is trained on more than 100 million square feet of building data gathered from permit archives across the United States."
+    },
+    {
+      "zdroj": "verge",
+      "nazev": "Microsoft’s AI future has fewer jobs",
+      "url": "https://www.theverge.com/tech/1022023/microsoft-exit-offer-layoffs-notepad",
+      "datum": "2026-10-29T16:00:00.000Z",
+      "popis": "To anyone listening closely to what Microsoft CEO Satya Nadella has been saying over the past couple of years, this week felt like the clearest sign yet that AI is about to fundamentally change the size of Microsoft's workforce. Microsoft is now offering voluntary buyouts to around 60,000 employees across the US, UK, Canada, and […]"
+    },
+    {
+      "zdroj": "verge",
+      "nazev": "The NYT Cooking app is testing AI recipe modifications",
+      "url": "https://www.theverge.com/ai-artificial-intelligence/1022193/nyt-cooking-app-ai-recipe-modification-tool",
+      "datum": "2026-10-29T14:39:37.000Z",
+      "popis": "The New York Times is testing a new AI feature for its Cooking app that helps users to modify recipes, and it has sparked some drama among users. Last Friday, NYT Cooking senior editor Genevieve Ko announced the feature, which can be used to recommend substitutions for ingredients and cooking equipment, scale recipes to any […]"
+    },
+    {
+      "zdroj": "techcrunch",
+      "nazev": "Wabi, the AI agent that builds mini apps, now valued at $1.25B after latest round",
+      "url": "https://techcrunch.com/2026/10/29/wabi-the-ai-agent-that-builds-mini-apps-now-valued-at-1-25b-after-latest-round/",
+      "datum": "2026-10-29T14:35:26.000Z",
+      "popis": "On Thursday, AI app Wabi, now describing itself as a \"personal agent,\" said it has raised $55 million at a $1.25 billion valuation."
+    },
+    {
+      "zdroj": "willison",
+      "nazev": "Quoting Ben Hylak",
+      "url": "https://simonwillison.net/2026/Oct/29/ben-hylak/",
+      "datum": "2026-10-29T14:06:27.000Z",
+      "popis": "every product i use should just be a headless mcp, that feeds into an agent, where i never have to think about anything underneath. except for our product, of course. in our product, customers love the ui and love us very much. we're special that way. &mdash; Ben Hylak Tags: model-context-protocol , ai"
+    },
+    {
+      "zdroj": "verge",
+      "nazev": "Anthropic is asking Wall Street to believe in AGI",
+      "url": "https://www.theverge.com/podcast/1021322/anthropic-ipo-filing-s-1-claude-semianalysis-joey-brookhart-interview",
+      "datum": "2026-10-29T14:00:00.000Z",
+      "popis": "Today on Decoder, I’m joined by Joey Brookhart, an analyst at the chip and AI research firm SemiAnalysis, to help me dig into the story inside the numbers of the Anthropic IPO filing — a document known as an S-1. Anthropic just filed its S-1 to go public on the Nasdaq, and it could start […]"
+    },
+    {
+      "zdroj": "huggingface",
+      "nazev": "Granite Switch 4.1.1 — Update models like you update software",
+      "url": "https://huggingface.co/blog/ibm-granite/granite-switch-4-1-1",
+      "datum": "2026-10-29T13:37:07.000Z",
+      "popis": ""
+    },
+    {
+      "zdroj": "verge",
+      "nazev": "Anthropic’s business plan: Build God or die trying",
+      "url": "https://www.theverge.com/ai-artificial-intelligence/1021476/anthropic-s-1-compute-recursive",
+      "datum": "2026-10-29T13:30:00.000Z",
+      "popis": "The Anthropic S-1 seems to have provided the financial justification for the company to spend as much as it possibly can on compute. If you are the kind of person who wonders if Anthropic is doing its level best to build a machine god while convincing Wall Street it's in the business of selling IT […]"
+    },
+    {
+      "zdroj": "techcrunch",
+      "nazev": "Deepgram acquires Pipecat-maker Daily to bolster its voice AI infrastructure",
+      "url": "https://techcrunch.com/2026/10/29/deepgram-acquires-pipecat-maker-daily-to-bolster-its-voice-ai-infrastructure/",
+      "datum": "2026-10-29T13:00:00.000Z",
+      "popis": "With Pipecat, Deepgram will likely gain a deeper understanding of real-time voice and video infrastructure."
+    },
+    {
+      "zdroj": "verge",
       "nazev": "AI has come for Arizona’s water",
       "url": "https://www.theverge.com/cs/features/1016650/arizona-water-data-center-tsmc",
       "datum": "2026-10-29T10:00:04.000Z",
       "popis": "A hulking gray giant rises from the desert. Inside, engineers create the force behind our phones and computers and appliances, our streaming services and search engines and chatbots and vibe-coded apps and websites. The complex is simultaneously massive and squat, dwarfed by the mountains that surround it, and it is endless. I drive past one […]"
+    },
+    {
+      "zdroj": "openai",
+      "nazev": "How we detect frontier model misalignment",
+      "url": "https://openai.com/index/how-we-detect-frontier-model-misalignment",
+      "datum": "2026-10-29T09:00:00.000Z",
+      "popis": "OpenAI uses layered monitoring to detect frontier model misalignment and unauthorized agent behavior so responders can intervene before incidents escalate."
+    },
+    {
+      "zdroj": "openai",
+      "nazev": "How Ropes & Gray is developing AI for transactional diligence",
+      "url": "https://openai.com/index/ropes-gray-ai-diligence",
+      "datum": "2026-10-29T07:00:00.000Z",
+      "popis": "Ropes & Gray is developing AI for transactional diligence with OpenAI. Lawyers review grouped documents, summaries, and reports before advising clients."
+    },
+    {
+      "zdroj": "huggingface",
+      "nazev": "Announcing Project ProtoStar: Making Publicly Funded Science AI-Ready",
+      "url": "https://huggingface.co/blog/announcing-project-protostar",
+      "datum": "2026-10-29T00:00:00.000Z",
+      "popis": ""
+    },
+    {
+      "zdroj": "huggingface",
+      "nazev": "Welcome Le Chonk: Mistral Large 4 on Hugging Face",
+      "url": "https://huggingface.co/blog/mistral-large4",
+      "datum": "2026-10-29T00:00:00.000Z",
+      "popis": ""
+    },
+    {
+      "zdroj": "huggingface",
+      "nazev": "Introducing AnySpeechRecognizer and AnyDecisionModel: Open Models for Speech and Decisions on Apple Platforms",
+      "url": "https://huggingface.co/blog/anydecisionmodel",
+      "datum": "2026-10-29T00:00:00.000Z",
+      "popis": ""
     },
     {
       "zdroj": "willison",
@@ -114,74 +317,11 @@
       "popis": "Asked about AI and the trend of college students booing tech CEOs at graduation ceremonies, Instagram head Adam Mosseri acknowledged in an interview that a lot of people really don't like AI, and it's not just young people and creatives. Appearing on the Colin and Samir podcast to talk about the launch of widescreen and […]"
     },
     {
-      "zdroj": "techcrunch",
-      "nazev": "Microsoft just shared Azure’s actual revenue in dollars: $33.2 billion",
-      "url": "https://techcrunch.com/2026/10/28/microsoft-just-shared-azures-actual-revenue-in-dollars-33-2-billion/",
-      "datum": "2026-10-28T21:58:32.000Z",
-      "popis": "Microsoft has never disclosed Azure's quarterly revenue in dollars. But for the first time, we can see just how close it is getting to besting the biggest competitor in the market, AWS."
-    },
-    {
-      "zdroj": "techcrunch",
-      "nazev": "Google expands AI Search ads globally as core ad growth slows",
-      "url": "https://techcrunch.com/2026/10/28/google-expands-ai-search-ads-globally-as-core-ad-growth-slows/",
-      "datum": "2026-10-28T21:48:37.000Z",
-      "popis": "The announcement came alongside parent company Alphabet's third-quarter earnings report, which saw revenue grow 25% year over year to $127.6 billion."
-    },
-    {
-      "zdroj": "techcrunch",
-      "nazev": "Microsoft recorded $10 billion in revenue from OpenAI",
-      "url": "https://techcrunch.com/2026/10/28/microsoft-recorded-10-billion-in-revenue-from-openai/",
-      "datum": "2026-10-28T21:34:30.000Z",
-      "popis": "Microsoft said it made $10 billion in revenue from commercial arrangements with OpenAI, including revenue-sharing payments, in the quarter ending September 30. It underscores the still-enormous financial dependency of the partnership."
-    },
-    {
       "zdroj": "verge",
       "nazev": "Akai is embracing vibe-coded mods with an open-source MPC",
       "url": "https://www.theverge.com/gadgets/1021405/akai-open-source-mpc-sample-key",
       "datum": "2026-10-28T21:34:04.000Z",
       "popis": "The MPC Sample Key isn't even formally announced yet, but Akai is already showing off what the modding community is cooking up through vibe coding. Akai has decided to embrace the explosion of hackers and custom firmware developers by giving them early access to the device, which will have open-source firmware. It will likely run […]"
-    },
-    {
-      "zdroj": "techcrunch",
-      "nazev": "Microsoft hits 10 quarters of record-breaking revenue in a row",
-      "url": "https://techcrunch.com/2026/10/28/microsoft-hits-10-quarters-of-record-breaking-revenue-in-a-row/",
-      "datum": "2026-10-28T21:25:30.000Z",
-      "popis": "Whatever the future of AI might be, the current situation is still very good for Microsoft. The tech giant reported yet another record for quarterly revenue on Wednesday: $92.3 billion, a 19% increase over the year-ago quarter."
-    },
-    {
-      "zdroj": "verge",
-      "nazev": "Google launches Gemini 4 Carbon with a ‘significant leap’ in cybersecurity",
-      "url": "https://www.theverge.com/tech/1021339/google-gemini-4-carbon-cybersecurity-frontier",
-      "datum": "2026-10-28T20:03:00.000Z",
-      "popis": "Google has released its latest frontier model, Gemini 4 Carbon, offering \"significant gains\" in coding, agentic tasks, and cybersecurity. In an announcement on Wednesday, Google highlights Carbon's top spot on the Artificial Analysis Intelligence Index (v5.0) benchmark, with Claude Opus 5.5 and GPT-6 Astra trailing behind. The new Gemini 4 Carbon model offers improvements over […]"
-    },
-    {
-      "zdroj": "techcrunch",
-      "nazev": "Anthropic just launched tools to show companies what their AI spending is buying",
-      "url": "https://techcrunch.com/2026/10/28/anthropic-just-launched-tools-to-show-companies-what-their-ai-spending-is-buying/",
-      "datum": "2026-10-28T19:19:58.000Z",
-      "popis": "The frontier lab is lifting the curtain on how users spend money on its models ahead of a planned IPO."
-    },
-    {
-      "zdroj": "techcrunch",
-      "nazev": "Wiz’s CTO on PHP2Shell and the coming ‘vulnpocalypse’",
-      "url": "https://techcrunch.com/video/wizs-cto-on-php2shell-and-the-coming-vulnpocalypse/",
-      "datum": "2026-10-28T19:05:46.000Z",
-      "popis": "The PHP scare may have faded from your feed, but the cleanup is far from over. Last week, two critical bugs in the open source language behind roughly 70% of websites left organizations scrambling to fix their systems, with some taking sites offline until the vulnerabilities could be patched. According to researchers who found the […]"
-    },
-    {
-      "zdroj": "techcrunch",
-      "nazev": "The ‘Vulnpocalypse’ is coming for the internet’s aging code, says Wiz’s CTO",
-      "url": "https://techcrunch.com/podcast/the-vulnpocalypse-is-coming-for-the-internets-aging-code-says-wizs-cto/",
-      "datum": "2026-10-28T18:50:39.000Z",
-      "popis": "The PHP scare may have faded from your feed, but the cleanup is far from over. Last week, two critical bugs in the open source language behind roughly 70% of websites left organizations scrambling to fix their systems, with some taking sites offline until the vulnerabilities could be patched. According to researchers who found the […]"
-    },
-    {
-      "zdroj": "verge",
-      "nazev": "Microsoft is ending Copilot support on smart TVs",
-      "url": "https://www.theverge.com/tech/1021143/microsoft-lg-samsung-copilot-ai-assistant-smart-tvs-ending",
-      "datum": "2026-10-28T18:36:26.000Z",
-      "popis": "Nearly two years after LG and Samsung announced at CES 2025 that their latest smart TVs would include access to Microsoft's Copilot, the company is ending support for the AI assistant's functionality on all TVs this year, according to a report by Windows Central. The news comes not from an official announcement from LG, Samsung, […]"
     },
     {
       "zdroj": "deepmind",
@@ -191,27 +331,6 @@
       "popis": ""
     },
     {
-      "zdroj": "verge",
-      "nazev": "Chrome’s enhanced autofill can now pull info from Gmail to help you fill out forms",
-      "url": "https://www.theverge.com/tech/1020626/chrome-enhanced-autofill-gmail-forms-gemini-personal-intelligence",
-      "datum": "2026-10-28T17:00:00.000Z",
-      "popis": "Following improvements made to Chrome's enhanced autofill last year that included your name, passport number, email address, and physical addresses sourced from your Google Accounts and services like Google Wallet, the feature is now expanding. Starting today, Chrome's enhanced autofill will use Gemini with Personal Intelligence to suggest information sourced from your Gmail, potentially saving…"
-    },
-    {
-      "zdroj": "techcrunch",
-      "nazev": "Chrome’s AI-powered Autofill can now dig through your Gmail to fill out forms",
-      "url": "https://techcrunch.com/2026/10/28/chromes-ai-powered-autofill-can-now-dig-through-your-gmail-to-fill-out-forms/",
-      "datum": "2026-10-28T17:00:00.000Z",
-      "popis": "The autofill update lets Chrome pull flight confirmations, tracking info, order details, and other information from your inbox, with your permission."
-    },
-    {
-      "zdroj": "techcrunch",
-      "nazev": "As AI agents reshape the web, Google opens Gemini and Search to more apps",
-      "url": "https://techcrunch.com/2026/10/28/as-ai-agents-reshape-the-web-google-opens-gemini-and-search-to-more-apps/",
-      "datum": "2026-10-28T17:00:00.000Z",
-      "popis": "A new developer platform will let businesses bring their services to Google's AI experiences, potentially changing how consumers discover and use apps."
-    },
-    {
       "zdroj": "willison",
       "nazev": "GitHub Octoverse 2026",
       "url": "https://simonwillison.net/2026/Oct/28/github-octoverse-2026/",
@@ -219,46 +338,11 @@
       "popis": "GitHub Octoverse 2026 I'm at GitHub Universe today (GitHub gave me a free ticket through their \"GitHub Stars\" program). EVP Jay Parikh just announced this year's Octoverse report, and highlighted these numbers in particular: This is a pretty stark representation of the impact of agentic engineering on GitHub. In 2026, merged pull requests tripled in less than a year to 220 million per month.…"
     },
     {
-      "zdroj": "verge",
-      "nazev": "Meta says it’ll probably delay its controversial new business terms again",
-      "url": "https://www.theverge.com/tech/1020769/meta-updated-business-terms-delay-indefinitely",
-      "datum": "2026-10-28T16:15:30.000Z",
-      "popis": "Meta says it may push the implementation of its new business terms past November 20th as it faces backlash from publishers over concerns about AI training. In a post on X, Meta communications head Andy Stone said the company does \"not plan to make policy changes without a full consultation with industry groups and leaders.\" […]"
-    },
-    {
-      "zdroj": "techcrunch",
-      "nazev": "AI execs may be too out of touch to build for the general public",
-      "url": "https://techcrunch.com/2026/10/28/ai-execs-may-be-too-out-of-touch-to-build-for-the-general-public/",
-      "datum": "2026-10-28T15:53:52.000Z",
-      "popis": "Tech leaders are flaunting how out of touch they are when they brag about using AI to connect with their families."
-    },
-    {
-      "zdroj": "techcrunch",
-      "nazev": "South Korea’s financial industry hit by fresh wave of cyberattacks",
-      "url": "https://techcrunch.com/2026/10/28/south-koreas-financial-industry-hit-by-fresh-wave-of-cyberattacks/",
-      "datum": "2026-10-28T15:41:18.000Z",
-      "popis": "South Korea’s financial institutions have been hit by another wave of cyberattacks, highlighting the growing risk of AI-driven hacking in Asia."
-    },
-    {
-      "zdroj": "techcrunch",
-      "nazev": "Voice AI in vogue: Nvidia releases new open transcription model",
-      "url": "https://techcrunch.com/2026/10/28/voice-ai-in-vogue-nvidia-releases-new-open-transcription-model/",
-      "datum": "2026-10-28T15:00:00.000Z",
-      "popis": "Nvidia just released a free speech-to-text model that can transcribe up to 40 languages, but it only works on recordings, not live audio, so it’s a big step for meeting and medical transcription tools while still leaving real-time use to rivals like ElevenLabs."
-    },
-    {
       "zdroj": "huggingface",
       "nazev": "NVIDIA Nemotron 3.5 Transcribe and Granary v2: Intelligent Multilingual Transcription You Can Prompt and Adapt",
       "url": "https://huggingface.co/blog/nvidia/nemotron-transcribe-granary",
       "datum": "2026-10-28T14:58:17.000Z",
       "popis": ""
-    },
-    {
-      "zdroj": "verge",
-      "nazev": "xAI is buying out homeowners who promise not to sue over data center noise",
-      "url": "https://www.theverge.com/ai-artificial-intelligence/1020596/xai-mississippi-neighborhood-data-center-lawsuit",
-      "datum": "2026-10-28T14:44:00.000Z",
-      "popis": "A subsidiary of Elon Musk's xAI is offering to buy up homes in a Mississippi neighborhood, as long as residents don't join a lawsuit targeting the company's nearby data center and power plant, according to a report from The Guardian. A realtor going door-to-door in the Southaven neighborhood reportedly told one resident that xAI plans […]"
     },
     {
       "zdroj": "willison",
@@ -273,20 +357,6 @@
       "url": "https://openai.com/index/openai-servicenow-partnership-expansion",
       "datum": "2026-10-28T13:15:00.000Z",
       "popis": "OpenAI and ServiceNow expand their partnership to bring OpenAI models and agents into ServiceNow and ServiceNow workflows into ChatGPT and Codex."
-    },
-    {
-      "zdroj": "verge",
-      "nazev": "Voters in Texas agree: They hate data centers",
-      "url": "https://www.theverge.com/ai-artificial-intelligence/1018676/data-center-midterm-election-energy-water-texas",
-      "datum": "2026-10-28T12:00:00.000Z",
-      "popis": "Ask Texas NAACP president Gary Bledsoe what it's been like to see data center developers descend upon Austin and its surrounding suburbs and he can rattle off project after project facing opposition from locals. There's the fight in Taylor over plans to build a data center at a site that's supposed to be a park. […]"
-    },
-    {
-      "zdroj": "verge",
-      "nazev": "Meta quietly launched an ‘AI pet journal’ app",
-      "url": "https://www.theverge.com/ai-artificial-intelligence/1020410/meta-launched-ai-pet-journal-app-waddle-world",
-      "datum": "2026-10-28T11:27:30.000Z",
-      "popis": "Meta has launched a \"tamagotchi-style\" pet game called Waddle World, with virtual creatures that chat with users and create doodles to illustrate conversations. According to its Apple and Play Store listings, the \"16-bit pet care game\" is not really a game, but \"a daily journal disguised as a pet.\" Users should talk, not type, with […]"
     },
     {
       "zdroj": "willison",
@@ -427,139 +497,160 @@
       "url": "https://openai.com/index/gpt-6-1-sol-coderabbit-code-security",
       "datum": "2026-10-26T13:45:00.000Z",
       "popis": "CodeRabbit uses GPT-6.1 Sol to investigate security risks across complex codebases. Its security agent helps developers review findings and proposed fixes."
-    },
-    {
-      "zdroj": "openai",
-      "nazev": "ChatGPT’s expanding world of work",
-      "url": "https://openai.com/index/chatgpt-expanding-world-of-work",
-      "datum": "2026-10-26T10:00:00.000Z",
-      "popis": "Explore OpenAI Signals data on 165 work activities across nearly 100 countries, revealing how people use ChatGPT for work and how usage changes over time."
-    },
-    {
-      "zdroj": "openai",
-      "nazev": "How Fanatics and OpenAI streamline the fan experience",
-      "url": "https://openai.com/index/fanatics-streamline-fan-experience",
-      "datum": "2026-10-26T07:00:00.000Z",
-      "popis": "Fanatics uses OpenAI to help fans complete their game-day outfits with Shop the Look. Testing across roughly 30,000 MLB products showed 10% higher engagement."
-    },
-    {
-      "zdroj": "openai",
-      "nazev": "How Ultrafast cut incident investigation from hours to minutes at OpenAI",
-      "url": "https://openai.com/index/openai-cut-incident-investigation",
-      "datum": "2026-10-26T07:00:00.000Z",
-      "popis": "See how OpenAI engineers use Codex Ultrafast to investigate incidents in minutes. Explore faster security analysis, code refactoring, and daily workflows."
-    },
-    {
-      "zdroj": "anthropic",
-      "nazev": "Anthropic files S-1 with the SEC for proposed initial public offering",
-      "url": "https://www.anthropic.com/news/s1-sec",
-      "datum": "2026-10-26T00:00:00.000Z",
-      "popis": "Today, Anthropic, PBC filed a registration statement on Form S-1 with the U.S. Securities and Exchange Commission relating to its proposed initial public offering of its Class A common stock."
-    },
-    {
-      "zdroj": "willison",
-      "nazev": "Seam Cutter",
-      "url": "https://simonwillison.net/2026/Oct/25/seam-cutter/",
-      "datum": "2026-10-25T15:10:19.000Z",
-      "popis": "Tool: Seam Cutter I built this weird and very specific cropping tool - it lets you create a horizontal or vertical cut across an image, then slide the two sides relative to each other. Effectively it lets you crop out a section in the middle of an image. I wanted this because I often use Tailor on my iPhone to stitch several screenshots together into lot long image, but sometimes I find myself…"
     }
   ],
   "hn": [
     {
-      "nazev": "Gemini 4 Carbon",
-      "url": "https://blog.google/innovation-and-ai/models-and-research/gemini-models/introducing-gemini-4-carbon/",
-      "diskuse": "https://news.ycombinator.com/item?id=50276792",
-      "body": 949,
-      "komentare": 760,
-      "datum": "2026-10-28T17:01:23Z"
-    },
-    {
-      "nazev": "Kentucky man becomes the first humanist granted religious exemption from AI",
-      "url": "https://religionnews.com/2026/10/26/in-a-first-a-humanist-granted-a-religious-exemption-from-using-ai/",
-      "diskuse": "https://news.ycombinator.com/item?id=50273396",
-      "body": 464,
-      "komentare": 504,
-      "datum": "2026-10-28T13:41:30Z"
+      "nazev": "We're releasing the weights of Mistral Large 4",
+      "url": "https://mistral.ai/news/mistral-large-4-oss/",
+      "diskuse": "https://news.ycombinator.com/item?id=50289418",
+      "body": 1516,
+      "komentare": 400,
+      "datum": "2026-10-29T14:13:21Z"
     },
     {
       "nazev": "Claude Code regularly sends each background agent’s transcript to its model",
       "url": "https://gist.github.com/flamerix-ai/c3905705cc4205e5de3011fa2e74efce",
       "diskuse": "https://news.ycombinator.com/item?id=50284255",
-      "body": 411,
-      "komentare": 153,
+      "body": 567,
+      "komentare": 230,
       "datum": "2026-10-29T03:33:42Z"
     },
     {
-      "nazev": "Dayjob: Tax – evaluating AI agents on 50 professional tax assignments",
-      "url": "https://surgehq.ai/blog/dayjob-tax",
-      "diskuse": "https://news.ycombinator.com/item?id=50275626",
-      "body": 241,
-      "komentare": 154,
-      "datum": "2026-10-28T15:46:30Z"
+      "nazev": "LLM Voice",
+      "url": "https://martinfowler.com/bliki/LLM-Voice.html",
+      "diskuse": "https://news.ycombinator.com/item?id=50290177",
+      "body": 493,
+      "komentare": 261,
+      "datum": "2026-10-29T14:57:55Z"
     },
     {
-      "nazev": "Google AI gets cagey when asked who won the 2020 elections",
-      "url": "https://arstechnica.com/ai/2026/10/google-ai-gets-cagey-when-asked-who-won-the-2020-elections/",
-      "diskuse": "https://news.ycombinator.com/item?id=50280178",
-      "body": 156,
-      "komentare": 69,
-      "datum": "2026-10-28T20:10:16Z"
+      "nazev": "Gemini 4 Carbon is the new #1 on the Artificial Analysis Intelligence Index v5",
+      "url": "https://artificialanalysis.ai/articles/gemini-4-carbon-new-number-1",
+      "diskuse": "https://news.ycombinator.com/item?id=50288019",
+      "body": 336,
+      "komentare": 242,
+      "datum": "2026-10-29T12:41:56Z"
     },
     {
-      "nazev": "AI execs may be too out of touch to build for the general public",
-      "url": "https://techcrunch.com/2026/10/28/ai-execs-may-be-too-out-of-touch-to-build-for-the-general-public/",
-      "diskuse": "https://news.ycombinator.com/item?id=50281826",
-      "body": 70,
-      "komentare": 55,
-      "datum": "2026-10-28T22:27:46Z"
+      "nazev": "We ran AI agent swarms in Minecraft and Mindustry",
+      "url": "https://labs.ycombinator.com/projects/games/index.html",
+      "diskuse": "https://news.ycombinator.com/item?id=50296486",
+      "body": 303,
+      "komentare": 112,
+      "datum": "2026-10-29T21:40:28Z"
     },
     {
-      "nazev": "Harvey raised 500M for legal AI, I built the same and open sourced it",
-      "url": "https://github.com/thomasunise/casecite",
-      "diskuse": "https://news.ycombinator.com/item?id=50273623",
-      "body": 69,
-      "komentare": 38,
-      "datum": "2026-10-28T13:56:21Z"
+      "nazev": "Manifestos, Fear, and 'Loser Thinking': Inside Proton's AI Reckoning",
+      "url": "https://www.404media.co/manifestos-fear-and-loser-thinking-inside-protons-ai-reckoning/",
+      "diskuse": "https://news.ycombinator.com/item?id=50289692",
+      "body": 167,
+      "komentare": 59,
+      "datum": "2026-10-29T14:29:06Z"
     },
     {
-      "nazev": "Microsoft and Epic Games Suddenly Agree That AI Is Theft",
-      "url": "https://kotaku.com/now-that-the-shoe-is-on-the-other-foot-microsoft-and-epic-games-suddenly-agree-that-ai-is-theft-2000749316",
-      "diskuse": "https://news.ycombinator.com/item?id=50271271",
-      "body": 69,
-      "komentare": 33,
-      "datum": "2026-10-28T10:10:58Z"
+      "nazev": "Zombie stats: Where the numbers AI quotes come from",
+      "url": "https://trakkr.ai/trakkr-research/zombie-stats",
+      "diskuse": "https://news.ycombinator.com/item?id=50290283",
+      "body": 166,
+      "komentare": 67,
+      "datum": "2026-10-29T15:06:17Z"
     },
     {
-      "nazev": "Valve Responds to Developers Fearing AI Slop and Clones",
-      "url": "https://www.invenglobal.com/articles/27761/valve-responds-to-developers-fearing-ai-slop-and-clones",
-      "diskuse": "https://news.ycombinator.com/item?id=50273192",
-      "body": 65,
-      "komentare": 78,
-      "datum": "2026-10-28T13:27:24Z"
+      "nazev": "Claude Duet is the first personal-assistant-type harness that feels useful",
+      "url": "https://fig.blue/posts/duet-is-the-future/",
+      "diskuse": "https://news.ycombinator.com/item?id=50292727",
+      "body": 118,
+      "komentare": 125,
+      "datum": "2026-10-29T17:24:25Z"
     },
     {
-      "nazev": "Sleep framework: A new way for LLMs to retain knowledge in continual learning",
-      "url": "https://research.google/blog/the-sleep-framework-a-new-way-for-llms-to-retain-knowledge-in-continual-learning/",
-      "diskuse": "https://news.ycombinator.com/item?id=50272479",
-      "body": 61,
-      "komentare": 3,
-      "datum": "2026-10-28T12:24:25Z"
-    },
-    {
-      "nazev": "New York Times adds more AI features to its Cooking app. Users aren't thrilled",
-      "url": "https://www.niemanlab.org/2026/10/the-new-york-times-is-adding-more-ai-features-to-its-cooking-app-and-users-arent-thrilled/",
-      "diskuse": "https://news.ycombinator.com/item?id=50282766",
-      "body": 53,
+      "nazev": "Proton goes all in on using AI",
+      "url": "https://convo.casa/@b/117525936178835007",
+      "diskuse": "https://news.ycombinator.com/item?id=50296602",
+      "body": 99,
       "komentare": 100,
-      "datum": "2026-10-29T00:16:08Z"
+      "datum": "2026-10-29T21:49:28Z"
+    },
+    {
+      "nazev": "Ask HN: Are you tired too in this AI era?",
+      "url": "https://news.ycombinator.com/item?id=50301479",
+      "diskuse": "https://news.ycombinator.com/item?id=50301479",
+      "body": 96,
+      "komentare": 88,
+      "datum": "2026-10-30T09:17:43Z"
+    },
+    {
+      "nazev": "Show HN: I Turned DOOM into a Transformer",
+      "url": "https://github.com/mottopanikeiku/doomformer",
+      "diskuse": "https://news.ycombinator.com/item?id=50297697",
+      "body": 96,
+      "komentare": 31,
+      "datum": "2026-10-29T23:25:46Z"
+    },
+    {
+      "nazev": "Why are good developers so wary of agentic development?",
+      "url": "https://martinfowler.com/rachels-ramblings/good-devs-wary.html",
+      "diskuse": "https://news.ycombinator.com/item?id=50289162",
+      "body": 95,
+      "komentare": 134,
+      "datum": "2026-10-29T13:58:41Z"
+    },
+    {
+      "nazev": "Launch HN: Simantic (YC F26) – Firmware Simulation for AI Agents",
+      "url": "https://news.ycombinator.com/item?id=50291116",
+      "diskuse": "https://news.ycombinator.com/item?id=50291116",
+      "body": 71,
+      "komentare": 24,
+      "datum": "2026-10-29T15:56:32Z"
+    },
+    {
+      "nazev": "Google value plunges by $500B as AI fears rattle Wall Street",
+      "url": "https://www.bbc.com/news/articles/cm9qzdqpxy48o",
+      "diskuse": "https://news.ycombinator.com/item?id=50297037",
+      "body": 64,
+      "komentare": 28,
+      "datum": "2026-10-29T22:22:13Z"
     },
     {
       "nazev": "MicroZig to Adopt Strict No LLM / No AI Policy",
       "url": "https://github.com/ZigEmbeddedGroup/microzig/blob/main/CODE_OF_CONDUCT.md",
       "diskuse": "https://news.ycombinator.com/item?id=50282865",
-      "body": 51,
-      "komentare": 68,
+      "body": 57,
+      "komentare": 74,
       "datum": "2026-10-29T00:30:37Z"
+    },
+    {
+      "nazev": "New York Times adds more AI features to its Cooking app. Users aren't thrilled",
+      "url": "https://www.niemanlab.org/2026/10/the-new-york-times-is-adding-more-ai-features-to-its-cooking-app-and-users-arent-thrilled/",
+      "diskuse": "https://news.ycombinator.com/item?id=50282766",
+      "body": 57,
+      "komentare": 108,
+      "datum": "2026-10-29T00:16:08Z"
+    },
+    {
+      "nazev": "IgE disruptor for food allergy with Claude-enabled antibody design [pdf]",
+      "url": "https://divergencelabs.com/publications/ige-preprint.pdf",
+      "diskuse": "https://news.ycombinator.com/item?id=50294486",
+      "body": 48,
+      "komentare": 38,
+      "datum": "2026-10-29T19:25:48Z"
+    },
+    {
+      "nazev": "I Used AI to Fake a Scientific Paper. Here's What Happened",
+      "url": "https://spectrum.ieee.org/ai-generated-scientific-papers",
+      "diskuse": "https://news.ycombinator.com/item?id=50286738",
+      "body": 47,
+      "komentare": 26,
+      "datum": "2026-10-29T10:08:04Z"
+    },
+    {
+      "nazev": "MIT professor says AI is taking over your brain",
+      "url": "https://www.bostonglobe.com/2026/10/23/opinion/ai-impact-cognitive-ability-eric-so/",
+      "diskuse": "https://news.ycombinator.com/item?id=50290324",
+      "body": 42,
+      "komentare": 25,
+      "datum": "2026-10-29T15:08:49Z"
     }
   ],
   "modely": [
@@ -568,9 +659,9 @@
       "autor": "deepseek-ai",
       "nazev": "DeepSeek-V4.1-Flash-1017",
       "uloha": "image-text-to-text",
-      "lajky": 3677,
-      "stazeni": 131062,
-      "trend": 885,
+      "lajky": 3926,
+      "stazeni": 145869,
+      "trend": 851,
       "vytvoreno": "2026-10-17T02:40:38.000Z",
       "url": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017"
     },
@@ -579,86 +670,75 @@
       "autor": "Nanbeige",
       "nazev": "Nanbeige4.3-33B",
       "uloha": "text-generation",
-      "lajky": 748,
-      "stazeni": 9655,
-      "trend": 738,
+      "lajky": 787,
+      "stazeni": 12178,
+      "trend": 771,
       "vytvoreno": "2026-10-24T02:49:18.000Z",
       "url": "https://huggingface.co/Nanbeige/Nanbeige4.3-33B"
-    },
-    {
-      "id": "RecursiveSI/flint",
-      "autor": "RecursiveSI",
-      "nazev": "flint",
-      "uloha": "text-generation",
-      "lajky": 1221,
-      "stazeni": 16598,
-      "trend": 637,
-      "vytvoreno": "2026-10-21T14:20:58.000Z",
-      "url": "https://huggingface.co/RecursiveSI/flint"
-    },
-    {
-      "id": "XHToken/Spark-X2.6-4B",
-      "autor": "XHToken",
-      "nazev": "Spark-X2.6-4B",
-      "uloha": "text-generation",
-      "lajky": 886,
-      "stazeni": 10163,
-      "trend": 482,
-      "vytvoreno": "2026-10-19T03:19:51.000Z",
-      "url": "https://huggingface.co/XHToken/Spark-X2.6-4B"
-    },
-    {
-      "id": "tencent/Hy-SimulMT-30B-A3B-FP8",
-      "autor": "tencent",
-      "nazev": "Hy-SimulMT-30B-A3B-FP8",
-      "uloha": "translation",
-      "lajky": 454,
-      "stazeni": 396,
-      "trend": 446,
-      "vytvoreno": "2026-10-22T07:29:37.000Z",
-      "url": "https://huggingface.co/tencent/Hy-SimulMT-30B-A3B-FP8"
     },
     {
       "id": "LiquidAI/LFM3-1.7B",
       "autor": "LiquidAI",
       "nazev": "LFM3-1.7B",
       "uloha": "text-generation",
-      "lajky": 436,
-      "stazeni": 15885,
-      "trend": 432,
+      "lajky": 518,
+      "stazeni": 23694,
+      "trend": 507,
       "vytvoreno": "2026-10-23T21:35:42.000Z",
       "url": "https://huggingface.co/LiquidAI/LFM3-1.7B"
     },
     {
-      "id": "MiniMaxAI/MiniMax-M3.1-Flash",
-      "autor": "MiniMaxAI",
-      "nazev": "MiniMax-M3.1-Flash",
-      "uloha": "image-text-to-text",
-      "lajky": 477,
-      "stazeni": 15738,
-      "trend": 421,
-      "vytvoreno": "2026-10-17T06:37:50.000Z",
-      "url": "https://huggingface.co/MiniMaxAI/MiniMax-M3.1-Flash"
+      "id": "RecursiveSI/flint",
+      "autor": "RecursiveSI",
+      "nazev": "flint",
+      "uloha": "text-generation",
+      "lajky": 1249,
+      "stazeni": 19015,
+      "trend": 440,
+      "vytvoreno": "2026-10-21T14:20:58.000Z",
+      "url": "https://huggingface.co/RecursiveSI/flint"
     },
     {
       "id": "ISTA-DASLab/DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF",
       "autor": "ISTA-DASLab",
       "nazev": "DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF",
       "uloha": "text-generation",
-      "lajky": 461,
-      "stazeni": 1578937,
-      "trend": 410,
+      "lajky": 490,
+      "stazeni": 1747945,
+      "trend": 435,
       "vytvoreno": "2026-10-23T09:43:05.000Z",
       "url": "https://huggingface.co/ISTA-DASLab/DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF"
+    },
+    {
+      "id": "nvidia/NVIDIA-Nemotron-3.5-Transcribe-30B-A4B",
+      "autor": "nvidia",
+      "nazev": "NVIDIA-Nemotron-3.5-Transcribe-30B-A4B",
+      "uloha": "automatic-speech-recognition",
+      "lajky": 452,
+      "stazeni": 15980,
+      "trend": 429,
+      "vytvoreno": "2026-10-07T22:50:21.000Z",
+      "url": "https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Transcribe-30B-A4B"
+    },
+    {
+      "id": "baidu/Unlimited-OCR-2",
+      "autor": "baidu",
+      "nazev": "Unlimited-OCR-2",
+      "uloha": "image-text-to-text",
+      "lajky": 428,
+      "stazeni": 24276,
+      "trend": 388,
+      "vytvoreno": "2026-10-26T03:57:46.000Z",
+      "url": "https://huggingface.co/baidu/Unlimited-OCR-2"
     },
     {
       "id": "Lightricks/LTX-2.5",
       "autor": "Lightricks",
       "nazev": "LTX-2.5",
       "uloha": "image-to-video",
-      "lajky": 9777,
-      "stazeni": 2269999,
-      "trend": 399,
+      "lajky": 9894,
+      "stazeni": 2335172,
+      "trend": 382,
       "vytvoreno": "2026-07-23T07:55:24.000Z",
       "url": "https://huggingface.co/Lightricks/LTX-2.5"
     },
@@ -667,115 +747,126 @@
       "autor": "black-forest-labs",
       "nazev": "flux-3-image-klein-comfy",
       "uloha": "image-to-image",
-      "lajky": 1993,
-      "stazeni": 832197,
-      "trend": 379,
+      "lajky": 2078,
+      "stazeni": 886973,
+      "trend": 351,
       "vytvoreno": "2026-10-14T12:00:13.000Z",
       "url": "https://huggingface.co/black-forest-labs/flux-3-image-klein-comfy"
     },
     {
-      "id": "baidu/Unlimited-OCR-2",
-      "autor": "baidu",
-      "nazev": "Unlimited-OCR-2",
-      "uloha": "image-text-to-text",
-      "lajky": 355,
-      "stazeni": 18141,
-      "trend": 339,
-      "vytvoreno": "2026-10-26T03:57:46.000Z",
-      "url": "https://huggingface.co/baidu/Unlimited-OCR-2"
+      "id": "XHToken/Spark-X2.6-4B",
+      "autor": "XHToken",
+      "nazev": "Spark-X2.6-4B",
+      "uloha": "text-generation",
+      "lajky": 914,
+      "stazeni": 12515,
+      "trend": 350,
+      "vytvoreno": "2026-10-19T03:19:51.000Z",
+      "url": "https://huggingface.co/XHToken/Spark-X2.6-4B"
     },
     {
-      "id": "Qwen/Qwen3.8-27B",
-      "autor": "Qwen",
-      "nazev": "Qwen3.8-27B",
+      "id": "mistralai/Mistral-Large-4-1T-A52B",
+      "autor": "mistralai",
+      "nazev": "Mistral-Large-4-1T-A52B",
       "uloha": "image-text-to-text",
-      "lajky": 18656,
-      "stazeni": 7509924,
-      "trend": 316,
-      "vytvoreno": "2026-08-05T08:22:59.000Z",
-      "url": "https://huggingface.co/Qwen/Qwen3.8-27B"
+      "lajky": 1278,
+      "stazeni": 1239,
+      "trend": 347,
+      "vytvoreno": "2026-09-30T18:35:13.000Z",
+      "url": "https://huggingface.co/mistralai/Mistral-Large-4-1T-A52B"
+    },
+    {
+      "id": "abenzerps/Qwen-Image-2.1-Uncensored-Quantized",
+      "autor": "abenzerps",
+      "nazev": "Qwen-Image-2.1-Uncensored-Quantized",
+      "uloha": "text-to-image",
+      "lajky": 5337,
+      "stazeni": 2516721,
+      "trend": 302,
+      "vytvoreno": "2026-09-20T15:51:13.000Z",
+      "url": "https://huggingface.co/abenzerps/Qwen-Image-2.1-Uncensored-Quantized"
     }
   ],
   "vyzkum": [
     {
-      "nazev": "The Trinity:Capability-Driven Recursive Self-Improvement for Multimodal Agents",
-      "url": "https://huggingface.co/papers/2610.36077",
-      "arxiv": "https://arxiv.org/abs/2610.36077",
-      "hlasy": 540,
-      "datum": "2026-10-26T00:00:00.000Z",
-      "souhrn": "Multimodal intelligence can be viewed as human-guided co-evolution between worlds and agents through interaction. However, scaling this process faces two bottlenecks: constructing heterogeneous, verifiable environments is costly, and manual Harness iteration cannot keep pace with growing task diversity and complexity. A key insight is that tasks with different modalities and surface forms can share the same underlying capability requirements. We therefore introduce The Trinity, a recursive…"
-    },
-    {
-      "nazev": "Multiscale Policy Optimization for Long-Horizon LLM Agents",
-      "url": "https://huggingface.co/papers/2610.35013",
-      "arxiv": "https://arxiv.org/abs/2610.35013",
-      "hlasy": 377,
-      "datum": "2026-10-26T00:00:00.000Z",
-      "souhrn": "Long-horizon LLM agents interact with their environments through complete assistant turns while generating each action token by token. We observe that critic values vary primarily across turns, motivating optimization anchored at turns with finer credit allocation among tokens. We propose Multiscale Policy Optimization (MPO), combining Multiscale Advantage Estimation (MAE) and turn-level importance sampling to align credit assignment and policy updates at the turn scale. Extensive experiments…"
-    },
-    {
-      "nazev": "DTCA: Denoising Token Credit Assignment for Reinforcement Learning in Diffusion Language Models",
-      "url": "https://huggingface.co/papers/2610.35201",
-      "arxiv": "https://arxiv.org/abs/2610.35201",
-      "hlasy": 256,
-      "datum": "2026-10-26T00:00:00.000Z",
-      "souhrn": "Diffusion language models (DLMs) generate text through iterative denoising, enabling bidirectional context modeling and parallel token refinement. Recent studies have applied reinforcement learning (RL) to DLMs and improved their reasoning performance. However, the iterative denoising process makes credit assignment more challenging, as final outcome rewards provide limited information about how different tokens contribute to the final output. In this paper, we propose Denoising Token Credit…"
-    },
-    {
-      "nazev": "VibeVideoBench: Evaluating Multimodal Agents on Code-Driven Video Generation",
-      "url": "https://huggingface.co/papers/2610.35864",
-      "arxiv": "https://arxiv.org/abs/2610.35864",
-      "hlasy": 174,
-      "datum": "2026-10-27T00:00:00.000Z",
-      "souhrn": "Diffusion video models produce striking clips, but they cannot reliably render an exact formula, a correct chart, a rule-consistent game or narration synchronized to on-screen events. A different route is emerging: multimodal agents that write code to render every frame and synthesize every sound. We introduce VibeVideoBench, a benchmark for evaluating agents on code-driven video generation. Its 239 self-contained tasks in English and Chinese span 12 categories, from data stories and…"
-    },
-    {
-      "nazev": "Memory Tax: Dissecting the Net Value of Agent Memory",
-      "url": "https://huggingface.co/papers/2610.34073",
-      "arxiv": "https://arxiv.org/abs/2610.34073",
-      "hlasy": 147,
-      "datum": "2026-10-25T00:00:00.000Z",
-      "souhrn": "Memory is increasingly used in long-horizon agents, yet the net value of building memory over direct retrieval from raw history remains largely unclear. Through a large-scale evaluation across multiple benchmarks and model backbones, we find many dedicated memory systems underperform naive RAG in many cases, indicating a negative net value. Taking RAG as a reference, we dissect the net value of memory into the gains and losses over direct retrieval, termed memory benefit and memory tax. These…"
+      "nazev": "Intrinsic Distribution Matching",
+      "url": "https://huggingface.co/papers/2610.39633",
+      "arxiv": "https://arxiv.org/abs/2610.39633",
+      "hlasy": 232,
+      "datum": "2026-10-29T00:00:00.000Z",
+      "souhrn": "One-step and few-step text-to-image generation must accurately render the details specified in the prompt despite limited opportunities for refinement. Distribution matching distillation (DMD) uses score differences to bring the generated distribution closer to a reference distribution. Following prior work, we estimate this difference with internal velocity branches, avoiding a separate fake-score network. We ask whether an explicit moment constraint improves this learned score supervision. A…"
     },
     {
       "nazev": "Efficient Streaming Audio-Visual Target Speaker Extraction for Real-World Acoustic Scenes",
       "url": "https://huggingface.co/papers/2610.32749",
       "arxiv": "https://arxiv.org/abs/2610.32749",
-      "hlasy": 146,
+      "hlasy": 152,
       "datum": "2026-10-23T00:00:00.000Z",
       "souhrn": "Streaming audio-visual target speaker extraction (AVTSE) is essential for latency-sensitive applications. However, current causal systems face two coupled gaps. First, standard benchmarks fix the number of speakers at two and ignore the near-/far-field interference, reverberation, and sudden noise of real scenes. Second, high-performance causal architectures are too heavy for edge deployment. Lightweight alternatives try to reclaim capacity by repeatedly invoking a small separator, which…"
     },
     {
-      "nazev": "PDRVLA: A Vision-Language-Action Model with Physical Dynamics Representations",
-      "url": "https://huggingface.co/papers/2610.37381",
-      "arxiv": "https://arxiv.org/abs/2610.37381",
-      "hlasy": 144,
-      "datum": "2026-10-27T00:00:00.000Z",
-      "souhrn": "Vision--Language--Action (VLA) models generate robot actions from visual observations and language instructions, but their understanding of physical dynamics remains limited. Video world models can capture scene dynamics, yet generating future videos introduces high latency into the control loop. We introduce PDRVLA, whose lightweight Physical Dynamics Module extracts physical tokens from vision--language features to condition action generation without online video generation. The module…"
+      "nazev": "Your Benchmark Is an Empirical Measure Over Difficulty",
+      "url": "https://huggingface.co/papers/2610.29927",
+      "arxiv": "https://arxiv.org/abs/2610.29927",
+      "hlasy": 139,
+      "datum": "2026-10-21T00:00:00.000Z",
+      "souhrn": "A benchmark is not merely a collection of test questions; it naturally induces an empirical measure over difficulty. In this work, we develop this measure-based view of benchmark evaluation. This perspective allows us to identify and formalize two central failure modes: measure mismatch, where the benchmark difficulty distribution differs from the intended difficulty distribution, and coverage gaps, where uncovered regions along the difficulty axis prevent benchmarks from detecting meaningful…"
     },
     {
-      "nazev": "Can Test-Time Memory Evolution Outperform Test-Time Training for Scientific Discovery?",
-      "url": "https://huggingface.co/papers/2610.32046",
-      "arxiv": "https://arxiv.org/abs/2610.32046",
-      "hlasy": 119,
+      "nazev": "Look Only When Needed: Certificate-Guided Visual Routing for Efficient Diffusion VLMs",
+      "url": "https://huggingface.co/papers/2610.36671",
+      "arxiv": "https://arxiv.org/abs/2610.36671",
+      "hlasy": 73,
+      "datum": "2026-10-27T00:00:00.000Z",
+      "souhrn": "Diffusion vision-language models (DVLMs) process their entire input at every denoising step. Since visual tokens make up 89-97% of this input on the benchmarks we study, most of the decoding computation is spent repeatedly processing the same image. Visual token pruning methods partially relieve this burden by removing part of the visual tokens, but they lose the removed information and still process the remaining image at every step. To measure how often the image is actually needed, we…"
+    },
+    {
+      "nazev": "A-RSI: Adaptive Task Refresh for Zero-Data Multimodal Self-Improvement",
+      "url": "https://huggingface.co/papers/2610.38568",
+      "arxiv": "https://arxiv.org/abs/2610.38568",
+      "hlasy": 51,
+      "datum": "2026-10-28T00:00:00.000Z",
+      "souhrn": "Recursive self-improvement requires models not only to acquire useful training experience, but also to decide when their current experience has ceased to be useful. Existing methods often focus on what experience to generate next, while paying less attention to when fresh experience should be introduced. Many also construct training targets through self-consistency or majority voting, making supervision depend on the model's own uncertain predictions. We address these two questions separately:…"
+    },
+    {
+      "nazev": "OmniShowcase: Omnidirectional Subject-Consistent Video Generation from Multi-View Images",
+      "url": "https://huggingface.co/papers/2610.35684",
+      "arxiv": "https://arxiv.org/abs/2610.35684",
+      "hlasy": 51,
+      "datum": "2026-10-26T00:00:00.000Z",
+      "souhrn": "Generating videos of a specific subject from a few reference images remains challenging when the camera reveals surfaces that are not visible in the input. Early subject-to-video (S2V) methods condition on a single reference image and must therefore infer the subject's unseen appearance and geometry as the viewpoint changes. To address this limitation, recent methods extend S2V to multiple reference views, providing more information about the subject from different viewpoints. However, they do…"
+    },
+    {
+      "nazev": "L3G-World: Real-Time Infinite World Generation with Latent 3D Gaussian Memory",
+      "url": "https://huggingface.co/papers/2610.40614",
+      "arxiv": "https://arxiv.org/abs/2610.40614",
+      "hlasy": 29,
+      "datum": "2026-10-29T00:00:00.000Z",
+      "souhrn": "Interactive world models generate visual content conditioned on user actions, yet maintaining spatial consistency over long-horizon exploration in real time remains challenging. Existing approaches rely on either temporal context or explicit 3D memory, both of which scale poorly because memory grows with the length of the generated stream. Moreover, explicit 3D memories condition latent video generators by re-encoding RGB renderings, which precludes real-time generation. In this paper, we…"
+    },
+    {
+      "nazev": "WorkFactory: Turning Professional Intents into Executable Work for Scalable Agent Training",
+      "url": "https://huggingface.co/papers/2610.37161",
+      "arxiv": "https://arxiv.org/abs/2610.37161",
+      "hlasy": 28,
+      "datum": "2026-10-27T00:00:00.000Z",
+      "souhrn": "Scaling supervised training for working agents requires diverse professional tasks that yield reliable expert demonstrations. However, missing or inconsistent task information can obstruct teacher execution and weaken the resulting supervision. We propose WorkFactory, a scalable framework for constructing coherent and executable professional tasks. Starting from professional intents, information-level planning builds an information support graph to guide task instantiation, explicitly…"
+    },
+    {
+      "nazev": "A Broader Look into MLLM's Retrieval Heads",
+      "url": "https://huggingface.co/papers/2610.32411",
+      "arxiv": "https://arxiv.org/abs/2610.32411",
+      "hlasy": 25,
       "datum": "2026-10-23T00:00:00.000Z",
-      "souhrn": "Recent test-time training (TTT) frameworks have enabled open-weight large language models (LLMs) to outperform inference-only frameworks powered by frontier models on scientific discovery tasks. However, TTT introduces additional computational cost for online weight updates during the discovery process, making computational efficiency an important consideration when scaling to larger models. This motivates us to explore an efficient test-time adaptation method for scientific discovery. We…"
+      "souhrn": "Locating relevant evidence in long inputs is a core capability of Multimodal Large Language Models. Prior studies attribute this capability to retrieval heads, a sparse set of attention heads that transfer information from the context to the output. However, these analyses are confined to a limited set of modalities and the corresponding models. Moreover, how retrieval heads can be leveraged to enhance the model calls for further exploration. In this paper, we ask whether this mechanism…"
     },
     {
-      "nazev": "Hy-Nomas: Towards Free-form Interactive World Generation",
-      "url": "https://huggingface.co/papers/2610.36729",
-      "arxiv": "https://arxiv.org/abs/2610.36729",
-      "hlasy": 107,
-      "datum": "2026-10-27T00:00:00.000Z",
-      "souhrn": "Interactive world generation requires models to follow successive commands while preserving relevant history and action consequences. We present Hy-Nomas, a video world model with an 8B diffusion backbone that supports free-form text instructions and continuous camera control across multiple interaction turns. It generates variable-length segments conditioned on current inputs and cached history. Our central design aligns structured video captions with action-aware causal attention:…"
-    },
-    {
-      "nazev": "Can Discrete Tokens Serve as Semantically Lossless Representations of Visual Signals?",
-      "url": "https://huggingface.co/papers/2610.37662",
-      "arxiv": "https://arxiv.org/abs/2610.37662",
-      "hlasy": 90,
-      "datum": "2026-10-27T00:00:00.000Z",
-      "souhrn": "Discrete visual tokens represent vision in a discrete form analogous to language, offering a native interface for multimodal modeling under a shared next-token prediction objective. However, quantization error is widely assumed to cause unavoidable semantic loss, fundamentally limiting the semantic fidelity of discrete visual tokens and positioning continuous visual representations as an intrinsic upper bound. Using multimodal understanding as a proxy for semantic fidelity, we revisit this…"
+      "nazev": "Sensorimotor Alignment: A Platonic Proxy for Embodied Policy Success",
+      "url": "https://huggingface.co/papers/2610.31670",
+      "arxiv": "https://arxiv.org/abs/2610.31670",
+      "hlasy": 21,
+      "datum": "2026-10-23T00:00:00.000Z",
+      "souhrn": "Robot foundation models are typically evaluated through costly closed-loop rollouts, motivating low-cost offline proxies for model capability. The Platonic Representation Hypothesis (PRH) suggests that as representations improve, modalities such as vision and language converge toward a shared statistical model of reality. We ask whether motion trajectories form another such modality: as embodied models become more capable, should their sensory representations converge toward the structure of…"
     }
   ]
 }
