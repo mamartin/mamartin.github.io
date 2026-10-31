@@ -102,10 +102,24 @@ export class HUD {
     this.driftCells = [...view.querySelectorAll('.drift-tag b')];
     this.rocketWarn = q('.rocket-warn');
     this.speedFx = q('.speed-fx');
+    this.keyPanel = q('.key-panel');
     this.msgTimer = 0;
     this.subTimer = 0;
     this.cache = {};
     this.rows = [];
+  }
+
+  // panel s klávesami hráče; html = null skryje
+  showKeys(html, color = null, ready = false) {
+    const p = this.keyPanel;
+    p.hidden = !html;
+    if (!html) return;
+    if (p.dataset.html !== html) {
+      p.innerHTML = html;
+      p.dataset.html = html;
+    }
+    if (color) p.style.setProperty('--pc', color);
+    p.classList.toggle('ready', ready);
   }
 
   setupRace(race, car, { tag = '', itemKey = 'F' } = {}) {

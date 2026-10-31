@@ -269,7 +269,6 @@ button:focus-visible, summary:focus-visible { outline: 2px solid var(--amber); o
 .cup-list .cl-name { font-family: var(--font-display); font-weight: 700; font-size: 15px; }
 .cup-list .cl-meta { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .cup-caption { margin: 6px 0 4px; }
-.keys-2p strong { color: var(--paper); font-weight: 600; }
 .drivers-row { grid-template-columns: 1fr; }
 .drivers-row:has(> .opt:not([hidden]) + .opt:not([hidden])) { grid-template-columns: 1fr 1fr; }
 .driver-pick { position: relative; max-width: 300px; }
@@ -1383,23 +1382,139 @@ body.tilt-steer .touch-left { display: none; }
 .tw-rival { font-size: 12px; color: #ffc21a; }
 
 /* ovládání při prvním závodě */
-.controls-card {
+/* klávesy hráče v jeho části obrazovky (první závod, rozcvička ve dvou, klávesa H) */
+.key-panel {
   position: absolute;
   z-index: 3;
   left: 50%;
-  bottom: 26px;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  max-width: calc(100% - 32px);
-  padding: 8px 12px;
-  background: rgba(11, 15, 26, 0.8);
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(400px, calc(100% - 24px));
+  max-height: calc(100% - 16px);
+  overflow: hidden;
+  padding: clamp(8px, 2.6cqh, 16px) 16px;
+  background: rgba(11, 15, 26, 0.86);
+  border-top: 4px solid var(--pc, var(--signal));
   color: var(--paper);
-  font-size: 15px;
-  pointer-events: auto;
+  font-size: clamp(12px, 3.4cqh, 15px);
 }
-.controls-card[hidden] { display: none; }
-.controls-card p { margin: 0; }
-.controls-card button { flex: none; border: 0; padding: 5px 9px; background: #24365a; color: var(--paper); font: inherit; font-size: 14px; cursor: pointer; }
-.controls-card button:hover { background: #30466f; }
+.key-panel[hidden] { display: none; }
+.key-panel h3 {
+  margin: 0 0 6px;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: clamp(14px, 4.4cqh, 20px);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.key-panel h3 i { display: inline-block; width: 12px; height: 12px; margin-right: 8px; background: var(--pc); transform: skewX(-12deg); }
+.key-panel dl { display: grid; grid-template-columns: auto 1fr; gap: clamp(2px, 1cqh, 5px) 14px; margin: 0; align-items: center; }
+.key-panel dt { white-space: nowrap; }
+.key-panel dd { margin: 0; color: #c6ccd6; }
+.key-panel kbd { font-size: 0.85em; }
+.key-panel .kp-foot { margin: 8px 0 0; color: var(--muted); font-size: 0.9em; }
+.key-panel .kp-foot b { color: var(--amber); font-weight: 600; }
+.key-panel.ready { border-top-color: var(--go); }
+.key-panel.ready .kp-foot b { color: var(--go); }
+
+/* obrázek klávesnice pro dva hráče */
+.kb-map { container-type: inline-size; }
+.kb { position: relative; width: 100%; aspect-ratio: 18 / 5; }
+.kb-key {
+  position: absolute;
+  height: 20%;
+  padding: 0.25cqi;
+  display: block;
+}
+.kb-key::before {
+  content: '';
+  position: absolute;
+  inset: 0.25cqi;
+  border: 1px solid var(--line);
+  border-bottom-width: 2px;
+  background: rgba(17, 27, 46, 0.7);
+}
+.kb-key b, .kb-key em, .kb-key i { position: absolute; font-style: normal; }
+.kb-key b {
+  left: 0.9cqi;
+  top: 0.6cqi;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(8px, 1.7cqi, 15px);
+  color: rgba(243, 245, 248, 0.45);
+}
+.kb-key.own::before { background: color-mix(in srgb, var(--pc) 34%, #0d1626); border-color: var(--pc); }
+.kb-key.own b { color: var(--paper); font-weight: 700; }
+.kb-key em {
+  left: 0.9cqi;
+  right: 0.6cqi;
+  bottom: 0.7cqi;
+  font-size: clamp(7px, 1.25cqi, 12px);
+  line-height: 1;
+  color: #e7ecf3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.kb-key i {
+  right: 0.9cqi;
+  top: 0.6cqi;
+  width: 1.8cqi;
+  height: 1.8cqi;
+  border-radius: 50%;
+  background: var(--pc);
+  color: #fff;
+  font-size: clamp(6px, 1.2cqi, 11px);
+  font-weight: 700;
+  line-height: 1.8cqi;
+  text-align: center;
+}
+.kb-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 8px 0 0; font-size: 14px; color: #cdd5e1; }
+.kb-legend i { display: inline-block; width: 12px; height: 12px; margin-right: 6px; vertical-align: -1px; background: var(--pc); transform: skewX(-12deg); }
+.kb-legend .kb-pad { color: var(--muted); }
+
+/* přenastavení kláves */
+.keybind-title { margin-top: 14px; }
+.keybind { display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr); gap: 5px 8px; margin: 8px 0; align-items: center; font-size: 14px; }
+.kb-h { font-family: var(--font-display); font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.kb-act { color: #cdd5e1; white-space: nowrap; }
+.kb-bind {
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-bottom-width: 2px;
+  background: var(--panel-solid);
+  color: var(--paper);
+  font-family: var(--font-display);
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.kb-bind small { font-size: 11px; color: var(--muted); }
+.kb-bind:hover { background: var(--panel-hi); }
+.kb-bind.wait { border-color: var(--amber); color: var(--amber); }
+.kb-bind.empty { color: var(--signal-hi); border-color: var(--signal); }
+.keybind-note { color: var(--amber); }
+.keybind-foot { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-bottom: 4px; }
+.keybind-foot .hint { flex: 1 1 240px; }
+.keybind-foot .btn { font-size: 13px; padding: 7px 14px; }
+
+/* volby pro dva hráče */
+.duo-row { grid-template-columns: repeat(3, auto); }
+.duo-row .duo-score { grid-column: 1 / -1; }
+.duo-score b { color: var(--paper); font-family: var(--font-display); font-size: 17px; }
+.duo-score button { margin-left: 10px; padding: 2px 8px; border: 1px solid var(--line); background: transparent; color: var(--muted); font-size: 13px; }
+.duo-score button:hover { color: var(--paper); }
+@media (max-width: 720px) { .duo-row { grid-template-columns: 1fr 1fr; } }
+
+/* rozdělená obrazovka vedle sebe */
+.hud.split.split-v .hud-view[data-view='0'] { bottom: 0; right: 50%; }
+.hud.split.split-v .hud-view[data-view='1'] { top: 0; left: 50%; }
+.hud.split.split-v::after { left: 50%; right: auto; top: 0; bottom: 0; width: 4px; height: auto; transform: translateX(-50%); }
+.hud.split.split-v .hud-view[data-view='0'] .minimap,
+.hud.split.split-v .hud-view[data-view='0'] .speedo { bottom: var(--gut); }
+.hud.split.split-v .hud-view[data-view='0'] .draft-tag { bottom: calc(var(--gut) + 4px + var(--speedo)); }
+.hud.split.split-v .pause-btn { top: auto; bottom: calc(var(--gut) + var(--safe-b)); transform: translateX(-50%); }

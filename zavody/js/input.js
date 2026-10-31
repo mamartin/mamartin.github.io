@@ -1,19 +1,8 @@
 // Vstupy: klávesnice (jeden nebo dva hráči), gamepady, dotyková tlačítka a náklon telefonu.
 
-// Rozložení kláves. Sólo hráč může používat obě poloviny klávesnice.
-export const KEYMAP = {
-  p1: {
-    up: ['KeyW'], down: ['KeyS'], left: ['KeyA'], right: ['KeyD'],
-    hand: ['Space'], nitro: ['ShiftLeft'], item: ['KeyE', 'KeyF'], reset: ['KeyR'],
-  },
-  p2: {
-    up: ['ArrowUp'], down: ['ArrowDown'], left: ['ArrowLeft'], right: ['ArrowRight'],
-    hand: ['Slash', 'Numpad0', 'ControlRight'], nitro: ['ShiftRight'], item: ['Period', 'NumpadDecimal'], reset: ['Enter', 'NumpadEnter'],
-  },
-};
-KEYMAP.solo = Object.fromEntries(Object.keys(KEYMAP.p1).map((k) => [k, [...KEYMAP.p1[k], ...KEYMAP.p2[k]]]));
+import { KEYMAP, isGameKey, learnKey } from './keys.js';
 
-const GAME_KEYS = new Set([...Object.values(KEYMAP.solo).flat(), 'KeyC', 'KeyP', 'KeyM', 'KeyH', 'Escape', 'Backspace']);
+export { KEYMAP };
 
 // tlačítka gamepadu (standardní mapování) -> jméno události
 const PAD_BUTTONS = { 0: 'A', 1: 'B', 2: 'X', 3: 'Y', 8: 'Back', 9: 'Start' };
@@ -28,7 +17,14 @@ export class Input {
     this.tilt = { on: false, angle: null, zero: 0, invert: false };
     window.addEventListener('keydown', (e) => {
       if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
-      if (GAME_KEYS.has(e.code) && this.enabled) e.preventDefault();
+      if (!e.shiftKey && !e.altKey && !e.ctrlKey && !e.metaKey) learnKey(e.code, e.key);
+      // přenastavení klávesy v menu si stisk vezme samo
+      if (this.capture) {
+        e.preventDefault();
+        if (!e.repeat) this.capture(e.code);
+        return;
+      }
+      if (isGameKey(e.code) && this.enabled) e.preventDefault();
       if (!e.repeat) this.pressed.push(e.code);
       this.keys.add(e.code);
     });

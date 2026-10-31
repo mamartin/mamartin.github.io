@@ -69,8 +69,9 @@ export class Race {
   constructor({
     track, biome, mode = 'race', laps = 3, difficulty = 'medium', playerColor = 0xd7263d, playerColors = null,
     humans = 1, night = false, opponents = null, playerKinds = [], playerNames = [], opponentNames = [], opponentKind = 'car', opponentLooks = [],
-    playerAccents = [], playerLiveries = [], playerNumbers = PLAYER_NUMBERS,
+    playerAccents = [], playerLiveries = [], playerNumbers = PLAYER_NUMBERS, catchup = false,
   }) {
+    this.catchup = catchup;
     this.track = track;
     this.biome = biome;
     this.mode = mode;
@@ -243,6 +244,7 @@ export class Race {
     }
 
     if (racing) this.updateDraft(dt);
+    if (racing && this.catchup) this.updateCatchup();
     for (const car of this.cars) {
       if (!racing) {
         // na roštu jen natáčení kol a otáčky
@@ -267,6 +269,17 @@ export class Race {
     this.updatePlaces();
     if (racing) this.trackLeader();
     if (racing && this.mode === 'race') this.trackOvertakes(dt);
+  }
+
+  // vyrovnání šancí ve dvou: kdo ze dvou hráčů ztrácí, má o kousek silnější motor (až +10 %),
+  // úměrně odstupu; vedoucí hráč nic neztrácí
+  updateCatchup() {
+    const [a, b] = this.players;
+    if (!a || !b) return;
+    const gap = a.progress - b.progress;
+    const boost = (d) => 1 + 0.1 * clamp((d - 15) / 150, 0, 1);
+    a.power = a.finished ? 1 : boost(-gap);
+    b.power = b.finished ? 1 : boost(gap);
   }
 
   judgeStarts() {

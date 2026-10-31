@@ -56,6 +56,16 @@ export function showResults() {
     const winner = placeOf(a) < placeOf(b) ? a : b;
     $('res-title').textContent = `${winner.name} vyhrál souboj`;
     for (const c of humans) badges.push(`${c.name}: ${placeOf(c)}. místo`);
+    // skóre série mezi hráči (počítá se jednou za závod)
+    if (!race.duelCounted) {
+      race.duelCounted = true;
+      const wins = [...(S.duel?.wins || [0, 0])];
+      wins[winner === a ? 0 : 1]++;
+      S.duel = { wins };
+      store.save();
+    }
+    const [w1, w2] = S.duel.wins;
+    badges.push(`<span class="good">Série ${a.name} ${w1} : ${w2} ${b.name}</span>`);
   }
   if (G.results?.lap) badges.push('Nový rekord kola');
   if (G.results?.race) badges.push('Nový rekord závodu');

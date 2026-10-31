@@ -33,6 +33,8 @@ import { HUD, formatTime, formatDelta, trackOutline } from './hud.js';
 import { GhostRecorder, GhostPlayer } from './ghost.js';
 import { Pickups, ITEM_NAMES } from './pickups.js';
 import { clamp } from './rng.js';
+import { applyKeys } from './keys.js';
+import { bindKeysUI, refreshKeysUI, keyPanelHtml, itemKeyLabel, keyPlayer, keysSignature, playerColor } from './keysui.js';
 import { Post } from './post.js';
 import { TrackEditor, customToDef, decodeTrack, checkDef } from './editor.js';
 
@@ -42,6 +44,8 @@ const STEP = 1 / 120;
 
 if (!S.quality) S.quality = isTouch || Math.min(screen.width, screen.height) < 700 ? 'medium' : 'high';
 if (isTouch) document.body.classList.add('touch-ui');
+
+applyKeys(S.keys || {});
 
 // podíl rozlišení; hra ho sníží sama, když počítač nestíhá
 let resScale = 1;
@@ -465,7 +469,8 @@ function refreshMenu() {
     card.querySelector('strong').textContent = kindName(playerKinds()[i]);
     card.querySelector('em').textContent = two ? `Hráč ${i + 1} · barvy a typ vozu` : 'Barvy a typ vozu';
   }
-  $('keys-2p').hidden = !two;
+  $('keys-2p').hidden = !two || isTouch;
+  refreshKeysUI();
   const season = S.mode === 'season';
   $('diff-opt').hidden = S.mode === 'time' || season;
   $('weapons-opt').hidden = S.mode === 'time' || season;
@@ -506,6 +511,17 @@ function refreshMenu() {
     $(id).setAttribute('aria-pressed', String(on));
     $(id).querySelector('em').textContent = on ? 'Zapnuto' : 'Vypnuto';
   }
+  // dva hráči: rozdělení obrazovky, vyrovnání šancí, soupeři z počítače a skóre série
+  $('duo-row').hidden = humanCount() < 2;
+  for (const b of $('split-seg').children) b.setAttribute('aria-checked', String(b.dataset.split === (S.split || 'h')));
+  for (const [id, on] of [['catchup-toggle', !!S.catchup], ['ai-toggle', S.duoAI !== false]]) {
+    $(id).setAttribute('aria-pressed', String(on));
+    $(id).querySelector('em').textContent = on ? 'Zapnuto' : 'Vypnuto';
+  }
+  const wins = S.duel?.wins || [0, 0];
+  $('duo-score').innerHTML = wins[0] + wins[1]
+    ? `Skóre série: hráč 1 <b>${wins[0]} : ${wins[1]}</b> hráč 2 <button type="button" id="duo-reset">Vynulovat</button>`
+    : 'Skóre série se začne počítat po prvním závodě ve dvou.';
   const tilt = S.steer === 'tilt';
   for (const b of $('steer-seg').children) b.setAttribute('aria-checked', String((b.dataset.steer === 'tilt') === tilt));
   $('invert-opt').hidden = !tilt;
@@ -570,6 +586,7 @@ function closeGarage() {
 }
 
 function bindMenu() {
+  bindKeysUI();
   for (const b of $('mode-seg').children) {
     b.addEventListener('click', async () => {
       S.mode = b.dataset.mode;
@@ -659,6 +676,29 @@ function bindMenu() {
     store.save();
     refreshMenu();
   });
+  for (const b of $('split-seg').children) {
+    b.addEventListener('click', () => {
+      S.split = b.dataset.split;
+      store.save();
+      refreshMenu();
+    });
+  }
+  $('catchup-toggle').addEventListener('click', () => {
+    S.catchup = !S.catchup;
+    store.save();
+    refreshMenu();
+  });
+  $('ai-toggle').addEventListener('click', () => {
+    S.duoAI = S.duoAI === false;
+    store.save();
+    refreshMenu();
+  });
+  $('duo-score').addEventListener('click', (e) => {
+    if (e.target.id !== 'duo-reset') return;
+    S.duel = null;
+    store.save();
+    refreshMenu();
+  });
   $('weapons-toggle').addEventListener('click', () => {
     S.weapons = !S.weapons;
     store.save();
@@ -741,10 +781,6 @@ function bindMenu() {
   $('restart-btn').addEventListener('click', () => startRace());
   $('menu-btn').addEventListener('click', () => toMenu());
   $('retry-btn').addEventListener('click', () => startRace());
-  $('cc-skip').addEventListener('click', () => {
-    hideControls();
-    document.activeElement?.blur();
-  });
   $('again-btn').addEventListener('click', () => {
     if (G.seasonNext) {
       S.seasonEvent = G.seasonNext;
@@ -808,7 +844,7 @@ function bindInstall() {
 }
 
 function clearRace() {
-  hideControls();
+  setKeyPanel('off');
   const r = G.race;
   if (!r) return;
   if (G.replay) {
@@ -875,6 +911,7 @@ async function startRaceInner() {
     opponentNames: G.cup ? (G.cup.names ??= opponentNames()) : opponentNames(), opponentKind: opponentKind(),
     opponentLooks: G.cup ? currentLooks() : (G.looks = opponentLooks()),
     playerAccents: playerAccents(), playerLiveries: playerLiveries(), playerNumbers: numbersOf(S), humans, night: w.biome.night,
+    opponents: humans > 1 && S.duoAI === false ? 0 : null, catchup: humans > 1 && !!S.catchup,
   });
   for (const c of race.cars) {
     scene.add(c.mesh.root);
@@ -936,29 +973,51 @@ async function startRaceInner() {
   const ev = currentEvent();
   if (ev) hud.sub(`Sezóna · ${seriesOf(ev).name} · ${w.def.name}`, 3.2);
   if (race.rival) hud.showRival(race.rival, rivalWhy(race.rival), driverTrait(race.rival.name));
-  showControls(humans);
+  // klávesy: ve dvou před prvním závodem (a po změně kláves) rozcvička, sólo jen poprvé
+  if (humans > 1 && !isTouch && G.readySig !== keysSignature()) setKeyPanel('ready');
+  else if (humans === 1 && !isTouch && !S.controlsSeen && !S.racesStarted) {
+    S.controlsSeen = true;
+    setKeyPanel('info', true);
+  } else setKeyPanel('off');
   S.racesStarted = (S.racesStarted || 0) + 1;
   store.save();
   G.screen = 'race';
 }
 
-// stručné ovládání při prvním závodě: nepřekáží, jde skrýt a už se neopakuje
-function showControls(humans) {
-  if (isTouch || S.controlsSeen || S.racesStarted) return;
-  S.controlsSeen = true;
-  const item = (key) => (G.pickups ? ` · <kbd>${key}</kbd> power-up` : '');
-  $('cc-rows').innerHTML = humans === 1
-    ? `<p><kbd>W</kbd> plyn · <kbd>S</kbd> brzda · <kbd>A</kbd><kbd>D</kbd> zatáčení · <kbd>Mezerník</kbd> drift · <kbd>Shift</kbd> nitro${item('F')}</p>`
-    : `<p>Hráč 1: <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> · <kbd>Mezerník</kbd> drift · <kbd>Shift</kbd> nitro${item('E')}</p>`
-      + `<p>Hráč 2: šipky · <kbd>-</kbd> drift · pravý <kbd>Shift</kbd> nitro${item('.')}</p>`;
-  $('controls-card').hidden = false;
+// panel s klávesami v části obrazovky každého hráče:
+// off, info (první závod, klávesa H), ready (rozcvička ve dvou: závod čeká, až každý zmáčkne svou klávesu)
+function setKeyPanel(mode, auto = false) {
+  G.keyPanel = mode;
+  G.keyPanelAuto = auto;
+  G.readyDone = [false, false];
+  G.readyTimer = 0;
+  refreshKeyPanels();
 }
 
-function hideControls() {
-  $('controls-card').hidden = true;
+function refreshKeyPanels() {
+  const race = G.race;
+  if (!race) return;
+  const humans = race.players.length;
+  race.players.forEach((car, i) => {
+    const h = huds[i];
+    if (!h) return;
+    if (G.keyPanel === 'off') return h.showKeys(null);
+    const ready = G.keyPanel === 'ready';
+    const prof = humans > 1 ? (i === 0 ? 'p1' : 'p2') : 'solo';
+    const html = keyPanelHtml(i, humans, car.name, { items: !!G.pickups, ready, done: G.readyDone[i], pad: !!input.padFor(prof) });
+    h.showKeys(html, humans > 1 ? playerColor(i) : null, ready && G.readyDone[i]);
+  });
 }
 
-// pohledy HUD podle počtu hráčů
+// hráč dal najevo, že je připraven; když jsou oba, závod se po chvilce rozjede
+function markReady(i) {
+  if (G.keyPanel !== 'ready' || i < 0 || G.readyDone[i]) return;
+  G.readyDone[i] = true;
+  audio.pickup?.();
+  refreshKeyPanels();
+  if (G.readyDone.slice(0, G.race.players.length).every(Boolean)) G.readyTimer = 0.8;
+}
+
 function setupHuds(race) {
   const n = race.players.length;
   while (huds.length > n) huds.pop().view.remove();
@@ -970,8 +1029,9 @@ function setupHuds(race) {
   }
   G.huds = huds.slice(0, n);
   hudRoot.classList.toggle('split', n > 1);
+  hudRoot.classList.toggle('split-v', n > 1 && S.split === 'v');
   race.players.forEach((car, i) => {
-    huds[i].setupRace(race, car, { tag: n > 1 ? car.name : '', itemKey: n > 1 ? (i === 0 ? 'E' : '.') : 'F' });
+    huds[i].setupRace(race, car, { tag: n > 1 ? car.name : '', itemKey: itemKeyLabel(i, n) });
     huds[i].setItem(null);
   });
 }
@@ -1048,7 +1108,11 @@ function handleKeys(pressed) {
       if (!$('results').hidden) toMenu();
       else setPaused(!G.paused);
     }
-    if (code === 'KeyH') hideControls();
+    // H ukáže nebo schová klávesy kdykoliv během závodu (rozcvička se tím nepřeskočí)
+    if (code === 'KeyH') {
+      if (G.keyPanel !== 'ready') setKeyPanel(G.keyPanel === 'info' ? 'off' : 'info');
+      continue;
+    }
     // okamžitý restart závodu, ve výsledcích slouží tlačítka
     if (code === 'Backspace' && $('results').hidden) {
       startRace();
@@ -1057,6 +1121,11 @@ function handleKeys(pressed) {
     if (G.paused) continue;
     const race = G.race;
     const humans = race.players.length;
+    // rozcvička: kterákoli klávesa (nebo tlačítko gamepadu) hráče = připraven
+    if (G.keyPanel === 'ready') {
+      markReady(btn ? input.playerForPad(padIdx, humans) : keyPlayer(code));
+      continue;
+    }
     if (code === 'KeyC' || btn === 'Y') {
       const list = btn ? [rigs[input.playerForPad(padIdx, humans)]] : rigs;
       for (const r of list) {
@@ -1267,7 +1336,16 @@ function frame(now) {
     const humans = race.players;
     if (!G.paused) {
       const ctrls = humans.length > 1 ? [input.controls('p1'), input.controls('p2')] : [input.controls('solo')];
-      G.acc += dt;
+      // při rozcvičce stojí čas závodu, dokud nejsou všichni připraveni
+      if (G.keyPanel === 'ready') {
+        if (G.readyTimer > 0) {
+          G.readyTimer -= dt;
+          if (G.readyTimer <= 0) {
+            G.readySig = keysSignature();
+            setKeyPanel('off');
+          }
+        }
+      } else G.acc += dt;
       let steps = 0;
       while (G.acc >= STEP && steps < 1200) {
         race.step(STEP, ctrls);
@@ -1418,7 +1496,7 @@ function frame(now) {
   if (w.snow) w.snow.update(dt);
   if (w.rain) w.rain.update(dt);
   if (G.race) {
-    if (G.race.time > 7 && !$('controls-card').hidden) hideControls();
+    if (G.keyPanelAuto && G.race.time > 7) setKeyPanel('off');
     // v tunelu neprší a nesněží
     const covered = w.track.tunnels.length > 0 && w.track.inTunnel(G.race.player.proj.s);
     if (w.snow) w.snow.points.visible = !covered;
@@ -1493,14 +1571,15 @@ function renderViews(w) {
     } else renderer.render(scene, camera);
     return;
   }
-  // rozdělená obrazovka: hráč 1 nahoře, hráč 2 dole
+  // rozdělená obrazovka: hráč 1 nahoře (nebo vlevo), hráč 2 dole (vpravo)
   const W = window.innerWidth, H = window.innerHeight;
-  const h2 = Math.floor(H / 2);
+  const side = S.split === 'v';
+  const vw = side ? Math.floor(W / 2) : W, vh = side ? H : Math.floor(H / 2);
   const post = G.post;
   if (!post) renderer.setScissorTest(true);
   players.forEach((car, i) => {
     const cam = i === 0 ? camera : camera2;
-    const aspect = W / h2;
+    const aspect = vw / vh;
     if (Math.abs(cam.aspect - aspect) > 1e-3) {
       cam.aspect = aspect;
       cam.updateProjectionMatrix();
@@ -1508,14 +1587,15 @@ function renderViews(w) {
     hideNear(cam, race, car);
     aimSun(w, car.x, car.y, car.z);
     w.sky.position.copy(cam.position);
-    w.effects.setView(cam, h2 * renderer.getPixelRatio(), scene.fog);
-    if (w.snow) w.snow.setView(cam, h2 * renderer.getPixelRatio());
+    w.effects.setView(cam, vh * renderer.getPixelRatio(), scene.fog);
+    if (w.snow) w.snow.setView(cam, vh * renderer.getPixelRatio());
     if (w.rain) w.rain.setView(cam);
-    const y = i === 0 ? H - h2 : 0;
-    if (post) post.setView(0, y, W, h2);
+    const x = side && i === 1 ? W - vw : 0;
+    const y = side ? 0 : i === 0 ? H - vh : 0;
+    if (post) post.setView(x, y, vw, vh);
     else {
-      renderer.setViewport(0, y, W, h2);
-      renderer.setScissor(0, y, W, h2);
+      renderer.setViewport(x, y, vw, vh);
+      renderer.setScissor(x, y, vw, vh);
     }
     renderer.render(scene, cam);
   });

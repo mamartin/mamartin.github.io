@@ -123,6 +123,25 @@
         </div>
       </section>
 
+      <section class="menu-block options duo-row" id="duo-row" hidden>
+        <div class="opt">
+          <h2 class="label">Obrazovka</h2>
+          <div class="seg small" id="split-seg" role="radiogroup" aria-label="Rozdělení obrazovky">
+            <button type="button" role="radio" data-split="h">Nad sebou</button>
+            <button type="button" role="radio" data-split="v">Vedle sebe</button>
+          </div>
+        </div>
+        <div class="opt">
+          <h2 class="label">Vyrovnání šancí</h2>
+          <button type="button" class="toggle" id="catchup-toggle" aria-pressed="false" aria-label="Vyrovnání šancí" title="Kdo ze dvou hráčů ztrácí, má o kousek silnější motor"><span></span><em>Vypnuto</em></button>
+        </div>
+        <div class="opt">
+          <h2 class="label">Soupeři z počítače</h2>
+          <button type="button" class="toggle" id="ai-toggle" aria-pressed="true" aria-label="Soupeři z počítače"><span></span><em>Zapnuto</em></button>
+        </div>
+        <p class="hint duo-score" id="duo-score"></p>
+      </section>
+
       <section class="menu-block" id="car-block">
         <h2 class="label">Vůz</h2>
         <div class="car-cards">
@@ -156,11 +175,7 @@
         </div>
       </section>
 
-      <p class="hint keys-2p" id="keys-2p" hidden>
-        <strong>Hráč 1</strong> WASD, drift mezerník, nitro levý Shift, power-up E.
-        <strong>Hráč 2</strong> šipky, drift klávesa vpravo od tečky, nitro pravý Shift, power-up tečka, návrat na trať Enter.
-        Druhý gamepad ovládá hráče 2.
-      </p>
+      <section class="menu-block kb-map" id="keys-2p" hidden aria-label="Rozložení kláves pro dva hráče"></section>
 
       <button type="button" class="start-btn" id="start-btn">Na start <span aria-hidden="true">▸</span></button>
       <button type="button" class="fs-btn" data-fullscreen hidden>Celá obrazovka</button>
@@ -168,18 +183,19 @@
 
       <details class="menu-more">
         <summary>Ovládání a nastavení</summary>
+        <h2 class="label keybind-title">Klávesy</h2>
+        <div class="keybind" id="keybind"></div>
+        <p class="hint keybind-note" id="keybind-note" hidden></p>
+        <div class="keybind-foot">
+          <p class="hint">Klikni na klávesu a zmáčkni novou, <kbd>Esc</kbd> zruší. Kdo jede sám, může používat obě sady.</p>
+          <button type="button" class="btn" id="keys-reset">Výchozí klávesy</button>
+        </div>
         <div class="keys">
-          <div><kbd>W</kbd><kbd>↑</kbd> plyn</div>
-          <div><kbd>S</kbd><kbd>↓</kbd> brzda / couvání</div>
-          <div><kbd>A</kbd><kbd>D</kbd> zatáčení</div>
-          <div><kbd>Mezerník</kbd> ruční brzda, drift</div>
-          <div><kbd>Shift</kbd> nitro</div>
           <div><kbd>C</kbd> kamera</div>
-          <div><kbd>R</kbd> zpět na trať</div>
+          <div><kbd>H</kbd> ovládání během závodu</div>
           <div><kbd>Backspace</kbd> restart závodu</div>
           <div><kbd>Esc</kbd> pauza</div>
           <div><kbd>M</kbd> zvuk</div>
-          <div><kbd>F</kbd> power-up</div>
         </div>
         <p class="hint">Delší drift dá mini-turbo a plní nitro, náraz nebo výjezd z trati ho zruší. Funguje i gamepad (RT plyn, LT brzda, A nitro, B drift, X power-up).</p>
         <div class="settings">
@@ -290,10 +306,6 @@
 
   <!-- HUD -->
   <div id="hud" class="hud" hidden>
-    <aside class="controls-card" id="controls-card" hidden>
-      <div id="cc-rows"></div>
-      <button type="button" id="cc-skip">Skrýt <kbd>H</kbd></button>
-    </aside>
     <div class="hud-view" data-view="0">
       <div class="speed-fx" aria-hidden="true"></div>
       <div class="rival-card" hidden>
@@ -325,6 +337,7 @@
       <div class="center-msg" aria-live="polite"></div>
       <div class="sub-msg"></div>
       <div class="player-tag" hidden></div>
+      <aside class="key-panel" hidden></aside>
     </div>
     <div class="rotate-hint" id="rotate-hint">Na šířku se hraje líp</div>
     <button type="button" class="pause-btn" id="pause-btn" aria-label="Pauza">II</button>
