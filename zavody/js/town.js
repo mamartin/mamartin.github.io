@@ -6,6 +6,8 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { RNG } from './rng.js';
 import { instancedChunks, colored, spruceGeometry, broadleafGeometry } from './scenery.js';
 import { pointInRing } from './terrain.js';
+import { part, vertex, addBuilding, areaOf, color, fenceLine, mix, toMesh, triangulate } from './mass.js';
+import { buildLandmarks } from './landmarks.js';
 
 const pairs = (a, from = 0) => {
   const out = [];
@@ -29,6 +31,8 @@ function decode(raw) {
     barriers: raw.barriers.map((b) => ({ type: b[0], line: pairs(b, 1) })),
     lamps: pairs(raw.lamps),
     trees: pairs(raw.trees),
+    statues: pairs(raw.statues),
+    chimneys: raw.chimneys.map((c) => ({ x: c[0] / 10, z: c[1] / 10, height: c[2] / 10 })),
   };
 }
 
@@ -95,7 +99,7 @@ function worldCanvas(terrain, width) {
 
 const AREA_COLORS = {
   forest: '#3f6235', park: '#73a24f', grass: '#7fa858', field: '#b9ad68',
-  cemetery: '#628a52', allotments: '#809f58', pitch: '#55a049',
+  cemetery: '#628a52', allotments: '#809f58', pitch: '#55a049', garden: '#84b35c',
 };
 
 function grain(rng) {
@@ -127,7 +131,7 @@ export function paintGround(town, track, terrain, quality, anisotropy) {
     ctx.fill();
   }
   ctx.globalAlpha = 1;
-  for (const kind of ['field', 'grass', 'allotments', 'forest', 'park', 'cemetery', 'pitch']) {
+  for (const kind of ['field', 'grass', 'allotments', 'forest', 'park', 'garden', 'cemetery', 'pitch']) {
     fillRings(ctx, town.areas.filter((a) => a.kind === kind).map((a) => a.ring), AREA_COLORS[kind]);
   }
   fillRings(ctx, town.paved.filter((a) => a.kind === 'parking').map((a) => a.ring), '#7d7e80');
@@ -188,223 +192,12 @@ function windowTexture(rng, anisotropy) {
   return tex;
 }
 
-const FLOOR = 3; // metrů na patro i na okno
-const SHAPE = { GABLE: 0, HIP: 1, FLAT: 2, TENT: 3, SHED: 4 };
-
-function orientedBox(r) {
-  let best = null;
-  for (let i = 0; i < r.length; i++) {
-    const q = r[(i + 1) % r.length];
-    const dx = q[0] - r[i][0], dz = q[1] - r[i][1];
-    const l = Math.hypot(dx, dz);
-    if (l < 0.3) continue;
-    const ux = dx / l, uz = dz / l;
-    let a0 = Infinity, a1 = -Infinity, b0 = Infinity, b1 = -Infinity;
-    for (const p of r) {
-      const a = p[0] * ux + p[1] * uz, b = -p[0] * uz + p[1] * ux;
-      a0 = Math.min(a0, a); a1 = Math.max(a1, a);
-      b0 = Math.min(b0, b); b1 = Math.max(b1, b);
-    }
-    if (!best || (a1 - a0) * (b1 - b0) < best.area) best = { area: (a1 - a0) * (b1 - b0), ux, uz, a0, a1, b0, b1 };
-  }
-  let { ux, uz, a0, a1, b0, b1 } = best;
-  // osa a je delší strana, po ní běží hřeben
-  if (b1 - b0 > a1 - a0) [ux, uz, a0, a1, b0, b1] = [-uz, ux, b0, b1, -a1, -a0];
-  const ca = (a0 + a1) / 2, cb = (b0 + b1) / 2;
-  return { ux, uz, cx: ca * ux - cb * uz, cz: ca * uz + cb * ux, hl: (a1 - a0) / 2, hw: Math.max(0.5, (b1 - b0) / 2) };
-}
-
-// výška střechy nad římsou v poměru 0..1 a čáry, podél kterých se lomí: [A, B, C] pro A·a + B·d + C = 0
-function roofProfile(shape, hl, hw) {
-  if (shape === SHAPE.GABLE) return { at: (a, d) => Math.max(0, 1 - Math.abs(d) / hw), lines: [[0, 1, 0]] };
-  if (shape === SHAPE.HIP) {
-    return {
-      at: (a, d) => Math.max(0, Math.min(1 - Math.abs(d) / hw, (hl - Math.abs(a)) / hw)),
-      lines: [[0, 1, 0], [1, 1, -hl], [1, -1, -hl], [-1, 1, -hl], [-1, -1, -hl]],
-    };
-  }
-  if (shape === SHAPE.TENT) {
-    return { at: (a, d) => Math.max(0, Math.min(1 - Math.abs(d) / hw, 1 - Math.abs(a) / hl)), lines: [[hw, hl, 0], [hw, -hl, 0]] };
-  }
-  if (shape === SHAPE.SHED) return { at: (a, d) => (d + hw) / (2 * hw), lines: [] };
-  return { at: () => 0, lines: [] };
-}
-
-const mix = (p, q, t) => [p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t];
-
-// do obrysu vloží body, kde ho protíná lomová čára: horní hrana stěny pak přesně sleduje střechu
-function splitRing(ring, f) {
-  const out = [];
-  ring.forEach((p, i) => {
-    const q = ring[(i + 1) % ring.length];
-    const a = f(p), b = f(q);
-    out.push(p);
-    if ((a > 1e-6 && b < -1e-6) || (a < -1e-6 && b > 1e-6)) out.push(mix(p, q, a / (a - b)));
-  });
-  return out;
-}
-
-function splitTriangles(tris, f) {
-  const out = [];
-  for (const t of tris) {
-    const v = t.map(f);
-    const side = v.map((x) => x > 0);
-    if (side[0] === side[1] && side[1] === side[2]) {
-      out.push(t);
-      continue;
-    }
-    const i = side[0] === side[1] ? 2 : side[0] === side[2] ? 1 : 0;
-    const p = t[i], q = t[(i + 1) % 3], r = t[(i + 2) % 3];
-    const pq = mix(p, q, v[i] / (v[i] - v[(i + 1) % 3])), pr = mix(p, r, v[i] / (v[i] - v[(i + 2) % 3]));
-    out.push([p, pq, pr], [pq, q, r], [pq, r, pr]);
-  }
-  return out;
-}
-
-function triangulate(ring) {
-  const contour = ring.map((p) => new THREE.Vector2(p[0], p[1]));
-  return THREE.ShapeUtils.triangulateShape(contour, []).map((t) => t.map((i) => ring[i]));
-}
-
-const part = () => ({ pos: [], nor: [], col: [], uv: [] });
-
-function vertex(o, p, n, c, u = 0, v = 0) {
-  o.pos.push(p[0], p[1], p[2]);
-  o.nor.push(n[0], n[1], n[2]);
-  o.col.push(c.r, c.g, c.b);
-  o.uv.push(u, v);
-}
-
-// obdélník s rohy a (dole), b (nahoře), c (nahoře), d (dole), barva dole a nahoře zvlášť
-function panel(o, a, b, c, d, n, low, high, uv) {
-  const [u0, u1, v0, v1] = uv ?? [0, 0, 0, 0];
-  vertex(o, a, n, low, u0, v0); vertex(o, b, n, high, u0, v1); vertex(o, c, n, high, u1, v1);
-  vertex(o, a, n, low, u0, v0); vertex(o, c, n, high, u1, v1); vertex(o, d, n, low, u1, v0);
-}
-
-function roofTriangle(o, a, b, c, col) {
-  const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2];
-  const vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2];
-  let nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
-  const l = Math.hypot(nx, ny, nz);
-  if (l < 1e-4) return;
-  const flip = ny < 0 ? -1 : 1;
-  const n = [(nx * flip) / l, (ny * flip) / l, (nz * flip) / l];
-  vertex(o, a, n, col);
-  if (flip > 0) {
-    vertex(o, b, n, col); vertex(o, c, n, col);
-  } else {
-    vertex(o, c, n, col); vertex(o, b, n, col);
-  }
-}
-
-const areaOf = (r) => r.reduce((s, p, i) => {
-  const q = r[(i + 1) % r.length];
-  return s + p[0] * q[1] - q[0] * p[1];
-}, 0);
-
-function addBuilding(tile, terrain, ringIn, { wall, roof, shape, face, top, plain }) {
-  const ring = areaOf(ringIn) > 0 ? ringIn : [...ringIn].reverse();
-  const box = orientedBox(ring);
-  const A = (p) => (p[0] - box.cx) * box.ux + (p[1] - box.cz) * box.uz;
-  const D = (p) => -(p[0] - box.cx) * box.uz + (p[1] - box.cz) * box.ux;
-  const prof = roofProfile(shape, box.hl, box.hw);
-  let sum = 0, low = Infinity;
-  for (const p of ring) {
-    const h = terrain.heightAt(p[0], p[1]);
-    sum += h;
-    low = Math.min(low, h);
-  }
-  const eave = sum / ring.length + wall;
-  low -= 0.6;
-  const roofY = (p) => eave + roof * prof.at(A(p), D(p));
-
-  let rim = ring, tris = triangulate(ring);
-  for (const [a, b, c] of prof.lines) {
-    const f = (p) => a * A(p) + b * D(p) + c;
-    rim = splitRing(rim, f);
-    tris = splitTriangles(tris, f);
-  }
-
-  const out = plain ? tile.plain : tile.walls;
-  const shade = face.clone().multiplyScalar(0.8);
-  rim.forEach((p, i) => {
-    const q = rim[(i + 1) % rim.length];
-    const dx = q[0] - p[0], dz = q[1] - p[1], len = Math.hypot(dx, dz);
-    if (len < 0.05) return;
-    const n = [dz / len, 0, -dx / len];
-    const cells = !plain && len >= 2.2 ? Math.max(1, Math.round(len / FLOOR)) : 0;
-    const uv = cells ? [0, cells / 4, (low - eave) / (FLOOR * 4), 0] : null;
-    panel(out, [p[0], low, p[1]], [p[0], eave, p[1]], [q[0], eave, q[1]], [q[0], low, q[1]], n, shade, face, uv);
-    const yp = roofY(p), yq = roofY(q);
-    if (yp > eave + 0.02 || yq > eave + 0.02) panel(out, [p[0], eave, p[1]], [p[0], yp, p[1]], [q[0], yq, q[1]], [q[0], eave, q[1]], n, face, face);
-  });
-  for (const t of tris) {
-    const [a, b, c] = t.map((p) => [p[0], roofY(p), p[1]]);
-    roofTriangle(tile.plain, a, b, c, top);
-  }
-}
-
-function toMesh(o, mat, castShadow) {
-  const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.Float32BufferAttribute(o.pos, 3));
-  g.setAttribute('normal', new THREE.Float32BufferAttribute(o.nor, 3));
-  g.setAttribute('color', new THREE.Float32BufferAttribute(o.col, 3));
-  g.setAttribute('uv', new THREE.Float32BufferAttribute(o.uv, 2));
-  g.computeBoundingSphere();
-  const m = new THREE.Mesh(g, mat);
-  m.castShadow = castShadow;
-  m.receiveShadow = true;
-  return m;
-}
-
-// dominanty mají zatím jen hrubý objem, ruční modely přijdou ve fázi 4
-const LANDMARK_MASS = {
-  zamek: { wall: 11, roof: 5, shape: SHAPE.HIP, face: '#deb887', top: '#3a3d42' },
-  trojice: { wall: 11, roof: 7, shape: SHAPE.GABLE, face: '#e3cfa0', top: '#8e4a36' },
-  kriz: { wall: 11, roof: 7, shape: SHAPE.GABLE, face: '#ece6d6', top: '#6f7276' },
-  radnice: { wall: 9, roof: 5, shape: SHAPE.HIP, face: '#e9c46a', top: '#8e4a36' },
-  synagoga: { wall: 8, roof: 4, shape: SHAPE.HIP, face: '#ddd3bd', top: '#6f7276' },
-  vargac: { wall: 9, roof: 5, shape: SHAPE.HIP, face: '#efe7d6', top: '#8e4a36' },
-};
-
-const colorCache = new Map();
-function color(hex) {
-  if (!colorCache.has(hex)) colorCache.set(hex, new THREE.Color(hex));
-  return colorCache.get(hex);
-}
-
 const FENCES = [
   { h: 2, t: 0.4, color: '#b9aea0' }, // zeď
   { h: 1.5, t: 0.5, color: '#a3a097' }, // opěrná zeď
   { h: 1.4, t: 0.12, color: '#6f7a6d' }, // plot
   { h: 1.6, t: 0.9, color: '#3f6a34' }, // živý plot
 ];
-
-function addFence(tileOf, terrain, track, { type, line }) {
-  const f = FENCES[type];
-  const col = color(f.color), low = col.clone().multiplyScalar(0.8);
-  for (let i = 0; i + 1 < line.length; i++) {
-    const p = line[i], q = line[i + 1];
-    const len = Math.hypot(q[0] - p[0], q[1] - p[1]);
-    if (len < 0.1) continue;
-    const parts = Math.ceil(len / 6);
-    const nx = (q[1] - p[1]) / len, nz = -(q[0] - p[0]) / len;
-    const ox = (nx * f.t) / 2, oz = (nz * f.t) / 2;
-    for (let k = 0; k < parts; k++) {
-      const a = mix(p, q, k / parts), b = mix(p, q, (k + 1) / parts);
-      const mid = mix(a, b, 0.5);
-      if (terrain.distAt(mid[0], mid[1]) < track.edge + 1 || terrain.keepOut(mid[0], mid[1])) continue;
-      const ya = terrain.heightAt(a[0], a[1]), yb = terrain.heightAt(b[0], b[1]);
-      const o = tileOf(mid[0], mid[1]).plain;
-      const A = (s, y) => [a[0] + s * ox, y, a[1] + s * oz], B = (s, y) => [b[0] + s * ox, y, b[1] + s * oz];
-      const [t0, t1] = [ya + f.h, yb + f.h];
-      panel(o, A(1, ya - 0.3), A(1, t0), B(1, t1), B(1, yb - 0.3), [nx, 0, nz], low, col);
-      panel(o, B(-1, yb - 0.3), B(-1, t1), A(-1, t0), A(-1, ya - 0.3), [-nx, 0, -nz], low, col);
-      panel(o, A(1, t0), A(-1, t0), B(-1, t1), B(1, t1), [0, 1, 0], col, col);
-    }
-  }
-}
 
 function buildWater(town) {
   const o = part();
@@ -551,12 +344,10 @@ export function buildTown(town, track, terrain, quality, seed, anisotropy) {
       face: color(town.palette.wall[b.face]), top: color(town.palette.roof[b.top]), plain: plainWalls.has(b.face),
     });
   }
-  for (const l of town.landmarks) {
-    const m = LANDMARK_MASS[l.id];
-    placed.push(l.ring);
-    addBuilding(tileOf(l.ring[0][0], l.ring[0][1]), terrain, l.ring, { ...m, face: color(m.face), top: color(m.top), plain: false });
-  }
-  for (const b of town.barriers) addFence(tileOf, terrain, track, b);
+  for (const l of town.landmarks) placed.push(l.ring);
+  const clear = (x, z) => terrain.distAt(x, z) >= track.edge + 1 && !terrain.keepOut(x, z);
+  for (const b of town.barriers) fenceLine(tileOf, terrain, b.line, FENCES[b.type], clear);
+  group.add(buildLandmarks(town, track, terrain, tileOf, shadows, anisotropy));
 
   const wallMat = new THREE.MeshLambertMaterial({ map: windowTexture(rng, anisotropy), vertexColors: true });
   const plainMat = new THREE.MeshLambertMaterial({ vertexColors: true });

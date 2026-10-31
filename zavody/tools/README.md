@@ -27,7 +27,8 @@ Souřadnice jsou herní (x na východ, z na jih, počátek na startu) v decimetr
 
 - `dem`: výšková mřížka, `h[j * nx + i]`
 - `buildings`: `[stěny, střecha, tvar, barva fasády, barva střechy, x, z, x, z, …]`; tvar 0 sedlová, 1 valbová, 2 plochá, 3 stanová, 4 pultová
-- `landmarks`: půdorysy ručně modelovaných dominant, `moved` říká, o kolik metrů se odsunuly od silnice
+- `landmarks`: půdorysy ručně modelovaných dominant, `moved` říká, o kolik metrů se odsunuly od silnice; modely jsou v `js/landmarks.js`, předlohou jsou fotky z Wikimedia Commons, nic se z nich nekopíruje
 - `areas`, `paved`: `[druh, x, z, …]`; `water`: `{ name, level, p }`
 - `streets`: `[šířka, x, z, …]`; `barriers`: `[typ, x, z, …]`; typ 0 zeď, 1 opěrná zeď, 2 plot, 3 živý plot
-- `paths`, `streams`, `treeRows`: čáry; `lamps`, `trees`: dvojice x, z
+- `paths`, `streams`, `treeRows`: čáry; `lamps`, `trees`: dvojice x, z, stejně `statues` (sochy z OSM)
+- `chimneys`: trojice x, z, výška (komíny z OSM)

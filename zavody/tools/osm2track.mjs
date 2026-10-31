@@ -167,7 +167,7 @@ const bounds = { minX: minX - MARGIN, maxX: maxX + MARGIN, minZ: minZ - MARGIN, 
 
 // ručně modelované dominanty, ve fázi 4 nahradí generický dům
 const LANDMARKS = {
-  49589320: 'zamek', 49589317: 'trojice', 49589363: 'kriz', 30103766: 'radnice', 48876694: 'synagoga', 30103752: 'vargac',
+  49589320: 'zamek', 49589317: 'trojice', 49589363: 'kriz', 30103766: 'radnice', 48876694: 'synagoga', 30103752: 'vargac', 49589359: 'oranzerie',
 };
 const ROOF = { gabled: 0, hipped: 1, flat: 2, pyramidal: 3, skillion: 4, mansard: 1, half_hipped: 1, 'half-hipped': 1, gambrel: 0, round: 0, dome: 3 };
 const WALLS = {
@@ -349,6 +349,7 @@ stats.maxTrim = +Math.max(0, ...pushback).toFixed(1);
 const AREA_KIND = (t) => {
   if (t.landuse === 'forest' || t.natural === 'wood') return 'forest';
   if (t.natural === 'scrub') return 'forest';
+  if (t.name === 'Francouzský park') return 'garden';
   if (t.leisure === 'park' || t.leisure === 'garden') return 'park';
   if (t.landuse === 'cemetery') return 'cemetery';
   if (t.landuse === 'meadow' || t.landuse === 'grass') return 'grass';
@@ -491,6 +492,14 @@ for (const e of area) {
 const pointsOf = (filter) => area.filter(filter).map((e) => toGame(e.lat, e.lon)).filter(near).flatMap((p) => [dm(p[0]), dm(p[1])]);
 const lamps = pointsOf((e) => e.type === 'node' && e.tags?.highway === 'street_lamp');
 const trees = pointsOf((e) => e.type === 'node' && e.tags?.natural === 'tree');
+const poi = read('osm_poi.json');
+const statues = poi.filter((e) => e.type === 'node' && (e.tags?.artwork_type === 'statue' || e.tags?.memorial === 'statue'))
+  .map((e) => toGame(e.lat, e.lon)).filter(near).flatMap((p) => [dm(p[0]), dm(p[1])]);
+// komíny převyšují město, proto stačí, když leží na terénu; bez výšky v OSM 25 m
+const chimneys = poi.filter((e) => e.tags?.man_made === 'chimney' && e.type === 'node').flatMap((e) => {
+  const p = toGame(e.lat, e.lon);
+  return p[0] > bounds.minX && p[0] < bounds.maxX && p[1] > bounds.minZ && p[1] < bounds.maxZ ? [[dm(p[0]), dm(p[1]), dm(parseFloat(e.tags.height) || 25)]] : [];
+});
 const treeRows = area.filter((e) => e.tags?.natural === 'tree_row' && e.geometry).map((e) => lineOf(e.geometry.map((p) => toGame(p.lat, p.lon)), 1));
 
 // --- výšková mřížka ---------------------------------------------------------------
@@ -522,7 +531,7 @@ const scene = {
   origin: { lat: +lat0.toFixed(6), lon: +lon0.toFixed(6), base: +base.toFixed(2) },
   dem: { x0: Math.round(bounds.minX), z0: Math.round(bounds.minZ), cell: DEM_CELL, nx, nz, h: heights },
   palette: { wall: wallPalette, roof: roofPalette, plain: WALLS.plain.map((c) => wallPalette.indexOf(c)) },
-  buildings, landmarks, areas, water, paved, streets, paths, streams, barriers, lamps, trees, treeRows,
+  buildings, landmarks, areas, water, paved, streets, paths, streams, barriers, lamps, trees, treeRows, statues, chimneys,
 };
 
 mkdirSync(join(GAME, 'data'), { recursive: true });
