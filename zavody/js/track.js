@@ -1,6 +1,6 @@
 // Trať: středová čára + dotazy pro fyziku/AI + 3D geometrie silnice.
 import * as THREE from 'three';
-import { buildCenterline, smoothCircular } from './trackmath.js';
+import { buildCenterline, smoothCircular, Cut } from './trackmath.js';
 import { clamp, angleDiff, RNG } from './rng.js';
 import { BIOMES, WET_GRIP } from './biomes.js';
 
@@ -21,6 +21,23 @@ export class Track {
     this.roadGrip = (BIOMES[def.biome]?.roadGrip ?? 1) * (def.wet ? WET_GRIP : 1);
     this.speedProfile = this.computeSpeedProfile(22 * this.roadGrip, 19 * this.roadGrip, 60);
     this.profiles = new Map([['car', this.speedProfile]]);
+    this.cuts = def.cut ? [new Cut(this, def.cut)] : [];
+    this.tunnels = (def.tunnels || []).map(([from, to]) => {
+      const a = this.project(from[0], from[1], -1, {}).s, b = this.project(to[0], to[1], -1, {}).s;
+      const fwd = ((b - a + this.L) % this.L) < this.L / 2;
+      const s0 = fwd ? a : b;
+      return { s0, len: (fwd ? b - a + this.L : a - b + this.L) % this.L };
+    });
+  }
+
+  // mezera ve svodidle pro zkratku (null = plné svodidlo)
+  cutAt(s, side) {
+    for (const c of this.cuts) if (c.inGap(s, side)) return c;
+    return null;
+  }
+
+  inTunnel(s) {
+    return this.tunnels.some((t) => ((s - t.s0 + this.L) % this.L) < t.len);
   }
 
   // rychlostní profil pro jiný typ vozu: přilnavost a maximálka poměrem k autu
@@ -311,6 +328,7 @@ export class Track {
       const seg = Math.floor(this.s[k] / (period * 2));
       const col = seg % 2 ? colA : colB;
       for (const side of [-1, 1]) {
+        if (this.cutAt(this.s[k], side)) continue;
         const li = side * (edge + 0.05), lo = side * (edge + 0.05 + t);
         // vnitřní líc
         const q1 = [this.point(k, li, bottom), this.point(k, li, h), this.point(n, li, h), this.point(n, li, bottom)];
@@ -348,6 +366,7 @@ export class Track {
       let i = 0;
       for (let k = 0; k < N; k += every) {
         for (const side of [-1, 1]) {
+          if (this.cutAt(this.s[k], side)) continue;
           this.point(k, side * (edge + 0.2), 0, p);
           m.makeRotationY(this.hd[k]);
           m.setPosition(p[0], p[1], p[2]);

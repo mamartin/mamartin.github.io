@@ -44,10 +44,11 @@ export class Store {
     this.settings = { ...DEFAULTS, ...(data.settings || {}) };
     this.records = data.records || {};
     this.custom = Array.isArray(data.custom) ? data.custom : [];
+    this.season = data.season || {};
   }
 
   save() {
-    return write(KEY, { settings: this.settings, records: this.records, custom: this.custom });
+    return write(KEY, { settings: this.settings, records: this.records, custom: this.custom, season: this.season });
   }
 
   // vlastní tratě z editoru

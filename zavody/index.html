@@ -48,6 +48,7 @@
       <section class="menu-block">
         <div class="seg" role="radiogroup" aria-label="Režim" id="mode-seg">
           <button type="button" data-mode="race" role="radio">Závod</button>
+          <button type="button" data-mode="season" role="radio">Sezóna</button>
           <button type="button" data-mode="cup" role="radio">Šampionát</button>
           <button type="button" data-mode="time" role="radio">Časovka</button>
         </div>
@@ -75,8 +76,13 @@
         <p class="hint" id="cup-best"></p>
       </section>
 
+      <section class="menu-block" id="season-block" hidden>
+        <p class="season-total" id="season-total"></p>
+        <div id="season-list"></div>
+      </section>
+
       <section class="menu-block options">
-        <div class="opt">
+        <div class="opt" id="laps-opt">
           <h2 class="label">Kola</h2>
           <div class="stepper">
             <button type="button" id="laps-minus" aria-label="Méně kol">−</button>
@@ -241,7 +247,10 @@
         <div class="seg" id="gar-vehicle" role="radiogroup" aria-label="Typ vozu">
           <button type="button" role="radio" data-vehicle="car">Auto</button>
           <button type="button" role="radio" data-vehicle="formula">Formule</button>
+          <button type="button" role="radio" data-vehicle="gt">GT</button>
+          <button type="button" role="radio" data-vehicle="rally">Rally</button>
         </div>
+        <p class="hint" id="gar-kind-hint"></p>
       </section>
       <section class="menu-block">
         <h2 class="label">Startovní číslo</h2>
@@ -280,8 +289,17 @@
 
   <!-- HUD -->
   <div id="hud" class="hud" hidden>
+    <aside class="controls-card" id="controls-card" hidden>
+      <div id="cc-rows"></div>
+      <button type="button" id="cc-skip">Skrýt <kbd>H</kbd></button>
+    </aside>
     <div class="hud-view" data-view="0">
       <div class="speed-fx" aria-hidden="true"></div>
+      <div class="rival-card" hidden>
+        <span class="rc-label">Rival závodu</span>
+        <strong><i class="rc-chip"></i><span class="rc-name"></span></strong>
+        <em class="rc-why"></em>
+      </div>
       <div class="hud-left">
         <div class="pos-box">
           <span class="pos-num">1</span><span class="pos-of">/6</span>
@@ -394,6 +412,7 @@
       <p class="eyebrow" id="res-track"></p>
       <h2 class="dialog-title" id="res-title">Cíl</h2>
       <p class="res-badges" id="res-badges"></p>
+      <ul class="res-goals" id="res-goals" hidden></ul>
       <div class="res-tables">
         <div class="table-wrap">
           <h3 class="label cup-caption" id="race-caption" hidden>Tento závod</h3>
@@ -412,6 +431,7 @@
       </div>
       <div class="dialog-actions row">
         <button type="button" class="btn primary" id="again-btn">Jet znovu</button>
+        <button type="button" class="btn" id="retry-btn" hidden>Jet znovu</button>
         <button type="button" class="btn" id="replay-btn">Záznam</button>
         <button type="button" class="btn" id="res-menu-btn">Do menu</button>
       </div>

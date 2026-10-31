@@ -5,6 +5,7 @@ import { randomTrackDef, buildCenterline, validateCenterline } from './trackmath
 import { RNG } from './rng.js';
 import { customToDef } from './editor.js';
 import { S, G, store } from './state.js';
+import { seasonEvent } from './season.js';
 
 // šampionáty: čtyři závody za sebou; bouřkový se jede v dešti
 export const CUPS = [
@@ -56,13 +57,27 @@ export function randomDef(seed) {
   return def;
 }
 
+// právě vybraný závod sezóny (mimo režim Sezóna null)
+export const currentEvent = () => (S.mode === 'season' ? seasonEvent(S.seasonEvent) : null);
+// podmínky závodu: v sezóně pevné, jinde podle menu
+export const raceLaps = () => currentEvent()?.laps ?? S.laps;
+export const raceDifficulty = () => currentEvent()?.difficulty ?? S.difficulty;
+export const raceWeapons = () => currentEvent()?.weapons ?? (currentEvent() ? true : S.weapons);
+
 // závodní režim bez šampionátu ('race' | 'time')
 export const raceMode = () => (S.mode === 'time' ? 'time' : 'race');
 // trať, která se má právě jet (v šampionátu podle kola)
-export const currentTrackId = () => (S.mode === 'cup' ? cupTracks()[G.cup ? G.cup.round : 0] : S.track + (S.reverse ? REV : ''));
+export function currentTrackId() {
+  if (S.mode === 'season') return currentEvent().track;
+  return S.mode === 'cup' ? cupTracks()[G.cup ? G.cup.round : 0] : S.track + (S.reverse ? REV : '');
+}
 
 // prší podle volby v menu, v bouřkovém poháru a v deštivé denní výzvě (na zimní trati sněží)
-export const wantsRain = (def) => (def.rain || S.weather === 'rain' || (S.mode === 'cup' && currentCup().rain)) && def.biome !== 'winter';
+export function wantsRain(def) {
+  if (def.biome === 'winter') return false;
+  if (S.mode === 'season') return !!currentEvent().rain;
+  return !!(def.rain || S.weather === 'rain' || (S.mode === 'cup' && currentCup().rain));
+}
 
 // nejlepší umístění v šampionátu (klasický má kvůli starším uložením vlastní místo)
 export function cupRecord(id) {
@@ -83,11 +98,11 @@ export function dailyDef() {
 }
 
 // obrácená varianta trati: stejné body v opačném pořadí (start zůstává uprostřed rovinky),
-// vlastní id kvůli rekordům a ghostům
+// vlastní id kvůli rekordům a ghostům; zkratka je stavěná jen po směru, obráceně by nic nepřinesla
 export const REV = '~r';
 export const baseId = (id) => (id && id.endsWith(REV) ? id.slice(0, -REV.length) : id);
 export function reverseDef(def) {
-  return { ...def, id: def.id + REV, name: `${def.name} (obráceně)`, points: [def.points[0], ...def.points.slice(1).reverse()] };
+  return { ...def, id: def.id + REV, name: `${def.name} (obráceně)`, cut: null, points: [def.points[0], ...def.points.slice(1).reverse()] };
 }
 
 export function trackDef(id) {

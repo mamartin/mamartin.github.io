@@ -65,6 +65,26 @@ export class Terrain {
         }
       }
     }
+    // zkratky: terén kolem nich klesne stejně jako u trati a nic na nich neroste
+    const cutY = (this.cutY = new Float32Array(V).fill(NaN));
+    for (const c of track.cuts) {
+      for (let k = 0; k < c.n; k++) {
+        const ci = Math.round((c.px[k] - x0) / cell);
+        const cj = Math.round((c.pz[k] - z0) / cell);
+        for (let j = Math.max(0, cj - rc); j <= Math.min(nz - 1, cj + rc); j++) {
+          const z = z0 + j * cell;
+          for (let i = Math.max(0, ci - rc); i <= Math.min(nx - 1, ci + rc); i++) {
+            const x = x0 + i * cell;
+            const d = Math.hypot(x - c.px[k], z - c.pz[k]);
+            const v = j * nx + i;
+            if (d < dist[v]) {
+              dist[v] = d;
+              cutY[v] = c.py[k];
+            }
+          }
+        }
+      }
+    }
     this.dist = dist;
     this.near = near;
   }
@@ -87,7 +107,7 @@ export class Terrain {
         const v = j * nx + i;
         const d = this.dist[v];
         const k = this.near[v];
-        const ty = track.py[k];
+        const ty = isNaN(this.cutY[v]) ? track.py[k] : this.cutY[v];
         const low = ty - Math.abs(track.tanBank[k]) * edge - 0.7;
         const base = lerp(ty, meanY, smoothstep(50, 260, d));
         // vzdálenost od obdélníku trati – pro prstenec hor v dálce

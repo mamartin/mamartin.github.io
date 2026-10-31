@@ -13,13 +13,18 @@ import { Garage, playerNumbers as numbersOf, partColor, kindName, hexCss } from 
 import { $, S, G, store, isTouch, input, audio, music, view, buzz } from './state.js';
 import {
   currentCup, cupTracks, raceMode, currentTrackId, wantsRain, cupRecord, REV, baseId, trackDef, randomDef, dailyDef,
+  raceLaps, raceDifficulty, raceWeapons, currentEvent
 } from './trackdefs.js';
 import {
   humanCount, playerColors, playerAccents, playerLiveries, playerKinds, opponentKind, playerNames, opponentNames, opponentLooks, currentLooks,
+  pickRival, rivalWhy
 } from './players.js';
 import { bindDriverPick, refreshDriverPick } from './driverpick.js';
 import { stopReplay, toggleReplay, refreshReplayUI, bindReplay } from './replayui.js';
 import { saveResults, showResults } from './results.js';
+import { renderSeasonMenu } from './seasonui.js';
+import { seriesOf } from './season.js';
+import { driverTrait } from './drivers.js';
 import { emitEffects } from './carfx.js';
 import { CameraRig } from './camera.js';
 import { Effects } from './effects.js';
@@ -427,15 +432,22 @@ function refreshMenu() {
     card.querySelector('em').textContent = two ? `Hráč ${i + 1} · barvy a typ vozu` : 'Barvy a typ vozu';
   }
   $('keys-2p').hidden = !two;
-  $('diff-opt').hidden = S.mode === 'time';
-  $('weapons-opt').hidden = S.mode === 'time';
-  $('track-block').hidden = S.mode === 'cup';
+  const season = S.mode === 'season';
+  $('diff-opt').hidden = S.mode === 'time' || season;
+  $('weapons-opt').hidden = S.mode === 'time' || season;
+  $('laps-opt').hidden = season;
+  $('weather-opt').hidden = season;
+  if (season) $('players-opt').hidden = true;
+  $('track-block').hidden = S.mode === 'cup' || season;
   $('cup-block').hidden = S.mode !== 'cup';
+  $('season-block').hidden = !season;
   $('mode-hint').textContent = {
     race: 'Ty proti pěti soupeřům. Delší drift dá mini-turbo a plní nitro, krabice s otazníkem dávají power-upy.',
     cup: `${currentCup().name}: čtyři závody za sebou${currentCup().rain ? ' v dešti' : ''}. Body za umístění 10, 6, 4, 3, 2, 1 a vítězí nejvíc bodů.`,
     time: 'Sám na trati proti průhlednému ghostu svého nejlepšího kola.',
+    season: 'Dvanáct závodů se třemi cíli. Hvězdy otevírají další série a nové laky a designy v garáži.',
   }[S.mode];
+  if (season) renderSeasonMenu(pickEvent);
   if (S.mode === 'cup') {
     for (const b of $('cup-seg').children) b.setAttribute('aria-checked', String(b.dataset.cup === currentCup().id));
     $('cup-list').innerHTML = cupTracks().map((id) => {
@@ -464,6 +476,15 @@ function refreshMenu() {
   for (const b of $('steer-seg').children) b.setAttribute('aria-checked', String((b.dataset.steer === 'tilt') === tilt));
   $('invert-opt').hidden = !tilt;
   document.body.classList.toggle('tilt-steer', tilt && isTouch);
+}
+
+async function pickEvent(id) {
+  if (S.seasonEvent === id) return;
+  S.seasonEvent = id;
+  store.save();
+  refreshMenu();
+  await loadWorld(currentTrackId());
+  G.screen = 'menu';
 }
 
 // přestavba aut v menu nejvýš jednou za snímek (picker barvy posílá hodně změn)
@@ -679,7 +700,16 @@ function bindMenu() {
   $('resume-btn').addEventListener('click', () => setPaused(false));
   $('restart-btn').addEventListener('click', () => startRace());
   $('menu-btn').addEventListener('click', () => toMenu());
+  $('retry-btn').addEventListener('click', () => startRace());
+  $('cc-skip').addEventListener('click', () => {
+    hideControls();
+    document.activeElement?.blur();
+  });
   $('again-btn').addEventListener('click', () => {
+    if (G.seasonNext) {
+      S.seasonEvent = G.seasonNext;
+      store.save();
+    }
     if (G.cup) {
       if (G.cup.round < cupTracks().length - 1) {
         G.cup.round++;
@@ -738,6 +768,7 @@ function bindInstall() {
 }
 
 function clearRace() {
+  hideControls();
   const r = G.race;
   if (!r) return;
   if (G.replay) {
@@ -798,7 +829,7 @@ async function startRaceInner() {
   w.effects.clear();
   const humans = humanCount();
   const race = new Race({
-    track: w.track, biome: w.biome, mode: raceMode(), laps: S.laps, difficulty: S.difficulty,
+    track: w.track, biome: w.biome, mode: raceMode(), laps: raceLaps(), difficulty: raceDifficulty(),
     playerColors: playerColors().slice(0, humans), playerKinds: playerKinds(), playerNames: playerNames(),
     opponentNames: G.cup ? (G.cup.names ??= opponentNames()) : opponentNames(), opponentKind: opponentKind(),
     opponentLooks: G.cup ? currentLooks() : (G.looks = opponentLooks()),
@@ -818,6 +849,7 @@ async function startRaceInner() {
       car.headlight = spot;
     }
   }
+  race.rival = pickRival(race);
   G.race = race;
   G.acc = 0;
   G.resultsTimer = 0;
@@ -836,7 +868,7 @@ async function startRaceInner() {
       scene.add(G.ghostMesh.root);
     }
   }
-  if (raceMode() === 'race' && S.weapons) {
+  if (raceMode() === 'race' && raceWeapons()) {
     G.pickups = new Pickups({ track: w.track, scene, race, effects: w.effects, audio, seed: Date.now() % 100000 });
   }
   document.body.classList.toggle('items-on', !!G.pickups);
@@ -853,17 +885,29 @@ async function startRaceInner() {
   else for (const r of rigs) r.snap();
   w.track.setStartLights(0);
   if (G.cup) for (const h of G.huds) h.sub(`Šampionát · závod ${G.cup.round + 1}/${cupTracks().length} · ${w.def.name}`, 3.2);
-  if (!isTouch && (S.racesStarted || 0) < 3) {
-    if (humans === 1) {
-      hud.sub('<kbd>W</kbd> plyn · <kbd>A</kbd><kbd>D</kbd> zatáčení · <kbd>Mezerník</kbd> drift · <kbd>Shift</kbd> nitro' + (G.pickups ? ' · <kbd>F</kbd> power-up' : ''), 5, 'help');
-    } else {
-      huds[0].sub('<kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> · drift <kbd>Mezerník</kbd> · nitro <kbd>Shift</kbd>' + (G.pickups ? ' · <kbd>E</kbd>' : ''), 5, 'help');
-      huds[1].sub('šipky · drift <kbd>-</kbd> · nitro pravý <kbd>Shift</kbd>' + (G.pickups ? ' · <kbd>.</kbd>' : ''), 5, 'help');
-    }
-  }
+  const ev = currentEvent();
+  if (ev) hud.sub(`Sezóna · ${seriesOf(ev).name} · ${w.def.name}`, 3.2);
+  if (race.rival) hud.showRival(race.rival, rivalWhy(race.rival), driverTrait(race.rival.name));
+  showControls(humans);
   S.racesStarted = (S.racesStarted || 0) + 1;
   store.save();
   G.screen = 'race';
+}
+
+// stručné ovládání při prvním závodě: nepřekáží, jde skrýt a už se neopakuje
+function showControls(humans) {
+  if (isTouch || S.controlsSeen || S.racesStarted) return;
+  S.controlsSeen = true;
+  const item = (key) => (G.pickups ? ` · <kbd>${key}</kbd> power-up` : '');
+  $('cc-rows').innerHTML = humans === 1
+    ? `<p><kbd>W</kbd> plyn · <kbd>S</kbd> brzda · <kbd>A</kbd><kbd>D</kbd> zatáčení · <kbd>Mezerník</kbd> drift · <kbd>Shift</kbd> nitro${item('F')}</p>`
+    : `<p>Hráč 1: <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> · <kbd>Mezerník</kbd> drift · <kbd>Shift</kbd> nitro${item('E')}</p>`
+      + `<p>Hráč 2: šipky · <kbd>-</kbd> drift · pravý <kbd>Shift</kbd> nitro${item('.')}</p>`;
+  $('controls-card').hidden = false;
+}
+
+function hideControls() {
+  $('controls-card').hidden = true;
 }
 
 // pohledy HUD podle počtu hráčů
@@ -956,6 +1000,7 @@ function handleKeys(pressed) {
       if (!$('results').hidden) toMenu();
       else setPaused(!G.paused);
     }
+    if (code === 'KeyH') hideControls();
     // okamžitý restart závodu, ve výsledcích slouží tlačítka
     if (code === 'Backspace' && $('results').hidden) {
       startRace();
@@ -1005,6 +1050,7 @@ function processEvents() {
       w.track.setStartLights([0, 5, 4, 2][e.value] ?? 0);
     } else if (e.type === 'go') {
       each((h) => h.message('Start!', 'go', 1.1));
+      each((h) => h.hideRival());
       audio.beep(true);
       w.track.setStartLights(0, true);
       G.lightsOff = 2.5;
@@ -1023,7 +1069,7 @@ function processEvents() {
       buzz(perfect ? 25 : [40, 30, 40]);
     } else if (e.type === 'overtake') {
       const h = hudOf(e.car);
-      h.sub(`<span class="good">Předjetí</span>${e.rival ? ` · ${e.rival.name}` : ''}`, 1.6);
+      h.sub(`<span class="good">${e.rival && e.rival === race.rival ? 'Předjel jsi rivala' : 'Předjetí'}</span>${e.rival ? ` · ${e.rival.name}` : ''}`, 1.6);
       h.flashPlace();
       audio.overtake(e.place);
       buzz(20);
@@ -1310,6 +1356,13 @@ function frame(now) {
   w.effects.update(dt);
   if (w.snow) w.snow.update(dt);
   if (w.rain) w.rain.update(dt);
+  if (G.race) {
+    if (G.race.time > 7 && !$('controls-card').hidden) hideControls();
+    // v tunelu neprší a nesněží
+    const covered = w.track.tunnels.length > 0 && w.track.inTunnel(G.race.player.proj.s);
+    if (w.snow) w.snow.points.visible = !covered;
+    if (w.rain) w.rain.points.visible = !covered;
+  }
   renderViews(w);
 }
 

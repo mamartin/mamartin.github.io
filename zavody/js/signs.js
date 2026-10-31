@@ -84,6 +84,7 @@ export function buildCornerSigns(track) {
   const lat = track.edge + BOARD_LAT;
   // cell = dílek atlasu, flip = šipka do druhé strany; lícem k autům, která k tabuli přijíždějí
   const board = (s, side, cell, flip = false) => {
+    if (track.cutAt(s, side)) return;
     const p = track.pointS(s, side * lat);
     const q = track.pointS(s - 34, 0);
     const nx = q[0] - p[0], nz = q[2] - p[2];
@@ -140,6 +141,7 @@ export function buildRoadPoles(track, spacing = 16) {
   let i = 0;
   for (let k = 0; k < N; k += every) {
     for (const side of [-1, 1]) {
+      if (track.cutAt(track.s[k], side)) continue;
       track.point(k, side * (track.edge + BOARD_LAT), 0, p);
       m.makeRotationY(track.hd[k]);
       m.setPosition(p[0], p[1], p[2]);

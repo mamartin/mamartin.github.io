@@ -38,6 +38,11 @@ export const TRACKS = [
     runoff: 4.5,
     maxBank: 0.06,
     seed: 777,
+    cut: {
+      via: [[-20, -312], [-95, -345], [-140, -372], [-190, -383]],
+      width: 8,
+      rocks: [[0.36, 1.5, 1.5], [0.72, -1.5, 1.5]],
+    },
     points: [
       [0, 0, 0, 0],
       [320, 0, 0, 80],
@@ -61,6 +66,7 @@ export const TRACKS = [
     runoff: 4,
     maxBank: 0.06,
     seed: 2718,
+    tunnels: [[[95, -436], [-70, -424]]],
     points: [
       [0, 0, 0, 0],
       [220, 0, 2, 60],

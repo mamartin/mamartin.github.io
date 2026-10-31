@@ -1,8 +1,11 @@
 // Výsledky závodu: uložení rekordů a medailí, tabulka, odznaky a body do šampionátu.
 import { formatTime } from './hud.js';
 import { medalFor, nextMedal } from './medals.js';
-import { $, G, store, audio } from './state.js';
-import { trackDef, baseId, currentTrackId, cupTracks, currentCup, cupRecord, CUP_POINTS } from './trackdefs.js';
+import { $, G, S, store, audio } from './state.js';
+import { trackDef, baseId, currentTrackId, cupTracks, currentCup, cupRecord, CUP_POINTS, currentEvent } from './trackdefs.js';
+import {
+  goals, submitEvent, totalStars, starsHtml, UNLOCKS, unlockName, SERIES, SEASON_EVENTS, eventOpen, eventStars,
+} from './season.js';
 
 export function saveResults() {
   const race = G.race;
@@ -61,14 +64,16 @@ export function showResults() {
     audio.say({ gold: 'Zlatá medaile', silver: 'Stříbrná medaile', bronze: 'Bronzová medaile' }[G.results.medal.id]);
   }
   if (G.results?.next) badges.push(`Na ${G.results.next.name.toLowerCase()} chybí ${G.results.next.gap.toFixed(2).replace('.', ',')} s`);
+  renderRival(rows, badges);
   renderCup(rows, badges);
+  renderSeason(rows, badges);
   $('res-badges').innerHTML = badges.map((b) => `<span class="badge">${b}</span>`).join('');
   $('res-body').innerHTML = rows
     .map(({ c, t }, i) => {
       const est = !c.finished;
       const color = '#' + c.color.toString(16).padStart(6, '0');
       return `<tr class="${c.isPlayer ? 'me' : ''}"><td class="pos">${i + 1}</td>` +
-        `<td><span class="chip" style="background:${color}"></span>${c.name}</td>` +
+        `<td><span class="chip" style="background:${color}"></span>${c.name}${c === race.rival ? ' <span class="tw-rival">rival</span>' : ''}</td>` +
         `<td class="num ${est ? 'est' : ''}">${est ? '~' : ''}${formatTime(t)}</td>` +
         `<td class="num">${formatTime(c.bestLap)}</td></tr>`;
     })
@@ -77,6 +82,51 @@ export function showResults() {
   $('replay-btn').hidden = !G.replayRec || G.replayRec.duration < 3;
   $('results').hidden = false;
   $('again-btn').focus();
+}
+
+// rival: výsledek souboje a kdo bude rivalem příště (kdo skončil těsně před hráčem, u vítěze za ním)
+function renderRival(rows, badges) {
+  const race = G.race;
+  if (!race.rival) return;
+  const place = (car) => rows.findIndex((r) => r.c === car);
+  const mine = place(race.player);
+  if (place(race.rival) > mine) badges.push(`<span class="good">Rival poražen: ${race.rival.name}</span>`);
+  else badges.push(`Rival ${race.rival.name} byl před tebou`);
+  S.rival = (rows[mine - 1] ?? rows[mine + 1]).c.name;
+  S.rivalBeat = mine > 0;
+  store.save();
+}
+
+// sezóna: vyhodnocení cílů, hvězdy, odměny a další závod
+function renderSeason(rows, badges) {
+  const ev = currentEvent();
+  const box = $('res-goals');
+  const again = $('again-btn');
+  box.hidden = !ev;
+  $('retry-btn').hidden = true;
+  G.seasonNext = null;
+  if (!ev) return;
+  const race = G.race;
+  const place = rows.findIndex((r) => r.c === race.player);
+  const reached = [place + 1 <= ev.place, race.player.miniTurbos >= ev.drift, rows.findIndex((r) => r.c === race.rival) > place];
+  const before = totalStars(store);
+  const mask = reached.reduce((m, ok, i) => m | (ok ? 1 << i : 0), 0);
+  const total = submitEvent(store, ev.id, mask);
+  box.innerHTML = goals(ev, race.rival.name).map((g, i) => {
+    const old = total & (1 << i) && !reached[i];
+    return `<li class="${reached[i] ? 'ok' : old ? 'old' : ''}"><span class="goal-star">★</span>${g.text}${old ? ' <em>(splněno dřív)</em>' : ''}</li>`;
+  }).join('');
+  const after = totalStars(store);
+  if (after > before) badges.unshift(`Hvězdy: +${after - before} · celkem ${after} ${starsHtml(eventStars(store, ev.id))}`);
+  for (const u of UNLOCKS) if (u.stars > before && u.stars <= after) badges.push(`Odemčeno v garáži: ${unlockName(u)}`);
+  for (const s of SERIES) if (s.need > before && s.need <= after) badges.push(`Odemčena série ${s.name}`);
+  // po aspoň jedné hvězdě nabídne další závod, když je otevřený
+  const next = SEASON_EVENTS[SEASON_EVENTS.indexOf(ev) + 1];
+  if (next && eventStars(store, ev.id) > 0 && eventOpen(store, next)) {
+    G.seasonNext = next.id;
+    again.textContent = `Další závod: ${trackDef(next.track).name}`;
+    $('retry-btn').hidden = false;
+  }
 }
 
 // body do šampionátu a tabulka průběžného pořadí

@@ -27,23 +27,52 @@ export const CAR = {
   powerLoss: 0.27, // o kolik plný plyn ve vysoké rychlosti ubere boční přilnavost
   rearZ: 1.3,
   rearX: 0.86,
+  wallLoss: 1, // násobek ztráty rychlosti po nárazu
+  wetGrip: 1, // násobek přilnavosti na mokru
 };
 
-// typy vozů: formule drží víc v zatáčkách a líp zrychluje, mimo asfalt ale trpí
+// typy vozů: auto je vyvážené, formule drží a zrychluje, ale náraz, tráva a déšť ji stojí nejvíc,
+// GT je nejrychlejší na rovince a klouže v zatáčkách, rally je obratná, i mimo asfalt, a pomalejší
 export const VEHICLES = {
   car: CAR,
   formula: {
     ...CAR,
     wheelbase: 3.0,
-    accel: 14.6,
-    vmax: 62.5,
-    grip: 26.5,
+    accel: 14.2,
+    vmax: 61,
+    grip: 24.4,
     steerMax: 0.6,
     halfWidth: 1.05,
     halfLength: 2.35,
-    offDragMul: 1.35,
+    offDragMul: 1.6,
     rearZ: 1.45,
     rearX: 0.88,
+    wallLoss: 1.6,
+    wetGrip: 0.92,
+  },
+  gt: {
+    ...CAR,
+    wheelbase: 2.8,
+    accel: 14,
+    vmax: 72,
+    brake: 24,
+    grip: 22.3,
+    steerMax: 0.58,
+    halfLength: 2.35,
+    offDragMul: 1.2,
+  },
+  rally: {
+    ...CAR,
+    wheelbase: 2.45,
+    accel: 14.6,
+    vmax: 56,
+    grip: 25.5,
+    steerMax: 0.68,
+    halfLength: 2.1,
+    halfWidth: 0.97,
+    offDragMul: 0.65,
+    offSafe: 31,
+    wetGrip: 1.05,
   },
 };
 
@@ -281,6 +310,10 @@ function sharedParts() {
     ...[-0.36, 0, 0.36].map((x) => box(0.03, 0.14, 0.3, x, 0.3, -2.2)),
   ]);
   const chromeGeo = mergeGeometries(mirrorX((sx) => ni(new THREE.CylinderGeometry(0.055, 0.055, 0.2, 12).rotateX(Math.PI / 2).translate(sx * 0.42, 0.33, -2.3))));
+  // rampa světel na střeše rally
+  const barY = CAR_ROOF(0.2) + 0.09;
+  const rallyBarGeo = new THREE.BoxGeometry(1.0, 0.05, 0.1).translate(0, barY - 0.07, 0.2);
+  const rallyLampGeo = mergeGeometries([0.13, 0.4].flatMap((x) => mirrorX((sx) => ni(new THREE.CylinderGeometry(0.075, 0.075, 0.06, 12).rotateX(Math.PI / 2).translate(sx * x, barY, 0.24)))));
   const headGeo = mergeGeometries(mirrorX((sx) => box(0.36, 0.05, 0.16, sx * 0.55, CAR_TOP(2.21) + 0.01, 2.21, noseSlope)));
   const tailGeo = mergeGeometries([
     ...mirrorX((sx) => box(0.5, 0.1, 0.05, sx * 0.52, 0.64, -2.29)),
@@ -328,7 +361,7 @@ function sharedParts() {
   })();
 
   shared = {
-    paintGeo, wingGeo, cabinGeo, darkGeo, chromeGeo, headGeo, tailGeo, wheel, stripeGeo,
+    paintGeo, wingGeo, cabinGeo, darkGeo, chromeGeo, rallyBarGeo, rallyLampGeo, headGeo, tailGeo, wheel, stripeGeo,
     plate: { y: CAR_ROOF(-0.36) + 0.032, z: -0.36, rx: 0, scale: 1 },
     numberGeo: new THREE.PlaneGeometry(0.62, 0.62).rotateX(-Math.PI / 2),
     blob: new THREE.PlaneGeometry(2.7, 5.4).rotateX(-Math.PI / 2),
@@ -484,6 +517,8 @@ export const FINISHES = {
   gloss: { roughness: 0.3, metalness: 0.45 },
   metal: { roughness: 0.2, metalness: 0.85 },
   matte: { roughness: 0.78, metalness: 0.05 },
+  pearl: { roughness: 0.14, metalness: 0.6 },
+  chrome: { roughness: 0.06, metalness: 1 },
 };
 
 // livery: vlastní barvy dílů (wings, trim, rims, tires, cockpit, plate) a lak (finish); null = výchozí
@@ -535,6 +570,14 @@ export function createCarMesh(color, {
   );
   if (F) tilt.add(new THREE.Mesh(F.accentGeo, stripeMat), new THREE.Mesh(F.visorGeo, ghost ? mats.glass : P.glassMat));
   else tilt.add(new THREE.Mesh(P.chromeGeo, ghost ? mats.rim : P.chromeMat));
+  // GT a rally vycházejí z auta: nižší a širší s větším křídlem, nebo vyšší a kratší s rampou světel
+  if (kind === 'gt') {
+    tilt.scale.set(1.05, 0.9, 1.08);
+    wingMesh.scale.set(1.08, 1.22, 1);
+  } else if (kind === 'rally') {
+    tilt.scale.set(0.98, 1.1, 0.93);
+    tilt.add(new THREE.Mesh(P.rallyBarGeo, mats.dark), new THREE.Mesh(P.rallyLampGeo, mats.head));
+  }
 
   const wheels = [];
   const wheelPos = F
@@ -604,6 +647,7 @@ export class Car {
     this.number = number;
     this.isPlayer = isPlayer;
     this.biome = biome;
+    this.power = 1; // výkonnost jezdce AI
     this.kind = VEHICLES[kind] ? kind : 'car';
     this.spec = VEHICLES[this.kind];
     this.mesh = createCarMesh(color, { ghost, night, number, kind: this.kind, accent, livery });
@@ -645,6 +689,7 @@ export class Car {
     this.turboFired = 0; // úroveň právě vypáleného turba (pro událost závodu)
     this.launchBoost = 0; // perfektní start: zbývající čas extra tahu
     this.launchPenalty = 0; // předčasný start: zbývající čas protáčení kol
+    this.cut = null; // zkratka, na které vůz právě je
     this.track.project(this.x, this.z, -1, this.proj);
     this.savePrev();
   }
@@ -663,9 +708,9 @@ export class Car {
     const tr = this.track;
     const P = this.proj;
     const biome = this.biome;
-    this.surface = tr.surfaceAt(P.lat);
+    this.surface = this.cut ? SURF_OFF : tr.surfaceAt(P.lat);
     const off = this.surface === SURF_OFF;
-    const gripMul = off ? biome.offGrip ?? 0.6 : (this.surface === SURF_CURB ? 0.95 : 1) * (biome.roadGrip ?? 1);
+    const gripMul = off ? biome.offGrip ?? 0.6 : (this.surface === SURF_CURB ? 0.95 : 1) * (biome.roadGrip ?? 1) * (biome.wet ? V.wetGrip : 1);
     const dragMul = off ? (biome.offDrag ?? 3) * V.offDragMul : 1;
     const topMul = off ? 0.6 : 1;
 
@@ -729,9 +774,9 @@ export class Car {
       if (vLong < -1) a += V.brake * throttle;
       else {
         // ve slipstreamu je menší odpor, takže i vyšší maximálka
-        const vm = V.vmax * topMul * (this.nitroActive ? V.nitroVmax : 1) * (1 + 0.06 * this.draft) * (this.turbo > 0 ? 1.08 : 1);
+        const vm = V.vmax * Math.sqrt(this.power) * topMul * (this.nitroActive ? V.nitroVmax : 1) * (1 + 0.06 * this.draft) * (this.turbo > 0 ? 1.08 : 1);
         const r = Math.max(0, vLong) / vm;
-        a += V.accel * throttle * Math.max(0, 1 - r * r);
+        a += V.accel * this.power * throttle * Math.max(0, 1 - r * r);
         // nitro nejvíc táhne v pomalém výjezdu ze zatáčky, v plné rychlosti už málo
         if (this.nitroActive) a += V.nitroAccel * Math.min(0.65, Math.max(0, 1 - r)) ** 2;
         if (this.launchBoost > 0) a += 7 * throttle * Math.max(0, 1 - r);
@@ -782,7 +827,9 @@ export class Car {
     if (this.slip > 0.18 && this.speed > 12 && !off) this.nitro = Math.min(1, this.nitro + dt * 0.22 * Math.min(1, this.slip * 2));
     this.nitro = Math.min(1, this.nitro + dt * 0.012);
 
-    tr.project(this.x, this.z, P.i ?? -1, P);
+    if (this.cut) this.cut.project(this.x, this.z, P);
+    else tr.project(this.x, this.z, P.i ?? -1, P);
+    this.updateCut();
     this.collideWalls(dt);
     this.updateDrift(dt, off);
 
@@ -826,13 +873,62 @@ export class Car {
     return DRIFT_LEVELS.filter((t) => this.driftTime >= t).length;
   }
 
+  // zkratka: vjezd mezerou ve svodidle a návrat na trať (AI ji nepoužívá)
+  updateCut() {
+    const P = this.proj, tr = this.track, cut = this.cut;
+    const lim = tr.edge - this.spec.halfWidth;
+    if (cut) {
+      let back = P.cutEnd !== 0;
+      if (!back && (P.cutK < cut.k0 || P.cutK >= cut.k1)) {
+        const m = tr.project(this.x, this.z, P.i, this.mainProj || (this.mainProj = {}));
+        back = Math.abs(m.lat) < lim - 1;
+      }
+      if (back) {
+        this.cut = null;
+        tr.project(this.x, this.z, P.i, P);
+      }
+    } else if (this.isPlayer && tr.cuts.length && Math.abs(P.lat) > lim - 0.5) {
+      const c = tr.cutAt(P.s, Math.sign(P.lat));
+      if (c) {
+        this.cut = c;
+        P.cutK = -1;
+        c.project(this.x, this.z, P);
+      }
+    }
+  }
+
+  collideRocks() {
+    const V = this.spec;
+    for (const r of this.cut.rocks) {
+      const dx = this.x - r.x, dz = this.z - r.z;
+      const d = Math.hypot(dx, dz) || 0.01;
+      const min = r.r + V.halfWidth;
+      if (d >= min) continue;
+      const nx = dx / d, nz = dz / d;
+      this.x = r.x + nx * min;
+      this.z = r.z + nz * min;
+      const vn = this.vx * nx + this.vz * nz;
+      if (vn >= 0) continue;
+      this.vx -= nx * vn * 1.3;
+      this.vz -= nz * vn * 1.3;
+      const loss = 1 - Math.min(0.7, -vn * 0.05 * V.wallLoss);
+      this.vx *= loss;
+      this.vz *= loss;
+      this.impact = -vn;
+      this.yawRate *= 0.4;
+    }
+  }
+
   collideWalls(dt) {
     const V = this.spec;
     const P = this.proj;
-    const lim = this.track.edge - V.halfWidth - 0.1;
+    const cut = this.cut;
+    const lim = (cut ? cut.hw : this.track.edge) - V.halfWidth - 0.1;
     const a = Math.abs(P.lat);
     this.impact = 0;
-    if (a <= lim) return;
+    if (cut) this.collideRocks();
+    // tam, kde se cesta dotýká trati, je na její straně k trati volno
+    if (a <= lim || (cut && (P.cutK < cut.k0 || P.cutK >= cut.k1) && P.lat * cut.side < 0)) return;
     const side = Math.sign(P.lat);
     const excess = a - lim;
     const nx = P.rx * side, nz = P.rz * side;
@@ -842,7 +938,7 @@ export class Car {
     if (vn > 0) {
       this.vx -= nx * vn * 1.3;
       this.vz -= nz * vn * 1.3;
-      const loss = 1 - Math.min(0.5, vn * 0.035);
+      const loss = 1 - Math.min(0.6, vn * 0.035 * V.wallLoss);
       this.vx *= loss;
       this.vz *= loss;
       this.impact = vn;

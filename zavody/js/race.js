@@ -2,6 +2,7 @@
 import { Car } from './car.js';
 import { AIDriver } from './ai.js';
 import { clamp } from './rng.js';
+import { nameSeed } from './drivers.js';
 
 export const OPPONENTS = [
   { name: 'Tonda Blesk', color: 0x2c6fd1, number: 11 },
@@ -117,7 +118,7 @@ export class Race {
       if (isPlayer) {
         car.humanIndex = h;
         this.players[h] = car;
-      } else this.ais.set(car, new AIDriver(car, track, difficulty, 1000 + slot * 77));
+      } else this.ais.set(car, new AIDriver(car, track, difficulty, 1000 + slot * 77 + nameSeed(info.name), info.name));
     }
     this.player = this.players[0];
     this.autopilots = new Map();
@@ -150,6 +151,7 @@ export class Race {
     car.shownPlace = null;
     car.cheerAt = -99;
     car.cheerPlace = 0;
+    car.miniTurbos = 0;
   }
 
   emit(type, data = {}) {
@@ -251,6 +253,7 @@ export class Race {
       }
       car.step(dt);
       if (car.turboFired) {
+        car.miniTurbos++;
         this.emit('turbo', { car, level: car.turboFired });
         car.turboFired = 0;
       }
@@ -293,7 +296,7 @@ export class Race {
       let target = 0;
       if (car.speed > 15) {
         for (const o of this.cars) {
-          if (o === car || o.ghostTimer > 0 || o.speed < 12) continue;
+          if (o === car || o.ghostTimer > 0 || o.speed < 12 || o.cut || car.cut) continue;
           let ds = o.proj.s - car.proj.s;
           if (ds < -L / 2) ds += L;
           else if (ds > L / 2) ds -= L;

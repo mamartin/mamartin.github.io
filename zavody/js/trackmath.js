@@ -310,3 +310,137 @@ export function randomTrackDef(seed) {
   }
   return ordered;
 }
+
+// Zkratka: úzká vlastní cesta mezi dvěma místy trati, zadaná body ve světě (první a poslední leží
+// u trati). Pro fyziku je to kus trati: project() vrací stejná pole jako
+// Track.project, s se mapuje na vynechaný úsek. V místech, kde se cesta odpojuje a připojuje, je ve
+// svodidle mezera (gapIn, gapOut, měřeno od s0), jinde cestu lemují vlastní valy.
+export class Cut {
+  constructor(track, spec) {
+    const L = track.L;
+    const via = spec.via;
+    const a = track.project(via[0][0], via[0][1], -1, {});
+    const b = track.project(via[via.length - 1][0], via[via.length - 1][1], -1, {});
+    this.track = track;
+    this.spec = spec;
+    this.hw = spec.width / 2;
+    this.s0 = a.s;
+    this.span = (b.s - a.s + L) % L;
+    this.side = Math.sign((via[1][0] - a.cx) * a.rx + (via[1][1] - a.cz) * a.rz) || 1;
+    const lat = this.side * (track.edge - 2.5);
+    const at = (s) => track.sampleAt(s, lat, {});
+    const A = at(a.s), B = at(b.s);
+    const ctrl = [at(a.s - 30), A, ...via.slice(1, -1).map(([x, z]) => ({ x, z })), B, at(b.s + 30)];
+    // Catmull-Rom přes řídicí body, pak převzorkovat po 2 m
+    const dense = [];
+    for (let i = 1; i < ctrl.length - 2; i++) {
+      const [p0, p1, p2, p3] = [ctrl[i - 1], ctrl[i], ctrl[i + 1], ctrl[i + 2]];
+      for (let t = 0; t < 1; t += 0.02) {
+        const f = (q) => 0.5 * (2 * p1[q] + (p2[q] - p0[q]) * t + (2 * p0[q] - 5 * p1[q] + 4 * p2[q] - p3[q]) * t * t + (3 * p1[q] - p0[q] - 3 * p2[q] + p3[q]) * t * t * t);
+        dense.push({ x: f('x'), z: f('z') });
+      }
+    }
+    dense.push({ x: B.x, z: B.z });
+    const pts = [dense[0]];
+    let run = 0;
+    for (let i = 1; i < dense.length; i++) {
+      run += Math.hypot(dense[i].x - dense[i - 1].x, dense[i].z - dense[i - 1].z);
+      if (run >= 2) {
+        pts.push(dense[i]);
+        run = 0;
+      }
+    }
+    pts.push(dense[dense.length - 1]);
+    const n = (this.n = pts.length);
+    this.px = Float32Array.from(pts, (p) => p.x);
+    this.pz = Float32Array.from(pts, (p) => p.z);
+    this.py = new Float32Array(n);
+    this.hd = new Float32Array(n);
+    this.d = new Float32Array(n);
+    for (let k = 0; k < n; k++) {
+      const u = k / (n - 1);
+      this.py[k] = A.y + (B.y - A.y) * u * u * (3 - 2 * u);
+      const q = Math.min(k, n - 2);
+      this.hd[k] = Math.atan2(pts[q + 1].x - pts[q].x, pts[q + 1].z - pts[q].z);
+      if (k) this.d[k] = this.d[k - 1] + Math.hypot(pts[k].x - pts[k - 1].x, pts[k].z - pts[k - 1].z);
+    }
+    this.len = this.d[n - 1];
+    // kde už celá šířka cesty leží za svodidlem
+    const clear = (k, hint) => {
+      const p = track.project(this.px[k], this.pz[k], hint, {});
+      return { p, ok: Math.abs(p.lat) - this.hw > track.edge + 0.6 };
+    };
+    let hint = a.i;
+    let k0 = 0;
+    for (; k0 < n; k0++) {
+      const c = clear(k0, hint);
+      hint = c.p.i;
+      if (c.ok) {
+        this.gapIn = (c.p.s - this.s0 + L) % L;
+        break;
+      }
+    }
+    hint = b.i;
+    let k1 = n - 1;
+    for (; k1 > k0; k1--) {
+      const c = clear(k1, hint);
+      hint = c.p.i;
+      if (c.ok) {
+        this.gapOut = (c.p.s - this.s0 + L) % L;
+        break;
+      }
+    }
+    this.k0 = k0;
+    this.k1 = k1;
+    this.rocks = (spec.rocks || []).map(([t, l, r]) => {
+      const k = Math.round(t * (n - 1));
+      return { x: this.px[k] - Math.cos(this.hd[k]) * l, z: this.pz[k] + Math.sin(this.hd[k]) * l, y: this.py[k], r };
+    });
+  }
+
+  // je místo s, lat na hlavní trati v mezeře ve svodidle?
+  inGap(s, side) {
+    if (side !== this.side) return false;
+    const rel = ((s - this.s0) % this.track.L + this.track.L) % this.track.L;
+    return rel < this.gapIn || (rel >= this.gapOut && rel < this.span);
+  }
+
+  // nejbližší místo na cestě; hint v out.cutK (-1 = hledat všude)
+  project(x, z, out) {
+    const { n, px, pz } = this;
+    const from = out.cutK >= 0 ? Math.max(0, out.cutK - 12) : 0;
+    const to = out.cutK >= 0 ? Math.min(n - 1, out.cutK + 12) : n - 1;
+    let k = from, best = Infinity;
+    for (let q = from; q <= to; q++) {
+      const dx = x - px[q], dz = z - pz[q];
+      const d = dx * dx + dz * dz;
+      if (d < best) {
+        best = d;
+        k = q;
+      }
+    }
+    const a = Math.min(k, n - 2);
+    const dx = px[a + 1] - px[a], dz = pz[a + 1] - pz[a];
+    const raw = ((x - px[a]) * dx + (z - pz[a]) * dz) / (dx * dx + dz * dz || 1);
+    const u = clamp(raw, 0, 1);
+    const dist = this.d[a] + (this.d[a + 1] - this.d[a]) * u;
+    out.cutK = k;
+    out.cutEnd = raw > 1 && a === n - 2 ? 1 : raw < 0 && a === 0 ? -1 : 0;
+    out.s = (this.s0 + (dist / this.len) * this.span) % this.track.L;
+    out.i = this.track.indexAt(out.s);
+    out.u = 0;
+    out.cx = px[a] + dx * u;
+    out.cz = pz[a] + dz * u;
+    out.cy = this.py[a] + (this.py[a + 1] - this.py[a]) * u;
+    out.hd = this.hd[a];
+    out.rx = -Math.cos(out.hd);
+    out.rz = Math.sin(out.hd);
+    out.tanBank = 0;
+    out.bank = 0;
+    out.grade = (this.py[a + 1] - this.py[a]) / Math.max(0.1, this.d[a + 1] - this.d[a]);
+    out.kappa = 0;
+    out.lat = (x - out.cx) * out.rx + (z - out.cz) * out.rz;
+    out.y = out.cy;
+    return out;
+  }
+}

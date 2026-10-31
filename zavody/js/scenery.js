@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { RNG, smoothstep } from './rng.js';
 import { buildCornerSigns, buildRoadPoles, buildReflectors } from './signs.js';
+import { buildCuts, buildTunnels } from './features.js';
 
 // --- obloha -----------------------------------------------------------------
 
@@ -892,7 +893,7 @@ export function buildScenery(track, terrain, biomeKey, biome, quality, seed) {
   group.add(stand.group);
   extra.crowd = stand.crowd;
   group.add(buildAdBoards(track, rng, biome.night));
-  group.add(buildCornerSigns(track), buildRoadPoles(track));
+  group.add(buildCornerSigns(track), buildRoadPoles(track), buildCuts(track, biome.track), buildTunnels(track));
   if (biome.night) group.add(buildReflectors(track));
   return { group, extra };
 }

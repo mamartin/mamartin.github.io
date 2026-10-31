@@ -4,10 +4,11 @@ import {
 } from './garage.js';
 import { F1_TEAMS } from './race.js';
 import { S, G, isTouch } from './state.js';
-import { raceMode } from './trackdefs.js';
+import { raceMode, currentEvent } from './trackdefs.js';
+import { strongest } from './drivers.js';
 
 // počet lidských hráčů (dva jen v závodě/šampionátu a ne na dotykovém zařízení)
-export const humanCount = () => (raceMode() === 'race' && S.players === 2 && !isTouch ? 2 : 1);
+export const humanCount = () => (S.mode !== 'season' && raceMode() === 'race' && S.players === 2 && !isTouch ? 2 : 1);
 // typ a barvy vozů hráčů (upravují se v garáži)
 export const playerColors = () => colorsOf(S);
 export const playerAccents = () => accentsOf(S);
@@ -30,7 +31,31 @@ export function opponentNames() {
     const j = Math.floor(Math.random() * (i + 1));
     [names[i], names[j]] = [names[j], names[i]];
   }
+  // rival musí být v poli (první čtyři jména vždy jedou)
+  const rival = names.indexOf(wantedRival());
+  if (rival >= 4) {
+    const to = Math.floor(Math.random() * 4);
+    [names[rival], names[to]] = [names[to], names[rival]];
+  }
   return names;
+}
+
+// rival: v sezóně daný závodem, jinak jezdec, který hráče minule porazil
+export const wantedRival = () => currentEvent()?.rival ?? S.rival;
+
+// rival závodu pro jednoho hráče; když není v poli, je jím nejsilnější soupeř
+export function pickRival(race) {
+  if (race.mode !== 'race' || race.players.length > 1) return null;
+  const others = race.cars.filter((c) => !c.isPlayer);
+  const name = others.some((c) => c.name === wantedRival()) ? wantedRival() : strongest(others.map((c) => c.name));
+  return others.find((c) => c.name === name);
+}
+
+// proč je právě on rival (krátká věta na kartu před startem)
+export function rivalWhy(rival) {
+  if (currentEvent()) return 'Porazit ho je cíl závodu.';
+  if (rival.name !== S.rival) return 'Nejsilnější soupeř na startu.';
+  return S.rivalBeat ? 'Minule tě porazil.' : 'Minule skončil těsně za tebou.';
 }
 
 // soupeři jezdí v hotových designech z garáže (náhodně, kromě barev hráčů);

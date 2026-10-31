@@ -1,6 +1,7 @@
 // Garáž: typ a barvy vozu na samostatné obrazovce. Základ = jedna barva nebo hotový design,
 // detail = barva každého dílu zvlášť a typ laku.
 import { PLAYER_COLORS, ACCENT_COLORS, PLAYER_NUMBERS } from './race.js';
+import { UNLOCKS, totalStars } from './season.js';
 
 export const PALETTE = [
   { name: 'Červená', hex: 0xd7263d },
@@ -21,8 +22,15 @@ export const PALETTE = [
   { name: 'Černá', hex: 0x1d1f24 },
 ];
 
-export const FINISH_NAMES = { gloss: 'Lesk', metal: 'Metalíza', matte: 'Mat' };
-const KIND_NAMES = { car: 'Auto', formula: 'Formule' };
+export const FINISH_NAMES = { gloss: 'Lesk', metal: 'Metalíza', matte: 'Mat', pearl: 'Perleť', chrome: 'Chrom' };
+const KIND_NAMES = { car: 'Auto', formula: 'Formule', gt: 'GT', rally: 'Rally' };
+// kompromis každého typu, ukazuje se v garáži
+const KIND_HINTS = {
+  car: 'Vyvážené auto bez výrazné slabiny.',
+  formula: 'Nejlíp drží a zrychluje, ale náraz, tráva a déšť ji stojí nejvíc.',
+  gt: 'Nejrychlejší na rovince, v zatáčkách ale klouže a hůř brzdí.',
+  rally: 'Nejobratnější v zatáčkách a mimo asfalt, na rovince ale ztrácí.',
+};
 
 // díly s vlastní barvou: body a accent mají v nastavení vlastní klíče, ostatní jsou v livery;
 // def = výchozí barva (null = jako karoserie), u accent se dopočítá kontrastní
@@ -59,7 +67,7 @@ const luminance = (hex) => 0.2126 * ((hex >> 16) & 255) / 255 + 0.7152 * ((hex >
 const keysOf = (i) => (i === 0
   ? { color: 'color', accent: 'accent', livery: 'livery', vehicle: 'vehicle', number: 'number' }
   : { color: 'color2', accent: 'accent2', livery: 'livery2', vehicle: 'vehicle2', number: 'number2' });
-const label = (name, kind) => (typeof name === 'string' ? name : name[kind]);
+const label = (name, kind) => (typeof name === 'string' ? name : name[kind] ?? name.car);
 
 export const playerKinds = (S) => [S.vehicle || 'car', S.vehicle2 || 'car'];
 
@@ -101,7 +109,7 @@ export function partColor(S, i, key) {
   }
   const p = LIVERY_PARTS.find((q) => q.key === key);
   const own = customHex((S[keysOf(i).livery] || {})[key]);
-  const def = p.def == null ? body : typeof p.def === 'number' ? p.def : p.def[kind];
+  const def = p.def == null ? body : typeof p.def === 'number' ? p.def : p.def[kind] ?? p.def.car;
   return { hex: own ?? def, own: own != null };
 }
 
@@ -168,7 +176,10 @@ export class Garage {
     }
     // základ: barva karoserie a hotové designy
     this.fillPalette(this.el('gar-colors'), (hex, save) => this.setPart('body', hex, save));
-    for (const d of DESIGNS) {
+    // položky za hvězdy ze sezóny: { b, need }, zamčené jsou vidět, ale nejdou vybrat
+    this.locks = [];
+    const prized = UNLOCKS.filter((u) => u.design).map((u) => ({ ...u.design, need: u.stars }));
+    for (const d of [...DESIGNS, ...prized]) {
       const b = document.createElement('button');
       b.type = 'button';
       b.className = 'design';
@@ -176,6 +187,13 @@ export class Garage {
       b.innerHTML = `<span class="design-chips"><i style="background:${hexCss(d.color)}"></i><i style="background:${hexCss(d.accent)}"></i><i style="background:${hexCss(wings)}"></i></span><span class="design-name">${d.name}</span>`;
       b.addEventListener('click', () => this.applyDesign(d));
       this.el('gar-designs').appendChild(b);
+      if (d.need) {
+        const lock = document.createElement('em');
+        lock.className = 'design-lock';
+        lock.textContent = `★ ${d.need}`;
+        b.appendChild(lock);
+        this.locks.push({ b, need: d.need, tag: lock });
+      }
     }
     // detail: seznam dílů, paleta pro vybraný díl, lak
     for (const p of PARTS) {
@@ -201,6 +219,13 @@ export class Garage {
       b.textContent = name;
       b.addEventListener('click', () => this.patchLivery({ finish: f === 'gloss' ? null : f }));
       this.el('gar-finish').appendChild(b);
+      const prize = UNLOCKS.find((u) => u.finish === f);
+      if (prize) {
+        const lock = document.createElement('span');
+        lock.textContent = ` ★ ${prize.stars}`;
+        b.appendChild(lock);
+        this.locks.push({ b, need: prize.stars, tag: lock });
+      }
     }
     this.el('gar-reset').addEventListener('click', () => {
       const k = keysOf(this.player);
@@ -323,6 +348,12 @@ export class Garage {
     this.el('gar-player').hidden = !two;
     for (const b of this.el('gar-player').children) b.setAttribute('aria-checked', String(+b.dataset.player === i));
     for (const b of this.el('gar-vehicle').children) b.setAttribute('aria-checked', String(b.dataset.vehicle === kind));
+    this.el('gar-kind-hint').textContent = KIND_HINTS[kind];
+    const stars = totalStars(this.store);
+    for (const { b, need, tag } of this.locks) {
+      b.disabled = stars < need;
+      tag.hidden = stars >= need;
+    }
     for (const b of this.el('gar-mode').children) b.setAttribute('aria-checked', String(b.dataset.mode === this.mode));
     this.el('gar-basic').hidden = this.mode !== 'basic';
     // pole s číslem nepřepisovat, dokud do něj hráč píše

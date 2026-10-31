@@ -45,6 +45,20 @@ export function trackOutline(track, canvas, { pad = 8, color = '#f3f5f8', width 
   g.strokeStyle = color;
   g.lineWidth = lw;
   g.stroke();
+  // zkratky čárkovaně
+  for (const cut of track.cuts) {
+    g.beginPath();
+    for (let k = 0; k < cut.n; k += 2) {
+      const [x, y] = map(cut.px[k], cut.pz[k]);
+      if (k === 0) g.moveTo(x, y);
+      else g.lineTo(x, y);
+    }
+    g.setLineDash([3, 4]);
+    g.strokeStyle = '#ffc21a';
+    g.lineWidth = Math.max(1.5, lw * 0.45);
+    g.stroke();
+    g.setLineDash([]);
+  }
   if (start) {
     const [sx, sy] = map(track.px[0], track.pz[0]);
     const rx = track.rx[0], rz = track.rz[0];
@@ -76,6 +90,7 @@ export class HUD {
     this.msg = q('.center-msg');
     this.subEl = q('.sub-msg');
     this.minimap = q('.minimap');
+    this.rivalCard = q('.rival-card');
     this.speedo = q('.speedo');
     this.itemSlot = q('.item-slot');
     this.itemIcon = q('.item-icon');
@@ -113,8 +128,21 @@ export class HUD {
     this.tag.style.background = hex(car.color);
     this.itemKey.textContent = itemKey;
     this.cache = {};
+    this.hideRival();
     this.clearMessages();
     this.resize();
+  }
+
+  // karta rivala do konce odpočtu
+  showRival(car, why, trait) {
+    this.rivalCard.hidden = false;
+    this.rivalCard.querySelector('.rc-chip').style.background = hex(car.color);
+    this.rivalCard.querySelector('.rc-name').textContent = car.name;
+    this.rivalCard.querySelector('.rc-why').textContent = [trait, why].filter(Boolean).join(' · ');
+  }
+
+  hideRival() {
+    this.rivalCard.hidden = true;
   }
 
   // záblesk pozice po předjetí
@@ -233,7 +261,7 @@ export class HUD {
         const g = race.gapToLeader(car);
         gap = g != null ? '+' + g.toFixed(1).replace('.', ',') : '';
       }
-      const key = car.name + '|' + gap + '|' + (car === p);
+      const key = car.name + '|' + gap + '|' + (car === p) + '|' + (car === race.rival);
       if (r.key !== key) {
         r.key = key;
         r.pos.textContent = i + 1;
@@ -241,6 +269,7 @@ export class HUD {
         r.name.textContent = car.name;
         r.gap.textContent = gap;
         r.li.classList.toggle('me', car === p);
+        r.li.classList.toggle('rival', car === race.rival);
       }
     });
 
