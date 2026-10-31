@@ -378,15 +378,14 @@ function scatter(rng, terrain, count, { minD, maxD, tries = count * 8, accept })
     const x = rng.range(b.minX - pad, b.maxX + pad);
     const z = rng.range(b.minZ - pad, b.maxZ + pad);
     const d = terrain.distAt(x, z);
-    if (d < minD || d > maxD) continue;
+    if (d < minD || d > maxD || terrain.keepOut?.(x, z)) continue;
     if (accept && !accept(x, z, d)) continue;
     out.push({ x, z, d, y: terrain.heightAt(x, z) });
   }
   return out;
 }
 
-// body těsně podél trati, přesně podle její délky (scatter by v tak úzkém pásu skoro nic netrefil);
-// kolem startu zůstává volno pro tribunu
+// body těsně podél trati, přesně podle její délky (scatter by v tak úzkém pásu skoro nic netrefil)
 function nearBand(track, terrain, rng, count, minOff, maxOff, accept) {
   const out = [];
   const edge = track.edge;
@@ -394,7 +393,7 @@ function nearBand(track, terrain, rng, count, minOff, maxOff, accept) {
     const s = rng.range(70, track.L - 70);
     const p = track.sampleAt(s, (rng.chance(0.5) ? 1 : -1) * (edge + rng.range(minOff, maxOff)), {});
     const d = terrain.distAt(p.x, p.z);
-    if (d < edge + minOff - 0.5 || (accept && !accept(p.x, p.z, d))) continue;
+    if (d < edge + minOff - 0.5 || terrain.keepOut?.(p.x, p.z) || (accept && !accept(p.x, p.z, d))) continue;
     out.push({ x: p.x, z: p.z, d, y: terrain.heightAt(p.x, p.z) });
   }
   return out;
@@ -498,19 +497,37 @@ function buildAdBoards(track, rng, night) {
   return group;
 }
 
-function buildGrandstand(track, terrain, rng) {
-  // strana s víc místem
+const STAND_LEN = 70;
+
+// strana s víc místem
+function standSide(track, terrain) {
   const probe = (side) => {
     const p = track.pointS(0, side * (track.edge + 30));
     return terrain.distAt(p[0], p[2]);
   };
-  const side = probe(1) >= probe(-1) ? 1 : -1;
+  return probe(1) >= probe(-1) ? 1 : -1;
+}
+
+// půdorys tribuny se střechou a rezervou na koruny stromů
+function standArea(track, terrain) {
+  const side = standSide(track, terrain);
+  const base = track.pointS(-10, side * (track.edge + 3));
+  const sin = Math.sin(track.hd[0]), cos = Math.cos(track.hd[0]);
+  return (x, z) => {
+    const dx = x - base[0], dz = z - base[2];
+    const away = -side * (dx * cos - dz * sin); // od trati
+    return Math.abs(dx * sin + dz * cos) < STAND_LEN / 2 + 7 && away > -3 && away < 21;
+  };
+}
+
+function buildGrandstand(track, terrain, rng) {
+  const side = standSide(track, terrain);
   const group = new THREE.Group();
   const base = track.pointS(-10, side * (track.edge + 3));
   group.position.set(base[0], base[1] - 0.3, base[2]);
   // lokální +z = směr trati, lokální -x = pravá strana trati; řady stoupají do -x
   group.rotation.y = track.hd[0];
-  const len = 70;
+  const len = STAND_LEN;
   const concrete = new THREE.MeshLambertMaterial({ color: 0x9aa0a6 });
   const seatsMat = new THREE.MeshLambertMaterial({ color: 0x2f5fa8 });
   const rows = 7;
@@ -653,10 +670,14 @@ function buildCity(track, terrain, rng, quality) {
       if (rng.chance(0.12)) continue;
       const w = rng.range(14, cellSize - 8), d = rng.range(14, cellSize - 8);
       const x0 = gx + rng.range(0, cellSize - 4 - w), z0 = gz + rng.range(0, cellSize - 4 - d);
-      let minD = Infinity;
-      for (let i = 0; i <= 2; i++)
-        for (let j = 0; j <= 2; j++) minD = Math.min(minD, terrain.distAt(x0 + (w * i) / 2, z0 + (d * j) / 2));
-      if (minD < edge + 7) continue;
+      let minD = Infinity, onStand = false;
+      for (let i = 0; i <= 4; i++)
+        for (let j = 0; j <= 4; j++) {
+          const px = x0 + (w * i) / 4, pz = z0 + (d * j) / 4;
+          minD = Math.min(minD, terrain.distAt(px, pz));
+          onStand ||= terrain.keepOut(px, pz);
+        }
+      if (minD < edge + 7 || onStand) continue;
       const far = smoothstep(20, 200, minD);
       const h = rng.range(9, 26) + rng.next() * rng.next() * 60 * (0.4 + far);
       box(x0, z0, w, d, h, rng.int(0, 7) / 8, rng.int(0, 7) / 8, rng.pick(tints));
@@ -814,6 +835,7 @@ export function buildScenery(track, terrain, biomeKey, biome, quality, seed) {
   const density = quality === 'low' ? 0.45 : quality === 'medium' ? 0.75 : 1;
   const edge = track.edge;
   const extra = {};
+  terrain.keepOut = standArea(track, terrain);
 
   if (biomeKey === 'forest') {
     const lake = terrain.lake;
