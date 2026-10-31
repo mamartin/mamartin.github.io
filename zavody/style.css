@@ -660,7 +660,7 @@ kbd {
   font-weight: 700;
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
 }
-.pos-num { font-size: clamp(34px, 11cqmin, 72px); line-height: 0.85; font-variant-numeric: tabular-nums; }
+.pos-num { display: inline-block; transform-origin: left center; font-size: clamp(34px, 11cqmin, 72px); line-height: 0.85; font-variant-numeric: tabular-nums; }
 .pos-num.delta { font-size: clamp(26px, 7cqmin, 48px); }
 .pos-num.ahead { color: var(--go); }
 .pos-num.behind { color: var(--signal-hi); }
@@ -790,6 +790,15 @@ kbd {
   text-transform: uppercase;
 }
 .draft-tag i { display: block; width: 46%; height: 3px; background: #6ec6f0; transform-origin: left; transform: scaleX(0); transition: transform 0.15s; }
+.speed-fx {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 55%, transparent 50%, rgba(255, 150, 40, 0.14) 76%, rgba(24, 10, 0, 0.55) 100%);
+  opacity: 0;
+  transition: opacity 0.22s;
+  pointer-events: none;
+}
+.speed-fx.on { opacity: 1; }
 .drift-tag { margin-bottom: 30px; }
 .drift-tag span { color: #ffc21a; }
 .drift-tag div { display: flex; gap: 3px; width: 46%; }

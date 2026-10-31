@@ -777,6 +777,7 @@ async function startRaceInner() {
   $('results').hidden = true;
   $('pause').hidden = true;
   G.paused = false;
+  G.placeSaid = -99;
   clearRace();
   if (S.mode === 'cup' && !G.cup) G.cup = newCup();
   if (S.mode !== 'cup') G.cup = null;
@@ -955,6 +956,11 @@ function handleKeys(pressed) {
       if (!$('results').hidden) toMenu();
       else setPaused(!G.paused);
     }
+    // okamžitý restart závodu, ve výsledcích slouží tlačítka
+    if (code === 'Backspace' && $('results').hidden) {
+      startRace();
+      continue;
+    }
     if (G.paused) continue;
     const race = G.race;
     const humans = race.players.length;
@@ -1015,6 +1021,17 @@ function processEvents() {
       if (perfect) audio.perfectStart();
       else audio.wheelspin();
       buzz(perfect ? 25 : [40, 30, 40]);
+    } else if (e.type === 'overtake') {
+      const h = hudOf(e.car);
+      h.sub(`<span class="good">Předjetí</span>${e.rival ? ` · ${e.rival.name}` : ''}`, 1.6);
+      h.flashPlace();
+      audio.overtake(e.place);
+      buzz(20);
+      // hlas jen pro stupně vítězů a ne moc často
+      if (e.car === p && e.place <= 3 && race.time - G.placeSaid > 10) {
+        G.placeSaid = race.time;
+        audio.say(['Vedeš', 'Druhé místo', 'Třetí místo'][e.place - 1]);
+      }
     } else if (e.type === 'turbo' && e.car.isPlayer) {
       hudOf(e.car).sub(`<span class="good">Mini-turbo ${'I'.repeat(e.level)}</span>`, 1);
       audio.turbo(e.level);

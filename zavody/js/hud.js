@@ -86,6 +86,7 @@ export class HUD {
     this.driftTag = q('.drift-tag');
     this.driftCells = [...view.querySelectorAll('.drift-tag b')];
     this.rocketWarn = q('.rocket-warn');
+    this.speedFx = q('.speed-fx');
     this.msgTimer = 0;
     this.subTimer = 0;
     this.cache = {};
@@ -114,6 +115,12 @@ export class HUD {
     this.cache = {};
     this.clearMessages();
     this.resize();
+  }
+
+  // záblesk pozice po předjetí
+  flashPlace() {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    this.pos.animate([{ transform: 'scale(1.6)', color: '#ffc21a' }, { transform: 'scale(1)' }], { duration: 650, easing: 'ease-out' });
   }
 
   // varování před raketou s šipkou na stranu, odkud letí
@@ -199,6 +206,12 @@ export class HUD {
       this.cache.draft = draft;
       this.draftTag.classList.toggle('on', draft > 0.05);
       this.draftBar.style.transform = `scaleX(${draft})`;
+    }
+    // nitro a mini-turbo ztmaví okraje obrazu
+    const boost = p.nitroActive || p.turbo > 0;
+    if (this.cache.boost !== boost) {
+      this.cache.boost = boost;
+      this.speedFx.classList.toggle('on', boost);
     }
     // mini-turbo: tři dílky podle délky driftu
     const drift = p.driftOn && p.driftTime > 0.08 ? 1 + p.driftLevel : 0;

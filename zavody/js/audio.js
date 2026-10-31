@@ -294,6 +294,12 @@ export class AudioEngine {
     this.tone(440 * 1.25 ** level, 0.18, 'triangle', 0.14);
   }
 
+  // předjetí: krátký stoupající akord, do vedení o kvartu výš
+  overtake(place) {
+    const base = place === 1 ? 698 : 523;
+    [1, 1.25, 1.5].forEach((m, i) => this.tone(base * m, 0.16, 'triangle', 0.12, i * 0.055));
+  }
+
   // varování před raketou: tři zrychlující pípnutí
   incoming() {
     [0, 0.34, 0.58].forEach((when) => this.tone(1480, 0.1, 'square', 0.11, when));

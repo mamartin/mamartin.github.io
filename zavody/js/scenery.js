@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { RNG, smoothstep } from './rng.js';
+import { buildCornerSigns, buildRoadPoles, buildReflectors } from './signs.js';
 
 // --- obloha -----------------------------------------------------------------
 
@@ -379,6 +380,21 @@ function scatter(rng, terrain, count, { minD, maxD, tries = count * 8, accept })
     if (d < minD || d > maxD) continue;
     if (accept && !accept(x, z, d)) continue;
     out.push({ x, z, d, y: terrain.heightAt(x, z) });
+  }
+  return out;
+}
+
+// body těsně podél trati, přesně podle její délky (scatter by v tak úzkém pásu skoro nic netrefil);
+// kolem startu zůstává volno pro tribunu
+function nearBand(track, terrain, rng, count, minOff, maxOff, accept) {
+  const out = [];
+  const edge = track.edge;
+  for (let t = 0; t < count * 4 && out.length < count; t++) {
+    const s = rng.range(70, track.L - 70);
+    const p = track.sampleAt(s, (rng.chance(0.5) ? 1 : -1) * (edge + rng.range(minOff, maxOff)), {});
+    const d = terrain.distAt(p.x, p.z);
+    if (d < edge + minOff - 0.5 || (accept && !accept(p.x, p.z, d))) continue;
+    out.push({ x: p.x, z: p.z, d, y: terrain.heightAt(p.x, p.z) });
   }
   return out;
 }
@@ -781,7 +797,8 @@ export function buildScenery(track, terrain, biomeKey, biome, quality, seed) {
     const lake = terrain.lake;
     const notLake = (x, z) => !lake || Math.hypot(x - lake.x, z - lake.z) > lake.r * 1.2;
     const forestMask = (x, z, d) => terrain.noise.noise(x / 110 + 40, z / 110) > -0.25 || d < edge + 30;
-    const near = scatter(rng, terrain, Math.round(650 * density), { minD: edge + 4, maxD: edge + 60, accept: (x, z, d) => notLake(x, z) && forestMask(x, z, d) });
+    const near = scatter(rng, terrain, Math.round(650 * density), { minD: edge + 4, maxD: edge + 60, accept: (x, z, d) => notLake(x, z) && forestMask(x, z, d) })
+      .concat(nearBand(track, terrain, rng, Math.round(240 * density), 2.5, 9, notLake));
     const far = scatter(rng, terrain, Math.round(900 * density), { minD: edge + 60, maxD: 420, accept: (x, z, d) => notLake(x, z) && forestMask(x, z, d) });
     const trees = near.concat(far);
     const spruce = [], broad = [];
@@ -815,7 +832,7 @@ export function buildScenery(track, terrain, biomeKey, biome, quality, seed) {
       group.add(water);
     }
   } else if (biomeKey === 'canyon') {
-    const cacti = scatter(rng, terrain, Math.round(320 * density), { minD: edge + 4, maxD: 200 }).map((c) => ({
+    const cacti = scatter(rng, terrain, Math.round(320 * density), { minD: edge + 4, maxD: 200 }).concat(nearBand(track, terrain, rng, Math.round(200 * density), 2, 8)).map((c) => ({
       x: c.x, y: c.y - 0.2, z: c.z, s: rng.range(0.7, 1.4), ry: rng.range(0, 6.28), color: 0xffffff,
     }));
     const vmat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
@@ -826,7 +843,7 @@ export function buildScenery(track, terrain, biomeKey, biome, quality, seed) {
       }));
       group.add(instancedChunks(hoodooGeometry(100 + v * 17), vmat, hoodoos));
     }
-    const boulders = scatter(rng, terrain, Math.round(220 * density), { minD: edge + 3, maxD: 260 }).map((r) => ({
+    const boulders = scatter(rng, terrain, Math.round(220 * density), { minD: edge + 3, maxD: 260 }).concat(nearBand(track, terrain, rng, Math.round(120 * density), 2.5, 7)).map((r) => ({
       x: r.x, y: r.y, z: r.z, s: rng.range(0.5, 2.2), ry: rng.range(0, 6.28), color: 0xffffff,
     }));
     group.add(instancedChunks(colored(jitter(new THREE.DodecahedronGeometry(1, 0), 0.3, 12), '#9c4a2c'), vmat, boulders));
@@ -836,6 +853,7 @@ export function buildScenery(track, terrain, biomeKey, biome, quality, seed) {
     group.add(instancedChunks(colored(jitter(new THREE.IcosahedronGeometry(1, 0), 0.25, 13), '#8a8a45'), vmat, bushes, { castShadow: false }));
   } else if (biomeKey === 'winter') {
     const trees = scatter(rng, terrain, Math.round(700 * density), { minD: edge + 4, maxD: edge + 70 })
+      .concat(nearBand(track, terrain, rng, Math.round(240 * density), 2.5, 9))
       .concat(scatter(rng, terrain, Math.round(800 * density), {
         minD: edge + 70, maxD: 420, accept: (x, z) => terrain.noise.noise(x / 110 + 40, z / 110) > -0.3,
       }))
@@ -867,13 +885,15 @@ export function buildScenery(track, terrain, biomeKey, biome, quality, seed) {
     group.add(extra.snow.points);
   } else if (biomeKey === 'city') {
     group.add(buildCity(track, terrain, rng, quality));
-    group.add(buildStreetLamps(track));
+    group.add(buildStreetLamps(track, 26));
   }
 
   const stand = buildGrandstand(track, terrain, rng);
   group.add(stand.group);
   extra.crowd = stand.crowd;
   group.add(buildAdBoards(track, rng, biome.night));
+  group.add(buildCornerSigns(track), buildRoadPoles(track));
+  if (biome.night) group.add(buildReflectors(track));
   return { group, extra };
 }
 

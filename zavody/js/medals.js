@@ -14,7 +14,7 @@ export const MEDALS = [
 ];
 
 const KEY = 'turbo-okruh-ref';
-const VERSION = 2;
+const VERSION = 3;
 let cache = null;
 
 function load() {

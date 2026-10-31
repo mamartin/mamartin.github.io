@@ -61,6 +61,9 @@ const RUBBER = {
   expert: { ahead: 0, behind: 0.1 },
 };
 
+// oslava předjetí: nové místo musí vydržet, mezi oslavami je odstup (stejné místo znovu až později)
+const OVERTAKE_HOLD = 0.6, OVERTAKE_GAP = 2.5, OVERTAKE_SAME = 8;
+
 export class Race {
   constructor({
     track, biome, mode = 'race', laps = 3, difficulty = 'medium', playerColor = 0xd7263d, playerColors = null,
@@ -142,6 +145,11 @@ export class Race {
     car.sectorTimes = [];
     car.wrongWay = 0;
     car.lastWheels = null;
+    car.heldPlace = 0;
+    car.heldTime = 0;
+    car.shownPlace = null;
+    car.cheerAt = -99;
+    car.cheerPlace = 0;
   }
 
   emit(type, data = {}) {
@@ -255,6 +263,7 @@ export class Race {
     if (racing) for (const car of this.cars) this.updateProgress(car, dt);
     this.updatePlaces();
     if (racing) this.trackLeader();
+    if (racing && this.mode === 'race') this.trackOvertakes(dt);
   }
 
   judgeStarts() {
@@ -356,6 +365,28 @@ export class Race {
       const facing = Math.cos(car.hd - car.proj.hd);
       if (facing < -0.25 && car.speed > 4) car.wrongWay += dt;
       else car.wrongWay = 0;
+    }
+  }
+
+  trackOvertakes(dt) {
+    for (const car of this.players) {
+      if (car.finished) continue;
+      if (car.place !== car.heldPlace) {
+        car.heldPlace = car.place;
+        car.heldTime = 0;
+      }
+      car.heldTime += dt;
+      const before = car.shownPlace ?? car.place;
+      if (car.heldTime < OVERTAKE_HOLD || car.place === before) {
+        car.shownPlace = before;
+        continue;
+      }
+      car.shownPlace = car.place;
+      const wait = this.time - car.cheerAt;
+      if (car.place > before || this.time < 3 || wait < OVERTAKE_GAP || (car.place === car.cheerPlace && wait < OVERTAKE_SAME)) continue;
+      car.cheerAt = this.time;
+      car.cheerPlace = car.place;
+      this.emit('overtake', { car, rival: this.standings[car.place], place: car.place });
     }
   }
 

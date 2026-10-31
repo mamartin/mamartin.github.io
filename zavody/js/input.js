@@ -13,7 +13,7 @@ export const KEYMAP = {
 };
 KEYMAP.solo = Object.fromEntries(Object.keys(KEYMAP.p1).map((k) => [k, [...KEYMAP.p1[k], ...KEYMAP.p2[k]]]));
 
-const GAME_KEYS = new Set([...Object.values(KEYMAP.solo).flat(), 'KeyC', 'KeyP', 'KeyM', 'Escape']);
+const GAME_KEYS = new Set([...Object.values(KEYMAP.solo).flat(), 'KeyC', 'KeyP', 'KeyM', 'Escape', 'Backspace']);
 
 // tlačítka gamepadu (standardní mapování) -> jméno události
 const PAD_BUTTONS = { 0: 'A', 1: 'B', 2: 'X', 3: 'Y', 8: 'Back', 9: 'Start' };
