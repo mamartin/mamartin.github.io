@@ -4,6 +4,8 @@ import { clamp } from './rng.js';
 import { G, audio, view, buzz } from './state.js';
 
 const wl = [0, 0, 0], wr = [0, 0, 0];
+// ujetý sníh je šedomodrý, ne černý jako guma na asfaltu
+const SNOW_TRACK = [0.42, 0.47, 0.55];
 export function emitEffects(dt) {
   const race = G.race;
   const w = G.world;
@@ -11,6 +13,7 @@ export function emitEffects(dt) {
   const smokeCol = w.biome.night ? [0.5, 0.52, 0.58] : [0.82, 0.82, 0.8];
   const sprayCol = w.biome.night ? [0.45, 0.5, 0.56] : [0.7, 0.75, 0.8];
   const cams = race.players.length > 1 ? [view.camera, view.camera2] : [view.camera];
+  const winter = w.def.biome === 'winter';
   for (const car of race.cars) {
     const far = cams.every((c) => (car.x - c.position.x) ** 2 + (car.z - c.position.z) ** 2 > 170 * 170);
     car.rearWheels(wl, wr);
@@ -37,6 +40,28 @@ export function emitEffects(dt) {
         }
       }
     } else car.lastWheels = null;
+    // sníh: kola nechávají koleje (na zasněžené silnici i mimo ni) a víří sníh
+    const inSnow = winter && (w.snowy || car.surface === SURF_OFF) && car.proj && Math.abs(car.proj.lat) < w.track.edge;
+    if (inSnow && car.speed > 2) {
+      const prev = car.snowWheels;
+      if (prev) {
+        const d = Math.hypot(wl[0] - prev[0][0], wl[2] - prev[0][2]);
+        if (d > 1.1) {
+          if (d < 5) {
+            const rx = -Math.cos(car.hd), rz = Math.sin(car.hd);
+            const a = car.surface === SURF_OFF ? 0.42 : 0.2;
+            fx.snowTracks.add(prev[0], wl, 0.32, a, rx, rz, SNOW_TRACK);
+            fx.snowTracks.add(prev[1], wr, 0.32, a, rx, rz, SNOW_TRACK);
+          }
+          car.snowWheels = [[...wl], [...wr]];
+        }
+      } else car.snowWheels = [[...wl], [...wr]];
+      if (!far && car.speed > 10 && Math.random() < dt * (car.surface === SURF_OFF ? 30 : 14)) {
+        const amt = clamp((car.speed - 10) / 35, 0.25, 1) * (car.skidding ? 1.4 : 1);
+        fx.snowSpray(wl[0], wl[1], wl[2], car.vx, car.vz, amt);
+        fx.snowSpray(wr[0], wr[1], wr[2], car.vx, car.vz, amt);
+      }
+    } else car.snowWheels = null;
     // na mokru zvedají kola za sebou spršku vody
     if (w.wet && !far && car.speed > 12 && car.surface !== SURF_OFF && Math.random() < dt * 18) {
       const amt = clamp((car.speed - 12) / 40, 0.2, 0.75);

@@ -12,7 +12,7 @@ import { Race, OPPONENTS } from './race.js';
 import { Garage, playerNumbers as numbersOf, partColor, kindName, hexCss } from './garage.js';
 import { $, S, G, store, isTouch, input, audio, music, view, buzz } from './state.js';
 import {
-  currentCup, cupTracks, raceMode, currentTrackId, wantsRain, wantsSnow, cupRecord, REV, baseId, trackDef, randomDef, dailyDef,
+  currentCup, cupTracks, raceMode, currentTrackId, wantsRain, wantsSnow, wantsMix, cupRecord, REV, baseId, trackDef, randomDef, dailyDef,
   raceLaps, raceDifficulty, raceWeapons, currentEvent
 } from './trackdefs.js';
 import {
@@ -34,6 +34,7 @@ import { GhostRecorder, GhostPlayer } from './ghost.js';
 import { Pickups, ITEM_NAMES } from './pickups.js';
 import { clamp } from './rng.js';
 import { applyKeys } from './keys.js';
+import { WeatherShift } from './weather.js';
 import { bindKeysUI, refreshKeysUI, keyPanelHtml, itemKeyLabel, keyPlayer, keysSignature, playerColor } from './keysui.js';
 import { Post } from './post.js';
 import { TrackEditor, customToDef, decodeTrack, checkDef } from './editor.js';
@@ -216,7 +217,9 @@ async function loadWorld(id) {
   const wet = wantsRain(baseDef);
   const snowy = wantsSnow(baseDef);
   const def = wet ? { ...baseDef, wet: true } : snowy ? { ...baseDef, snowy: true } : baseDef;
-  const biome = wet ? wetBiome(BIOMES[def.biome]) : snowy ? snowBiome(BIOMES[def.biome]) : BIOMES[def.biome];
+  const mix = wantsMix(baseDef);
+  // proměnlivé počasí mění biom za jízdy, proto vlastní kopie
+  const biome = wet ? wetBiome(BIOMES[def.biome]) : snowy ? snowBiome(BIOMES[def.biome]) : mix ? { ...BIOMES[def.biome] } : BIOMES[def.biome];
   const track = new Track(def);
   const terrain = new Terrain(track, def.biome, { seed: def.seed, lake: def.lake, cell: S.quality === 'low' ? 11 : 8 });
   const group = new THREE.Group();
@@ -255,6 +258,10 @@ async function loadWorld(id) {
   G.world = {
     def, biome, track, terrain, group, sky, lights, effects, envRT, showcase: [], stand: scenery.extra.stand, snowmen: scenery.extra.snowmen, snow: scenery.extra.snow, rain, wet, snowy,
   };
+  if (mix) {
+    G.world.mix = true;
+    G.world.shift = new WeatherShift(G.world, def.biome === 'winter' ? 'snow' : 'rain', { scene, renderer, quality: S.quality });
+  }
   setupPost();
   buildShowcase();
   $('loading').hidden = true;
@@ -452,7 +459,11 @@ function refreshMenu() {
   const [dry, bad] = $('weather-seg').children;
   dry.textContent = winter ? 'Jasno' : 'Sucho';
   bad.textContent = winter ? 'Sněžení' : 'Déšť';
-  $('weather-hint').hidden = !(winter && S.weather === 'rain');
+  const hint = $('weather-hint');
+  hint.textContent = S.weather === 'mix'
+    ? (winter ? 'Startuje se za jasna, během prvního kola začne sněžit a silnice bude klouzat.' : 'Startuje se za sucha, během prvního kola se rozprší a silnice bude klouzat.')
+    : 'Na zasněžené silnici auta méně drží, brzdi dřív.';
+  hint.hidden = !((winter && S.weather === 'rain') || S.weather === 'mix');
   for (const b of $('quality-seg').children) b.setAttribute('aria-checked', String(b.dataset.q === S.quality));
   $('laps-value').textContent = S.laps;
   const two = humanCount() === 2;
@@ -895,7 +906,10 @@ async function startRaceInner() {
     openEditor(custom);
     return;
   }
-  if (!G.world || G.forceReload || G.world.def.id !== trackDef(trackId).id || G.world.wet !== wantsRain(trackDef(trackId)) || G.world.snowy !== wantsSnow(trackDef(trackId))) {
+  // proměnlivé počasí začíná každý závod znovu za sucha
+  G.world?.shift?.reset();
+  const want = trackDef(trackId);
+  if (!G.world || G.forceReload || G.world.def.id !== want.id || G.world.wet !== wantsRain(want) || !!G.world.snowy !== wantsSnow(want) || !!G.world.mix !== wantsMix(want)) {
     G.forceReload = false;
     await loadWorld(trackId);
   }
@@ -1040,6 +1054,7 @@ const hudOf = (car) => huds[car && car.isPlayer ? car.humanIndex || 0 : 0];
 
 function toMenu() {
   clearRace();
+  G.world?.shift?.reset();
   G.cup = null;
   $('results').hidden = true;
   $('pause').hidden = true;
@@ -1362,6 +1377,8 @@ function frame(now) {
       }
       G.wantUse = [false, false];
       processEvents();
+      const weatherMsg = w.shift?.update(dt, race);
+      if (weatherMsg) G.huds.forEach((h) => h.sub(weatherMsg, 3.5));
       for (const c of race.cars) c.render(alpha);
       emitEffects(dt);
 

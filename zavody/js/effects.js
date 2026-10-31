@@ -129,6 +129,8 @@ export class Effects {
     this.glow = new ParticlePool(Math.round(900 * mul), true);
     scene.add(this.smoke.points, this.glow.points);
     this.skids = new SkidMarks(scene, quality === 'low' ? 1500 : 3500);
+    this.scene = scene;
+    this.snowPool = null;
     this.rng = Math.random;
     this.quality = quality;
   }
@@ -210,16 +212,35 @@ export class Effects {
     }
   }
 
+  // stopy kol ve sněhu: vlastní zásobník, vzniká až na zimní trati
+  get snowTracks() {
+    if (!this.snowPool) this.snowPool = new SkidMarks(this.scene, this.quality === 'low' ? 1800 : 4500);
+    return this.snowPool;
+  }
+
+  // zvířený sníh od kol
+  snowSpray(x, y, z, vx, vz, amount) {
+    const r = this.rng;
+    this.smoke.emit(
+      x + (r() - 0.5) * 0.5, y + 0.15, z + (r() - 0.5) * 0.5,
+      vx * 0.35 + (r() - 0.5) * 2.2, 1.2 + r() * 1.8, vz * 0.35 + (r() - 0.5) * 2.2,
+      0.7 + r() * 0.7, 0.6, 2.6 + amount * 2,
+      0.94, 0.96, 1.0, 0.5 * Math.min(1, amount), 1.6, 3,
+    );
+  }
+
   update(dt) {
     this.smoke.update(dt);
     this.glow.update(dt);
     this.skids.flush();
+    this.snowPool?.flush();
   }
 
   clear() {
     this.smoke.clear();
     this.glow.clear();
     this.skids.clear();
+    this.snowPool?.clear();
   }
 
   dispose(scene) {
@@ -227,10 +248,15 @@ export class Effects {
     this.smoke.points.geometry.dispose();
     this.glow.points.geometry.dispose();
     this.skids.mesh.geometry.dispose();
+    if (this.snowPool) {
+      scene.remove(this.snowPool.mesh);
+      this.snowPool.mesh.geometry.dispose();
+    }
   }
 }
 
 // Stopy pneumatik: kruhový buffer čtyřúhelníků položených na silnici.
+const DARK = [0.03, 0.03, 0.03];
 class SkidMarks {
   constructor(scene, max) {
     this.max = max;
@@ -258,7 +284,7 @@ class SkidMarks {
     this.dirty = false;
   }
 
-  add(a, b, width, alpha, rx, rz) {
+  add(a, b, width, alpha, rx, rz, color = DARK) {
     const i = this.cursor;
     this.cursor = (this.cursor + 1) % this.max;
     const w = width / 2;
@@ -272,7 +298,7 @@ class SkidMarks {
     const c = this.col;
     for (let v = 0; v < 4; v++) {
       const q = i * 16 + v * 4;
-      c[q] = 0.03; c[q + 1] = 0.03; c[q + 2] = 0.03; c[q + 3] = alpha;
+      c[q] = color[0]; c[q + 1] = color[1]; c[q + 2] = color[2]; c[q + 3] = alpha;
     }
     this.dirty = true;
   }

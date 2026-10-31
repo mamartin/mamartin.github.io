@@ -228,6 +228,7 @@ export class Track {
     const roadMat = this.roadMaterial(style, roadTex, surface, anisotropy);
     const roadMesh = new THREE.Mesh(road.build(), roadMat);
     roadMesh.receiveShadow = true;
+    this.roadMat = roadMat; // proměnlivé počasí mění vzhled silnice za jízdy
     group.add(roadMesh, this.buildRubber());
 
     // Obrubníky (jen v zatáčkách) – červenobílé pruhy
