@@ -72,12 +72,15 @@ export function currentTrackId() {
   return S.mode === 'cup' ? cupTracks()[G.cup ? G.cup.round : 0] : S.track + (S.reverse ? REV : '');
 }
 
-// prší podle volby v menu, v bouřkovém poháru a v deštivé denní výzvě (na zimní trati sněží)
-export function wantsRain(def) {
-  if (def.biome === 'winter') return false;
+// špatné počasí podle volby v menu, v bouřkovém poháru a v deštivé denní výzvě
+function badWeather(def) {
   if (S.mode === 'season') return !!currentEvent().rain;
   return !!(def.rain || S.weather === 'rain' || (S.mode === 'cup' && currentCup().rain));
 }
+
+// na zimní trati místo deště sněží
+export const wantsRain = (def) => def.biome !== 'winter' && badWeather(def);
+export const wantsSnow = (def) => def.biome === 'winter' && badWeather(def);
 
 // nejlepší umístění v šampionátu (klasický má kvůli starším uložením vlastní místo)
 export function cupRecord(id) {

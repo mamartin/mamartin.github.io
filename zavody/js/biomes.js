@@ -102,6 +102,25 @@ const mixHex = (a, b, t) => {
 };
 
 export const WET_GRIP = 0.82;
+export const SNOW_GRIP = 0.84;
+
+// sněžení: zatažená bílošedá obloha bez slunce, hustý sníh a blízká mlha, zasněžená silnice
+export function snowBiome(b) {
+  return {
+    ...b,
+    snowfall: true,
+    sky: { top: '#8794a3', horizon: '#d2d9e0', bottom: '#b4bec8', glow: 0.12 },
+    sun: { ...b.sun, intensity: b.sun.intensity * 0.35 },
+    hemi: { ...b.hemi, intensity: b.hemi.intensity * 1.05 },
+    fog: { color: '#cdd5dd', near: 35, far: 340 },
+    exposure: b.exposure * 0.97,
+    clouds: '#c4ccd5',
+    cloudCover: 0.12,
+    roadGrip: (b.roadGrip ?? 1) * SNOW_GRIP,
+    offGrip: (b.offGrip ?? 0.6) * 0.9,
+    track: { ...b.track, asphalt: mixHex(b.track.asphalt, '#6b737d', 0.35), snowy: true },
+  };
+}
 
 export function wetBiome(b) {
   // v noci míříme k tmavým šedým, aby se obloha nerozsvítila

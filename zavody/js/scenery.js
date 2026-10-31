@@ -20,7 +20,7 @@ export function buildSky(biome, quality = 'high') {
     cover: { value: biome.cloudCover ?? 0.5 },
     glow: { value: biome.sky.glow },
     night: { value: biome.night ? 1 : 0 },
-    sunShow: { value: biome.wet ? 0 : 1 },
+    sunShow: { value: biome.wet || biome.snowfall ? 0 : 1 },
     time: { value: 0 },
   };
   const mat = new THREE.ShaderMaterial({
@@ -987,8 +987,11 @@ export function buildScenery(track, terrain, biomeKey, biome, quality, seed) {
       x: r.x, y: r.y, z: r.z, s: rng.range(0.6, 2.2), ry: rng.range(0, 6.28), color: 0xffffff,
     }));
     group.add(instancedChunks(colored(jitter(new THREE.DodecahedronGeometry(1, 0), 0.25, 8), '#7d848e'), vmat, rocks));
-    extra.snow = buildSnow(quality === 'low' ? 1200 : quality === 'medium' ? 2200 : 3500);
-    group.add(extra.snow.points);
+    // padá jen při sněžení; za jasna je zima slunečná a vzduch čistý
+    if (biome.snowfall) {
+      extra.snow = buildSnow(quality === 'low' ? 2200 : quality === 'medium' ? 3800 : 6000);
+      group.add(extra.snow.points);
+    }
   } else if (biomeKey === 'city') {
     group.add(buildCity(track, terrain, rng, quality));
     group.add(buildStreetLamps(track, 26));

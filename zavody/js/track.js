@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { buildCenterline, smoothCircular, Cut } from './trackmath.js';
 import { clamp, angleDiff, RNG } from './rng.js';
-import { BIOMES, WET_GRIP } from './biomes.js';
+import { BIOMES, WET_GRIP, SNOW_GRIP } from './biomes.js';
 
 export const SURF_ROAD = 0, SURF_CURB = 1, SURF_OFF = 2;
 
@@ -18,7 +18,7 @@ export class Track {
     this.curbMask = this.computeCurbs();
     this.buildRacingLine();
     // AI počítá s přilnavostí povrchu (na sněhu jede opatrněji)
-    this.roadGrip = (BIOMES[def.biome]?.roadGrip ?? 1) * (def.wet ? WET_GRIP : 1);
+    this.roadGrip = (BIOMES[def.biome]?.roadGrip ?? 1) * (def.wet ? WET_GRIP : 1) * (def.snowy ? SNOW_GRIP : 1);
     this.speedProfile = this.computeSpeedProfile(22 * this.roadGrip, 19 * this.roadGrip, 60);
     this.profiles = new Map([['car', this.speedProfile]]);
     this.cuts = def.cut ? [new Cut(this, def.cut)] : [];
@@ -599,6 +599,7 @@ function makeRoadTextures(style, quality) {
   grd.addColorStop(1, 'rgba(0,0,0,0)');
   g.fillStyle = grd;
   g.fillRect(0, 0, W, H);
+  if (style.snowy) snowCover(g, W, H, k, rng);
   // kaluže jsou tmavší než mokrý asfalt kolem
   const puddles = style.wet ? roadPuddles(rng) : [];
   for (const p of puddles) softEllipse(g, p.x * W, p.y * H, p.rx * W, p.ry * H, 'rgba(0,0,0,0.4)', 'rgba(0,0,0,0)');
@@ -624,6 +625,16 @@ function makeRoadTextures(style, quality) {
     g.fillRect(x * k, rng.range(0, H), rng.range(1, 3) * k, rng.range(1, 5) * k);
   }
   g.globalAlpha = 1;
+  // na sněhu jsou krajní čáry z velké části zaváté
+  if (style.snowy) {
+    g.fillStyle = '#e4eaf0';
+    for (let i = 0; i < 160 * k; i++) {
+      const x = rng.chance(0.5) ? rng.range(2, 16) : 256 - rng.range(2, 16);
+      g.globalAlpha = rng.range(0.4, 0.9);
+      g.fillRect(x * k, rng.range(0, H), rng.range(3, 7) * k, rng.range(6, 30) * k);
+    }
+    g.globalAlpha = 1;
+  }
   const map = new THREE.CanvasTexture(c);
   map.wrapS = THREE.ClampToEdgeWrapping;
   map.wrapT = THREE.RepeatWrapping;
@@ -636,9 +647,9 @@ function makeRoadTextures(style, quality) {
   sc.width = SW;
   sc.height = SH;
   const sg = sc.getContext('2d', { willReadFrequently: true });
-  sg.fillStyle = `rgb(128,${style.wet ? 84 : 224},0)`;
+  sg.fillStyle = `rgb(128,${style.wet ? 84 : style.snowy ? 236 : 224},0)`;
   sg.fillRect(0, 0, SW, SH);
-  if (!style.wet) {
+  if (!style.wet && !style.snowy) {
     // vyjeté pruhy se lesknou víc než zbytek
     const band = sg.createLinearGradient(0, 0, SW, 0);
     for (const [t, a] of [[0.12, 0], [0.3, 0.5], [0.46, 0], [0.54, 0], [0.7, 0.5], [0.88, 0]]) band.addColorStop(t, `rgba(128,170,0,${a})`);
@@ -660,6 +671,25 @@ function makeRoadTextures(style, quality) {
   surface.wrapS = THREE.ClampToEdgeWrapping;
   surface.wrapT = THREE.RepeatWrapping;
   return { map, surface };
+}
+
+// ujetý sníh: u krajů a mezi stopami bílá vrstva, v projetých kolejích prosvítá asfalt
+function snowCover(g, W, H, k, rng) {
+  const across = g.createLinearGradient(0, 0, W, 0);
+  for (const [t, a] of [[0, 0.95], [0.12, 0.85], [0.22, 0.35], [0.3, 0.12], [0.38, 0.4], [0.5, 0.62], [0.62, 0.4], [0.7, 0.12], [0.78, 0.35], [0.88, 0.85], [1, 0.95]]) {
+    across.addColorStop(t, `rgba(226,233,240,${a})`);
+  }
+  g.fillStyle = across;
+  g.fillRect(0, 0, W, H);
+  // nepravidelné jazyky sněhu a ujeté plochy, ať okraj sněhu není rovný
+  for (let i = 0; i < 90; i++) {
+    const x = rng.range(0, W), y = rng.range(0, H);
+    softEllipse(g, x, y, rng.range(6, 26) * k, rng.range(30, 140) * k, 'rgba(232,238,244,0.45)', 'rgba(232,238,244,0)');
+  }
+  for (let i = 0; i < 40; i++) {
+    const x = (rng.chance(0.5) ? rng.range(0.24, 0.36) : rng.range(0.64, 0.76)) * W;
+    softEllipse(g, x, rng.range(0, H), rng.range(5, 14) * k, rng.range(40, 160) * k, 'rgba(40,44,50,0.18)', 'rgba(40,44,50,0)');
+  }
 }
 
 function makeRubberTexture() {

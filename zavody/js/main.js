@@ -1,7 +1,7 @@
 // Turbo Okruh – vstupní bod: renderer, menu, závod a herní smyčka.
 import * as THREE from 'three';
 import { TRACKS } from './tracks.js';
-import { BIOMES, wetBiome } from './biomes.js';
+import { BIOMES, wetBiome, snowBiome } from './biomes.js';
 import { Track, SURF_OFF } from './track.js';
 import { Terrain } from './terrain.js';
 import { buildScenery, buildSky, buildLights, buildRain } from './scenery.js';
@@ -12,7 +12,7 @@ import { Race, OPPONENTS } from './race.js';
 import { Garage, playerNumbers as numbersOf, partColor, kindName, hexCss } from './garage.js';
 import { $, S, G, store, isTouch, input, audio, music, view, buzz } from './state.js';
 import {
-  currentCup, cupTracks, raceMode, currentTrackId, wantsRain, cupRecord, REV, baseId, trackDef, randomDef, dailyDef,
+  currentCup, cupTracks, raceMode, currentTrackId, wantsRain, wantsSnow, cupRecord, REV, baseId, trackDef, randomDef, dailyDef,
   raceLaps, raceDifficulty, raceWeapons, currentEvent
 } from './trackdefs.js';
 import {
@@ -210,8 +210,9 @@ async function loadWorld(id) {
   // déšť (na zimní trati místo něj padá sníh)
   const baseDef = trackDef(id);
   const wet = wantsRain(baseDef);
-  const def = wet ? { ...baseDef, wet: true } : baseDef;
-  const biome = wet ? wetBiome(BIOMES[def.biome]) : BIOMES[def.biome];
+  const snowy = wantsSnow(baseDef);
+  const def = wet ? { ...baseDef, wet: true } : snowy ? { ...baseDef, snowy: true } : baseDef;
+  const biome = wet ? wetBiome(BIOMES[def.biome]) : snowy ? snowBiome(BIOMES[def.biome]) : BIOMES[def.biome];
   const track = new Track(def);
   const terrain = new Terrain(track, def.biome, { seed: def.seed, lake: def.lake, cell: S.quality === 'low' ? 11 : 8 });
   const group = new THREE.Group();
@@ -248,7 +249,7 @@ async function loadWorld(id) {
   const rain = wet ? buildRain(S.quality === 'low' ? 1500 : S.quality === 'medium' ? 2600 : 4000) : null;
   if (rain) group.add(rain.points);
   G.world = {
-    def, biome, track, terrain, group, sky, lights, effects, envRT, showcase: [], crowd: scenery.extra.crowd, snow: scenery.extra.snow, rain, wet,
+    def, biome, track, terrain, group, sky, lights, effects, envRT, showcase: [], crowd: scenery.extra.crowd, snow: scenery.extra.snow, rain, wet, snowy,
   };
   setupPost();
   buildShowcase();
@@ -324,7 +325,7 @@ function trackMeta(def, track) {
   const kind = playerKinds()[0];
   const rec = store.record(def.id + (S.reverse ? REV : ''), kind);
   const km = (track.L / 1000).toFixed(2).replace('.', ',');
-  const head = def.daily ? `${def.subtitle}${def.rain && def.biome !== 'winter' ? ' · déšť' : ''}` : `${km} km`;
+  const head = def.daily ? `${def.subtitle}${def.rain ? (def.biome === 'winter' ? ' · sněžení' : ' · déšť') : ''}` : `${km} km`;
   if (!rec.lap) return { text: `${head} · bez rekordu` };
   const medal = hasReference(def, kind) ? medalFor(def, kind, rec.lap) : null;
   return { text: `${head} · rekord ${formatTime(rec.lap)}`, medal };
@@ -442,7 +443,11 @@ function refreshMenu() {
   for (const b of $('diff-seg').children) b.setAttribute('aria-checked', String(b.dataset.diff === S.difficulty));
   for (const b of $('dir-seg').children) b.setAttribute('aria-checked', String((b.dataset.dir === 'rev') === !!S.reverse));
   for (const b of $('weather-seg').children) b.setAttribute('aria-checked', String(b.dataset.weather === (S.weather || 'dry')));
+  // na zimní trati se volí mezi jasnem a sněžením
   const winter = trackDef(currentTrackId()).biome === 'winter';
+  const [dry, bad] = $('weather-seg').children;
+  dry.textContent = winter ? 'Jasno' : 'Sucho';
+  bad.textContent = winter ? 'Sněžení' : 'Déšť';
   $('weather-hint').hidden = !(winter && S.weather === 'rain');
   for (const b of $('quality-seg').children) b.setAttribute('aria-checked', String(b.dataset.q === S.quality));
   $('laps-value').textContent = S.laps;
@@ -854,7 +859,7 @@ async function startRaceInner() {
     openEditor(custom);
     return;
   }
-  if (!G.world || G.forceReload || G.world.def.id !== trackDef(trackId).id || G.world.wet !== wantsRain(trackDef(trackId))) {
+  if (!G.world || G.forceReload || G.world.def.id !== trackDef(trackId).id || G.world.wet !== wantsRain(trackDef(trackId)) || G.world.snowy !== wantsSnow(trackDef(trackId))) {
     G.forceReload = false;
     await loadWorld(trackId);
   }
