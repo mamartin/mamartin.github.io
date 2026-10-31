@@ -436,15 +436,22 @@ function sponsorAtlas() {
   return tex;
 }
 
+const AD_LOW = 1.3; // spodní hrana tabule: nad nejvyšším svodidlem, ať ji nic nezakrývá
+
 function buildAdBoards(track, rng, night) {
-  const pos = [], uv = [], nrm = [];
+  const pos = [], uv = [], legs = [];
   const N = track.N;
   const add = (k, side, idx) => {
     const lat = side * (track.edge + 0.9);
     const len = 9;
     const kk = (k + Math.round(len / track.step)) % N;
-    const a = track.point(k, lat, 0.3), b = track.point(kk, lat, 0.3);
+    // tabule nesmí stát v mezeře pro zkratku ani v tunelu
+    if ([track.s[k], track.s[kk]].some((s) => track.cutAt(s, side) || track.inTunnel(s))) return;
+    const a = track.point(k, lat, AD_LOW), b = track.point(kk, lat, AD_LOW);
     const h = 1.5;
+    for (const [u, w] of [[0.15, 0.85], [0.85, 0.15]]) {
+      legs.push({ x: a[0] * u + b[0] * w, y: a[1] * u + b[1] * w, z: a[2] * u + b[2] * w, ry: track.hd[k] });
+    }
     const v0 = 1 - (idx + 1) / 8, v1 = 1 - idx / 8;
     // lícem k trati
     const quad = side > 0
@@ -474,7 +481,21 @@ function buildAdBoards(track, rng, night) {
     : new THREE.MeshLambertMaterial({ map: sponsorAtlas() });
   const mesh = new THREE.Mesh(g, mat);
   mesh.receiveShadow = true;
-  return mesh;
+  const group = new THREE.Group();
+  group.add(mesh);
+  // nohy až do terénu
+  const legGeo = new THREE.BoxGeometry(0.16, 3.4, 0.16).translate(0, -1.7, 0);
+  const posts = new THREE.InstancedMesh(legGeo, new THREE.MeshLambertMaterial({ color: 0x2a2d33 }), Math.max(1, legs.length));
+  const m = new THREE.Matrix4();
+  legs.forEach((l, i) => {
+    m.makeRotationY(l.ry);
+    m.setPosition(l.x, l.y, l.z);
+    posts.setMatrixAt(i, m);
+  });
+  posts.count = legs.length;
+  posts.computeBoundingSphere();
+  group.add(posts);
+  return group;
 }
 
 function buildGrandstand(track, terrain, rng) {
