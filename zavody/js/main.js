@@ -463,8 +463,12 @@ function refreshMenu() {
   for (const m of menuTracks) m.btn.setAttribute('aria-checked', String(m.id === S.track));
   // zdroje dat u tratí podle skutečného města
   const credit = menuTracks.find((m) => m.id === S.track)?.def.credit;
-  $('track-credit').hidden = !credit;
-  $('track-credit').textContent = credit ?? '';
+  const creditEl = $('track-credit');
+  // starší index.html z mezipaměti prohlížeče tenhle řádek nemá
+  if (creditEl) {
+    creditEl.hidden = !credit;
+    creditEl.textContent = credit ?? '';
+  }
   for (const b of $('mode-seg').children) b.setAttribute('aria-checked', String(b.dataset.mode === S.mode));
   for (const b of $('diff-seg').children) b.setAttribute('aria-checked', String(b.dataset.diff === S.difficulty));
   for (const b of $('dir-seg').children) b.setAttribute('aria-checked', String((b.dataset.dir === 'rev') === !!S.reverse));
