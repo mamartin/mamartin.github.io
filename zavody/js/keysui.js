@@ -170,12 +170,15 @@ export function bindKeysUI(onChange) {
 
 // --- panel s klávesami ve hře ---------------------------------------------------------------
 
+// hlavní klávesy akce z obou sad, bez opakování
+const bothMain = (action) => [...new Set(PLAYERS.map((p) => KEYMAP[p][action][0]).filter(Boolean))];
+
 // i = index hráče, humans = počet hráčů, opts: { items, ready, done, pad }
 export function keyPanelHtml(i, humans, name, { items = false, ready = false, done = false, pad = false } = {}) {
   const p = humans > 1 ? PLAYERS[i] : 'p1';
   const solo = humans < 2;
-  // sólo hráč může jezdit i šipkami, ukážeme obě sady
-  const k = (a) => actionKbd(p, a) + (solo && ['up', 'down', 'left', 'right'].includes(a) ? actionKbd('p2', a) : '');
+  // sólo hráč může používat obě sady, ukážeme všechny jeho klávesy
+  const k = (a) => (solo ? bothMain(a).map(kbd).join('') || '<kbd>—</kbd>' : actionKbd(p, a));
   const rows = [
     [`${k('up')} ${k('down')}`, 'plyn / brzda'],
     [`${k('left')} ${k('right')}`, 'zatáčení'],
@@ -193,7 +196,13 @@ export function keyPanelHtml(i, humans, name, { items = false, ready = false, do
 }
 
 // popisek klávesy power-upu v HUD
-export const itemKeyLabel = (i, humans) => keyLabel(KEYMAP[humans > 1 ? PLAYERS[i] : 'p1'].item[0]);
+export const itemKeyLabel = (i, humans) => keyLabel(humans > 1 ? KEYMAP[PLAYERS[i]].item[0] : bothMain('item')[0]);
+
+// nápověda v pauze; v závodě se klávesy měnit nedají, stačí ji sestavit při pauze
+export const pauseHint = () => {
+  const back = bothMain('reset').map(keyLabel).join(' nebo ');
+  return `Esc pokračuje. C přepíná kameru${back ? `, ${back} vrátí auto na trať` : ''}.`;
+};
 
 // komu klávesa patří (0/1), -1 = nikomu
 export function keyPlayer(code) {

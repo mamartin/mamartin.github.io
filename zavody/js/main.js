@@ -37,7 +37,7 @@ import { applyKeys } from './keys.js';
 import { WeatherShift } from './weather.js';
 import { addDamage, disposeDamage } from './damage.js';
 import { encodeGhost, decodeGhost, sharedGhost, saveSharedGhost } from './ghostshare.js';
-import { bindKeysUI, refreshKeysUI, keyPanelHtml, itemKeyLabel, keyPlayer, keysSignature, playerColor } from './keysui.js';
+import { bindKeysUI, refreshKeysUI, keyPanelHtml, itemKeyLabel, keyPlayer, keysSignature, playerColor, pauseHint } from './keysui.js';
 import { Post } from './post.js';
 import { TrackEditor, customToDef, decodeTrack, checkDef } from './editor.js';
 
@@ -1108,6 +1108,7 @@ function setPaused(p) {
   if (G.screen !== 'race' || !G.race || !$('results').hidden) return;
   G.paused = p;
   $('pause').hidden = !p;
+  $('pause-hint').textContent = pauseHint();
   music.setIntensity(p ? 0 : 1);
   if (p) {
     audio.silence();
@@ -1325,7 +1326,7 @@ function processEvents() {
 
   if (G.pickups) {
     const near = (x, z) => Math.max(...race.players.map((c) => clamp(1 - Math.hypot(x - c.x, z - c.z) / 120, 0, 1)));
-    const keyFor = (car) => (solo ? 'F nebo X' : car.humanIndex === 0 ? 'E' : 'tečka');
+    const keyFor = (car) => (solo ? `${itemKeyLabel(0, 1)} nebo X` : itemKeyLabel(car.humanIndex, 2));
     for (const e of G.pickups.events) {
       if (e.type === 'box') audio.pickup();
       else if (e.type === 'incoming') {
