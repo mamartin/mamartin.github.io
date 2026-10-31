@@ -90,6 +90,10 @@ export function showResults() {
     .join('');
   G.recording = false;
   $('replay-btn').hidden = !G.replayRec || G.replayRec.duration < 3;
+  // ghost nejlepšího kola jde poslat odkazem (jen pevné tratě, ty má každý)
+  const gb = $('ghost-share-btn');
+  gb.textContent = 'Sdílet ghost';
+  gb.hidden = !(race.mode === 'time' && G.shareableTrack?.(w.def.id) && store.ghost(w.def.id, p.kind));
   $('results').hidden = false;
   $('again-btn').focus();
 }

@@ -26,6 +26,7 @@
 </head>
 <body>
   <canvas id="game" aria-label="Herní scéna"></canvas>
+  <div class="fps" id="fps" hidden aria-hidden="true"></div>
 
   <!-- Načítání -->
   <div id="loading" class="screen loading">
@@ -208,6 +209,18 @@
               <button type="button" role="radio" data-q="high">Vysoká</button>
               <button type="button" role="radio" data-q="ultra" title="Stínění, odrazy na mokré silnici a ostřejší stíny. Jen pro silný počítač; při nízkém FPS si samo ubere.">Ultra</button>
             </div>
+          </div>
+          <div class="opt">
+            <h2 class="label">Stíny</h2>
+            <div class="seg small" id="shadow-seg" role="radiogroup" aria-label="Stíny">
+              <button type="button" role="radio" data-shadow="off">Vypnuté</button>
+              <button type="button" role="radio" data-shadow="normal">Běžné</button>
+              <button type="button" role="radio" data-shadow="sharp" title="Nejnáročnější efekt scény, jen pro silný počítač">Ostré</button>
+            </div>
+          </div>
+          <div class="opt">
+            <h2 class="label">Ukazatel FPS</h2>
+            <button type="button" class="toggle" id="fps-toggle" aria-pressed="false" aria-label="Ukazatel FPS"><span></span><em>Vypnuto</em></button>
           </div>
           <div class="opt">
             <h2 class="label">Zvuk</h2>
@@ -448,6 +461,7 @@
         <button type="button" class="btn primary" id="again-btn">Jet znovu</button>
         <button type="button" class="btn" id="retry-btn" hidden>Jet znovu</button>
         <button type="button" class="btn" id="replay-btn">Záznam</button>
+        <button type="button" class="btn" id="ghost-share-btn" hidden>Sdílet ghost</button>
         <button type="button" class="btn" id="res-menu-btn">Do menu</button>
       </div>
     </div>

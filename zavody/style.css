@@ -1518,3 +1518,21 @@ body.tilt-steer .touch-left { display: none; }
 .hud.split.split-v .hud-view[data-view='0'] .speedo { bottom: var(--gut); }
 .hud.split.split-v .hud-view[data-view='0'] .draft-tag { bottom: calc(var(--gut) + 4px + var(--speedo)); }
 .hud.split.split-v .pause-btn { top: auto; bottom: calc(var(--gut) + var(--safe-b)); transform: translateX(-50%); }
+
+/* ukazatel FPS */
+.fps {
+  position: fixed;
+  z-index: 50;
+  left: 50%;
+  bottom: calc(2px + var(--safe-b));
+  transform: translateX(-50%);
+  padding: 1px 6px;
+  background: rgba(11, 15, 26, 0.7);
+  font-family: var(--font-display);
+  font-size: 12px;
+  color: var(--go);
+  pointer-events: none;
+  font-variant-numeric: tabular-nums;
+}
+.fps.low { color: var(--amber); }
+.fps[hidden] { display: none; }

@@ -35,6 +35,8 @@ import { Pickups, ITEM_NAMES } from './pickups.js';
 import { clamp } from './rng.js';
 import { applyKeys } from './keys.js';
 import { WeatherShift } from './weather.js';
+import { addDamage, disposeDamage } from './damage.js';
+import { encodeGhost, decodeGhost, sharedGhost, saveSharedGhost } from './ghostshare.js';
 import { bindKeysUI, refreshKeysUI, keyPanelHtml, itemKeyLabel, keyPlayer, keysSignature, playerColor } from './keysui.js';
 import { Post } from './post.js';
 import { TrackEditor, customToDef, decodeTrack, checkDef } from './editor.js';
@@ -124,6 +126,9 @@ function resizeView() {
   if (G.world) G.world.effects.setView(camera, renderer.domElement.height, scene.fog);
   if (G.race) for (const h of huds) h.resize();
 }
+
+// stíny: vlastní volba, jinak podle kvality grafiky
+const shadowLevel = () => S.shadows || (S.quality === 'low' ? 'off' : S.quality === 'ultra' ? 'sharp' : 'normal');
 
 // efekty přes obraz jen pro vysokou kvalitu, ty nejdražší jen pro Ultra
 function setupPost() {
@@ -227,14 +232,14 @@ async function loadWorld(id) {
   group.add(track.buildMeshes(biome.track, renderer.capabilities.getMaxAnisotropy(), S.quality));
   const scenery = buildScenery(track, terrain, def.biome, biome, S.quality, def.seed + 3);
   group.add(scenery.group);
-  const lights = buildLights(biome, S.quality);
+  const lights = buildLights(biome, S.quality, shadowLevel());
   group.add(lights.group);
   const sky = buildSky(biome, S.quality);
   scene.add(group, sky);
   scene.fog = new THREE.Fog(biome.fog.color, biome.fog.near, biome.fog.far);
   scene.background = new THREE.Color(biome.fog.color);
   renderer.toneMappingExposure = biome.exposure;
-  renderer.shadowMap.enabled = S.quality !== 'low';
+  renderer.shadowMap.enabled = shadowLevel() !== 'off';
 
   // odrazy na autech a vodě z oblohy
   const envScene = new THREE.Scene();
@@ -465,6 +470,10 @@ function refreshMenu() {
     : 'Na zasněžené silnici auta méně drží, brzdi dřív.';
   hint.hidden = !((winter && S.weather === 'rain') || S.weather === 'mix');
   for (const b of $('quality-seg').children) b.setAttribute('aria-checked', String(b.dataset.q === S.quality));
+  for (const b of $('shadow-seg').children) b.setAttribute('aria-checked', String(b.dataset.shadow === shadowLevel()));
+  $('fps-toggle').setAttribute('aria-pressed', String(!!S.showFps));
+  $('fps-toggle').querySelector('em').textContent = S.showFps ? 'Zapnuto' : 'Vypnuto';
+  $('fps').hidden = !S.showFps;
   $('laps-value').textContent = S.laps;
   const two = humanCount() === 2;
   $('players-opt').hidden = S.mode === 'time' || isTouch;
@@ -677,6 +686,21 @@ function bindMenu() {
       G.screen = 'menu';
     });
   }
+  for (const b of $('shadow-seg').children) {
+    b.addEventListener('click', async () => {
+      if (shadowLevel() === b.dataset.shadow) return;
+      S.shadows = b.dataset.shadow;
+      store.save();
+      refreshMenu();
+      await loadWorld(currentTrackId());
+      G.screen = 'menu';
+    });
+  }
+  $('fps-toggle').addEventListener('click', () => {
+    S.showFps = !S.showFps;
+    store.save();
+    refreshMenu();
+  });
   $('laps-minus').addEventListener('click', () => {
     S.laps = Math.max(1, S.laps - 1);
     store.save();
@@ -806,6 +830,7 @@ function bindMenu() {
     startRace();
   });
   $('res-menu-btn').addEventListener('click', () => toMenu());
+  $('ghost-share-btn').addEventListener('click', shareGhost);
 }
 
 // --- závod ---------------------------------------------------------------------------
@@ -864,6 +889,7 @@ function clearRace() {
   }
   for (const c of r.cars) {
     if (c.headlight) c.headlight.dispose?.();
+    disposeDamage(c.mesh);
     disposeCarMesh(c.mesh);
   }
   if (G.ghostMesh) {
@@ -959,10 +985,16 @@ async function startRaceInner() {
   G.recording = true;
   G.ghost = null;
   if (raceMode() === 'time') {
-    const data = store.ghost(w.def.id, race.player.kind);
-    if (data && data.frames && data.frames.length > 8) {
+    // ghost: vlastní nejlepší kolo, nebo rychlejší ghost, který poslal kamarád
+    const own = store.ghost(w.def.id, race.player.kind);
+    const friend = sharedGhost(w.def.id);
+    const valid = (g) => g && g.frames && g.frames.length > 8;
+    const useFriend = valid(friend) && (!valid(own) || friend.time < own.time);
+    const data = useFriend ? friend : own;
+    if (valid(data)) {
       G.ghost = new GhostPlayer(data);
-      G.ghostMesh = createCarMesh(0x9fd8ff, { ghost: true, kind: race.player.kind });
+      if (useFriend) hud.sub(`Honíš ghost: ${friend.name} · ${formatTime(friend.time)}`, 3.5);
+      G.ghostMesh = createCarMesh(useFriend ? 0xffb35c : 0x9fd8ff, { ghost: true, kind: race.player.kind });
       G.ghostMesh.root.visible = false;
       scene.add(G.ghostMesh.root);
     }
@@ -1277,6 +1309,8 @@ function processEvents() {
         hudOf(other).sub(`${e.car.name} je v cíli`, 2.5);
       }
     } else if (e.type === 'bump') {
+      addDamage(e.a, e.x, e.z, e.strength);
+      addDamage(e.b, e.x, e.z, e.strength);
       for (const car of [e.a, e.b]) {
         if (!car.isPlayer) continue;
         audio.impact(e.strength);
@@ -1335,6 +1369,11 @@ function frame(now) {
   fpsFrames++;
   if (fpsAcc > 0.5) {
     G.fps = Math.round(fpsFrames / fpsAcc);
+    if (S.showFps) {
+      const el = $('fps');
+      el.textContent = `${G.fps} FPS`;
+      el.classList.toggle('low', G.fps < 50);
+    }
     fpsAcc = 0;
     fpsFrames = 0;
     watchFps();
@@ -1626,6 +1665,48 @@ function renderViews(w) {
 
 // --- start ---------------------------------------------------------------------------
 
+// ghost jde sdílet jen na pevných tratích (vlastní a náhodné kamarád nemá)
+const shareableTrack = (id) => TRACKS.some((t) => t.id === baseId(id));
+G.shareableTrack = shareableTrack;
+
+async function shareGhost() {
+  const btn = $('ghost-share-btn');
+  const w = G.world, p = G.race?.player;
+  const ghost = w && p && store.ghost(w.def.id, p.kind);
+  if (!ghost) return;
+  const code = await encodeGhost(w.def.id, p.kind, p.name === 'Ty' ? '' : p.name, ghost);
+  const url = `${location.origin}${location.pathname}#g=${code}`;
+  let ok = false;
+  try {
+    await navigator.clipboard.writeText(url);
+    ok = true;
+  } catch {
+    window.prompt('Zkopíruj odkaz na ghost:', url);
+  }
+  btn.textContent = ok ? 'Odkaz zkopírován' : 'Sdílet ghost';
+}
+
+// ghost ze sdíleného odkazu (#g=...): uloží se k trati a vybere se časovka na ní
+async function importSharedGhost() {
+  const m = /^#g=([A-Za-z0-9_.-]+)$/.exec(location.hash);
+  if (!m) return;
+  history.replaceState(null, '', location.pathname + location.search);
+  const note = $('menu-note');
+  try {
+    const { trackId, name, ghost } = await decodeGhost(m[1]);
+    if (!shareableTrack(trackId) || ghost.frames.length < 32) throw new Error('trať');
+    saveSharedGhost(trackId, name, ghost);
+    S.track = baseId(trackId);
+    S.reverse = trackId !== baseId(trackId);
+    S.mode = 'time';
+    store.save();
+    note.textContent = `Ghost od ${name}: ${trackDef(trackId).name}, kolo ${formatTime(ghost.time)}. Časovka je vybraná, dej Na start a porovnej se.`;
+  } catch {
+    note.textContent = 'Odkaz na ghost se nepodařilo přečíst.';
+  }
+  note.hidden = false;
+}
+
 // trať ze sdíleného odkazu (#t=...) se přidá mezi vlastní
 function importSharedTrack() {
   const m = /^#t=([A-Za-z0-9_-]+)$/.exec(location.hash);
@@ -1660,6 +1741,7 @@ async function boot() {
     /* písma nejsou nutná */
   }
   importSharedTrack();
+  await importSharedGhost();
   bindMenu();
   bindReplay();
   bindInstall();

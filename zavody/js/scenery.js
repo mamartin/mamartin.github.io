@@ -927,21 +927,23 @@ export function buildScenery(track, terrain, biomeKey, biome, quality, seed) {
 }
 
 // Světla scény pro daný biom.
-export function buildLights(biome, quality) {
+// shadows: 'off' | 'normal' | 'sharp' (ostré stíny jsou nejdražší efekt scény)
+export function buildLights(biome, quality, shadows = quality === 'low' ? 'off' : quality === 'ultra' ? 'sharp' : 'normal') {
   const group = new THREE.Group();
   const hemi = new THREE.HemisphereLight(biome.hemi.sky, biome.hemi.ground, biome.hemi.intensity);
   group.add(hemi);
   const sun = new THREE.DirectionalLight(biome.sun.color, biome.sun.intensity);
   const sunDir = new THREE.Vector3(...biome.sunDir).normalize();
   sun.userData.dir = sunDir;
-  if (quality !== 'low') {
+  if (shadows !== 'off') {
     sun.castShadow = true;
-    const size = quality === 'ultra' ? 4096 : quality === 'high' ? 2048 : 1024;
+    const sharp = shadows === 'sharp';
+    const size = sharp ? 4096 : quality === 'low' || quality === 'medium' ? 1024 : 2048;
     sun.shadow.mapSize.set(size, size);
-    const r = quality === 'ultra' ? 105 : 75;
+    const r = sharp ? 105 : 75;
     Object.assign(sun.shadow.camera, { left: -r, right: r, top: r, bottom: -r, near: 1, far: 600 });
     sun.shadow.bias = -0.0004;
-    sun.shadow.normalBias = quality === 'ultra' ? 0.025 : 0.04;
+    sun.shadow.normalBias = sharp ? 0.025 : 0.04;
     // osy stínové mapy, podle nich se střed mapy posouvá po celých texelech
     const u = new THREE.Vector3(0, 1, 0).cross(sunDir).normalize();
     sun.userData.axes = [u, new THREE.Vector3().crossVectors(sunDir, u)];

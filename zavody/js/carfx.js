@@ -2,6 +2,7 @@
 import { SURF_OFF } from './track.js';
 import { clamp } from './rng.js';
 import { G, audio, view, buzz } from './state.js';
+import { addDamage } from './damage.js';
 
 const wl = [0, 0, 0], wr = [0, 0, 0];
 // ujetý sníh je šedomodrý, ne černý jako guma na asfaltu
@@ -83,6 +84,7 @@ export function emitEffects(dt) {
       const side = Math.sign(car.proj.lat);
       const x = car.x + car.proj.rx * side * 1.0, z = car.z + car.proj.rz * side * 1.0;
       if (!far) fx.sparks(x, car.y, z, car.proj.rx * side, car.proj.rz * side, car.impact);
+      addDamage(car, x, z, car.impact);
       if (car.isPlayer) {
         audio.impact(car.impact);
         view.rigs[car.humanIndex].addShake(Math.min(0.9, car.impact * 0.05));
