@@ -284,11 +284,14 @@ function buildCemeteryChurch(terrain, church, tileOf) {
 }
 
 function buildTownHall(l, terrain, tile) {
+  // dvě vysoká patra a střecha skoro stejně vysoká jako zdi
+  const roof = 7.8;
   const m = addBuilding(tile, terrain, l.ring, {
-    wall: 8.6, roof: 6.4, shape: SHAPE.HIP, face: color('#f0ead9'), top: color('#b35a35'), plain: false,
+    wall: 8.6, roof, shape: SHAPE.HIP, face: color('#f0ead9'), top: color('#b35a35'), plain: false,
+    uvOf: (len) => (len > 3 ? [0, Math.round(len / 3.6) / 4, -0.5, 0] : SOLID),
   });
   const { cx, cz } = m.box;
-  const y = m.eave + 6.4;
+  const y = m.eave + roof;
   const sill = color('#5f6468');
   lathe(tile.plain, cx, cz, 8, [[1.9, y - 1.2], [1.9, y + 0.8, sill], [1.45, y + 0.9], [1.45, y + 2.6, color('#8fb7a5')], [1.75, y + 2.75, sill],
     [1.1, y + 3.7, COPPER], [0.45, y + 4.3], [0.6, y + 4.7], [0.05, y + 6]], COPPER);

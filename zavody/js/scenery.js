@@ -241,6 +241,16 @@ export function spruceGeometry() {
   return mergeGeometries(parts.map(ni));
 }
 
+// silueta pro stromy daleko od trati: čtvrtina trojúhelníků
+export function farSpruceGeometry() {
+  const parts = [
+    colored(new THREE.CylinderGeometry(0.2, 0.32, 2.4, 3, 1, true).translate(0, 1.2, 0), '#5a3d26'),
+    colored(new THREE.ConeGeometry(2.4, 4.6, 6, 1, true).translate(0, 3.7, 0), '#2d5a2e'),
+    colored(new THREE.ConeGeometry(1.6, 4, 6, 1, true).translate(0, 6.2, 0), '#346636'),
+  ];
+  return mergeGeometries(parts.map(ni));
+}
+
 function snowSpruceGeometry() {
   const parts = [
     colored(new THREE.CylinderGeometry(0.2, 0.32, 2.4, 6).translate(0, 1.2, 0), '#4a3322'),
@@ -405,6 +415,14 @@ export function broadleafGeometry() {
     colored(new THREE.CylinderGeometry(0.16, 0.24, 3.2, 6).translate(0, 1.6, 0), '#d8d2c4'),
     colored(jitter(new THREE.IcosahedronGeometry(2.3, 0), 0.35, 3).translate(0, 4.6, 0), '#6c9a3d'),
     colored(jitter(new THREE.IcosahedronGeometry(1.5, 0), 0.25, 4).translate(0.9, 5.8, 0.4), '#7eab47'),
+  ];
+  return mergeGeometries(parts.map(ni));
+}
+
+export function farBroadleafGeometry() {
+  const parts = [
+    colored(new THREE.CylinderGeometry(0.16, 0.24, 3.2, 3, 1, true).translate(0, 1.6, 0), '#d8d2c4'),
+    colored(jitter(new THREE.IcosahedronGeometry(2.8, 0), 0.35, 3).translate(0.3, 5, 0.1), '#74a241'),
   ];
   return mergeGeometries(parts.map(ni));
 }

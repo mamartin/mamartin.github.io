@@ -4,10 +4,13 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { RNG } from './rng.js';
-import { instancedChunks, colored, spruceGeometry, broadleafGeometry } from './scenery.js';
+import { instancedChunks, colored, spruceGeometry, broadleafGeometry, farSpruceGeometry, farBroadleafGeometry } from './scenery.js';
 import { pointInRing } from './terrain.js';
 import { part, vertex, addBuilding, areaOf, color, fenceLine, mix, toMesh, triangulate } from './mass.js';
 import { buildLandmarks } from './landmarks.js';
+
+// jak daleko od osy trati ještě něco vrhá stín
+const SHADOW_REACH = 70;
 
 const pairs = (a, from = 0) => {
   const out = [];
@@ -98,7 +101,7 @@ function worldCanvas(terrain, width) {
 }
 
 const AREA_COLORS = {
-  forest: '#3f6235', park: '#73a24f', grass: '#7fa858', field: '#b9ad68',
+  forest: '#3f6235', park: '#73a24f', grass: '#7fa858', lawn: '#7fa858', field: '#b9ad68',
   cemetery: '#628a52', allotments: '#809f58', pitch: '#55a049', garden: '#84b35c',
 };
 
@@ -131,7 +134,9 @@ export function paintGround(town, track, terrain, quality, anisotropy) {
     ctx.fill();
   }
   ctx.globalAlpha = 1;
-  for (const kind of ['field', 'grass', 'allotments', 'forest', 'park', 'garden', 'cemetery', 'pitch']) {
+  // zeleň na náměstí je v datech: plocha je jen obal jeho ulic, proto až pod ní
+  fillRings(ctx, town.paved.filter((a) => a.kind === 'square').map((a) => a.ring), '#aaa69c');
+  for (const kind of ['field', 'grass', 'lawn', 'allotments', 'forest', 'park', 'garden', 'cemetery', 'pitch']) {
     fillRings(ctx, town.areas.filter((a) => a.kind === kind).map((a) => a.ring), AREA_COLORS[kind]);
   }
   fillRings(ctx, town.paved.filter((a) => a.kind === 'parking').map((a) => a.ring), '#7d7e80');
@@ -147,7 +152,6 @@ export function paintGround(town, track, terrain, quality, anisotropy) {
   strokeLines(ctx, town.paths, 2, '#bcae92');
   // chodník vznikne širší stopou pod asfaltem ulice
   for (const s of town.streets) strokeLines(ctx, [s.line], s.width + 3.4, '#a9a69e');
-  fillRings(ctx, town.paved.filter((a) => a.kind === 'square').map((a) => a.ring), '#b6a994');
   for (const s of town.streets) strokeLines(ctx, [s.line], s.width, '#58595c');
   trackBand(ctx, track, 3.6, '#adaaa2');
   ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -222,7 +226,7 @@ function occupancy(town, track, terrain, buildings) {
   const ink = '#000';
   for (const s of town.streets) strokeLines(ctx, [s.line], s.width + 3.5, ink);
   strokeLines(ctx, town.paths, 2.5, ink);
-  fillRings(ctx, town.paved.map((a) => a.ring), ink);
+  fillRings(ctx, town.paved.filter((a) => a.kind !== 'square').map((a) => a.ring), ink);
   fillRings(ctx, town.water.map((w) => w.ring), ink);
   ctx.strokeStyle = ink;
   ctx.lineWidth = 3;
@@ -283,6 +287,7 @@ function buildGreenery(town, track, terrain, buildings, density, shadows, rng) {
   for (const a of town.areas) {
     if (a.kind === 'forest') plantArea(a.ring, 17 * scale, rng, free, (x, z) => (rng.chance(0.68) ? pine : leaf)(x, z));
     else if (a.kind === 'park') plantArea(a.ring, 27 * scale, rng, free, leaf);
+    else if (a.kind === 'lawn') plantArea(a.ring, 11 * scale, rng, free, leaf);
     else if (a.kind === 'cemetery') plantArea(a.ring, 24 * scale, rng, free, pine);
     else if (a.kind === 'allotments') plantArea(a.ring, 30 * scale, rng, free, leaf);
   }
@@ -295,8 +300,13 @@ function buildGreenery(town, track, terrain, buildings, density, shadows, rng) {
   const mat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
   const group = new THREE.Group();
   group.name = 'greenery';
-  group.add(instancedChunks(spruceGeometry(), mat, spruce, { castShadow: shadows, chunk: 320 }));
-  group.add(instancedChunks(broadleafGeometry(), mat, broad, { castShadow: shadows, chunk: 320 }));
+  // stín padá jen kolem auta, takže plný model a stín má jen to, co je u trati
+  const close = (t) => shadows && terrain.distAt(t.x, t.z) < SHADOW_REACH;
+  const far = (t) => !close(t);
+  group.add(instancedChunks(spruceGeometry(), mat, spruce.filter(close), { castShadow: true, chunk: 260 }));
+  group.add(instancedChunks(broadleafGeometry(), mat, broad.filter(close), { castShadow: true, chunk: 260 }));
+  group.add(instancedChunks(farSpruceGeometry(), mat, spruce.filter(far), { castShadow: false, chunk: 520 }));
+  group.add(instancedChunks(farBroadleafGeometry(), mat, broad.filter(far), { castShadow: false, chunk: 520 }));
   return group;
 }
 
@@ -329,8 +339,10 @@ export function buildTown(town, track, terrain, quality, seed, anisotropy) {
   group.name = 'town';
   const tiles = new Map();
   const tileOf = (x, z) => {
-    const key = Math.floor(x / 420) + ':' + Math.floor(z / 420);
-    if (!tiles.has(key)) tiles.set(key, { walls: part(), plain: part() });
+    const near = shadows && terrain.distAt(x, z) < SHADOW_REACH;
+    const size = near ? 260 : 520;
+    const key = `${near}:${Math.floor(x / size)}:${Math.floor(z / size)}`;
+    if (!tiles.has(key)) tiles.set(key, { walls: part(), plain: part(), near });
     return tiles.get(key);
   };
   const plainWalls = new Set(town.palette.plain);
@@ -352,8 +364,8 @@ export function buildTown(town, track, terrain, quality, seed, anisotropy) {
   const wallMat = new THREE.MeshLambertMaterial({ map: windowTexture(rng, anisotropy), vertexColors: true });
   const plainMat = new THREE.MeshLambertMaterial({ vertexColors: true });
   for (const t of tiles.values()) {
-    if (t.walls.pos.length) group.add(toMesh(t.walls, wallMat, shadows));
-    if (t.plain.pos.length) group.add(toMesh(t.plain, plainMat, shadows));
+    if (t.walls.pos.length) group.add(toMesh(t.walls, wallMat, t.near));
+    if (t.plain.pos.length) group.add(toMesh(t.plain, plainMat, t.near));
   }
   group.add(buildWater(town));
   group.add(buildGreenery(town, track, terrain, placed, density, shadows, rng));

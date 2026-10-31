@@ -346,6 +346,9 @@ stats.maxTrim = +Math.max(0, ...pushback).toFixed(1);
 
 // --- zeleň, voda, zpevněné plochy ----------------------------------------------
 
+// trávníky před radnicí: stromy v OSM nejsou, na fotkách náměstí ano
+const TOWN_HALL_LAWNS = new Set([1314555286, 1314555287]);
+
 const AREA_KIND = (t) => {
   if (t.landuse === 'forest' || t.natural === 'wood') return 'forest';
   if (t.natural === 'scrub') return 'forest';
@@ -365,7 +368,7 @@ const closed = (e) => e.type === 'relation' || (e.nodes && e.nodes[0] === e.node
 
 const areas = [];
 for (const e of area) {
-  const kind = e.tags && AREA_KIND(e.tags);
+  const kind = e.tags && (TOWN_HALL_LAWNS.has(e.id) ? 'lawn' : AREA_KIND(e.tags));
   if (!kind || !closed(e)) continue;
   for (const raw of ringsOf(e)) {
     const r = clipRing(cleanRing(raw), bounds);
@@ -464,7 +467,7 @@ for (const e of area) {
 
 const streams = [];
 for (const e of area) {
-  if (!e.tags?.waterway || !e.geometry) continue;
+  if (!e.tags?.waterway || e.tags.tunnel || !e.geometry) continue;
   const r = e.geometry.map((p) => toGame(p.lat, p.lon));
   if (r.some((p) => p[0] > bounds.minX && p[0] < bounds.maxX && p[1] > bounds.minZ && p[1] < bounds.maxZ)) streams.push(lineOf(r, 2));
 }
@@ -492,6 +495,7 @@ for (const e of area) {
 const pointsOf = (filter) => area.filter(filter).map((e) => toGame(e.lat, e.lon)).filter(near).flatMap((p) => [dm(p[0]), dm(p[1])]);
 const lamps = pointsOf((e) => e.type === 'node' && e.tags?.highway === 'street_lamp');
 const trees = pointsOf((e) => e.type === 'node' && e.tags?.natural === 'tree');
+trees.push(-930, -80, -820, -90); // před průčelím radnice: v OSM nejsou, na fotkách ano
 const poi = read('osm_poi.json');
 const statues = poi.filter((e) => e.type === 'node' && (e.tags?.artwork_type === 'statue' || e.tags?.memorial === 'statue'))
   .map((e) => toGame(e.lat, e.lon)).filter(near).flatMap((p) => [dm(p[0]), dm(p[1])]);

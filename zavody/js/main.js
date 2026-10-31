@@ -230,7 +230,9 @@ async function loadWorld(id) {
   // proměnlivé počasí mění biom za jízdy, proto vlastní kopie
   const biome = wet ? wetBiome(BIOMES[def.biome]) : snowy ? snowBiome(BIOMES[def.biome]) : mix ? { ...BIOMES[def.biome] } : BIOMES[def.biome];
   const track = new Track(def);
-  const terrain = new Terrain(track, def.biome, { seed: def.seed, lake: def.lake, cell: S.quality === 'low' ? 11 : 8, dem: town?.dem, water: town?.water });
+  // reliéf z DMR má mřížku 12 m, jemnější terén by nic nepřidal
+  const cell = S.quality === 'low' ? (town ? 14 : 11) : town ? 10 : 8;
+  const terrain = new Terrain(track, def.biome, { seed: def.seed, lake: def.lake, cell, dem: town?.dem, water: town?.water });
   if (town) terrain.groundMap = paintGround(town, track, terrain, S.quality, renderer.capabilities.getMaxAnisotropy());
   const group = new THREE.Group();
   group.add(terrain.buildMesh(biome.terrain));
