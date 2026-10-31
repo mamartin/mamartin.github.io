@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { clamp, angleDiff, lerp } from './rng.js';
-import { SURF_OFF, SURF_CURB } from './track.js';
+import { SURF_ROAD, SURF_OFF } from './track.js';
 import { S } from './state.js';
 
 export const CAR = {
@@ -691,6 +691,7 @@ export class Car {
     this.yawRate = 0;
     this.steer = 0;
     this.speed = 0;
+    this.offMix = 0;
     this.vLong = 0;
     this.slip = 0;
     this.aLong = 0;
@@ -734,9 +735,16 @@ export class Car {
     const biome = this.biome;
     this.surface = this.cut ? SURF_OFF : tr.surfaceAt(P.lat);
     const off = this.surface === SURF_OFF;
-    const gripMul = off ? biome.offGrip ?? 0.6 : (this.surface === SURF_CURB ? 0.95 : 1) * (biome.roadGrip ?? 1) * (biome.wet ? V.wetGrip : 1);
-    const dragMul = off ? (biome.offDrag ?? 3) * V.offDragMul : 1;
-    const topMul = off ? 0.6 : 1;
+    // podíl auta mimo asfalt: kola přejíždějí okraj postupně, takže přilnavost se mění plynule
+    const offTarget = this.cut ? 1 : clamp((Math.abs(P.lat) - tr.hw - tr.curbW + V.halfWidth) / (2 * V.halfWidth), 0, 1);
+    this.offMix += (offTarget - this.offMix) * Math.min(1, dt * 8);
+    const mix = this.offMix;
+    const roadGrip = (this.surface === SURF_ROAD ? 1 : 0.95) * (biome.roadGrip ?? 1) * (biome.wet ? V.wetGrip : 1);
+    // volant točený zpátky k asfaltu pomáhá, aby se dalo vrátit i z tvrdého povrchu v ostré zatáčce
+    const rejoin = this.cut ? 0 : Math.max(0, -Math.sign(P.lat) * this.steer);
+    const gripMul = lerp(roadGrip, (biome.offGrip ?? 0.6) * (1 + 0.4 * rejoin), mix);
+    const dragMul = lerp(1, (biome.offDrag ?? 3) * V.offDragMul, mix);
+    const topMul = lerp(1, 0.6, mix);
 
     let throttle = c.throttle, brake = c.brake, steerIn = c.steer;
     let handbrake = c.handbrake;
@@ -813,9 +821,9 @@ export class Car {
     }
     if (handbrake && vLong > 0) a -= 3.5;
     if (this.launchBoost > 0) this.launchBoost -= dt;
-    const resist = V.roll * dragMul + V.drag * vLong * vLong * (off ? 1.6 : 1) * (1 - 0.5 * this.draft);
+    const resist = V.roll * dragMul + V.drag * vLong * vLong * lerp(1, 1.6, mix) * (1 - 0.5 * this.draft);
     if (Math.abs(vLong) > 0.05) a -= Math.sign(vLong) * resist;
-    if (off && vLong > V.offSafe) a -= (vLong - V.offSafe) * V.offSlow * V.offDragMul;
+    if (vLong > V.offSafe) a -= (vLong - V.offSafe) * V.offSlow * V.offDragMul * mix;
     this.aLong = a;
     const nsin = Math.sin(this.hd), ncos = Math.cos(this.hd);
     vx += nsin * a * dt;
@@ -969,7 +977,8 @@ export class Car {
       // natočit podél svodidla
       const along = Math.cos(this.hd - P.hd) >= 0 ? P.hd : P.hd + Math.PI;
       this.hd += angleDiff(this.hd, along) * Math.min(0.5, vn * 0.03);
-      this.yawRate *= 0.5;
+      // tvrdá rána otáčení utne, při drhnutí zůstává řízení, aby šlo od svodidla odjet
+      this.yawRate *= 1 - Math.min(0.5, vn * 0.1);
     }
     // drhnutí o svodidlo brzdí i při lehkém doteku
     const grind = 1 - 0.4 * dt;
