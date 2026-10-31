@@ -9,12 +9,12 @@ const STEP = 1 / 120; // stejný krok fyziky jako ve hře
 
 export const MEDALS = [
   { id: 'gold', name: 'Zlato', mul: 1.0 },
-  { id: 'silver', name: 'Stříbro', mul: 1.06 },
-  { id: 'bronze', name: 'Bronz', mul: 1.14 },
+  { id: 'silver', name: 'Stříbro', mul: 1.05 },
+  { id: 'bronze', name: 'Bronz', mul: 1.12 },
 ];
 
 const KEY = 'turbo-okruh-ref';
-const VERSION = 1;
+const VERSION = 2;
 let cache = null;
 
 function load() {

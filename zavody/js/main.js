@@ -432,7 +432,7 @@ function refreshMenu() {
   $('track-block').hidden = S.mode === 'cup';
   $('cup-block').hidden = S.mode !== 'cup';
   $('mode-hint').textContent = {
-    race: 'Ty proti pěti soupeřům. Drift plní nitro, krabice s otazníkem dávají power-upy.',
+    race: 'Ty proti pěti soupeřům. Delší drift dá mini-turbo a plní nitro, krabice s otazníkem dávají power-upy.',
     cup: `${currentCup().name}: čtyři závody za sebou${currentCup().rain ? ' v dešti' : ''}. Body za umístění 10, 6, 4, 3, 2, 1 a vítězí nejvíc bodů.`,
     time: 'Sám na trati proti průhlednému ghostu svého nejlepšího kola.',
   }[S.mode];
@@ -1015,6 +1015,12 @@ function processEvents() {
       if (perfect) audio.perfectStart();
       else audio.wheelspin();
       buzz(perfect ? 25 : [40, 30, 40]);
+    } else if (e.type === 'turbo' && e.car.isPlayer) {
+      hudOf(e.car).sub(`<span class="good">Mini-turbo ${'I'.repeat(e.level)}</span>`, 1);
+      audio.turbo(e.level);
+      buzz(15 + e.level * 10);
+    } else if (e.type === 'driftFail' && e.car.isPlayer) {
+      hudOf(e.car).sub('<span class="bad">Drift přerušen</span>', 1);
     } else if (e.type === 'lap' && e.car.isPlayer) {
       const car = e.car;
       const h = hudOf(car);
@@ -1083,6 +1089,10 @@ function processEvents() {
     const keyFor = (car) => (solo ? 'F nebo X' : car.humanIndex === 0 ? 'E' : 'tečka');
     for (const e of G.pickups.events) {
       if (e.type === 'box') audio.pickup();
+      else if (e.type === 'incoming') {
+        audio.incoming();
+        buzz(40);
+      }
       else if (e.type === 'got') hudOf(e.car).sub(`${ITEM_NAMES[e.item]} · ${keyFor(e.car)}`, 1.6);
       else if (e.type === 'fire') { if (near(e.car.x, e.car.z) > 0.2) audio.launch(); }
       else if (e.type === 'hit') {
@@ -1229,7 +1239,7 @@ function frame(now) {
         throttle: p.controls.throttle,
         speed: Math.max(...humans.map((c) => c.speed)),
         skid: Math.max(...humans.map(skidOf)),
-        nitro: humans.some((c) => c.nitroActive),
+        nitro: humans.some((c) => c.nitroActive || c.turbo > 0),
         offroad: humans.some((c) => c.surface === SURF_OFF),
         rain: w.wet,
         rivals,
@@ -1240,6 +1250,7 @@ function frame(now) {
         // protisměr
         if (c.wrongWay > 1.2 && !c.finished && huds[i].msgTimer <= 0.2) huds[i].message('Špatný směr', 'warn', 0.6);
         huds[i].update(dt, race, gearboxes[i].gear);
+        huds[i].setThreat(G.pickups?.threat(c));
       });
 
       if (G.waitOthers > 0) {

@@ -11,7 +11,7 @@ export const DIFFICULTY = {
   medium: { label: 'Střední', corner: 0.93, top: 0.92, reaction: 0.24, noise: 0.03, nitro: false, variance: 0.035, mistakes: 0.03, defend: 0.6, nitroRegen: 0 },
   hard: { label: 'Těžká', corner: 1.12, top: 1.0, reaction: 0.12, noise: 0.01, nitro: true, variance: 0.02, mistakes: 0.006, defend: 1, nitroRegen: 0.03 },
   expert: { label: 'Nejtěžší', corner: 1.16, top: 1.0, reaction: 0.1, noise: 0.008, nitro: true, variance: 0.015, mistakes: 0.003, defend: 1, nitroRegen: 0.05 },
-  reference: { label: 'Medaile', corner: 1.04, top: 1.0, reaction: 0.16, noise: 0.012, nitro: true, variance: 0.025, mistakes: 0, defend: 1, nitroRegen: 0 },
+  reference: { label: 'Medaile', corner: 1.12, top: 1.0, reaction: 0.16, noise: 0.012, nitro: true, variance: 0.025, mistakes: 0, defend: 1, nitroRegen: 0 },
 };
 
 export class AIDriver {
@@ -35,6 +35,7 @@ export class AIDriver {
     this.recover = 0;
     this.rubber = 1;
     this.gain = 4.5;
+    this.maxLat = 0.9;
     this.wantsRespawn = false;
     this.tmp = {};
   }
@@ -80,6 +81,9 @@ export class AIDriver {
     // kus před námi: nejpomalejší místo v brzdné dráze
     const k2 = tr.indexAt(s + look + speed * 0.5);
     vt = Math.min(vt, this.profile[k2] * corner * 1.08 * this.rubber);
+    // ani nejlepší AI nejede rychleji, než dovolí přilnavost
+    const grip = this.maxLat * car.spec.grip * (car.biome.roadGrip ?? 1);
+    vt = Math.min(vt, Math.sqrt(grip / Math.max(Math.abs(tr.kappaS[k]), 1e-4)), 1.08 * Math.sqrt(grip / Math.max(Math.abs(tr.kappaS[k2]), 1e-4)));
 
     // --- chyby: občas přežene nájezd do zatáčky (vyletí ven) nebo zaváhá na plynu
     if (this.mistake > 0) this.mistake -= dt;
@@ -122,6 +126,9 @@ export class AIDriver {
     if (dv > 1) throttle = 1;
     else if (dv > -1.5) throttle = clamp(0.35 + dv * 0.3, 0, 1);
     else brake = clamp(-dv / 7, 0.25, 1);
+    // uprostřed zatáčky na hraně přilnavosti přivře plyn, plný plyn by auto vytlačil ven
+    const demand = (speed * speed * Math.max(Math.abs(tr.kappaS[tr.indexAt(s)]), Math.abs(tr.kappaS[tr.indexAt(s + 6)]))) / car.spec.grip;
+    if (demand > 0.75) throttle = Math.min(throttle, clamp((1.1 - demand) * 3, 0.15, 1));
     throttle *= lift;
     if (this.mistake > 0 && this.mistakeKind === 'lift') throttle *= 0.35;
 

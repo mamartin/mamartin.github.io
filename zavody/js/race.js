@@ -242,6 +242,14 @@ export class Race {
         continue;
       }
       car.step(dt);
+      if (car.turboFired) {
+        this.emit('turbo', { car, level: car.turboFired });
+        car.turboFired = 0;
+      }
+      if (car.driftFail) {
+        this.emit('driftFail', { car });
+        car.driftFail = false;
+      }
     }
     if (racing) this.collideCars();
     if (racing) for (const car of this.cars) this.updateProgress(car, dt);

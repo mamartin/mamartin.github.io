@@ -4,6 +4,10 @@ import { RNG, clamp } from './rng.js';
 
 export const ITEM_NAMES = { rocket: 'Raketa', mine: 'Mina', shield: 'Štít', nitro: 'Nitro' };
 
+const SPIN_TIME = 0.9; // zásah: jedna otočka, auto skončí čelem vpřed
+const ROCKET_WARN = 1.5; // varování hráče tolik sekund před dopadem
+const ROCKET_LOCK = 0.45;
+
 // čtverec vzdálenosti bodu p od úsečky a–b (dráha auta za poslední snímek)
 function segDist2(ax, az, bx, bz, px, pz) {
   const dx = bx - ax, dz = bz - az;
@@ -258,7 +262,7 @@ export class Pickups {
       mesh.add(body, nose);
       this.group.add(mesh);
       this.rockets.push({
-        s: car.proj.s + 3, lat: car.proj.lat, speed: Math.max(car.speed + 28, 72), owner: car, target, life: 4, mesh,
+        s: car.proj.s + 3, lat: car.proj.lat, speed: car.speed + 12, top: Math.max(car.speed + 28, 72), owner: car, target, life: 4, mesh, warned: new Set(),
       });
       this.emit('fire', { car });
     } else if (item === 'mine') {
@@ -291,27 +295,60 @@ export class Pickups {
       this.emit('blocked', { target, by, x, y, z });
       return;
     }
-    target.spinTimer = 1.25;
-    target.vx *= 0.35;
-    target.vz *= 0.35;
+    target.spinTimer = SPIN_TIME;
+    target.vx *= 0.36;
+    target.vz *= 0.36;
     target.yawRate = (this.rng.chance(0.5) ? 1 : -1) * 6;
     this.effects.explosion(x, y, z);
     this.emit('hit', { target, by, x, y, z });
   }
 
+  // za kolik sekund raketa dostihne auto (Infinity = je před ním)
+  eta(r, car) {
+    const L = this.track.L;
+    let ds = car.proj.s - r.s;
+    if (ds < -L / 2) ds += L;
+    else if (ds > L / 2) ds -= L;
+    if (ds <= 0) return Infinity;
+    return ds / Math.max((r.speed + r.top) / 2 - car.speed, 6);
+  }
+
+  // nejbližší raketa, která míří na auto: { eta, side } (side −1 vlevo, 1 vpravo, 0 přímo za ním)
+  threat(car) {
+    let best = null;
+    for (const r of this.rockets) {
+      if (r.owner === car) continue;
+      const eta = this.eta(r, car);
+      const rel = r.lat - car.proj.lat;
+      if (eta > ROCKET_WARN || eta > r.life || (r.target !== car && Math.abs(rel) > 3)) continue;
+      if (!best || eta < best.eta) best = { eta, side: Math.abs(rel) < 1 ? 0 : Math.sign(rel), rocket: r };
+    }
+    return best;
+  }
+
   updateRockets(dt) {
     const tr = this.track;
     const L = tr.L;
+    for (const car of this.race.players) {
+      const t = this.threat(car);
+      if (t && !t.rocket.warned.has(car)) {
+        t.rocket.warned.add(car);
+        this.emit('incoming', { car });
+      }
+    }
     for (let i = this.rockets.length - 1; i >= 0; i--) {
       const r = this.rockets[i];
       r.life -= dt;
+      r.speed = Math.min(r.top, r.speed + 45 * dt);
       let done = r.life <= 0;
+      // těsně před dopadem už raketa nezatáčí, prudkým úhybem se jí dá vyhnout
+      const homing = r.target && this.eta(r, r.target) > ROCKET_LOCK;
       // po krocích max. 1,5 m, aby raketa auto „nepřeskočila“
       const sub = Math.max(1, Math.ceil((r.speed * dt) / 1.5));
       const h = dt / sub;
       for (let k = 0; k < sub && !done; k++) {
         r.s += r.speed * h;
-        if (r.target) r.lat += clamp(r.target.proj.lat - r.lat, -10 * h, 10 * h);
+        if (homing) r.lat += clamp(r.target.proj.lat - r.lat, -10 * h, 10 * h);
         r.lat = clamp(r.lat, -tr.edge + 1, tr.edge - 1);
         for (const car of this.race.cars) {
           if (car === r.owner || car.ghostTimer > 0) continue;

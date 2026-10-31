@@ -83,6 +83,9 @@ export class HUD {
     this.tag = q('.player-tag');
     this.draftTag = q('.draft-tag');
     this.draftBar = q('.draft-tag i');
+    this.driftTag = q('.drift-tag');
+    this.driftCells = [...view.querySelectorAll('.drift-tag b')];
+    this.rocketWarn = q('.rocket-warn');
     this.msgTimer = 0;
     this.subTimer = 0;
     this.cache = {};
@@ -111,6 +114,15 @@ export class HUD {
     this.cache = {};
     this.clearMessages();
     this.resize();
+  }
+
+  // varování před raketou s šipkou na stranu, odkud letí
+  setThreat(t) {
+    const side = t ? String(t.side) : '';
+    if (this.cache.threat === side) return;
+    this.cache.threat = side;
+    this.rocketWarn.classList.toggle('on', !!t);
+    if (t) this.rocketWarn.dataset.side = side;
   }
 
   // přepočet velikostí plátna (volá se i při změně okna)
@@ -187,6 +199,13 @@ export class HUD {
       this.cache.draft = draft;
       this.draftTag.classList.toggle('on', draft > 0.05);
       this.draftBar.style.transform = `scaleX(${draft})`;
+    }
+    // mini-turbo: tři dílky podle délky driftu
+    const drift = p.driftOn && p.driftTime > 0.08 ? 1 + p.driftLevel : 0;
+    if (this.cache.drift !== drift) {
+      this.cache.drift = drift;
+      this.driftTag.classList.toggle('on', drift > 0);
+      this.driftCells.forEach((c, i) => c.classList.toggle('lit', i < drift - 1));
     }
 
     // věž

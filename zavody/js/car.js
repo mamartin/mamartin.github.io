@@ -8,7 +8,7 @@ export const CAR = {
   wheelbase: 2.65,
   accel: 13.5,
   vmax: 64,
-  nitroAccel: 9,
+  nitroAccel: 34,
   nitroVmax: 1.24,
   brake: 26,
   reverseAccel: 9,
@@ -21,6 +21,10 @@ export const CAR = {
   halfWidth: 1.0,
   halfLength: 2.25,
   offDragMul: 1,
+  offSafe: 26, // mimo trať: rychlost, nad kterou povrch rychle brzdí
+  offSlow: 0.5, // a jak silně (1/s)
+  turboAccel: 8,
+  powerLoss: 0.27, // o kolik plný plyn ve vysoké rychlosti ubere boční přilnavost
   rearZ: 1.3,
   rearX: 0.86,
 };
@@ -42,6 +46,10 @@ export const VEHICLES = {
     rearX: 0.88,
   },
 };
+
+// mini-turbo: délka driftu (s) pro úrovně 1–3 a jak dlouho pak výstřel trvá
+export const DRIFT_LEVELS = [0.4, 0.8, 1.3];
+const TURBO_TIME = [0.5, 0.85, 1.25];
 
 const TWO_PI = Math.PI * 2;
 
@@ -630,6 +638,11 @@ export class Car {
     this.spinTimer = 0;
     this.shield = 0;
     this.draft = 0; // slipstream za jiným autem (0–1)
+    this.driftOn = false; // běží drift začatý ruční brzdou
+    this.driftTime = 0;
+    this.driftFail = false;
+    this.turbo = 0; // zbývající čas výstřelu mini-turba
+    this.turboFired = 0; // úroveň právě vypáleného turba (pro událost závodu)
     this.launchBoost = 0; // perfektní start: zbývající čas extra tahu
     this.launchPenalty = 0; // předčasný start: zbývající čas protáčení kol
     this.track.project(this.x, this.z, -1, this.proj);
@@ -690,7 +703,8 @@ export class Car {
     }
 
     const hardBrakeTurn = brake > 0.5 && vLong > 18 && Math.abs(this.steer) > 0.5;
-    const baseGrip = V.grip * gripMul;
+    // plný plyn ve vysoké rychlosti tlačí auto ven, v driftu ale vůz řídí právě plyn
+    const baseGrip = V.grip * gripMul * (handbrake ? 1 : 1 - throttle * V.powerLoss * Math.min(1, speed / 40));
     const grip = baseGrip * (handbrake ? 0.8 : 1) * (hardBrakeTurn ? 0.85 : 1);
     // strop rychlosti otáčení: úměrný vychýlení volantu (plynulé pro gamepad)
     const yawLimit = ((baseGrip * (handbrake ? 2.0 : 1.12)) / Math.max(speed, 4)) * Math.min(1, Math.abs(this.steer) * 1.05 + 0.02);
@@ -715,11 +729,13 @@ export class Car {
       if (vLong < -1) a += V.brake * throttle;
       else {
         // ve slipstreamu je menší odpor, takže i vyšší maximálka
-        const vm = V.vmax * topMul * (this.nitroActive ? V.nitroVmax : 1) * (1 + 0.06 * this.draft);
+        const vm = V.vmax * topMul * (this.nitroActive ? V.nitroVmax : 1) * (1 + 0.06 * this.draft) * (this.turbo > 0 ? 1.08 : 1);
         const r = Math.max(0, vLong) / vm;
         a += V.accel * throttle * Math.max(0, 1 - r * r);
-        if (this.nitroActive) a += V.nitroAccel * Math.max(0, 1 - r);
+        // nitro nejvíc táhne v pomalém výjezdu ze zatáčky, v plné rychlosti už málo
+        if (this.nitroActive) a += V.nitroAccel * Math.min(0.65, Math.max(0, 1 - r)) ** 2;
         if (this.launchBoost > 0) a += 7 * throttle * Math.max(0, 1 - r);
+        if (this.turbo > 0) a += V.turboAccel * throttle * Math.max(0, 1 - r);
       }
     }
     if (brake > 0) {
@@ -730,6 +746,7 @@ export class Car {
     if (this.launchBoost > 0) this.launchBoost -= dt;
     const resist = V.roll * dragMul + V.drag * vLong * vLong * (off ? 1.6 : 1) * (1 - 0.5 * this.draft);
     if (Math.abs(vLong) > 0.05) a -= Math.sign(vLong) * resist;
+    if (off && vLong > V.offSafe) a -= (vLong - V.offSafe) * V.offSlow * V.offDragMul;
     this.aLong = a;
     const nsin = Math.sin(this.hd), ncos = Math.cos(this.hd);
     vx += nsin * a * dt;
@@ -766,7 +783,8 @@ export class Car {
     this.nitro = Math.min(1, this.nitro + dt * 0.012);
 
     tr.project(this.x, this.z, P.i ?? -1, P);
-    this.collideWalls();
+    this.collideWalls(dt);
+    this.updateDrift(dt, off);
 
     this.y = P.y;
     const rel = Math.cos(this.hd - P.hd);
@@ -782,7 +800,33 @@ export class Car {
     if (this.shield > 0) this.shield -= dt;
   }
 
-  collideWalls() {
+  // mini-turbo: drift začatý ruční brzdou se nabíjí a po vyrovnání vozu vystřelí, chyba ho zruší
+  updateDrift(dt, off) {
+    if (this.turbo > 0) this.turbo -= dt;
+    const slide = this.slip > 0.16 && this.vLong > 12;
+    if (this.controls.handbrake && slide) this.driftOn = true;
+    if (!this.driftOn) return;
+    if (off || this.impact > 2 || this.spinTimer > 0) {
+      this.driftFail = this.driftLevel > 0;
+      this.driftOn = false;
+      this.driftTime = 0;
+    } else if (slide) this.driftTime += dt;
+    else if (!this.controls.handbrake) {
+      const level = this.driftLevel;
+      if (level) {
+        this.turbo = TURBO_TIME[level - 1];
+        this.turboFired = level;
+      }
+      this.driftOn = false;
+      this.driftTime = 0;
+    }
+  }
+
+  get driftLevel() {
+    return DRIFT_LEVELS.filter((t) => this.driftTime >= t).length;
+  }
+
+  collideWalls(dt) {
     const V = this.spec;
     const P = this.proj;
     const lim = this.track.edge - V.halfWidth - 0.1;
@@ -798,7 +842,7 @@ export class Car {
     if (vn > 0) {
       this.vx -= nx * vn * 1.3;
       this.vz -= nz * vn * 1.3;
-      const loss = 1 - Math.min(0.35, vn * 0.018);
+      const loss = 1 - Math.min(0.5, vn * 0.035);
       this.vx *= loss;
       this.vz *= loss;
       this.impact = vn;
@@ -807,6 +851,10 @@ export class Car {
       this.hd += angleDiff(this.hd, along) * Math.min(0.5, vn * 0.03);
       this.yawRate *= 0.5;
     }
+    // drhnutí o svodidlo brzdí i při lehkém doteku
+    const grind = 1 - 0.4 * dt;
+    this.vx *= grind;
+    this.vz *= grind;
     P.lat = side * lim;
     P.y = P.cy + P.lat * P.tanBank;
   }

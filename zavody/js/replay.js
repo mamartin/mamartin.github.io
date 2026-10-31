@@ -21,7 +21,7 @@ export class ReplayRecorder {
     this.acc -= 1 / RATE;
     this.cars.forEach((c, k) => {
       const braking = c.controls.brake > 0.1 && c.vLong > 0.5;
-      this.data[k].push(c.x, c.y, c.z, c.hd, c.pitch, c.roll, c.steer, c.wheelRot, c.progress, (c.nitroActive ? 1 : 0) | (braking ? 2 : 0));
+      this.data[k].push(c.x, c.y, c.z, c.hd, c.pitch, c.roll, c.steer, c.wheelRot, c.progress, (c.nitroActive || c.turbo > 0 ? 1 : 0) | (braking ? 2 : 0));
     });
     this.frames++;
   }
@@ -101,6 +101,7 @@ export class ReplayPlayer {
       c.vz = (d[b + 2] - d[a + 2]) * RATE;
       c.speed = c.vLong = Math.hypot(c.vx, c.vz);
       c.nitroActive = !!(flags & 1);
+      c.turbo = 0;
       c.controls.brake = flags & 2 ? 1 : 0;
       c.skidding = false;
       c.impact = 0;

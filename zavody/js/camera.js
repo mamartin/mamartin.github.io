@@ -44,7 +44,7 @@ export class CameraRig {
       this.pos.set(x - Math.sin(hd) * 7, y + 2.6, z - Math.cos(hd) * 7);
     }
 
-    let fovTarget = 64 + Math.min(speed, 70) * 0.2 + (car.nitroActive ? 7 : 0);
+    let fovTarget = 64 + Math.min(speed, 70) * 0.2 + (car.nitroActive ? 7 : car.turbo > 0 ? 5 : 0);
     if (this.mode === 'hood') {
       const s = Math.sin(hd), c = Math.cos(hd);
       this.pos.set(x + s * 0.95, y + 1.3, z + c * 0.95);

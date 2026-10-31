@@ -288,6 +288,17 @@ export class AudioEngine {
     this.tone(990, 0.3, 'triangle', 0.16, 0.08);
   }
 
+  // mini-turbo: tím delší a vyšší hvizd, čím delší drift
+  turbo(level) {
+    this.burst(0.22 + level * 0.1, 'bandpass', 900, 0.2 + level * 0.05, 3200 + level * 500);
+    this.tone(440 * 1.25 ** level, 0.18, 'triangle', 0.14);
+  }
+
+  // varování před raketou: tři zrychlující pípnutí
+  incoming() {
+    [0, 0.34, 0.58].forEach((when) => this.tone(1480, 0.1, 'square', 0.11, when));
+  }
+
   wheelspin() {
     this.burst(0.9, 'bandpass', 1100, 0.22, 700);
   }

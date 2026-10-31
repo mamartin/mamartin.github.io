@@ -47,7 +47,7 @@ export function emitEffects(dt) {
       fx.dust(wl[0], wl[1], wl[2], car.vx, car.vz, w.biome.dust);
       fx.dust(wr[0], wr[1], wr[2], car.vx, car.vz, w.biome.dust);
     }
-    if ((car.nitroActive || car.launchBoost > 0) && !far) {
+    if ((car.nitroActive || car.launchBoost > 0 || car.turbo > 0) && !far) {
       const s = Math.sin(car.hd), c = Math.cos(car.hd);
       const bx = car.x - s * 2.35, bz = car.z - c * 2.35;
       const rx = -c, rz = s;
