@@ -4,6 +4,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { RNG, smoothstep } from './rng.js';
 import { buildCornerSigns, buildRoadPoles, buildReflectors } from './signs.js';
 import { buildCuts, buildTunnels } from './features.js';
+import { Stand, SnowmanHeads, standArea } from './stand.js';
 
 // --- obloha -----------------------------------------------------------------
 
@@ -272,6 +273,12 @@ function snowmanGeometry() {
   const parts = [
     colored(new THREE.SphereGeometry(0.8, 10, 8).translate(0, 0.7, 0), '#f7f9fc'),
     colored(new THREE.SphereGeometry(0.58, 10, 8).translate(0, 1.8, 0), '#f7f9fc'),
+  ];
+  return mergeGeometries(parts.map(ni));
+}
+
+function snowmanHeadGeometry() {
+  const parts = [
     colored(new THREE.SphereGeometry(0.42, 10, 8).translate(0, 2.6, 0), '#f7f9fc'),
     colored(new THREE.ConeGeometry(0.08, 0.45, 6).rotateX(Math.PI / 2).translate(0, 2.6, 0.6), '#f07b2c'),
     colored(new THREE.CylinderGeometry(0.3, 0.32, 0.4, 8).translate(0, 3.05, 0), '#23262d'),
@@ -461,7 +468,7 @@ function nearBand(track, terrain, rng, count, minOff, maxOff, accept) {
   return out;
 }
 
-// --- reklamní tabule a tribuna -------------------------------------------------
+// --- reklamní tabule -------------------------------------------------
 
 const SPONSORS = [
   ['PNEU BOBR', '#f2c230', '#1b1b1b'],
@@ -499,7 +506,7 @@ function sponsorAtlas() {
 
 const AD_LOW = 1.3; // spodní hrana tabule: nad nejvyšším svodidlem, ať ji nic nezakrývá
 
-function buildAdBoards(track, rng, night) {
+function buildAdBoards(track, terrain, rng, night) {
   const pos = [], uv = [], legs = [];
   const N = track.N;
   const add = (k, side, idx) => {
@@ -509,6 +516,8 @@ function buildAdBoards(track, rng, night) {
     // tabule nesmí stát v mezeře pro zkratku ani v tunelu
     if ([track.s[k], track.s[kk]].some((s) => track.cutAt(s, side) || track.inTunnel(s))) return;
     const a = track.point(k, lat, AD_LOW), b = track.point(kk, lat, AD_LOW);
+    // před tribunou by zakrývala diváky i bábu
+    if (terrain.keepOut(a[0], a[2]) || terrain.keepOut(b[0], b[2])) return;
     const h = 1.5;
     for (const [u, w] of [[0.15, 0.85], [0.85, 0.15]]) {
       legs.push({ x: a[0] * u + b[0] * w, y: a[1] * u + b[1] * w, z: a[2] * u + b[2] * w, ry: track.hd[k] });
@@ -557,96 +566,6 @@ function buildAdBoards(track, rng, night) {
   posts.computeBoundingSphere();
   group.add(posts);
   return group;
-}
-
-const STAND_LEN = 70;
-
-// strana s víc místem
-function standSide(track, terrain) {
-  const probe = (side) => {
-    const p = track.pointS(0, side * (track.edge + 30));
-    return terrain.distAt(p[0], p[2]);
-  };
-  return probe(1) >= probe(-1) ? 1 : -1;
-}
-
-// půdorys tribuny se střechou a rezervou na koruny stromů
-function standArea(track, terrain) {
-  const side = standSide(track, terrain);
-  const base = track.pointS(-10, side * (track.edge + 3));
-  const sin = Math.sin(track.hd[0]), cos = Math.cos(track.hd[0]);
-  return (x, z) => {
-    const dx = x - base[0], dz = z - base[2];
-    const away = -side * (dx * cos - dz * sin); // od trati
-    return Math.abs(dx * sin + dz * cos) < STAND_LEN / 2 + 7 && away > -3 && away < 21;
-  };
-}
-
-function buildGrandstand(track, terrain, rng) {
-  const side = standSide(track, terrain);
-  const group = new THREE.Group();
-  const base = track.pointS(-10, side * (track.edge + 3));
-  group.position.set(base[0], base[1] - 0.3, base[2]);
-  // lokální +z = směr trati, lokální -x = pravá strana trati; řady stoupají do -x
-  group.rotation.y = track.hd[0];
-  const len = STAND_LEN;
-  const concrete = new THREE.MeshLambertMaterial({ color: 0x9aa0a6 });
-  const seatsMat = new THREE.MeshLambertMaterial({ color: 0x2f5fa8 });
-  const rows = 7;
-  const parts = [];
-  for (let r = 0; r < rows; r++) {
-    const g = new THREE.BoxGeometry(1.6, 0.9 + r * 0.9, len);
-    g.translate(-(1.2 + r * 1.6), (0.9 + r * 0.9) / 2, 0);
-    parts.push(g);
-  }
-  const stand = new THREE.Mesh(mergeGeometries(parts), concrete);
-  stand.castShadow = stand.receiveShadow = true;
-  // pro levou stranu tribunu zrcadlíme
-  const flip = new THREE.Group();
-  flip.scale.x = side > 0 ? 1 : -1;
-  flip.add(stand);
-  // sedačky (tenké pruhy)
-  const seatParts = [];
-  for (let r = 0; r < rows; r++) {
-    const g = new THREE.BoxGeometry(0.5, 0.35, len - 1);
-    g.translate(-(1.2 + r * 1.6) + 0.35, 0.9 + r * 0.9 + 0.15, 0);
-    seatParts.push(g);
-  }
-  const seats = new THREE.Mesh(mergeGeometries(seatParts), seatsMat);
-  flip.add(seats);
-  // divácí
-  const crowdGeo = new THREE.BoxGeometry(0.45, 0.8, 0.45);
-  crowdGeo.translate(0, 0.4, 0);
-  const crowd = new THREE.InstancedMesh(crowdGeo, new THREE.MeshLambertMaterial({ color: 0xffffff }), rows * 60);
-  const m = new THREE.Matrix4(), c = new THREE.Color();
-  const shirt = ['#d7263d', '#f2c230', '#2c6fd1', '#ffffff', '#1f9d55', '#f07b2c', '#222222', '#b14fc5'];
-  let i = 0;
-  for (let r = 0; r < rows; r++) {
-    for (let j = 0; j < 60; j++) {
-      if (rng.chance(0.25)) continue;
-      m.makeTranslation(-(1.2 + r * 1.6) + 0.05, 0.9 + r * 0.9 + 0.3, -len / 2 + 1 + j * ((len - 2) / 60) + rng.range(-0.2, 0.2));
-      crowd.setMatrixAt(i, m);
-      crowd.setColorAt(i, c.set(rng.pick(shirt)));
-      i++;
-    }
-  }
-  crowd.count = i;
-  crowd.computeBoundingSphere();
-  flip.add(crowd);
-  // střecha
-  const roofH = 0.9 + rows * 0.9 + 3.2;
-  const roof = new THREE.Mesh(new THREE.BoxGeometry(rows * 1.6 + 2.5, 0.35, len + 2), new THREE.MeshLambertMaterial({ color: 0xe8e8e8 }));
-  roof.position.set(-(rows * 1.6) / 2 - 0.4, roofH, 0);
-  roof.castShadow = true;
-  flip.add(roof);
-  const postGeo = new THREE.BoxGeometry(0.3, roofH, 0.3);
-  for (let z = -len / 2; z <= len / 2; z += len / 5) {
-    const post = new THREE.Mesh(postGeo, concrete);
-    post.position.set(-0.4, roofH / 2, z);
-    flip.add(post);
-  }
-  group.add(flip);
-  return { group, crowd };
 }
 
 // --- město -------------------------------------------------------------------
@@ -978,11 +897,13 @@ export function buildScenery(track, terrain, biomeKey, biome, quality, seed) {
       return { x: c.x, y: c.y - 0.3, z: c.z, ry: Math.atan2(p.cx - c.x, p.cz - c.z), s: rng.range(0.9, 1.2), color: 0xffffff };
     });
     group.add(instancedChunks(cabinGeometry(), vmat, cabins));
-    const snowmen = scatter(rng, terrain, 12, { minD: edge + 5, maxD: edge + 22 }).map((c) => {
+    const snowmen = scatter(rng, terrain, 16, { minD: edge + 5, maxD: edge + 22 }).map((c) => {
       const p = track.project(c.x, c.z, -1, {});
       return { x: c.x, y: c.y - 0.1, z: c.z, ry: Math.atan2(p.cx - c.x, p.cz - c.z), s: rng.range(0.9, 1.25), color: 0xffffff };
     });
     group.add(instancedChunks(snowmanGeometry(), vmat, snowmen));
+    extra.snowmen = new SnowmanHeads(snowmanHeadGeometry(), vmat, snowmen);
+    group.add(extra.snowmen.mesh);
     const rocks = scatter(rng, terrain, Math.round(120 * density), { minD: edge + 3, maxD: 250 }).map((r) => ({
       x: r.x, y: r.y, z: r.z, s: rng.range(0.6, 2.2), ry: rng.range(0, 6.28), color: 0xffffff,
     }));
@@ -997,10 +918,9 @@ export function buildScenery(track, terrain, biomeKey, biome, quality, seed) {
     group.add(buildStreetLamps(track, 26));
   }
 
-  const stand = buildGrandstand(track, terrain, rng);
-  group.add(stand.group);
-  extra.crowd = stand.crowd;
-  group.add(buildAdBoards(track, rng, biome.night));
+  extra.stand = new Stand(track, terrain, rng, quality);
+  group.add(extra.stand.root);
+  group.add(buildAdBoards(track, terrain, rng, biome.night));
   group.add(buildCornerSigns(track), buildRoadPoles(track), buildCuts(track, biome.track), buildTunnels(track));
   if (biome.night) group.add(buildReflectors(track));
   return { group, extra };

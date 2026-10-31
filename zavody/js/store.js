@@ -3,6 +3,7 @@ const KEY = 'turbo-okruh-v1';
 const GHOST_KEY = 'turbo-okruh-ghost-';
 
 const DEFAULTS = {
+  bunStain: 0, // hráč (1 nebo 2), kterému bába pošpinila auto
   mode: 'race',
   track: 'sumava',
   laps: 3,

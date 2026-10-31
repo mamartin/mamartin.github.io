@@ -645,6 +645,58 @@ export function createCarMesh(color, {
   return { root, tilt, wheels, mats, beam: lightBeam };
 }
 
+// mastný flek od bábiny buchty (druhý kus je nahoře, aby byl vidět i z kamery za autem)
+let stain = null;
+function stainParts() {
+  if (stain) return stain;
+  const c = document.createElement('canvas');
+  c.width = c.height = 256;
+  const g = c.getContext('2d');
+  const blot = (x, y, r, color) => {
+    const grad = g.createRadialGradient(x, y, r * 0.2, x, y, r);
+    grad.addColorStop(0, color);
+    grad.addColorStop(0.7, color);
+    grad.addColorStop(1, 'rgba(120, 72, 20, 0)');
+    g.fillStyle = grad;
+    g.fillRect(x - r, y - r, r * 2, r * 2);
+  };
+  blot(128, 128, 78, 'rgba(120, 72, 20, 0.72)');
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2 + Math.random(), d = 50 + Math.random() * 45;
+    blot(128 + Math.cos(a) * d, 128 + Math.sin(a) * d, 12 + Math.random() * 24, 'rgba(120, 72, 20, 0.6)');
+  }
+  // drobky a cukr
+  for (let i = 0; i < 70; i++) {
+    const a = Math.random() * Math.PI * 2, d = Math.random() * 100;
+    g.fillStyle = ['#e0a452', '#7a4316', '#fbf1dc'][i % 3];
+    g.fillRect(128 + Math.cos(a) * d, 128 + Math.sin(a) * d, 2 + Math.random() * 4, 2 + Math.random() * 4);
+  }
+  const map = new THREE.CanvasTexture(c);
+  map.colorSpace = THREE.SRGBColorSpace;
+  stain = {
+    geo: new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2),
+    mat: new THREE.MeshStandardMaterial({
+      map, transparent: true, roughness: 0.14, metalness: 0.1, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
+    }),
+  };
+  return stain;
+}
+
+export function addBunStain(mesh, kind) {
+  const { geo, mat } = stainParts();
+  const hood = Math.atan2(CAR_TOP(0.9) - CAR_TOP(1.6), 0.7);
+  const spots = kind === 'formula'
+    ? [[0.03, noseTop(1.1) + 0.012, 1.1, Math.atan2(noseTop(0.75) - noseTop(2.0), 1.25), 0.3], [0.4, F_SIDE_TOP(-0.6) + 0.02, -0.6, 0, 0.42]]
+    : [[0.2, CAR_TOP(1.25) + 0.016, 1.25, hood, 0.95], [-0.34, CAR_ROOF(-0.2) + 0.03, -0.2, 0, 0.5]];
+  for (const [x, y, z, rx, size] of spots) {
+    const m = new THREE.Mesh(geo, mat);
+    m.position.set(x, y, z);
+    m.rotation.x = rx;
+    m.scale.setScalar(size);
+    mesh.tilt.add(m);
+  }
+}
+
 // uvolní materiály patřící jen tomuto autu (sdílené geometrie a materiály zůstávají)
 export function disposeCarMesh(mesh) {
   const P = sharedParts();
@@ -652,6 +704,7 @@ export function disposeCarMesh(mesh) {
     P.tireMat, P.rimMat, P.darkMat, P.chromeMat, P.glassMat, P.headMat, P.stripeLight, P.stripeDark, P.blobMat, P.beamMat, ...P.numberMats.values(),
   ]);
   if (formula) sharedMats.add(formula.helmetMat);
+  if (stain) sharedMats.add(stain.mat);
   mesh.root.traverse((o) => {
     if (o.material && !sharedMats.has(o.material)) o.material.dispose();
   });

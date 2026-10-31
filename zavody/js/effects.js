@@ -210,18 +210,6 @@ export class Effects {
     }
   }
 
-  confetti(x, y, z) {
-    const r = this.rng;
-    const cols = [[1, 0.25, 0.2], [1, 0.8, 0.1], [0.2, 0.6, 1], [0.2, 0.9, 0.4], [1, 1, 1], [0.8, 0.3, 1]];
-    for (let i = 0; i < 160; i++) {
-      const c = cols[i % cols.length];
-      const a = r() * Math.PI * 2, sp = 3 + r() * 9;
-      this.glow.emit(x + (r() - 0.5) * 3, y + 2 + r() * 2, z + (r() - 0.5) * 3,
-        Math.cos(a) * sp, 8 + r() * 10, Math.sin(a) * sp,
-        2.2 + r() * 1.5, 0.35, 0.3, c[0], c[1], c[2], 1, 1.2, 7);
-    }
-  }
-
   update(dt) {
     this.smoke.update(dt);
     this.glow.update(dt);

@@ -5,7 +5,7 @@ import { BIOMES, wetBiome, snowBiome } from './biomes.js';
 import { Track, SURF_OFF } from './track.js';
 import { Terrain } from './terrain.js';
 import { buildScenery, buildSky, buildLights, buildRain } from './scenery.js';
-import { Car, createCarMesh, disposeCarMesh } from './car.js';
+import { Car, createCarMesh, disposeCarMesh, addBunStain } from './car.js';
 import { medalFor, hasReference, referenceLap } from './medals.js';
 import { ReplayRecorder } from './replay.js';
 import { Race, OPPONENTS } from './race.js';
@@ -249,7 +249,7 @@ async function loadWorld(id) {
   const rain = wet ? buildRain(S.quality === 'low' ? 1500 : S.quality === 'medium' ? 2600 : 4000) : null;
   if (rain) group.add(rain.points);
   G.world = {
-    def, biome, track, terrain, group, sky, lights, effects, envRT, showcase: [], crowd: scenery.extra.crowd, snow: scenery.extra.snow, rain, wet, snowy,
+    def, biome, track, terrain, group, sky, lights, effects, envRT, showcase: [], stand: scenery.extra.stand, snowmen: scenery.extra.snowmen, snow: scenery.extra.snow, rain, wet, snowy,
   };
   setupPost();
   buildShowcase();
@@ -867,6 +867,7 @@ async function startRaceInner() {
   for (const c of w.showcase) disposeCarMesh(c.mesh);
   w.showcase = [];
   w.effects.clear();
+  w.stand.reset();
   const humans = humanCount();
   const race = new Race({
     track: w.track, biome: w.biome, mode: raceMode(), laps: raceLaps(), difficulty: raceDifficulty(),
@@ -888,6 +889,13 @@ async function startRaceInner() {
       car.mesh.root.add(spot, spot.target);
       car.headlight = spot;
     }
+  }
+  // bába z minulého závodu: flek vydrží tento závod
+  if (S.bunStain) {
+    const stained = race.players[S.bunStain - 1];
+    if (stained) addBunStain(stained.mesh, stained.kind);
+    S.bunStain = 0;
+    store.save();
   }
   race.rival = pickRival(race);
   G.race = race;
@@ -1164,7 +1172,17 @@ function processEvents() {
       audio.fanfare();
       audio.crowd();
       if (e.car === p) audio.say(race.mode === 'race' ? `Cíl. ${['První', 'Druhé', 'Třetí', 'Čtvrté', 'Páté', 'Šesté'][place - 1] ?? place + '.'} místo` : 'Cíl');
-      if (race.mode !== 'race' || place <= 3) w.effects.confetti(e.car.x, e.car.y, e.car.z);
+      if (race.mode !== 'race' || place <= 3) w.stand.celebrate(e.car, 5);
+      if (race.mode === 'race' && place === 1 && race.cars.length > 1) {
+        const winner = e.car;
+        w.stand.throwBun(winner, () => {
+          addBunStain(winner.mesh, winner.kind);
+          S.bunStain = winner.humanIndex + 1;
+          store.save();
+          audio.impact(5);
+          hudOf(winner).sub('Buchta od báby! Flek ti zůstane i do dalšího závodu', 3.5);
+        });
+      }
       if (race.players.every((c) => c.finished)) {
         G.resultsTimer = 3.2;
         G.waitOthers = 0;
@@ -1394,6 +1412,8 @@ function frame(now) {
     rig.orbit(dt, orbitCenter, 26, 8.5, 0.07);
   }
 
+  w.stand.update(G.paused ? 0 : dt, G.race, w.effects);
+  if (w.snowmen && G.race) w.snowmen.update(dt, G.race.player.x, G.race.player.z);
   w.effects.update(dt);
   if (w.snow) w.snow.update(dt);
   if (w.rain) w.rain.update(dt);
