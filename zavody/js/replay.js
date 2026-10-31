@@ -48,6 +48,11 @@ export class ReplayPlayer {
     this.cut = true;
     this.spot = -1;
     this.look = new THREE.Vector3();
+    // kamera i bod pohledu se vyhlazují vůči sledovanému autu, ne ve světě: zpoždění za autem
+    // pak nezávisí na délce snímku a obraz se při kolísání FPS necuká
+    this.camOff = new THREE.Vector3();
+    this.lookOff = new THREE.Vector3();
+    this.lastCar = null;
     this.saved = cars.map((c) => {
       const o = {};
       for (const k of SNAP) o[k] = c[k];
@@ -122,6 +127,12 @@ export class ReplayPlayer {
   updateCamera(dt, camera, rig) {
     const car = this.target();
     const L = this.track.L;
+    if (car !== this.lastCar) {
+      // jiné auto: plynulý přelet z místa, kde kamera právě je
+      this.lastCar = car;
+      this.camOff.set(camera.position.x - car.x, camera.position.y - car.y, camera.position.z - car.z);
+      this.lookOff.set(this.look.x - car.x, this.look.y - car.y, this.look.z - car.z);
+    }
     let fov;
     if (this.cam === 'tv') {
       // kamera, kterou auto právě míjí (nebo k ní jede), střih po 30 m za ní
@@ -140,18 +151,24 @@ export class ReplayPlayer {
       }
       const p = this.spots[best];
       camera.position.set(p.x, p.y, p.z);
+      this.camOff.set(p.x - car.x, p.y - car.y, p.z - car.z);
       const dist = camera.position.distanceTo(car.mesh.root.position);
       fov = clamp((2 * Math.atan(7 / Math.max(dist, 1)) * 180) / Math.PI, 9, 58);
-      this.aim(dt, car.x, car.y + 0.8, car.z, 10);
+      const tvLag = 0.083 * Math.min(1, 70 / Math.max(car.speed, 1));
+      this.aim(dt, car, -car.vx * tvLag, 0.8, -car.vz * tvLag, 10);
     } else {
       const s = Math.sin(car.hd), c = Math.cos(car.hd);
-      const tx = car.x - s * 7.5, ty = car.y + 2.6, tz = car.z - c * 7.5;
-      const k = this.cut ? 1 : Math.min(1, dt * 6);
-      camera.position.x += (tx - camera.position.x) * k;
-      camera.position.y += (ty - camera.position.y) * k;
-      camera.position.z += (tz - camera.position.z) * k;
+      // zaostávání za rychlým autem jako dřív, jen nezávislé na FPS
+      const lag = 0.15 * Math.min(1, 70 / Math.max(car.speed, 1));
+      const k = this.cut ? 1 : 1 - Math.exp(-dt * 6);
+      const o = this.camOff;
+      o.x += (-s * 7.5 - car.vx * lag - o.x) * k;
+      o.y += (2.6 - o.y) * k;
+      o.z += (-c * 7.5 - car.vz * lag - o.z) * k;
+      camera.position.set(car.x + o.x, car.y + o.y, car.z + o.z);
       fov = 62;
-      this.aim(dt, car.x + s * 3, car.y + 1, car.z + c * 3, 12);
+      const lookLag = 0.067 * Math.min(1, 70 / Math.max(car.speed, 1));
+      this.aim(dt, car, s * 3 - car.vx * lookLag, 1, c * 3 - car.vz * lookLag, 12);
     }
     this.cut = false;
     camera.lookAt(this.look);
@@ -165,14 +182,17 @@ export class ReplayPlayer {
     rig.fov = fov;
   }
 
-  aim(dt, x, y, z, rate) {
-    if (this.cut) this.look.set(x, y, z);
+  // bod pohledu = auto + vyhlazená odchylka (ox, oy, oz)
+  aim(dt, car, ox, oy, oz, rate) {
+    const o = this.lookOff;
+    if (this.cut) o.set(ox, oy, oz);
     else {
-      const k = Math.min(1, dt * rate);
-      this.look.x += (x - this.look.x) * k;
-      this.look.y += (y - this.look.y) * k;
-      this.look.z += (z - this.look.z) * k;
+      const k = 1 - Math.exp(-dt * rate);
+      o.x += (ox - o.x) * k;
+      o.y += (oy - o.y) * k;
+      o.z += (oz - o.z) * k;
     }
+    this.look.set(car.x + o.x, car.y + o.y, car.z + o.z);
   }
 
   // vrátí auta do stavu před přehráváním

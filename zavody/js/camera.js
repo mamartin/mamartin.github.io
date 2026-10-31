@@ -2,12 +2,24 @@
 import * as THREE from 'three';
 import { angleDiff, clamp, lerp } from './rng.js';
 
+// podíl dorovnání za dt nezávislý na počtu snímků za sekundu
+const ease = (rate, dt) => 1 - Math.exp(-rate * dt);
+// o kolik kamera zaostává za autem na každý m/s rychlosti (dřív vznikalo zpožděním vyhlazování)
+const SPEED_LAG = 0.055;
+// jak rychle se kamera natáčí za autem; v ustálené zatáčce zůstává o yawRate / YAW_RATE pozadu
+const YAW_RATE = 5.5;
+
 export class CameraRig {
   constructor(camera) {
     this.camera = camera;
     this.mode = 'chase';
     this.yaw = 0;
     this.pos = new THREE.Vector3();
+    // poloha kamery vůči autu: vyhlazuje se tahle odchylka, ne poloha ve světě. Kdyby se kamera
+    // dotahovala ve světě, její zpoždění za rychlým autem by záviselo na délce snímku a při
+    // kolísání FPS by se cukala (nejvíc vidět na autech, která jedou vedle)
+    this.offset = new THREE.Vector3();
+    this.yawRel = 0;
     this.look = new THREE.Vector3();
     this.shake = 0;
     this.orbitAngle = 0;
@@ -30,6 +42,8 @@ export class CameraRig {
   flyTo(car) {
     this.initialized = true;
     this.yaw = car.hd;
+    this.yawRel = 0;
+    this.offset.set(this.pos.x - car.x, this.pos.y - car.y, this.pos.z - car.z);
     this.blend = 1.6;
   }
 
@@ -40,49 +54,57 @@ export class CameraRig {
     const speed = car.speed;
     if (!this.initialized) {
       this.yaw = hd;
+      this.yawRel = 0;
       this.initialized = true;
-      this.pos.set(x - Math.sin(hd) * 7, y + 2.6, z - Math.cos(hd) * 7);
+      this.offset.set(-Math.sin(hd) * 7, 2.6, -Math.cos(hd) * 7);
     }
 
     let fovTarget = 64 + Math.min(speed, 70) * 0.2 + (car.nitroActive ? 7 : car.turbo > 0 ? 5 : 0);
     if (this.mode === 'hood') {
       const s = Math.sin(hd), c = Math.cos(hd);
       this.pos.set(x + s * 0.95, y + 1.3, z + c * 0.95);
+      this.offset.set(this.pos.x - x, this.pos.y - y, this.pos.z - z);
       const pitch = car.pitch;
       this.look.set(x + s * 21, y + 0.95 - Math.sin(pitch) * 20, z + c * 21);
       fovTarget += 6;
       this.yaw = hd;
+      this.yawRel = 0;
     } else {
-      // měkké dotahování směru – při driftu je vidět bok auta
+      // měkké dotahování směru – při driftu je vidět bok auta; vyhlazuje se odchylka od směru auta,
+      // v zatáčce kamera zaostává úměrně rychlosti otáčení (stejně jako dřív, ale bez cukání)
       const vAng = speed > 3 && car.vLong > 0 ? Math.atan2(car.vx, car.vz) : hd;
-      const aim = hd + angleDiff(hd, vAng) * 0.45;
-      this.yaw += angleDiff(this.yaw, aim) * Math.min(1, dt * 5.5);
+      const relTarget = clamp(angleDiff(hd, vAng) * 0.45 - (car.yawRate || 0) / YAW_RATE, -1.3, 1.3);
+      this.yawRel += (relTarget - this.yawRel) * ease(YAW_RATE, dt);
+      this.yaw = hd + this.yawRel;
       const dist = 6.4 + Math.min(speed, 60) * 0.028;
       const height = 2.35 + Math.min(speed, 60) * 0.01;
-      const tx = x - Math.sin(this.yaw) * dist;
-      const tz = z - Math.cos(this.yaw) * dist;
+      const lag = SPEED_LAG * Math.min(1, 80 / Math.max(speed, 1));
+      const ox = -Math.sin(this.yaw) * dist - car.vx * lag;
+      const oz = -Math.cos(this.yaw) * dist - car.vz * lag;
       let ty = y + height;
       // neprostrčit kameru pod silnici na horizontech
-      const p = track.project(tx, tz, car.proj.i, this.tmp);
+      const p = track.project(x + ox, z + oz, car.proj.i, this.tmp);
       if (Math.abs(p.lat) < track.edge + 4) ty = Math.max(ty, p.y + 1.2);
-      let k = Math.min(1, dt * 14), ky = Math.min(1, dt * 8);
+      let k = ease(14, dt), ky = ease(8, dt);
       if (this.blend > 0) {
         this.blend -= dt;
         const t = Math.max(0, this.blend) / 1.6;
-        k = ky = Math.min(1, dt * (2.2 + (1 - t) * 10));
+        k = ky = ease(2.2 + (1 - t) * 10, dt);
       }
-      this.pos.x += (tx - this.pos.x) * k;
-      this.pos.z += (tz - this.pos.z) * k;
-      this.pos.y += (ty - this.pos.y) * ky;
+      const o = this.offset;
+      o.x += (ox - o.x) * k;
+      o.z += (oz - o.z) * k;
+      o.y += (ty - y - o.y) * ky;
+      this.pos.set(x + o.x, y + o.y, z + o.z);
       const lx = x + Math.sin(hd) * 3.5, ly = y + 1.15, lz = z + Math.cos(hd) * 3.5;
       if (this.blend > 0) {
-        const lk = Math.min(1, dt * 5);
+        const lk = ease(5, dt);
         this.look.x += (lx - this.look.x) * lk;
         this.look.y += (ly - this.look.y) * lk;
         this.look.z += (lz - this.look.z) * lk;
       } else this.look.set(lx, ly, lz);
     }
-    this.fov += (fovTarget - this.fov) * Math.min(1, dt * 3);
+    this.fov += (fovTarget - this.fov) * ease(3, dt);
     this.applyShake(dt);
   }
 

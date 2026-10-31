@@ -94,7 +94,9 @@ export function buildSky(biome, quality = 'high') {
   });
   const sky = new THREE.Mesh(new THREE.SphereGeometry(1900, 32, 16), mat);
   sky.frustumCulled = false;
-  sky.renderOrder = -10;
+  // obloha leží na zadní rovině a kreslí se až po terénu, autech a stromech: drahý shader mraků
+  // pak běží jen na pixelech, kde je opravdu vidět, ne na celé obrazovce
+  sky.renderOrder = 1000;
   sky.name = 'sky';
   const group = new THREE.Group();
   group.add(sky);

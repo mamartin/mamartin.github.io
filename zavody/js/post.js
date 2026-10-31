@@ -271,6 +271,13 @@ export class Post {
 
   setSize() {
     const { x: w, y: h } = this.renderer.getDrawingBufferSize(new THREE.Vector2());
+    // při husté mřížce pixelů (retina, 4K) stačí dvojnásobné vyhlazení hran, čtyřnásobné by jen
+    // zdvojnásobilo práci s pamětí při každém snímku
+    const samples = this.renderer.getPixelRatio() >= 1.4 ? 2 : 4;
+    if (samples !== this.rt.samples) {
+      this.rt.samples = samples;
+      this.rt.dispose();
+    }
     this.rt.setSize(w, h);
     const level = (i) => [Math.max(1, w >> (i + 1)), Math.max(1, h >> (i + 1))];
     this.down.forEach((rt, i) => rt.setSize(...level(i)));

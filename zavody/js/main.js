@@ -45,6 +45,9 @@ if (isTouch) document.body.classList.add('touch-ui');
 
 // podíl rozlišení; hra ho sníží sama, když počítač nestíhá
 let resScale = 1;
+// nejvíc pixelů, které se kreslí (na 4K monitoru nebo retině by jich bylo dvakrát až čtyřikrát víc,
+// s efekty přes obraz to grafika nestíhá a hra se seká); obraz se pak jen mírně zvětší na plátno
+const PIXEL_BUDGET = { low: 2.1e6, medium: 2.8e6, high: 3.7e6, ultra: 4.4e6 };
 
 let renderer;
 try {
@@ -102,7 +105,9 @@ window.__game = G;
 function applyPixelRatio() {
   const dpr = window.devicePixelRatio || 1;
   const cap = S.quality === 'high' || S.quality === 'ultra' ? 2 : S.quality === 'medium' ? 1.5 : 1;
-  renderer.setPixelRatio(Math.min(dpr, cap) * resScale);
+  const area = Math.max(1, window.innerWidth * window.innerHeight);
+  const budget = Math.sqrt((PIXEL_BUDGET[S.quality] ?? PIXEL_BUDGET.high) / area);
+  renderer.setPixelRatio(Math.max(0.5, Math.min(dpr, cap, budget)) * resScale);
   renderer.setSize(window.innerWidth, window.innerHeight, false);
 }
 
