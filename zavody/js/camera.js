@@ -26,6 +26,7 @@ export class CameraRig {
     this.fov = camera.fov;
     this.initialized = false;
     this.blend = 0;
+    this.showing = false; // oblet kolem auta v cíli (bez rozmazání rychlostí)
     this.tmp = {};
   }
 
@@ -35,6 +36,7 @@ export class CameraRig {
 
   snap() {
     this.initialized = false;
+    this.showing = false;
     this.blend = 0;
   }
 
@@ -48,7 +50,7 @@ export class CameraRig {
   }
 
   follow(dt, car, alpha, track) {
-    const cam = this.camera;
+    this.showing = false;
     const x = lerp(car.px, car.x, alpha), z = lerp(car.pz, car.z, alpha), y = lerp(car.py, car.y, alpha);
     const hd = car.phd + angleDiff(car.phd, car.hd) * alpha;
     const speed = car.speed;
@@ -118,17 +120,23 @@ export class CameraRig {
     this.initialized = false;
   }
 
-  // oblet kolem auta v cíli
-  showcase(dt, car) {
+  // oblet kolem auta v cíli; auto ještě dojíždí, takže se kamera drží jeho vykreslené
+  // (interpolované) polohy a vyhlazuje jen odchylku od něj, jinak by auto v záběru poskakovalo
+  showcase(dt, car, alpha = 1) {
+    // oblet začne tam, kde kamera právě je, ať se neotáčí kolem půlky auta
+    if (!this.showing) this.orbitAngle = Math.atan2(this.offset.z, this.offset.x);
+    this.showing = true;
+    const x = lerp(car.px, car.x, alpha), z = lerp(car.pz, car.z, alpha), y = lerp(car.py, car.y, alpha);
     this.orbitAngle += dt * 0.35;
     const a = this.orbitAngle;
-    const tx = car.x + Math.cos(a) * 9, tz = car.z + Math.sin(a) * 9;
-    const k = Math.min(1, dt * 3);
-    this.pos.x += (tx - this.pos.x) * k;
-    this.pos.z += (tz - this.pos.z) * k;
-    this.pos.y += (car.y + 3 - this.pos.y) * k;
-    this.look.set(car.x, car.y + 0.9, car.z);
-    this.fov += (50 - this.fov) * Math.min(1, dt * 2);
+    const k = ease(3, dt);
+    const o = this.offset;
+    o.x += (Math.cos(a) * 9 - o.x) * k;
+    o.z += (Math.sin(a) * 9 - o.z) * k;
+    o.y += (3 - o.y) * k;
+    this.pos.set(x + o.x, y + o.y, z + o.z);
+    this.look.set(x, y + 0.9, z);
+    this.fov += (50 - this.fov) * ease(2, dt);
     this.applyShake(dt);
   }
 

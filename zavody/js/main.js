@@ -1292,7 +1292,7 @@ function frame(now) {
 
       // kamery
       humans.forEach((car, i) => {
-        if (car.finished && (humans.length > 1 || G.resultsTimer <= 1.5)) rigs[i].showcase(dt, car);
+        if (car.finished && (humans.length > 1 || G.resultsTimer <= 1.5)) rigs[i].showcase(dt, car, alpha);
         else rigs[i].follow(dt, car, alpha, w.track);
       });
 
@@ -1461,7 +1461,8 @@ function renderViews(w) {
     if (w.snow) w.snow.setView(camera, renderer.domElement.height);
     if (w.rain) w.rain.setView(camera);
     if (G.post) {
-      G.post.setMotion(focus, rig.mode === 'hood');
+      // při obletu v cíli kamera auto nesleduje zezadu, rozmazání od středu by ho rozdvojilo
+      G.post.setMotion(rig.showing ? null : focus, rig.mode === 'hood');
       G.post.setFocus(G.screen === 'replay' ? camera.position.distanceTo(rig.look) : 0);
       G.post.render();
     } else renderer.render(scene, camera);
