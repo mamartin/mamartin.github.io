@@ -7,18 +7,26 @@ import { buildCuts, buildTunnels } from './features.js';
 
 // --- obloha -----------------------------------------------------------------
 
-export function buildSky(biome) {
+export function buildSky(biome, quality = 'high') {
   const sunDir = new THREE.Vector3(...biome.sunDir).normalize();
+  const uniforms = {
+    top: { value: new THREE.Color(biome.sky.top) },
+    horizon: { value: new THREE.Color(biome.sky.horizon) },
+    bottom: { value: new THREE.Color(biome.sky.bottom) },
+    fogColor: { value: new THREE.Color(biome.fog.color) },
+    sunDir: { value: sunDir },
+    sunColor: { value: new THREE.Color(biome.sun.color) },
+    cloudColor: { value: new THREE.Color(biome.clouds ?? 0xffffff) },
+    cover: { value: biome.cloudCover ?? 0.5 },
+    glow: { value: biome.sky.glow },
+    night: { value: biome.night ? 1 : 0 },
+    sunShow: { value: biome.wet ? 0 : 1 },
+    time: { value: 0 },
+  };
   const mat = new THREE.ShaderMaterial({
-    uniforms: {
-      top: { value: new THREE.Color(biome.sky.top) },
-      horizon: { value: new THREE.Color(biome.sky.horizon) },
-      bottom: { value: new THREE.Color(biome.sky.bottom) },
-      sunDir: { value: sunDir },
-      sunColor: { value: new THREE.Color(biome.sun.color) },
-      glow: { value: biome.sky.glow },
-      night: { value: biome.night ? 1 : 0 },
-    },
+    uniforms,
+    // počet vrstev šumu vysokých mraků; na nízké kvalitě zůstávají jen obláčky na obzoru
+    defines: { OCT: !biome.clouds || quality === 'low' ? 0 : quality === 'medium' ? 3 : 5 },
     vertexShader: /* glsl */ `
       varying vec3 vDir;
       void main() {
@@ -27,16 +35,55 @@ export function buildSky(biome) {
         gl_Position = p.xyww;
       }`,
     fragmentShader: /* glsl */ `
-      uniform vec3 top; uniform vec3 horizon; uniform vec3 bottom;
-      uniform vec3 sunDir; uniform vec3 sunColor; uniform float glow; uniform float night;
+      uniform vec3 top; uniform vec3 horizon; uniform vec3 bottom; uniform vec3 fogColor;
+      uniform vec3 sunDir; uniform vec3 sunColor; uniform vec3 cloudColor;
+      uniform float cover; uniform float glow; uniform float night; uniform float sunShow; uniform float time;
       varying vec3 vDir;
+      #if OCT > 0
+      float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+      float noise(vec2 p) {
+        vec2 i = floor(p), f = fract(p);
+        f = f * f * (3.0 - 2.0 * f);
+        return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
+      }
+      float fbm(vec2 p) {
+        float v = 0.0, a = 0.5;
+        for (int i = 0; i < OCT; i++) {
+          v += a * noise(p);
+          p = p * 2.03 + vec2(1.7, 9.2);
+          a *= 0.5;
+        }
+        return v;
+      }
+      #endif
       void main() {
         vec3 d = normalize(vDir);
         float h = d.y;
         vec3 col = h > 0.0 ? mix(horizon, top, pow(clamp(h, 0.0, 1.0), 0.55)) : mix(horizon, bottom, pow(clamp(-h, 0.0, 1.0), 0.4));
+        // opar: obloha se u obzoru slévá s mlhou nad terénem
+        col = mix(col, fogColor, 0.75 * (1.0 - smoothstep(0.0, 0.11, abs(h))));
         float s = max(dot(d, sunDir), 0.0);
-        float disc = smoothstep(0.9993, 0.9997, s);
-        col += sunColor * (disc * (night > 0.5 ? 1.2 : 8.0) + pow(s, 7.0) * glow * 0.35 + pow(s, 48.0) * glow * 0.6);
+        float sunVis = sunShow;
+        #if OCT > 0
+        if (h > 0.0) {
+          vec2 uv = d.xz / (h + 0.1) * 0.55 + time * vec2(0.012, 0.005);
+          float n = fbm(uv);
+          float c = smoothstep(cover, cover + 0.26, n) * smoothstep(0.015, 0.16, h);
+          if (c > 0.001) {
+            // o kousek blíž ke slunci: kde je tam mrak řidší, je tahle strana nasvícená
+            float lit = clamp(0.5 + (n - fbm(uv + sunDir.xz * 0.22)) * 3.0, 0.0, 1.0);
+            vec3 cloud = cloudColor * mix(0.58, 1.12, lit) + sunColor * pow(s, 10.0) * glow * 0.5;
+            col = mix(col, cloud, c * 0.92);
+            sunVis *= 1.0 - c;
+          }
+        }
+        #endif
+        // slunce, v noci větší a tlumený měsíc
+        float disc = night > 0.5 ? smoothstep(0.9984, 0.9989, s) : smoothstep(0.9993, 0.9997, s);
+        col += sunColor * disc * sunVis * (night > 0.5 ? 1.2 : 8.0);
+        col += sunColor * (pow(s, 7.0) * 0.35 + pow(s, 48.0) * 0.6 + pow(s, 400.0) * 0.7) * glow * mix(0.45, 1.0, sunVis);
+        // v noci nad městem svítí opar od pouličních lamp
+        if (night > 0.5) col += vec3(0.5, 0.26, 0.11) * 0.16 * exp(-max(h, 0.0) * 8.0);
         gl_FragColor = vec4(col, 1.0);
         #include <tonemapping_fragment>
         #include <colorspace_fragment>
@@ -51,56 +98,69 @@ export function buildSky(biome) {
   sky.name = 'sky';
   const group = new THREE.Group();
   group.add(sky);
+  group.userData.time = uniforms.time;
   if (biome.clouds) {
     const rng = new RNG(17);
-    const tex = cloudTexture(rng);
-    const mat = new THREE.SpriteMaterial({ map: tex, color: biome.clouds, transparent: true, depthWrite: false, fog: false, opacity: 0.9 });
+    const mats = [0, 1, 2].map(() => new THREE.SpriteMaterial({ map: cloudTexture(rng), color: biome.clouds, transparent: true, depthWrite: false, fog: false, opacity: 0.9 }));
     for (let i = 0; i < 26; i++) {
       const a = rng.range(0, Math.PI * 2);
       const d = rng.range(700, 1500);
-      const sp = new THREE.Sprite(mat);
+      const sp = new THREE.Sprite(mats[i % 3]);
       sp.position.set(Math.cos(a) * d, rng.range(160, 420), Math.sin(a) * d);
       const w = rng.range(260, 520);
-      sp.scale.set(w, w * rng.range(0.32, 0.45), 1);
+      sp.scale.set(w, w * rng.range(0.4, 0.52), 1);
       sp.renderOrder = -9;
       group.add(sp);
     }
   }
-  if (biome.night) {
+  if (biome.night && !biome.wet) {
     const rng = new RNG(5);
-    const n = 650;
-    const pos = new Float32Array(n * 3);
-    for (let i = 0; i < n; i++) {
-      const u = rng.next(), v = rng.range(0.12, 1);
-      const th = u * Math.PI * 2, y = v * v;
-      const r = Math.sqrt(1 - y * y);
-      pos[i * 3] = Math.cos(th) * r * 1800;
-      pos[i * 3 + 1] = y * 1800;
-      pos[i * 3 + 2] = Math.sin(th) * r * 1800;
+    // hodně slabých hvězd a pár jasných
+    for (const [n, size, opacity] of [[650, 1.3, 0.55], [90, 2.3, 0.9]]) {
+      const pos = new Float32Array(n * 3);
+      for (let i = 0; i < n; i++) {
+        const u = rng.next(), v = rng.range(0.12, 1);
+        const th = u * Math.PI * 2, y = v * v;
+        const r = Math.sqrt(1 - y * y);
+        pos[i * 3] = Math.cos(th) * r * 1800;
+        pos[i * 3 + 1] = y * 1800;
+        pos[i * 3 + 2] = Math.sin(th) * r * 1800;
+      }
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      const stars = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xdfe6ff, size, sizeAttenuation: false, fog: false, transparent: true, opacity }));
+      stars.frustumCulled = false;
+      group.add(stars);
     }
-    const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    const stars = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xdfe6ff, size: 1.6, sizeAttenuation: false, fog: false, transparent: true, opacity: 0.7 }));
-    stars.frustumCulled = false;
-    group.add(stars);
   }
   return group;
 }
 
 function cloudTexture(rng) {
   const c = document.createElement('canvas');
-  c.width = 256;
-  c.height = 128;
+  c.width = 512;
+  c.height = 256;
   const g = c.getContext('2d');
-  for (let i = 0; i < 16; i++) {
-    const x = rng.range(50, 206), y = rng.range(52, 86), r = rng.range(22, 46);
+  // kupa: uprostřed vyšší, rovná základna
+  for (let i = 0; i < 34; i++) {
+    const x = rng.range(84, 428);
+    const hump = 1 - Math.abs(x - 256) / 180;
+    const y = 158 - rng.next() * hump * 78;
+    const r = rng.range(24, 44 + hump * 30);
     const grd = g.createRadialGradient(x, y, 0, x, y, r);
-    grd.addColorStop(0, 'rgba(255,255,255,0.8)');
-    grd.addColorStop(0.6, 'rgba(255,255,255,0.35)');
+    grd.addColorStop(0, 'rgba(255,255,255,0.85)');
+    grd.addColorStop(0.55, 'rgba(255,255,255,0.45)');
     grd.addColorStop(1, 'rgba(255,255,255,0)');
     g.fillStyle = grd;
-    g.fillRect(0, 0, 256, 128);
+    g.fillRect(0, 0, 512, 256);
   }
+  // spodek mraku je ve stínu
+  g.globalCompositeOperation = 'source-atop';
+  const shade = g.createLinearGradient(0, 80, 0, 200);
+  shade.addColorStop(0, 'rgba(112,124,146,0)');
+  shade.addColorStop(1, 'rgba(112,124,146,0.7)');
+  g.fillStyle = shade;
+  g.fillRect(0, 0, 512, 256);
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
   return tex;
@@ -951,14 +1011,24 @@ export function buildLights(biome, quality) {
   sun.userData.dir = sunDir;
   if (quality !== 'low') {
     sun.castShadow = true;
-    const size = quality === 'high' ? 2048 : 1024;
+    const size = quality === 'ultra' ? 4096 : quality === 'high' ? 2048 : 1024;
     sun.shadow.mapSize.set(size, size);
-    const r = 75;
+    const r = quality === 'ultra' ? 105 : 75;
     Object.assign(sun.shadow.camera, { left: -r, right: r, top: r, bottom: -r, near: 1, far: 600 });
     sun.shadow.bias = -0.0004;
-    sun.shadow.normalBias = 0.04;
+    sun.shadow.normalBias = quality === 'ultra' ? 0.025 : 0.04;
+    // osy stínové mapy, podle nich se střed mapy posouvá po celých texelech
+    const u = new THREE.Vector3(0, 1, 0).cross(sunDir).normalize();
+    sun.userData.axes = [u, new THREE.Vector3().crossVectors(sunDir, u)];
+    sun.userData.texel = (2 * r) / size;
   }
   group.add(sun);
   group.add(sun.target);
-  return { group, sun, hemi };
+  // v noci svítí vlastní auto na silnici doopravdy; stín nevrhá, aby to nebylo drahé
+  let headlamp = null;
+  if (biome.night && (quality === 'high' || quality === 'ultra')) {
+    headlamp = new THREE.SpotLight(0xffedcf, 0, 95, 0.46, 0.65, 1.5);
+    group.add(headlamp, headlamp.target);
+  }
+  return { group, sun, hemi, headlamp };
 }

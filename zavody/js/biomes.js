@@ -10,6 +10,7 @@ export const BIOMES = {
     exposure: 1.0,
     night: false,
     clouds: '#ffffff',
+    cloudCover: 0.52,
     bloom: { strength: 0.35, radius: 0.45, threshold: 2.6 },
     terrain: { groundA: '#4f7d37', groundB: '#33592a', groundC: '#86a049', rock: '#7d7b72', nearTrack: '#5d7b3b', shore: '#b5a77c' },
     track: {
@@ -32,6 +33,7 @@ export const BIOMES = {
     exposure: 1.02,
     night: false,
     clouds: '#ffc4a0',
+    cloudCover: 0.6,
     bloom: { strength: 0.45, radius: 0.55, threshold: 2.4 },
     terrain: { groundA: '#d49b5f', groundB: '#b0552f', groundC: '#e3b980', rock: '#8a3a22', nearTrack: '#caa06c' },
     track: {
@@ -54,6 +56,7 @@ export const BIOMES = {
     exposure: 0.92,
     night: false,
     clouds: '#f4f7fb',
+    cloudCover: 0.45,
     snow: true,
     bloom: { strength: 0.3, radius: 0.45, threshold: 2.8 },
     terrain: { groundA: '#eef3f8', groundB: '#d5dfea', groundC: '#ffffff', rock: '#5d6570', nearTrack: '#e1e8f0' },
@@ -114,6 +117,7 @@ export function wetBiome(b) {
     fog: { color: mixHex(b.fog.color, grey.fog, 0.6), near: b.fog.near * 0.45, far: b.fog.far * 0.55 },
     exposure: b.exposure * 0.92,
     clouds: b.clouds && mixHex(b.clouds, grey.clouds, 0.6),
+    cloudCover: 0.2,
     roadGrip: (b.roadGrip ?? 1) * WET_GRIP,
     offGrip: (b.offGrip ?? 0.6) * 0.85,
     track: { ...b.track, asphalt: mixHex(b.track.asphalt, '#1c1e22', 0.45), wet: true },

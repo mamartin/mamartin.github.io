@@ -204,17 +204,17 @@ export class Track {
     return [o.x, o.y + dy, o.z];
   }
 
-  buildMeshes(style, anisotropy = 4) {
+  buildMeshes(style, anisotropy = 4, quality = 'high') {
     const group = new THREE.Group();
     group.name = 'track';
     const N = this.N;
     const hw = this.hw, edge = this.edge, cw = this.curbW;
 
     // Silnice
-    const roadTex = makeRoadTexture(style);
+    const { map: roadTex, surface } = makeRoadTextures(style, quality);
     roadTex.anisotropy = anisotropy;
     const road = new StripBuilder();
-    const tile = 16;
+    const tile = ROAD_TILE;
     for (let k = 0; k < N; k++) {
       const n = (k + 1) % N;
       const v0 = this.s[k] / tile;
@@ -225,13 +225,10 @@ export class Track {
         [0, v0, 1, v0, 1, v1, 0, v1],
       );
     }
-    // mokrý asfalt se leskne (odráží oblohu), suchý je matný
-    const roadMat = style.wet
-      ? new THREE.MeshStandardMaterial({ map: roadTex, color: 0xffffff, roughness: 0.3, metalness: 0.2 })
-      : new THREE.MeshLambertMaterial({ map: roadTex, color: 0xffffff });
+    const roadMat = this.roadMaterial(style, roadTex, surface, anisotropy);
     const roadMesh = new THREE.Mesh(road.build(), roadMat);
     roadMesh.receiveShadow = true;
-    group.add(roadMesh);
+    group.add(roadMesh, this.buildRubber());
 
     // Obrubníky (jen v zatáčkách) – červenobílé pruhy
     const curb = new StripBuilder();
@@ -428,6 +425,50 @@ export class Track {
     return g;
   }
 
+  // mokrý asfalt se leskne (odráží oblohu), suchý je matný; na vysoké kvalitě má hrubší zrno a kaluže
+  roadMaterial(style, map, surface, anisotropy) {
+    if (!surface) {
+      return style.wet
+        ? new THREE.MeshStandardMaterial({ map, color: 0xffffff, roughness: 0.3, metalness: 0.2 })
+        : new THREE.MeshLambertMaterial({ map, color: 0xffffff });
+    }
+    surface.anisotropy = anisotropy;
+    const mat = new THREE.MeshStandardMaterial({
+      map, roughnessMap: surface, bumpMap: surface, bumpScale: style.wet ? 0.5 : 1.2, roughness: 1, metalness: 0, envMapIntensity: style.wet ? 0.95 : 0.42,
+    });
+    // odrazy na obrazovce poznají silnici podle hrubosti uložené v alfa kanálu
+    if (style.wet) {
+      mat.onBeforeCompile = (sh) => {
+        sh.fragmentShader = sh.fragmentShader.replace('#include <dithering_fragment>', '#include <dithering_fragment>\n gl_FragColor.a = roughnessFactor;');
+      };
+    }
+    return mat;
+  }
+
+  // zajetá guma: dvě tmavé stopy po ideální stopě přes zatáčky, s nájezdem a výjezdem
+  buildRubber() {
+    const N = this.N;
+    const wid = Array.from(this.kappaS, (kappa) => clamp((Math.abs(kappa) - 0.004) / 0.012, 0, 1));
+    const lat = this.racingLat, amount = smoothCircular(wid, Math.round(9 / this.step));
+    const strip = new StripBuilder();
+    for (let k = 0; k < N; k++) {
+      const n = (k + 1) % N;
+      const wa = 1.5 * Math.min(1, amount[k] * 2.5), wb = 1.5 * Math.min(1, amount[n] * 2.5);
+      if (wa < 0.05 && wb < 0.05) continue;
+      const v0 = this.s[k] / 6, v1 = v0 + this.step / 6;
+      strip.quad(
+        this.point(k, lat[k] - wa, 0.012), this.point(k, lat[k] + wa, 0.012),
+        this.point(n, lat[n] + wb, 0.012), this.point(n, lat[n] - wb, 0.012),
+        null, [0, v0, 1, v0, 1, v1, 0, v1],
+      );
+    }
+    const mesh = new THREE.Mesh(strip.build(), new THREE.MeshBasicMaterial({
+      color: 0x08080a, map: makeRubberTexture(), transparent: true, opacity: 0.34, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2,
+    }));
+    mesh.renderOrder = 1;
+    return mesh;
+  }
+
   setStartLights(n, green = false) {
     if (!this.startLights) return;
     this.startLights.forEach((m, i) => {
@@ -467,40 +508,173 @@ export class StripBuilder {
   }
 }
 
-function makeRoadTexture(style) {
-  const W = 256, H = 512;
+const ROAD_TILE = 32; // metrů asfaltu na jedno opakování textury
+const ROAD_W = { low: 256, medium: 512, high: 1024, ultra: 1024 };
+
+// zrno přes celý obrázek; kamínky dělá vzácný větší výkyv
+function grain(g, W, H, fn) {
+  const img = g.getImageData(0, 0, W, H);
+  const d = img.data;
+  let seed = 12345;
+  for (let i = 0; i < d.length; i += 4) {
+    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+    fn(d, i, (seed >>> 24) / 127.5 - 1);
+  }
+  g.putImageData(img, 0, 0);
+}
+
+function roadPatches(rng) {
+  // v podílech šířky a délky dlaždice, od švu dlaždice dál
+  return Array.from({ length: 4 }, () => {
+    const w = rng.range(0.12, 0.26), h = rng.range(0.02, 0.05);
+    return { x: rng.range(0.06, 0.94 - w), y: rng.range(0.02, 0.96 - h), w, h };
+  });
+}
+
+function roadPuddles(rng) {
+  return Array.from({ length: 16 }, () => {
+    // kaluže se drží v kolejích a u krajů
+    const lane = rng.pick([0.1, 0.3, 0.7, 0.9]);
+    return { x: lane + rng.range(-0.05, 0.05), y: rng.range(0.06, 0.94), rx: rng.range(0.04, 0.1), ry: rng.range(0.015, 0.05) };
+  });
+}
+
+function softEllipse(g, x, y, rx, ry, inner, outer) {
+  g.save();
+  g.translate(x, y);
+  g.scale(rx, ry);
+  const grd = g.createRadialGradient(0, 0, 0.2, 0, 0, 1);
+  grd.addColorStop(0, inner);
+  grd.addColorStop(1, outer);
+  g.fillStyle = grd;
+  g.beginPath();
+  g.arc(0, 0, 1, 0, Math.PI * 2);
+  g.fill();
+  g.restore();
+}
+
+function makeRoadTextures(style, quality) {
+  const W = ROAD_W[quality] ?? 512, H = W * 2, k = W / 256;
   const c = document.createElement('canvas');
   c.width = W;
   c.height = H;
-  const g = c.getContext('2d');
+  const g = c.getContext('2d', { willReadFrequently: true });
   g.fillStyle = style.asphalt;
   g.fillRect(0, 0, W, H);
   const rng = new RNG(99);
-  for (let i = 0; i < 9000; i++) {
-    const v = rng.range(-1, 1);
-    g.fillStyle = v > 0 ? `rgba(255,255,255,${v * 0.07})` : `rgba(0,0,0,${-v * 0.12})`;
-    g.fillRect(rng.range(0, W), rng.range(0, H), rng.range(1, 3), rng.range(1, 3));
+  // velké skvrny, aby se dlaždice neopakovala nápadně
+  for (let i = 0; i < 70; i++) {
+    const light = rng.chance(0.45);
+    softEllipse(g, rng.range(0, W), rng.range(0, H), rng.range(30, 90) * k, rng.range(40, 160) * k, light ? 'rgba(255,255,255,0.035)' : 'rgba(0,0,0,0.07)', 'rgba(0,0,0,0)');
+  }
+  // zalátané výtluky
+  const patches = roadPatches(rng);
+  for (const p of patches) {
+    g.fillStyle = 'rgba(0,0,0,0.08)';
+    g.fillRect(p.x * W, p.y * H, p.w * W, p.h * H);
+    g.strokeStyle = 'rgba(8,8,10,0.2)';
+    g.lineWidth = 0.8 * k;
+    g.strokeRect(p.x * W, p.y * H, p.w * W, p.h * H);
+  }
+  // praskliny
+  g.strokeStyle = 'rgba(6,6,8,0.5)';
+  for (let i = 0; i < 14; i++) {
+    let x = rng.range(0.1, 0.9) * W, y = rng.range(0.03, 0.95) * H;
+    g.lineWidth = rng.range(0.4, 0.9) * k;
+    g.beginPath();
+    g.moveTo(x, y);
+    for (let j = 0, n = rng.int(4, 9); j < n; j++) {
+      x += rng.range(-9, 9) * k;
+      y = Math.min(H - 4, y + rng.range(4, 14) * k);
+      g.lineTo(x, y);
+    }
+    g.stroke();
   }
   // tmavší stopa uprostřed jízdních pruhů
   const grd = g.createLinearGradient(0, 0, W, 0);
   grd.addColorStop(0, 'rgba(0,0,0,0)');
-  grd.addColorStop(0.3, 'rgba(0,0,0,0.10)');
+  grd.addColorStop(0.3, 'rgba(0,0,0,0.12)');
   grd.addColorStop(0.5, 'rgba(0,0,0,0.02)');
-  grd.addColorStop(0.7, 'rgba(0,0,0,0.10)');
+  grd.addColorStop(0.7, 'rgba(0,0,0,0.12)');
   grd.addColorStop(1, 'rgba(0,0,0,0)');
   g.fillStyle = grd;
   g.fillRect(0, 0, W, H);
+  // kaluže jsou tmavší než mokrý asfalt kolem
+  const puddles = style.wet ? roadPuddles(rng) : [];
+  for (const p of puddles) softEllipse(g, p.x * W, p.y * H, p.rx * W, p.ry * H, 'rgba(0,0,0,0.4)', 'rgba(0,0,0,0)');
+  grain(g, W, H, (d, i, v) => {
+    const a = Math.abs(v) > 0.93 ? v * 46 : v * 11;
+    d[i] += a;
+    d[i + 1] += a;
+    d[i + 2] += a;
+  });
   // krajní čáry
   g.fillStyle = style.lineColor ?? '#e9e6dc';
-  g.fillRect(5, 0, 7, H);
-  g.fillRect(W - 12, 0, 7, H);
+  g.fillRect(5 * k, 0, 7 * k, H);
+  g.fillRect(W - 12 * k, 0, 7 * k, H);
   if (style.centerLine) {
     g.fillStyle = style.centerLine;
-    g.fillRect(W / 2 - 3, 0, 6, H * 0.45);
-    g.fillRect(W / 2 - 3, H * 0.5, 6, H * 0.45);
+    for (let i = 0; i < 4; i++) g.fillRect(W / 2 - 3 * k, (i * H) / 4, 6 * k, H * 0.225);
+  }
+  // barva čar je místy sjetá
+  g.fillStyle = style.asphalt;
+  for (let i = 0; i < 240 * k; i++) {
+    const x = rng.chance(0.5) ? rng.range(5, 12) : 256 - rng.range(5, 12);
+    g.globalAlpha = rng.range(0.1, 0.4);
+    g.fillRect(x * k, rng.range(0, H), rng.range(1, 3) * k, rng.range(1, 5) * k);
+  }
+  g.globalAlpha = 1;
+  const map = new THREE.CanvasTexture(c);
+  map.wrapS = THREE.ClampToEdgeWrapping;
+  map.wrapT = THREE.RepeatWrapping;
+  map.colorSpace = THREE.SRGBColorSpace;
+  if (quality !== 'high' && quality !== 'ultra') return { map, surface: null };
+
+  // povrch: červená = výška zrna, zelená = hrubost
+  const SW = 512, SH = 1024;
+  const sc = document.createElement('canvas');
+  sc.width = SW;
+  sc.height = SH;
+  const sg = sc.getContext('2d', { willReadFrequently: true });
+  sg.fillStyle = `rgb(128,${style.wet ? 84 : 224},0)`;
+  sg.fillRect(0, 0, SW, SH);
+  if (!style.wet) {
+    // vyjeté pruhy se lesknou víc než zbytek
+    const band = sg.createLinearGradient(0, 0, SW, 0);
+    for (const [t, a] of [[0.12, 0], [0.3, 0.5], [0.46, 0], [0.54, 0], [0.7, 0.5], [0.88, 0]]) band.addColorStop(t, `rgba(128,170,0,${a})`);
+    sg.fillStyle = band;
+    sg.fillRect(0, 0, SW, SH);
+  }
+  for (const p of patches) {
+    sg.fillStyle = `rgb(112,${style.wet ? 60 : 200},0)`;
+    sg.fillRect(p.x * SW, p.y * SH, p.w * SW, p.h * SH);
+  }
+  for (const p of puddles) softEllipse(sg, p.x * SW, p.y * SH, p.rx * SW, p.ry * SH, 'rgba(128,44,0,0.8)', 'rgba(128,44,0,0)');
+  grain(sg, SW, SH, (d, i, v) => {
+    // v kaluži je hladina hladká
+    const calm = style.wet ? Math.min(1, d[i + 1] / 70) : 1;
+    d[i] += v * 70 * calm;
+    d[i + 1] += v * (style.wet ? 14 : 26) * calm;
+  });
+  const surface = new THREE.CanvasTexture(sc);
+  surface.wrapS = THREE.ClampToEdgeWrapping;
+  surface.wrapT = THREE.RepeatWrapping;
+  return { map, surface };
+}
+
+function makeRubberTexture() {
+  const c = document.createElement('canvas');
+  c.width = 64;
+  c.height = 128;
+  const g = c.getContext('2d');
+  const rng = new RNG(7);
+  // dvě stopy kol, po délce roztřepené
+  for (let i = 0; i < 90; i++) {
+    const x = (rng.chance(0.5) ? 14 : 50) + rng.range(-9, 9);
+    g.fillStyle = `rgba(255,255,255,${rng.range(0.06, 0.3)})`;
+    g.fillRect(x, rng.range(-30, 128), rng.range(1, 3), rng.range(40, 128));
   }
   const tex = new THREE.CanvasTexture(c);
-  tex.wrapS = THREE.ClampToEdgeWrapping;
   tex.wrapT = THREE.RepeatWrapping;
   tex.colorSpace = THREE.SRGBColorSpace;
   return tex;

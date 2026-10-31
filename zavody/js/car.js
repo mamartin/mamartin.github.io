@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { clamp, angleDiff, lerp } from './rng.js';
 import { SURF_OFF, SURF_CURB } from './track.js';
+import { S } from './state.js';
 
 export const CAR = {
   wheelbase: 2.65,
@@ -309,7 +310,22 @@ function sharedParts() {
     box(1.3, 0.1, 0.28, 0, 0.31, -2.2), // difuzor
     ...[-0.36, 0, 0.36].map((x) => box(0.03, 0.14, 0.3, x, 0.3, -2.2)),
   ]);
-  const chromeGeo = mergeGeometries(mirrorX((sx) => ni(new THREE.CylinderGeometry(0.055, 0.055, 0.2, 12).rotateX(Math.PI / 2).translate(sx * 0.42, 0.33, -2.3))));
+  // spáry dveří, kapoty a kufru, stěrače a víčko nádrže
+  const seam = (z, y0, y1) => mirrorX((sx) => box(0.012, y1 - y0, 0.014, sx * (CAR_WIDTH(z) + 0.012), (y0 + y1) / 2, z));
+  const panelGeo = mergeGeometries([
+    ...seam(0.8, 0.42, 0.84),
+    ...seam(-0.72, 0.42, 0.84),
+    ...mirrorX((sx) => box(0.012, 0.012, 1.5, sx * (CAR_WIDTH(0) + 0.012), 0.42, 0.04)),
+    box(1.34, 0.012, 0.016, 0, CAR_TOP(2.0) + 0.012, 2.0, noseSlope),
+    box(1.5, 0.012, 0.016, 0, CAR_TOP(-1.62) + 0.012, -1.62),
+    ...[0.32, -0.12].map((x) => beam([x, 0.965, 1.0], [x - 0.42, 0.97, 0.98], 0.02, 0.012)),
+    ni(new THREE.CylinderGeometry(0.075, 0.075, 0.012, 12).rotateZ(Math.PI / 2).translate(-(CAR_WIDTH(-1) + 0.012), 0.76, -1.0)),
+  ]);
+  const handleGeo = mergeGeometries(mirrorX((sx) => box(0.022, 0.03, 0.16, sx * (CAR_WIDTH(-0.5) + 0.018), 0.78, -0.48)));
+  const chromeGeo = mergeGeometries([
+    ...mirrorX((sx) => ni(new THREE.CylinderGeometry(0.055, 0.055, 0.2, 12).rotateX(Math.PI / 2).translate(sx * 0.42, 0.33, -2.3))),
+    handleGeo,
+  ]);
   // rampa světel na střeše rally
   const barY = CAR_ROOF(0.2) + 0.09;
   const rallyBarGeo = new THREE.BoxGeometry(1.0, 0.05, 0.1).translate(0, barY - 0.07, 0.2);
@@ -361,7 +377,7 @@ function sharedParts() {
   })();
 
   shared = {
-    paintGeo, wingGeo, cabinGeo, darkGeo, chromeGeo, rallyBarGeo, rallyLampGeo, headGeo, tailGeo, wheel, stripeGeo,
+    paintGeo, wingGeo, cabinGeo, darkGeo, panelGeo, chromeGeo, rallyBarGeo, rallyLampGeo, headGeo, tailGeo, wheel, stripeGeo,
     plate: { y: CAR_ROOF(-0.36) + 0.032, z: -0.36, rx: 0, scale: 1 },
     numberGeo: new THREE.PlaneGeometry(0.62, 0.62).rotateX(-Math.PI / 2),
     blob: new THREE.PlaneGeometry(2.7, 5.4).rotateX(-Math.PI / 2),
@@ -521,6 +537,14 @@ export const FINISHES = {
   chrome: { roughness: 0.06, metalness: 1 },
 };
 
+// na vysoké kvalitě má lesklý lak bezbarvou vrchní vrstvu s vlastním odleskem
+function paintMaterial(color, finish) {
+  const coat = (S.quality === 'high' || S.quality === 'ultra') && finish.roughness < 0.5;
+  return coat
+    ? new THREE.MeshPhysicalMaterial({ color, ...finish, envMapIntensity: 1.2, clearcoat: 1, clearcoatRoughness: 0.05 })
+    : new THREE.MeshStandardMaterial({ color, ...finish, envMapIntensity: 1.2 });
+}
+
 // livery: vlastní barvy dílů (wings, trim, rims, tires, cockpit, plate) a lak (finish); null = výchozí
 export function createCarMesh(color, {
   ghost = false, night = false, number = null, kind = 'car', accent = null, livery = {},
@@ -535,12 +559,12 @@ export function createCarMesh(color, {
   const finish = FINISHES[L.finish] ?? FINISHES.gloss;
   // vlastní barva dílu dostane vlastní materiál, jinak sdílený výchozí
   const own = (hex, fallback, roughness, metalness) => (hex == null ? fallback : new THREE.MeshStandardMaterial({ color: hex, roughness, metalness }));
-  const paint = new THREE.MeshStandardMaterial({ color, ...finish, envMapIntensity: 1.2 });
+  const paint = paintMaterial(color, finish);
   const tail = new THREE.MeshBasicMaterial({ color: 0x6a0a08, toneMapped: false });
   let mats = {
     paint,
     tail,
-    wing: L.wings == null ? paint : new THREE.MeshStandardMaterial({ color: L.wings, ...finish, envMapIntensity: 1.2 }),
+    wing: L.wings == null ? paint : paintMaterial(L.wings, finish),
     glass: F ? P.glassMat : own(L.cockpit, P.glassMat, 0.08, 0.9),
     helmet: F ? own(L.cockpit, F.helmetMat, 0.25, 0.3) : null,
     dark: own(L.trim, P.darkMat, 0.6, 0.2),
@@ -569,7 +593,7 @@ export function createCarMesh(color, {
     new THREE.Mesh(F ? F.tailGeo : P.tailGeo, mats.tail),
   );
   if (F) tilt.add(new THREE.Mesh(F.accentGeo, stripeMat), new THREE.Mesh(F.visorGeo, ghost ? mats.glass : P.glassMat));
-  else tilt.add(new THREE.Mesh(P.chromeGeo, ghost ? mats.rim : P.chromeMat));
+  else tilt.add(new THREE.Mesh(P.chromeGeo, ghost ? mats.rim : P.chromeMat), new THREE.Mesh(P.panelGeo, mats.dark));
   // GT a rally vycházejí z auta: nižší a širší s větším křídlem, nebo vyšší a kratší s rampou světel
   if (kind === 'gt') {
     tilt.scale.set(1.05, 0.9, 1.08);

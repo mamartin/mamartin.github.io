@@ -97,22 +97,37 @@ window.__game = G;
 
 function applyPixelRatio() {
   const dpr = window.devicePixelRatio || 1;
-  const cap = S.quality === 'high' ? 2 : S.quality === 'medium' ? 1.5 : 1;
+  const cap = S.quality === 'high' || S.quality === 'ultra' ? 2 : S.quality === 'medium' ? 1.5 : 1;
   renderer.setPixelRatio(Math.min(dpr, cap));
   renderer.setSize(window.innerWidth, window.innerHeight, false);
 }
 
-// bloom jen pro vysokou kvalitu
+// efekty přes obraz jen pro vysokou kvalitu, ty nejdražší jen pro Ultra
 function setupPost() {
-  const want = S.quality === 'high';
-  if (want && !G.post) G.post = new Post(renderer, scene, camera);
-  if (!want && G.post) {
+  const ultra = S.quality === 'ultra';
+  const want = ultra || S.quality === 'high';
+  if (G.post && (!want || G.post.ultra !== ultra)) {
     G.post.dispose();
     G.post = null;
   }
+  if (want && !G.post) G.post = new Post(renderer, scene, camera, ultra);
   if (G.world) {
-    if (G.post) G.post.setBloom(G.world.biome.bloom);
+    if (G.post) {
+      G.post.setBloom(G.world.biome.bloom);
+      G.post.setWet(G.world.wet ? 1 : 0);
+    }
     G.world.effects.setBoost(G.post ? 1.7 : 1);
+  }
+}
+
+// slabší stroj: Ultra si samo vypne nejdražší efekty, ať neutrpí řízení
+let slowTicks = 0;
+function watchFps() {
+  if (G.screen !== 'race' || !G.post?.heavy || document.hidden) return;
+  slowTicks = G.fps < 38 ? slowTicks + 1 : 0;
+  if (slowTicks >= 6) {
+    G.post.heavy = false;
+    slowTicks = 0;
   }
 }
 
@@ -140,7 +155,7 @@ function disposeObject(root) {
     if (o.material) {
       const mats = Array.isArray(o.material) ? o.material : [o.material];
       for (const m of mats) {
-        for (const key of ['map', 'emissiveMap']) if (m[key]) m[key].dispose();
+        for (const key of ['map', 'emissiveMap', 'roughnessMap', 'bumpMap']) if (m[key]) m[key].dispose();
         m.dispose();
       }
     }
@@ -187,12 +202,12 @@ async function loadWorld(id) {
   const terrain = new Terrain(track, def.biome, { seed: def.seed, lake: def.lake, cell: S.quality === 'low' ? 11 : 8 });
   const group = new THREE.Group();
   group.add(terrain.buildMesh(biome.terrain));
-  group.add(track.buildMeshes(biome.track, renderer.capabilities.getMaxAnisotropy()));
+  group.add(track.buildMeshes(biome.track, renderer.capabilities.getMaxAnisotropy(), S.quality));
   const scenery = buildScenery(track, terrain, def.biome, biome, S.quality, def.seed + 3);
   group.add(scenery.group);
   const lights = buildLights(biome, S.quality);
   group.add(lights.group);
-  const sky = buildSky(biome);
+  const sky = buildSky(biome, S.quality);
   scene.add(group, sky);
   scene.fog = new THREE.Fog(biome.fog.color, biome.fog.near, biome.fog.far);
   scene.background = new THREE.Color(biome.fog.color);
@@ -201,7 +216,7 @@ async function loadWorld(id) {
 
   // odrazy na autech a vodě z oblohy
   const envScene = new THREE.Scene();
-  const envSky = buildSky(biome);
+  const envSky = buildSky(biome, S.quality);
   envScene.add(envSky);
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(4000, 4000).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: new THREE.Color(biome.terrain.groundA).multiplyScalar(0.6) }));
   ground.position.y = -30;
@@ -1195,6 +1210,7 @@ function frame(now) {
     G.fps = Math.round(fpsFrames / fpsAcc);
     fpsAcc = 0;
     fpsFrames = 0;
+    watchFps();
   }
   const dt = rawDt * G.timeScale;
   handleKeys(input.takePressed());
@@ -1378,15 +1394,36 @@ function hideNear(cam, race, own) {
 }
 
 // slunce (a jeho stínová kamera) sleduje dění v daném pohledu
+const sunAim = new THREE.Vector3();
 function aimSun(w, x, y, z) {
   const sun = w.lights.sun;
-  sun.target.position.set(x, y, z);
-  const d = sun.userData.dir;
-  sun.position.set(x + d.x * 260, y + d.y * 260, z + d.z * 260);
+  sunAim.set(x, y, z);
+  // po celých texelech stínové mapy, ať okraje stínů za jízdy nepoblikávají
+  const { axes, texel } = sun.userData;
+  if (axes) {
+    for (const a of axes) {
+      const t = sunAim.dot(a);
+      sunAim.addScaledVector(a, Math.round(t / texel) * texel - t);
+    }
+  }
+  sun.target.position.copy(sunAim);
+  sun.position.copy(sunAim).addScaledVector(sun.userData.dir, 260);
+}
+
+// světlomety vlastního auta v noci
+function aimHeadlamp(w, car) {
+  const lamp = w.lights.headlamp;
+  if (!lamp) return;
+  lamp.intensity = car ? 70 : 0;
+  if (!car) return;
+  const fx = Math.sin(car.hd), fz = Math.cos(car.hd);
+  lamp.position.set(car.x + fx * 1.8, car.y + 1, car.z + fz * 1.8);
+  lamp.target.position.set(car.x + fx * 34, car.y - 0.6, car.z + fz * 34);
 }
 
 function renderViews(w) {
   const race = G.screen === 'race' ? G.race : null;
+  w.sky.userData.time.value = performance.now() / 1000;
   const players = race ? race.players : [];
   if (race) for (const c of race.cars) c.baseVisible = c.mesh.root.visible;
   renderer.info.reset();
@@ -1398,12 +1435,16 @@ function renderViews(w) {
       camera.updateProjectionMatrix();
     }
     aimSun(w, focus ? focus.x : rig.look.x, focus ? focus.y : rig.look.y, focus ? focus.z : rig.look.z);
+    aimHeadlamp(w, focus);
     w.sky.position.copy(camera.position);
     w.effects.setView(camera, renderer.domElement.height, scene.fog);
     if (w.snow) w.snow.setView(camera, renderer.domElement.height);
     if (w.rain) w.rain.setView(camera);
-    if (G.post) G.post.render();
-    else renderer.render(scene, camera);
+    if (G.post) {
+      G.post.setMotion(focus, rig.mode === 'hood');
+      G.post.setFocus(G.screen === 'replay' ? camera.position.distanceTo(rig.look) : 0);
+      G.post.render();
+    } else renderer.render(scene, camera);
     return;
   }
   // rozdělená obrazovka: hráč 1 nahoře, hráč 2 dole
