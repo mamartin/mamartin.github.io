@@ -1030,6 +1030,15 @@ async function startRaceInner() {
   G.screen = 'race';
 }
 
+// posun auta na volné místo vedle tabulky výsledků, [offX, offY] jako u garáže
+function resultsShift() {
+  const box = $('results');
+  if (box.hidden || !box.classList.contains('side')) return [0, 0];
+  const r = $('res-dialog').getBoundingClientRect();
+  if (Math.max(r.left, r.top) < 200) return [0, 0]; // malá obrazovka, auto se vedle nevejde
+  return r.left > r.top ? [r.left / innerWidth - 1, 0] : [0, 1 - r.top / innerHeight];
+}
+
 // panel s klávesami v části obrazovky každého hráče:
 // off, info (první závod, klávesa H), ready (rozcvička ve dvou: závod čeká, až každý zmáčkne svou klávesu)
 function setKeyPanel(mode, auto = false) {
@@ -1450,7 +1459,7 @@ function frame(now) {
 
       // kamery
       humans.forEach((car, i) => {
-        if (car.finished && (humans.length > 1 || G.resultsTimer <= 1.5)) rigs[i].showcase(dt, car, alpha);
+        if (car.finished && (humans.length > 1 || G.resultsTimer <= 1.5)) rigs[i].showcase(dt, car, alpha, ...resultsShift());
         else rigs[i].follow(dt, car, alpha, w.track);
       });
 

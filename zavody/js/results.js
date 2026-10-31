@@ -94,6 +94,8 @@ export function showResults() {
   const gb = $('ghost-share-btn');
   gb.textContent = 'Sdílet ghost';
   gb.hidden = !(race.mode === 'time' && G.shareableTrack?.(w.def.id) && store.ghost(w.def.id, p.kind));
+  // sólo tabulka ustoupí stranou, ať je vidět auto v cíli; ve dvou by zakryla pohled druhého hráče
+  $('results').classList.toggle('side', race.players.length === 1);
   $('results').hidden = false;
   $('again-btn').focus();
 }

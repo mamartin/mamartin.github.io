@@ -1089,6 +1089,24 @@ body:not(.items-on) .touch-right .t-item { display: none; }
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
 }
 .dialog.wide { width: min(640px, 100%); }
+/* výsledky sólo závodu: kde je místo, tabulka ustoupí a vedle ní je vidět auto v cíli (na telefonu se nevejde) */
+@media (min-aspect-ratio: 5/4) and (min-width: 1000px) {
+  #results.side {
+    place-items: center end;
+    padding-right: clamp(16px, 5vw, 80px);
+    background: linear-gradient(90deg, transparent 0 28%, rgba(6, 10, 18, 0.72) 60%);
+    backdrop-filter: none;
+  }
+  body:has(#results.side:not([hidden])) #hud { visibility: hidden; }
+}
+@media (max-aspect-ratio: 5/4) and (min-height: 900px) {
+  #results.side {
+    place-items: end center;
+    background: linear-gradient(180deg, transparent 0 16%, rgba(6, 10, 18, 0.72) 42%);
+    backdrop-filter: none;
+  }
+  body:has(#results.side:not([hidden])) #hud { visibility: hidden; }
+}
 .dialog-title {
   margin: 0;
   font-family: var(--font-display);

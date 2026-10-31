@@ -121,10 +121,14 @@ export class CameraRig {
   }
 
   // oblet kolem auta v cíli; auto ještě dojíždí, takže se kamera drží jeho vykreslené
-  // (interpolované) polohy a vyhlazuje jen odchylku od něj, jinak by auto v záběru poskakovalo
-  showcase(dt, car, alpha = 1) {
+  // (interpolované) polohy a vyhlazuje jen odchylku od něj, jinak by auto v záběru poskakovalo;
+  // offX/offY posunou auto ve výřezu jako v garáži, aby ho nezakrývala tabulka výsledků
+  showcase(dt, car, alpha = 1, offX = 0, offY = 0) {
     // oblet začne tam, kde kamera právě je, ať se neotáčí kolem půlky auta
-    if (!this.showing) this.orbitAngle = Math.atan2(this.offset.z, this.offset.x);
+    if (!this.showing) {
+      this.orbitAngle = Math.atan2(this.offset.z, this.offset.x);
+      this.shiftX = this.shiftY = 0;
+    }
     this.showing = true;
     const x = lerp(car.px, car.x, alpha), z = lerp(car.pz, car.z, alpha), y = lerp(car.py, car.y, alpha);
     this.orbitAngle += dt * 0.35;
@@ -135,7 +139,12 @@ export class CameraRig {
     o.z += (Math.sin(a) * 9 - o.z) * k;
     o.y += (3 - o.y) * k;
     this.pos.set(x + o.x, y + o.y, z + o.z);
-    this.look.set(x, y + 0.9, z);
+    this.shiftX += (offX - this.shiftX) * k;
+    this.shiftY += (offY - this.shiftY) * k;
+    const dist = Math.hypot(o.x, o.z) || 9;
+    const halfH = Math.tan((this.fov * Math.PI) / 360) * dist;
+    const side = this.shiftX * halfH * this.camera.aspect;
+    this.look.set(x - (o.z / dist) * side, y + 0.9 - this.shiftY * halfH, z + (o.x / dist) * side);
     this.fov += (50 - this.fov) * ease(2, dt);
     this.applyShake(dt);
   }
