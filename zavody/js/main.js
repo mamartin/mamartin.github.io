@@ -43,11 +43,15 @@ const STEP = 1 / 120;
 if (!S.quality) S.quality = isTouch || Math.min(screen.width, screen.height) < 700 ? 'medium' : 'high';
 if (isTouch) document.body.classList.add('touch-ui');
 
+// podíl rozlišení; hra ho sníží sama, když počítač nestíhá
+let resScale = 1;
+
 let renderer;
 try {
   renderer = new THREE.WebGLRenderer({
     canvas: $('game'),
-    antialias: S.quality !== 'low',
+    // vysoká kvalita vyhlazuje ve vlastním bufferu, druhé vyhlazení plátna by jen stálo výkon
+    antialias: S.quality === 'medium',
     powerPreference: 'high-performance',
   });
 } catch (e) {
@@ -98,8 +102,17 @@ window.__game = G;
 function applyPixelRatio() {
   const dpr = window.devicePixelRatio || 1;
   const cap = S.quality === 'high' || S.quality === 'ultra' ? 2 : S.quality === 'medium' ? 1.5 : 1;
-  renderer.setPixelRatio(Math.min(dpr, cap));
+  renderer.setPixelRatio(Math.min(dpr, cap) * resScale);
   renderer.setSize(window.innerWidth, window.innerHeight, false);
+}
+
+function resizeView() {
+  applyPixelRatio();
+  if (G.post) G.post.setSize();
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  if (G.world) G.world.effects.setView(camera, renderer.domElement.height, scene.fog);
+  if (G.race) for (const h of huds) h.resize();
 }
 
 // efekty přes obraz jen pro vysokou kvalitu, ty nejdražší jen pro Ultra
@@ -120,25 +133,21 @@ function setupPost() {
   }
 }
 
-// slabší stroj: Ultra si samo vypne nejdražší efekty, ať neutrpí řízení
+// když hra stabilně nestíhá, ubere nejdřív drahé efekty, pak rozlišení: plynulost je pro řízení důležitější
 let slowTicks = 0;
 function watchFps() {
-  if (G.screen !== 'race' || !G.post?.heavy || document.hidden) return;
-  slowTicks = G.fps < 38 ? slowTicks + 1 : 0;
-  if (slowTicks >= 6) {
-    G.post.heavy = false;
-    slowTicks = 0;
+  if (G.screen !== 'race' || document.hidden) return;
+  slowTicks = G.fps < 54 ? slowTicks + 1 : 0;
+  if (slowTicks < 3) return;
+  slowTicks = 0;
+  if (G.post?.heavy) G.post.heavy = false;
+  else if (resScale > 0.6) {
+    resScale = Math.max(0.6, resScale - 0.14);
+    resizeView();
   }
 }
 
-window.addEventListener('resize', () => {
-  applyPixelRatio();
-  if (G.post) G.post.setSize(window.innerWidth, window.innerHeight);
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  if (G.world) G.world.effects.setView(camera, renderer.domElement.height, scene.fog);
-  if (G.race) for (const h of huds) h.resize();
-});
+window.addEventListener('resize', resizeView);
 
 function showError(text) {
   $('loading').hidden = true;
@@ -618,7 +627,13 @@ function bindMenu() {
       if (S.quality === b.dataset.q) return;
       S.quality = b.dataset.q;
       store.save();
+      // vyhlazení plátna se dá nastavit jen při jeho vytvoření
+      if ((S.quality === 'medium') !== renderer.getContextAttributes().antialias) {
+        location.reload();
+        return;
+      }
       refreshMenu();
+      resScale = 1;
       applyPixelRatio();
       await loadWorld(currentTrackId());
       G.screen = 'menu';
@@ -1450,7 +1465,8 @@ function renderViews(w) {
   // rozdělená obrazovka: hráč 1 nahoře, hráč 2 dole
   const W = window.innerWidth, H = window.innerHeight;
   const h2 = Math.floor(H / 2);
-  renderer.setScissorTest(true);
+  const post = G.post;
+  if (!post) renderer.setScissorTest(true);
   players.forEach((car, i) => {
     const cam = i === 0 ? camera : camera2;
     const aspect = W / h2;
@@ -1465,10 +1481,17 @@ function renderViews(w) {
     if (w.snow) w.snow.setView(cam, h2 * renderer.getPixelRatio());
     if (w.rain) w.rain.setView(cam);
     const y = i === 0 ? H - h2 : 0;
-    renderer.setViewport(0, y, W, h2);
-    renderer.setScissor(0, y, W, h2);
+    if (post) post.setView(0, y, W, h2);
+    else {
+      renderer.setViewport(0, y, W, h2);
+      renderer.setScissor(0, y, W, h2);
+    }
     renderer.render(scene, cam);
   });
+  if (post) {
+    post.present();
+    return;
+  }
   renderer.setScissorTest(false);
   renderer.setViewport(0, 0, W, H);
 }

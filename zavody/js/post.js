@@ -1,11 +1,9 @@
 // Efekty přes obraz. Vysoká kvalita: bloom kolem světel, neonů, nitra a slunce, rozmazání rychlostí
 // a ztmavení rohů. Ultra navíc: stínění ve škvírách, odrazy na mokré silnici a hloubka ostrosti v záznamu.
+// Všechno se skládá v jediném průchodu rovnou na obrazovku: každý další celoobrazovkový průchod přes
+// velký buffer je na 4K a retině dražší než celá scéna.
 import * as THREE from 'three';
-import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
-import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { Pass, FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
+import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
 
 const VERT = /* glsl */ `
   varying vec2 vUv;
@@ -108,6 +106,8 @@ const FINAL_FRAG = /* glsl */ `
   uniform float carMask;
   uniform float blur;
   uniform float aspect;
+  uniform sampler2D tBloom;
+  uniform float bloom;
   ${NOISE}
   #if HEAVY
   uniform sampler2D tAO;
@@ -161,169 +161,144 @@ const FINAL_FRAG = /* glsl */ `
       col *= ao * 0.25;
     }
     #endif
+    col += texture2D(tBloom, vUv).rgb * bloom;
     // rohy obrazu
     vec2 c = (vUv - 0.5) * vec2(1.1, 1.0);
     col *= 1.0 - 0.3 * smoothstep(0.32, 0.86, length(c));
     gl_FragColor = vec4(col, 1.0);
+    #include <tonemapping_fragment>
+    #include <colorspace_fragment>
+    gl_FragColor.rgb += (j - 0.5) / 255.0; // úsporný buffer má méně odstínů, šum schová pruhy v přechodech
   }`;
 
-class ScreenPass extends Pass {
-  constructor(camera, ultra) {
-    super();
-    this.camera = camera;
-    this.ultra = ultra;
-    this.heavy = ultra;
-    this.wet = 0;
-    this.quad = new FullScreenQuad();
-    this.shared = {
-      tDepth: { value: null },
-      invProj: { value: new THREE.Matrix4() },
-      aspect: { value: 1 },
-    };
-    this.final = new THREE.ShaderMaterial({
-      defines: { HEAVY: ultra ? 1 : 0 },
-      uniforms: {
-        ...this.shared,
-        tDiffuse: { value: null },
-        tAO: { value: null },
-        tSSR: { value: null },
-        texel: { value: new THREE.Vector2() },
-        vanish: { value: new THREE.Vector2(0.5, 0.5) },
-        carPos: { value: new THREE.Vector2(0.5, 0.3) },
-        carMask: { value: 1 },
-        blur: { value: 0 },
-        useAO: { value: 0 },
-        useSSR: { value: 0 },
-        focusDist: { value: 0 },
-      },
-      vertexShader: VERT,
-      fragmentShader: FINAL_FRAG,
-      depthTest: false,
-      depthWrite: false,
-    });
-    if (!ultra) return;
-    const half = { type: THREE.HalfFloatType, depthBuffer: false };
-    this.aoRT = new THREE.WebGLRenderTarget(4, 4, { ...half, format: THREE.RGBAFormat });
-    this.ssrRT = new THREE.WebGLRenderTarget(4, 4, half);
-    this.ao = new THREE.ShaderMaterial({
-      uniforms: { ...this.shared, texel: { value: new THREE.Vector2() }, focal: { value: 1 } },
-      vertexShader: VERT,
-      fragmentShader: AO_FRAG,
-      depthTest: false,
-      depthWrite: false,
-    });
-    this.ssr = new THREE.ShaderMaterial({
-      uniforms: { ...this.shared, tScene: { value: null }, proj: { value: new THREE.Matrix4() }, up: { value: new THREE.Vector3(0, 1, 0) } },
-      vertexShader: VERT,
-      fragmentShader: SSR_FRAG,
-      depthTest: false,
-      depthWrite: false,
-    });
-    this.final.uniforms.tAO.value = this.aoRT.texture;
-    this.final.uniforms.tSSR.value = this.ssrRT.texture;
+// bloom: zmenšování a zvětšování po patrech je mnohem levnější než velké rozostření v plném rozlišení
+const BLOOM_DOWN = /* glsl */ `
+  varying vec2 vUv;
+  uniform sampler2D tex;
+  uniform vec2 px;
+  uniform float threshold;
+  vec3 bright(vec2 o) {
+    vec3 c = min(texture2D(tex, vUv + o * px).rgb, vec3(12.0));
+    #if BRIGHT
+    c *= smoothstep(threshold, threshold + 0.3, dot(c, vec3(0.2126, 0.7152, 0.0722)));
+    #endif
+    return c;
   }
+  void main() {
+    vec3 c = bright(vec2(0.0)) * 4.0 + bright(vec2(-1.0, -1.0)) + bright(vec2(1.0, -1.0)) + bright(vec2(-1.0, 1.0)) + bright(vec2(1.0, 1.0));
+    gl_FragColor = vec4(c / 8.0, 1.0);
+  }`;
 
-  setSize(w, h) {
-    this.final.uniforms.texel.value.set(2 / w, 2 / h);
-    if (!this.ultra) return;
-    const hw = Math.max(1, Math.round(w / 2)), hh = Math.max(1, Math.round(h / 2));
-    this.aoRT.setSize(hw, hh);
-    this.ssrRT.setSize(hw, hh);
-    this.ao.uniforms.texel.value.set(1 / hw, 1 / hh);
-  }
+const BLOOM_UP = /* glsl */ `
+  varying vec2 vUv;
+  uniform sampler2D tex;
+  uniform sampler2D add;
+  uniform vec2 px;
+  vec3 at(float x, float y) { return texture2D(tex, vUv + vec2(x, y) * px).rgb; }
+  void main() {
+    vec3 c = at(-2.0, 0.0) + at(2.0, 0.0) + at(0.0, -2.0) + at(0.0, 2.0)
+      + 2.0 * (at(-1.0, -1.0) + at(1.0, -1.0) + at(-1.0, 1.0) + at(1.0, 1.0));
+    gl_FragColor = vec4(c / 12.0 + texture2D(add, vUv).rgb, 1.0);
+  }`;
 
-  pass(renderer, material, target) {
-    this.quad.material = material;
-    renderer.setRenderTarget(target);
-    this.quad.render(renderer);
-  }
+const BLOOM_LEVELS = 5;
 
-  render(renderer, writeBuffer, readBuffer) {
-    const f = this.final.uniforms, cam = this.camera;
-    f.tDiffuse.value = readBuffer.texture;
-    f.aspect.value = cam.aspect;
-    if (this.ultra) {
-      this.shared.tDepth.value = readBuffer.depthTexture;
-      this.shared.invProj.value.copy(cam.projectionMatrixInverse);
-      f.useAO.value = f.useSSR.value = 0;
-      if (this.heavy) {
-        this.ao.uniforms.focal.value = cam.projectionMatrix.elements[5];
-        this.pass(renderer, this.ao, this.aoRT);
-        f.useAO.value = 1;
-        if (this.wet) {
-          const s = this.ssr.uniforms;
-          s.tScene.value = readBuffer.texture;
-          s.proj.value.copy(cam.projectionMatrix);
-          s.up.value.set(0, 1, 0).transformDirection(cam.matrixWorldInverse);
-          this.pass(renderer, this.ssr, this.ssrRT);
-          f.useSSR.value = 1;
-        }
-      }
-    }
-    this.pass(renderer, this.final, this.renderToScreen ? null : writeBuffer);
-  }
-
-  dispose() {
-    this.quad.dispose();
-    this.final.dispose();
-    if (!this.ultra) return;
-    this.ao.dispose();
-    this.ssr.dispose();
-    this.aoRT.dispose();
-    this.ssrRT.dispose();
-  }
-}
+const screenMaterial = (fragmentShader, uniforms, defines = {}) => new THREE.ShaderMaterial({
+  uniforms, defines, vertexShader: VERT, fragmentShader, depthTest: false, depthWrite: false,
+});
 
 const probe = new THREE.Vector3();
 
 export class Post {
   constructor(renderer, scene, camera, ultra = false) {
     this.renderer = renderer;
+    this.scene = scene;
     this.camera = camera;
     this.ultra = ultra;
-    const size = renderer.getDrawingBufferSize(new THREE.Vector2());
-    const rt = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, samples: 4 });
-    if (ultra) rt.depthTexture = new THREE.DepthTexture(size.x, size.y, THREE.UnsignedIntType);
-    this.composer = new EffectComposer(renderer, rt);
-    // scéna se kreslí vždy do prvního bufferu; do druhého jde jen celoobrazovkový průchod a MSAA by ho zbytečně prodražilo
-    this.composer.renderTarget2.samples = 0;
-    this.composer.renderTarget2.depthTexture = null;
-    this.composer.addPass(new RenderPass(scene, camera));
-    this.screen = new ScreenPass(camera, ultra);
-    this.composer.addPass(this.screen);
-    this.bloom = new UnrealBloomPass(new THREE.Vector2(size.x, size.y), 0.4, 0.5, 1);
-    this.composer.addPass(this.bloom);
-    this.composer.addPass(new OutputPass());
-    this.setSize(window.innerWidth, window.innerHeight);
+    this.heavy = ultra;
+    this.wet = false;
     this.motion = 0;
+    this.compact = renderer.extensions.has('EXT_color_buffer_float');
+    this.quad = new FullScreenQuad();
+    this.rt = this.hdrTarget({ samples: 4, depthBuffer: true });
+    if (ultra) this.rt.depthTexture = new THREE.DepthTexture(4, 4, THREE.UnsignedIntType);
+    this.down = Array.from({ length: BLOOM_LEVELS }, () => this.hdrTarget());
+    this.up = Array.from({ length: BLOOM_LEVELS - 1 }, () => this.hdrTarget());
+    const blurUniforms = () => ({ tex: { value: null }, px: { value: new THREE.Vector2() }, threshold: { value: 1 } });
+    this.brightMat = screenMaterial(BLOOM_DOWN, blurUniforms(), { BRIGHT: 1 });
+    this.downMat = screenMaterial(BLOOM_DOWN, blurUniforms(), { BRIGHT: 0 });
+    this.upMat = screenMaterial(BLOOM_UP, { ...blurUniforms(), add: { value: null } });
+    this.shared = { tDepth: { value: null }, invProj: { value: new THREE.Matrix4() }, aspect: { value: 1 } };
+    this.final = screenMaterial(FINAL_FRAG, {
+      ...this.shared,
+      tDiffuse: { value: this.rt.texture },
+      tBloom: { value: this.up[0].texture },
+      bloom: { value: 0 },
+      tAO: { value: null },
+      tSSR: { value: null },
+      texel: { value: new THREE.Vector2() },
+      vanish: { value: new THREE.Vector2(0.5, 0.5) },
+      carPos: { value: new THREE.Vector2(0.5, 0.3) },
+      carMask: { value: 1 },
+      blur: { value: 0 },
+      useAO: { value: 0 },
+      useSSR: { value: 0 },
+      focusDist: { value: 0 },
+    }, { HEAVY: ultra ? 1 : 0 });
+    if (ultra) {
+      this.aoRT = new THREE.WebGLRenderTarget(4, 4, { format: THREE.RedFormat, depthBuffer: false });
+      this.ssrRT = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, depthBuffer: false });
+      this.ao = screenMaterial(AO_FRAG, { ...this.shared, texel: { value: new THREE.Vector2() }, focal: { value: 1 } });
+      this.ssr = screenMaterial(SSR_FRAG, { ...this.shared, tScene: { value: null }, proj: { value: new THREE.Matrix4() }, up: { value: new THREE.Vector3() } });
+      this.final.uniforms.tAO.value = this.aoRT.texture;
+      this.final.uniforms.tSSR.value = this.ssrRT.texture;
+    }
+    this.setSize();
   }
 
-  get heavy() {
-    return this.screen.heavy;
+  // bez alfa kanálu má pixel polovic bajtů a celé skládání je znatelně rychlejší
+  hdrTarget(options = {}) {
+    const rt = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, depthBuffer: false, ...options });
+    this.packTexture(rt, true);
+    return rt;
   }
 
-  set heavy(on) {
-    this.screen.heavy = on;
+  packTexture(rt, compact) {
+    const on = compact && this.compact;
+    rt.texture.format = on ? THREE.RGBFormat : THREE.RGBAFormat;
+    rt.texture.internalFormat = on ? 'R11F_G11F_B10F' : null;
   }
 
-  setSize(w, h) {
-    this.composer.setPixelRatio(this.renderer.getPixelRatio());
-    this.composer.setSize(w, h);
+  setSize() {
+    const { x: w, y: h } = this.renderer.getDrawingBufferSize(new THREE.Vector2());
+    this.rt.setSize(w, h);
+    const level = (i) => [Math.max(1, w >> (i + 1)), Math.max(1, h >> (i + 1))];
+    this.down.forEach((rt, i) => rt.setSize(...level(i)));
+    this.up.forEach((rt, i) => rt.setSize(...level(i)));
+    this.final.uniforms.texel.value.set(2 / w, 2 / h);
+    if (!this.ultra) return;
+    const [hw, hh] = level(0);
+    this.aoRT.setSize(hw, hh);
+    this.ssrRT.setSize(hw, hh);
+    this.ao.uniforms.texel.value.set(1 / hw, 1 / hh);
   }
 
-  setBloom({ strength, radius, threshold }) {
-    this.bloom.strength = strength;
-    this.bloom.radius = radius;
-    this.bloom.threshold = threshold;
+  setBloom({ strength, threshold }) {
+    this.final.uniforms.bloom.value = strength * 0.6;
+    this.brightMat.uniforms.threshold.value = threshold;
   }
 
+  // odrazy na mokré silnici čtou její hrubost z alfa kanálu, jen tehdy je potřeba
   setWet(wet) {
-    this.screen.wet = wet;
+    this.wet = !!wet;
+    if (!this.ultra) return;
+    this.packTexture(this.rt, !this.wet);
+    this.rt.dispose();
   }
 
   // car = auto, které kamera sleduje (null mimo jízdu)
   setMotion(car, hood) {
-    const f = this.screen.final.uniforms;
+    const f = this.final.uniforms;
     let target = 0;
     if (car) {
       const fast = Math.min(1, Math.max(0, (car.speed - 28) / 42));
@@ -340,16 +315,82 @@ export class Post {
 
   // ostrost na danou vzdálenost, 0 = bez hloubky ostrosti
   setFocus(dist) {
-    this.screen.final.uniforms.focusDist.value = this.ultra && this.heavy ? dist : 0;
+    this.final.uniforms.focusDist.value = this.ultra && this.heavy ? dist : 0;
+  }
+
+  draw(material, target) {
+    this.quad.material = material;
+    this.renderer.setRenderTarget(target);
+    this.quad.render(this.renderer);
+  }
+
+  renderBloom() {
+    let from = this.rt;
+    this.down.forEach((rt, i) => {
+      const mat = i === 0 ? this.brightMat : this.downMat;
+      mat.uniforms.tex.value = from.texture;
+      mat.uniforms.px.value.set(1 / from.width, 1 / from.height);
+      this.draw(mat, rt);
+      from = rt;
+    });
+    const u = this.upMat.uniforms;
+    for (let i = this.up.length - 1; i >= 0; i--) {
+      u.tex.value = from.texture;
+      u.add.value = this.down[i].texture;
+      u.px.value.set(0.5 / from.width, 0.5 / from.height);
+      this.draw(this.upMat, this.up[i]);
+      from = this.up[i];
+    }
+  }
+
+  renderHeavy() {
+    const f = this.final.uniforms, cam = this.camera;
+    this.shared.tDepth.value = this.rt.depthTexture;
+    this.shared.invProj.value.copy(cam.projectionMatrixInverse);
+    this.ao.uniforms.focal.value = cam.projectionMatrix.elements[5];
+    this.draw(this.ao, this.aoRT);
+    f.useAO.value = 1;
+    if (!this.wet) return;
+    const s = this.ssr.uniforms;
+    s.tScene.value = this.rt.texture;
+    s.proj.value.copy(cam.projectionMatrix);
+    s.up.value.set(0, 1, 0).transformDirection(cam.matrixWorldInverse);
+    this.draw(this.ssr, this.ssrRT);
+    f.useSSR.value = 1;
   }
 
   render() {
-    this.composer.render();
+    this.renderer.setRenderTarget(this.rt);
+    this.renderer.render(this.scene, this.camera);
+    this.present(true);
+  }
+
+  // rozdělená obrazovka: scéna se kreslí po částech do společného bufferu
+  setView(x, y, w, h) {
+    const pr = this.renderer.getPixelRatio();
+    this.rt.viewport.set(Math.round(x * pr), Math.round(y * pr), Math.round(w * pr), Math.round(h * pr));
+    this.rt.scissor.copy(this.rt.viewport);
+    this.rt.scissorTest = true;
+    this.renderer.setRenderTarget(this.rt);
+  }
+
+  // složí hotovou scénu na obrazovku; effects = efekty závislé na jedné kameře
+  present(effects = false) {
+    const f = this.final.uniforms;
+    f.aspect.value = this.camera.aspect;
+    f.useAO.value = f.useSSR.value = 0;
+    if (!effects) {
+      f.blur.value = f.focusDist.value = 0;
+      this.rt.viewport.set(0, 0, this.rt.width, this.rt.height);
+      this.rt.scissorTest = false;
+    } else if (this.ultra && this.heavy) this.renderHeavy();
+    this.renderBloom();
+    this.draw(this.final, null);
   }
 
   dispose() {
-    this.composer.dispose();
-    this.bloom.dispose();
-    this.screen.dispose();
+    this.quad.dispose();
+    for (const m of [this.final, this.brightMat, this.downMat, this.upMat, this.ao, this.ssr]) m?.dispose();
+    for (const rt of [this.rt, ...this.down, ...this.up, this.aoRT, this.ssrRT]) rt?.dispose();
   }
 }
