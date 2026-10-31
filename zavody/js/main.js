@@ -5,6 +5,7 @@ import { BIOMES, wetBiome, snowBiome } from './biomes.js';
 import { Track, SURF_OFF } from './track.js';
 import { Terrain } from './terrain.js';
 import { buildScenery, buildSky, buildLights, buildRain } from './scenery.js';
+import { loadTown, paintGround, buildTown } from './town.js';
 import { Car, createCarMesh, disposeCarMesh, addBunStain } from './car.js';
 import { medalFor, hasReference, referenceLap } from './medals.js';
 import { ReplayRecorder } from './replay.js';
@@ -216,9 +217,12 @@ async function loadWorld(id) {
   await nextFrame();
   // mezitím si hráč vybral jinou trať
   if (token !== loadToken) return G.world;
+  const baseDef = trackDef(id);
+  // tratě podle skutečné krajiny si data dotáhnou až teď, ostatním nic nepřibude
+  const town = baseDef.scene ? await loadTown(baseDef.scene).catch((e) => (console.warn(e), null)) : null;
+  if (token !== loadToken) return G.world;
   disposeWorld();
   // déšť (na zimní trati místo něj padá sníh)
-  const baseDef = trackDef(id);
   const wet = wantsRain(baseDef);
   const snowy = wantsSnow(baseDef);
   const def = wet ? { ...baseDef, wet: true } : snowy ? { ...baseDef, snowy: true } : baseDef;
@@ -226,12 +230,14 @@ async function loadWorld(id) {
   // proměnlivé počasí mění biom za jízdy, proto vlastní kopie
   const biome = wet ? wetBiome(BIOMES[def.biome]) : snowy ? snowBiome(BIOMES[def.biome]) : mix ? { ...BIOMES[def.biome] } : BIOMES[def.biome];
   const track = new Track(def);
-  const terrain = new Terrain(track, def.biome, { seed: def.seed, lake: def.lake, cell: S.quality === 'low' ? 11 : 8 });
+  const terrain = new Terrain(track, def.biome, { seed: def.seed, lake: def.lake, cell: S.quality === 'low' ? 11 : 8, dem: town?.dem, water: town?.water });
+  if (town) terrain.groundMap = paintGround(town, track, terrain, S.quality, renderer.capabilities.getMaxAnisotropy());
   const group = new THREE.Group();
   group.add(terrain.buildMesh(biome.terrain));
   group.add(track.buildMeshes(biome.track, renderer.capabilities.getMaxAnisotropy(), S.quality));
   const scenery = buildScenery(track, terrain, def.biome, biome, S.quality, def.seed + 3);
   group.add(scenery.group);
+  if (town) group.add(buildTown(town, track, terrain, S.quality, def.seed + 5, renderer.capabilities.getMaxAnisotropy()));
   const lights = buildLights(biome, S.quality, shadowLevel());
   group.add(lights.group);
   const sky = buildSky(biome, S.quality);
@@ -455,6 +461,10 @@ async function selectTrack(id, force = false) {
 
 function refreshMenu() {
   for (const m of menuTracks) m.btn.setAttribute('aria-checked', String(m.id === S.track));
+  // zdroje dat u tratí podle skutečného města
+  const credit = menuTracks.find((m) => m.id === S.track)?.def.credit;
+  $('track-credit').hidden = !credit;
+  $('track-credit').textContent = credit ?? '';
   for (const b of $('mode-seg').children) b.setAttribute('aria-checked', String(b.dataset.mode === S.mode));
   for (const b of $('diff-seg').children) b.setAttribute('aria-checked', String(b.dataset.diff === S.difficulty));
   for (const b of $('dir-seg').children) b.setAttribute('aria-checked', String((b.dataset.dir === 'rev') === !!S.reverse));

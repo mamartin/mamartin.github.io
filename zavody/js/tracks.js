@@ -1,5 +1,6 @@
 // Definice tratí. Body: [x, z, výška, poloměr zaoblení rohu].
 // První bod leží uprostřed startovní rovinky (poloměr 0).
+import { DOBRIS } from './tracks-dobris.js';
 
 export const TRACKS = [
   {
@@ -112,6 +113,7 @@ export const TRACKS = [
       [-120, 0, 0, 30],
     ],
   },
+  DOBRIS,
 ];
 
 export function getTrack(id) {

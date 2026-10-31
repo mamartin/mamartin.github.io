@@ -1,0 +1,146 @@
+[
+  {
+    "id": "A",
+    "name": "Pražská a Pivovar",
+    "note": "Severní smyčka kolem Koryta",
+    "via": [
+      [
+        -525,
+        -44,
+        "Mírové náměstí"
+      ],
+      [
+        -201,
+        -22,
+        "Pražská"
+      ],
+      [
+        281,
+        77,
+        "Pražská"
+      ],
+      [
+        497,
+        199,
+        "Pražská"
+      ],
+      [
+        690,
+        800,
+        "Pražská"
+      ],
+      [
+        150,
+        640,
+        "U Pivovaru"
+      ],
+      [
+        -280,
+        311
+      ],
+      [
+        -500,
+        400,
+        "Přemyslova"
+      ],
+      [
+        -790,
+        420,
+        "Čs. armády"
+      ]
+    ]
+  },
+  {
+    "id": "B",
+    "name": "Zámecký park a Příbramská",
+    "note": "Jižní smyčka kolem parku a zimního stadionu",
+    "via": [
+      [
+        -525,
+        -44,
+        "Mírové náměstí"
+      ],
+      [
+        -201,
+        -22,
+        "Pražská"
+      ],
+      [
+        215,
+        45,
+        "Pražská"
+      ],
+      [
+        300,
+        -250
+      ],
+      [
+        -200,
+        -560
+      ],
+      [
+        -330,
+        -640,
+        "Příbramská"
+      ],
+      [
+        -330,
+        -300,
+        "Příbramská"
+      ],
+      [
+        -446,
+        -133
+      ]
+    ]
+  },
+  {
+    "id": "C",
+    "name": "Rosovická a Příbramská",
+    "note": "Větší jižní smyčka se západním sjezdem",
+    "via": [
+      [
+        -525,
+        -44,
+        "Mírové náměstí"
+      ],
+      [
+        -201,
+        -22,
+        "Pražská"
+      ],
+      [
+        215,
+        45,
+        "Pražská"
+      ],
+      [
+        300,
+        -250
+      ],
+      [
+        -200,
+        -560
+      ],
+      [
+        -800,
+        -700,
+        "Anenská"
+      ],
+      [
+        -1350,
+        -600
+      ],
+      [
+        -1000,
+        -300,
+        "Rosovická"
+      ],
+      [
+        -750,
+        -30,
+        "Rosovická"
+      ]
+    ]
+  }
+]

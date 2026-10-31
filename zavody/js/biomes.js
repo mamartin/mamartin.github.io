@@ -92,6 +92,29 @@ export const BIOMES = {
     offDrag: 1.6,
     dust: [0.35, 0.35, 0.38],
   },
+  town: {
+    name: 'Maloměsto',
+    sky: { top: '#3d7cc9', horizon: '#d3e3ec', bottom: '#9fb2b5', glow: 0.6 },
+    sunDir: [0.46, 0.68, 0.36],
+    sun: { color: '#fff1da', intensity: 2.7 },
+    hemi: { sky: '#dbe8ff', ground: '#6e6c58', intensity: 1.3 },
+    fog: { color: '#c9dce6', near: 240, far: 1350 },
+    exposure: 1.0,
+    night: false,
+    clouds: '#ffffff',
+    cloudCover: 0.48,
+    bloom: { strength: 0.3, threshold: 2.7 },
+    terrain: { groundA: '#5f8a3f', groundB: '#4c7436', groundC: '#86a049', rock: '#7d7b72', nearTrack: '#8a8880', shore: '#a89d78', flat: false },
+    track: {
+      asphalt: '#44464b', curbA: '#c8342c', curbB: '#efeee8', lineColor: '#e4e1d6',
+      shoulderA: '#b0ada5', shoulderB: '#a9a69e',
+      barrier: 'rail', barrierA: '#c3c7cc', barrierB: '#b8bdc3', barrierTop: '#d6d9dc', postColor: '#80868e',
+      gantry: '#1f2b45', bannerBg: '#10223f',
+    },
+    offGrip: 0.8,
+    offDrag: 1.6,
+    dust: [0.55, 0.52, 0.46],
+  },
 };
 
 // déšť: zatažená obloha, bližší šedá mlha, slabé slunce, tmavší mokrý asfalt a menší přilnavost

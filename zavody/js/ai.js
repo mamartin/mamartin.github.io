@@ -74,8 +74,9 @@ export class AIDriver {
     const Ld = 7 + speed * 0.42;
     const kA = tr.indexAt(s + Ld);
     const line = tr.racingLat[kA];
-    const W = tr.hw - 1.5;
-    const baseLat = line + this.pref * (1 - Math.abs(line) / Math.max(1, tr.hw - 2)) + this.avoid;
+    const hw = tr.hwAt(kA);
+    const W = hw - 1.5;
+    const baseLat = line + this.pref * (1 - Math.abs(line) / Math.max(1, hw - 2)) + this.avoid;
     let lat = baseLat + this.defend;
     lat = clamp(lat, -W, W);
     const tgt = tr.sampleAt(s + Ld, lat, this.tmp);

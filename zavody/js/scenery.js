@@ -171,7 +171,7 @@ function cloudTexture(rng) {
 
 // --- instancované rekvizity rozdělené do dlaždic kvůli ořezu mimo záběr -----------
 
-function instancedChunks(geo, mat, items, { chunk = 240, castShadow = true, receiveShadow = false } = {}) {
+export function instancedChunks(geo, mat, items, { chunk = 240, castShadow = true, receiveShadow = false } = {}) {
   const buckets = new Map();
   for (const it of items) {
     const key = Math.floor(it.x / chunk) + ':' + Math.floor(it.z / chunk);
@@ -203,7 +203,7 @@ function instancedChunks(geo, mat, items, { chunk = 240, castShadow = true, rece
 
 const ni = (g) => (g.index ? g.toNonIndexed() : g);
 
-function colored(geo, hex) {
+export function colored(geo, hex) {
   const g = geo;
   const c = new THREE.Color(hex);
   const n = g.attributes.position.count;
@@ -231,7 +231,7 @@ function jitter(geo, amount, seed) {
   return geo;
 }
 
-function spruceGeometry() {
+export function spruceGeometry() {
   const parts = [
     colored(new THREE.CylinderGeometry(0.2, 0.32, 2.4, 6).translate(0, 1.2, 0), '#5a3d26'),
     colored(new THREE.ConeGeometry(2.4, 3.8, 7).translate(0, 3.3, 0), '#2d5a2e'),
@@ -400,7 +400,7 @@ export function buildRain(count) {
   };
 }
 
-function broadleafGeometry() {
+export function broadleafGeometry() {
   const parts = [
     colored(new THREE.CylinderGeometry(0.16, 0.24, 3.2, 6).translate(0, 1.6, 0), '#d8d2c4'),
     colored(jitter(new THREE.IcosahedronGeometry(2.3, 0), 0.35, 3).translate(0, 4.6, 0), '#6c9a3d'),

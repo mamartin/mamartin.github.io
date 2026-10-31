@@ -786,10 +786,10 @@ export class Car {
     const tr = this.track;
     const P = this.proj;
     const biome = this.biome;
-    this.surface = this.cut ? SURF_OFF : tr.surfaceAt(P.lat);
+    this.surface = this.cut ? SURF_OFF : tr.surfaceAt(P.lat, P.i);
     const off = this.surface === SURF_OFF;
     // podíl auta mimo asfalt: kola přejíždějí okraj postupně, takže přilnavost se mění plynule
-    const offTarget = this.cut ? this.cut.dirt : clamp((Math.abs(P.lat) - tr.hw - tr.curbW + V.halfWidth) / (2 * V.halfWidth), 0, 1);
+    const offTarget = this.cut ? this.cut.dirt : clamp((Math.abs(P.lat) - tr.hwAt(P.i) - tr.curbW + V.halfWidth) / (2 * V.halfWidth), 0, 1);
     this.offMix += (offTarget - this.offMix) * Math.min(1, dt * 8);
     const mix = this.offMix;
     const roadGrip = (this.surface === SURF_ROAD ? 1 : 0.95) * (biome.roadGrip ?? 1) * (biome.wet ? V.wetGrip : 1);
@@ -1014,7 +1014,7 @@ export class Car {
     const V = this.spec;
     const P = this.proj;
     const cut = this.cut;
-    const lim = (cut ? cut.hw : this.track.edge) - V.halfWidth - 0.1;
+    const lim = (cut ? cut.hw : this.track.edgeAt(P.i)) - V.halfWidth - 0.1;
     const a = Math.abs(P.lat);
     this.impact = 0;
     if (cut) this.collideRocks();

@@ -11,9 +11,11 @@ export class Track {
     this.def = def;
     this.hw = def.width / 2;
     this.runoff = def.runoff;
-    this.edge = this.hw + this.runoff;
     this.curbW = 1.3;
     Object.assign(this, buildCenterline(def));
+    this.hws = def.widths ? this.widthProfile(def.widths, def.reversed) : null;
+    // edge je nejširší místo: kulisy a terén se drží mimo celou trať
+    this.edge = (this.hws ? Math.max(...this.hws) : this.hw) + this.runoff;
     this.tanBank = Float32Array.from(this.bank, Math.tan);
     this.curbMask = this.computeCurbs();
     this.buildRacingLine();
@@ -28,6 +30,27 @@ export class Track {
       const s0 = fwd ? a : b;
       return { s0, len: (fwd ? b - a + this.L : a - b + this.L) % this.L };
     });
+  }
+
+  // proměnlivá šířka: def.widths = [[metr od startu, šířka], ...], mezi úseky plynulý přechod
+  widthProfile(list, reversed) {
+    const raw = new Float64Array(this.N);
+    for (let k = 0; k < this.N; k++) {
+      const s = reversed ? this.L - this.s[k] : this.s[k];
+      let i = 0;
+      while (i + 1 < list.length && list[i + 1][0] <= s) i++;
+      raw[k] = list[i][1] / 2;
+    }
+    return Float32Array.from(smoothCircular(raw, Math.round(14 / this.step)));
+  }
+
+  // poloviční šířka silnice a okraj výběhu v bodě k
+  hwAt(k) {
+    return this.hws ? this.hws[k] : this.hw;
+  }
+
+  edgeAt(k) {
+    return this.hwAt(k) + this.runoff;
   }
 
   // mezera ve svodidle pro zkratku (null = plné svodidlo)
@@ -133,10 +156,11 @@ export class Track {
     return out;
   }
 
-  surfaceAt(lat) {
+  surfaceAt(lat, k = 0) {
     const a = Math.abs(lat);
-    if (a <= this.hw) return SURF_ROAD;
-    if (a <= this.hw + this.curbW) return SURF_CURB;
+    const hw = this.hwAt(k);
+    if (a <= hw) return SURF_ROAD;
+    if (a <= hw + this.curbW) return SURF_CURB;
     return SURF_OFF;
   }
 
@@ -147,10 +171,10 @@ export class Track {
     const kw = smoothCircular(this.kappa, 16);
     const A = new Float64Array(N);
     for (let k = 0; k < N; k++) A[k] = clamp(kw[k] * 55, -1, 1);
-    const W = this.hw - 2.3;
     const shift = Math.round(34 / this.step);
     const line = new Float64Array(N);
     for (let k = 0; k < N; k++) {
+      const W = this.hwAt(k) - 2.3;
       const a = A[k];
       const ahead = A[(k + shift) % N];
       const behind = A[(k - shift + N) % N];
@@ -208,7 +232,7 @@ export class Track {
     const group = new THREE.Group();
     group.name = 'track';
     const N = this.N;
-    const hw = this.hw, edge = this.edge, cw = this.curbW;
+    const cw = this.curbW;
 
     // Silnice
     const { map: roadTex, surface } = makeRoadTextures(style, quality);
@@ -219,8 +243,9 @@ export class Track {
       const n = (k + 1) % N;
       const v0 = this.s[k] / tile;
       const v1 = (n === 0 ? this.L : this.s[n]) / tile;
+      const ha = this.hwAt(k), hb = this.hwAt(n);
       road.quad(
-        this.point(k, -hw), this.point(k, hw), this.point(n, hw), this.point(n, -hw),
+        this.point(k, -ha), this.point(k, ha), this.point(n, hb), this.point(n, -hb),
         null,
         [0, v0, 1, v0, 1, v1, 0, v1],
       );
@@ -238,11 +263,12 @@ export class Track {
       const n = (k + 1) % N;
       if (!this.curbMask[k]) continue;
       const c = Math.floor(this.s[k] / 3) % 2 ? cA : cB;
+      const ha = this.hwAt(k), hb = this.hwAt(n);
       for (const side of [-1, 1]) {
-        const a = side * hw, b = side * (hw + cw);
+        const a0 = side * ha, a1 = side * hb, b0 = side * (ha + cw), b1 = side * (hb + cw);
         const q = side > 0
-          ? [this.point(k, a, 0.02), this.point(k, b, 0.07), this.point(n, b, 0.07), this.point(n, a, 0.02)]
-          : [this.point(k, b, 0.07), this.point(k, a, 0.02), this.point(n, a, 0.02), this.point(n, b, 0.07)];
+          ? [this.point(k, a0, 0.02), this.point(k, b0, 0.07), this.point(n, b1, 0.07), this.point(n, a1, 0.02)]
+          : [this.point(k, b0, 0.07), this.point(k, a0, 0.02), this.point(n, a1, 0.02), this.point(n, b1, 0.07)];
         curb.quad(q[0], q[1], q[2], q[3], c);
       }
     }
@@ -259,15 +285,16 @@ export class Track {
     for (let k = 0; k < N; k++) {
       const n = (k + 1) % N;
       const col = Math.floor(this.s[k] / 5) % 2 ? shA : shB;
+      const ha = this.hwAt(k), hb = this.hwAt(n);
+      const curbed = this.curbMask[k] && this.curbMask[n];
       for (const side of [-1, 1]) {
-        const inner = this.curbMask[k] && this.curbMask[n] ? hw + cw : hw;
-        const a = side * inner, b = side * edge;
-        if (side > 0) sh.quad(this.point(k, a), this.point(k, b), this.point(n, b), this.point(n, a), col);
-        else sh.quad(this.point(k, b), this.point(k, a), this.point(n, a), this.point(n, b), col);
+        const a0 = side * (curbed ? ha + cw : ha), a1 = side * (curbed ? hb + cw : hb);
+        const b0 = side * this.edgeAt(k), b1 = side * this.edgeAt(n);
+        if (side > 0) sh.quad(this.point(k, a0), this.point(k, b0), this.point(n, b1), this.point(n, a1), col);
+        else sh.quad(this.point(k, b0), this.point(k, a0), this.point(n, a1), this.point(n, b1), col);
         // zástěra na vnějším okraji, aby nebyla vidět mezera k terénu
-        const e = side * edge;
-        if (side > 0) sh.quad(this.point(k, e), this.point(k, e, -3), this.point(n, e, -3), this.point(n, e), skirt);
-        else sh.quad(this.point(k, e, -3), this.point(k, e), this.point(n, e), this.point(n, e, -3), skirt);
+        if (side > 0) sh.quad(this.point(k, b0), this.point(k, b0, -3), this.point(n, b1, -3), this.point(n, b1), skirt);
+        else sh.quad(this.point(k, b0, -3), this.point(k, b0), this.point(n, b1), this.point(n, b1, -3), skirt);
       }
     }
     const shMesh = new THREE.Mesh(sh.build(), new THREE.MeshLambertMaterial({ vertexColors: true }));
@@ -279,7 +306,8 @@ export class Track {
 
     // Start / cíl: šachovnice přes silnici
     const chk = new StripBuilder();
-    chk.quad(this.point(N - 1, -hw, 0.03), this.point(N - 1, hw, 0.03), this.point(1, hw, 0.03), this.point(1, -hw, 0.03), null,
+    const hw0 = this.hwAt(0);
+    chk.quad(this.point(N - 1, -hw0, 0.03), this.point(N - 1, hw0, 0.03), this.point(1, hw0, 0.03), this.point(1, -hw0, 0.03), null,
       [0, 0, 1, 0, 1, 1, 0, 1]);
     const chkMesh = new THREE.Mesh(chk.build(), new THREE.MeshLambertMaterial({ map: makeCheckerTexture(16, 2) }));
     chkMesh.receiveShadow = true;
@@ -307,12 +335,12 @@ export class Track {
   // Startovní rošt: dvě řady, střídavě vlevo / vpravo, 8 m od sebe.
   gridSlot(slot) {
     const row = slot;
-    const lat = (slot % 2 === 0 ? -1 : 1) * Math.min(3.6, this.hw - 2.2);
+    const lat = (slot % 2 === 0 ? -1 : 1) * Math.min(3.6, this.hwAt(0) - 2.2);
     return { s: this.L - 9 - row * 7, lat };
   }
 
   buildBarriers(style) {
-    const N = this.N, edge = this.edge;
+    const N = this.N;
     const b = new StripBuilder();
     const type = style.barrier;
     const h = type === 'rail' ? 0.85 : type === 'wall' ? 1.15 : 0.95;
@@ -327,13 +355,14 @@ export class Track {
       const col = seg % 2 ? colA : colB;
       for (const side of [-1, 1]) {
         if (this.cutAt(this.s[k], side)) continue;
-        const li = side * (edge + 0.05), lo = side * (edge + 0.05 + t);
+        const ik = side * (this.edgeAt(k) + 0.05), ok = side * (this.edgeAt(k) + 0.05 + t);
+        const in_ = side * (this.edgeAt(n) + 0.05), on = side * (this.edgeAt(n) + 0.05 + t);
         // vnitřní líc
-        const q1 = [this.point(k, li, bottom), this.point(k, li, h), this.point(n, li, h), this.point(n, li, bottom)];
+        const q1 = [this.point(k, ik, bottom), this.point(k, ik, h), this.point(n, in_, h), this.point(n, in_, bottom)];
         // vrch
-        const q2 = [this.point(k, li, h), this.point(k, lo, h), this.point(n, lo, h), this.point(n, li, h)];
+        const q2 = [this.point(k, ik, h), this.point(k, ok, h), this.point(n, on, h), this.point(n, in_, h)];
         // vnější líc
-        const q3 = [this.point(k, lo, h), this.point(k, lo, bottom), this.point(n, lo, bottom), this.point(n, lo, h)];
+        const q3 = [this.point(k, ok, h), this.point(k, ok, bottom), this.point(n, on, bottom), this.point(n, on, h)];
         if (side > 0) {
           b.quad(q1[0], q1[1], q1[2], q1[3], col);
           b.quad(q2[0], q2[1], q2[2], q2[3], top);
@@ -365,7 +394,7 @@ export class Track {
       for (let k = 0; k < N; k += every) {
         for (const side of [-1, 1]) {
           if (this.cutAt(this.s[k], side)) continue;
-          this.point(k, side * (edge + 0.2), 0, p);
+          this.point(k, side * (this.edgeAt(k) + 0.2), 0, p);
           m.makeRotationY(this.hd[k]);
           m.setPosition(p[0], p[1], p[2]);
           posts.setMatrixAt(i++, m);
@@ -381,7 +410,7 @@ export class Track {
   buildGantry(style) {
     const g = new THREE.Group();
     const k = 0;
-    const span = this.edge + 1.4;
+    const span = this.edgeAt(0) + 1.4;
     const metal = new THREE.MeshLambertMaterial({ color: style.gantry ?? 0x2b3140 });
     const pillarGeo = new THREE.BoxGeometry(0.8, 7.4, 0.8);
     for (const side of [-1, 1]) {

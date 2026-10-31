@@ -22,6 +22,7 @@ export class Terrain {
     this.nx = Math.ceil((maxX + margin - this.x0) / cell) + 1;
     this.nz = Math.ceil((maxZ + margin - this.z0) / cell) + 1;
     this.lake = opts.lake;
+    this.dem = opts.dem ?? null; // skutečná výšková mřížka (jen tratě podle reálné krajiny)
     this.noise = new Noise2D(opts.seed ?? 7);
     this.noise2 = new Noise2D((opts.seed ?? 7) + 101);
     this.computeDistance();
@@ -114,6 +115,12 @@ export class Terrain {
         const bx = Math.max(b.minX - x, 0, x - b.maxX);
         const bz = Math.max(b.minZ - z, 0, z - b.maxZ);
         const dBox = Math.hypot(bx, bz);
+        if (this.dem) {
+          // na okraji mřížky se krajina zvedne do kopců, ať není vidět její konec
+          const hills = smoothstep(330, 520, dBox) * (16 + 14 * (this.noise.fbm(x / 240, z / 240, 3) * 0.5 + 0.5));
+          h[v] = lerp(low, this.demAt(x, z) + hills, smoothstep(edge + 2, edge + 26, d));
+          continue;
+        }
         const far = base + this.biomeHeight(x, z, d, dBox);
         const w = smoothstep(edge + 3, edge + 55, d);
         h[v] = lerp(low, far, w);
@@ -121,6 +128,42 @@ export class Terrain {
     }
     this.h = h;
     if (lake) this.carveLake(lake);
+    for (const w of opts.water ?? []) this.carvePond(w);
+  }
+
+  demAt(x, z) {
+    const { x0, z0, cell, nx, nz, h } = this.dem;
+    const fx = clamp((x - x0) / cell, 0, nx - 1.001), fz = clamp((z - z0) / cell, 0, nz - 1.001);
+    const i = Math.floor(fx), j = Math.floor(fz), u = fx - i, w = fz - j;
+    const a = h[j * nx + i], b = h[j * nx + i + 1], c = h[(j + 1) * nx + i], d = h[(j + 1) * nx + i + 1];
+    return ((a + (b - a) * u) * (1 - w) + (c + (d - c) * u) * w) / 10;
+  }
+
+  // rybník podle obrysu: dno pod hladinou, břeh plynule k vodě; silnice má přednost
+  carvePond({ ring, level }) {
+    const { nx, nz, cell, x0, z0, h, track } = this;
+    const SHORE = 14;
+    let a = Infinity, b = -Infinity, c = Infinity, e = -Infinity;
+    for (const p of ring) {
+      a = Math.min(a, p[0]); b = Math.max(b, p[0]);
+      c = Math.min(c, p[1]); e = Math.max(e, p[1]);
+    }
+    const i0 = Math.max(0, Math.floor((a - SHORE - x0) / cell)), i1 = Math.min(nx - 1, Math.ceil((b + SHORE - x0) / cell));
+    const j0 = Math.max(0, Math.floor((c - SHORE - z0) / cell)), j1 = Math.min(nz - 1, Math.ceil((e + SHORE - z0) / cell));
+    for (let j = j0; j <= j1; j++) {
+      const z = z0 + j * cell;
+      for (let i = i0; i <= i1; i++) {
+        const v = j * nx + i;
+        if (this.dist[v] < track.edge + 1) continue;
+        const x = x0 + i * cell;
+        if (pointInRing(x, z, ring)) {
+          h[v] = Math.min(h[v], level - 1.4);
+          continue;
+        }
+        const dr = ringDistance(x, z, ring);
+        if (dr < SHORE) h[v] = lerp(level + 0.3, h[v], smoothstep(0, SHORE, dr));
+      }
+    }
   }
 
   // jezero: okolí srovnat do roviny těsně nad hladinou a uprostřed vyhloubit dno
@@ -263,10 +306,42 @@ export class Terrain {
     g.setIndex(new THREE.BufferAttribute(idx, 1));
     g.computeVertexNormals();
     g.computeBoundingSphere();
-    const mat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: palette.flat ?? true });
+    // namalovaná zem (ulice, parky, pole) místo barev ve vrcholech
+    if (this.groundMap) {
+      const uv = new Float32Array(V * 2);
+      for (let j = 0; j < nz; j++) {
+        for (let i = 0; i < nx; i++) {
+          uv[(j * nx + i) * 2] = i / (nx - 1);
+          uv[(j * nx + i) * 2 + 1] = 1 - j / (nz - 1);
+        }
+      }
+      g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+    }
+    const mat = this.groundMap
+      ? new THREE.MeshLambertMaterial({ map: this.groundMap })
+      : new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: palette.flat ?? true });
     const mesh = new THREE.Mesh(g, mat);
     mesh.receiveShadow = true;
     mesh.name = 'terrain';
     return mesh;
   }
+}
+
+export function pointInRing(x, z, r) {
+  let inside = false;
+  for (let i = 0, j = r.length - 1; i < r.length; j = i++) {
+    const a = r[i], b = r[j];
+    if ((a[1] > z) !== (b[1] > z) && x < ((b[0] - a[0]) * (z - a[1])) / (b[1] - a[1]) + a[0]) inside = !inside;
+  }
+  return inside;
+}
+
+function ringDistance(x, z, r) {
+  let m = Infinity;
+  for (let i = 0, j = r.length - 1; i < r.length; j = i++) {
+    const ax = r[j][0], az = r[j][1], dx = r[i][0] - ax, dz = r[i][1] - az;
+    const t = clamp(((x - ax) * dx + (z - az) * dz) / (dx * dx + dz * dz || 1), 0, 1);
+    m = Math.min(m, Math.hypot(x - ax - dx * t, z - az - dz * t));
+  }
+  return m;
 }

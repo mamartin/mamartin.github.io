@@ -107,7 +107,7 @@ export function dailyDef() {
 export const REV = '~r';
 export const baseId = (id) => (id && id.endsWith(REV) ? id.slice(0, -REV.length) : id);
 export function reverseDef(def) {
-  return { ...def, id: def.id + REV, name: `${def.name} (obráceně)`, cut: null, points: [def.points[0], ...def.points.slice(1).reverse()] };
+  return { ...def, id: def.id + REV, name: `${def.name} (obráceně)`, cut: null, reversed: true, points: [def.points[0], ...def.points.slice(1).reverse()] };
 }
 
 export function trackDef(id) {

@@ -1,0 +1,9 @@
+{
+  "name": "zavody-tools",
+  "private": true,
+  "type": "module",
+  "description": "Nástroje pro stavbu tratí ze skutečných dat. Hra je nepotřebuje, slouží jen k přegenerování dat.",
+  "dependencies": {
+    "laz-perf": "0.0.7"
+  }
+}
