@@ -40,8 +40,11 @@ export const TRACKS = [
     seed: 777,
     cut: {
       via: [[-20, -312], [-95, -345], [-140, -372], [-190, -383]],
-      width: 8,
-      rocks: [[0.36, 1.5, 1.5], [0.72, -1.5, 1.5]],
+      width: 11,
+      dirt: 0.3, // ujetá cesta: brzdí mnohem méně než volný terén
+      dirtA: '#f2dcb4',
+      dirtB: '#e9cda0',
+      rocks: [[0.36, 4.7, 1.1], [0.72, -4.7, 1.1]],
     },
     points: [
       [0, 0, 0, 0],

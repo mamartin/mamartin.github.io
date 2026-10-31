@@ -1,6 +1,7 @@
 // Stavby na trati: zkratka (polní cesta s valy, balvany a značením) a tunel.
 import * as THREE from 'three';
 import { StripBuilder } from './track.js';
+import { lerp } from './rng.js';
 
 const BERM = 1.1; // výška valu podél zkratky
 const TUNNEL_H = 6.8;
@@ -29,6 +30,7 @@ export function buildCuts(track, style) {
     const dirt = new StripBuilder(), berm = new StripBuilder();
     const dA = new THREE.Color(cut.spec.dirtA ?? style.shoulderA).multiplyScalar(0.72);
     const dB = new THREE.Color(cut.spec.dirtB ?? style.shoulderB).multiplyScalar(0.62);
+    const guide = new THREE.Color(0xffc21a);
     const bA = new THREE.Color(style.shoulderA).multiplyScalar(0.5);
     const top = new THREE.Color(style.shoulderA).multiplyScalar(0.6);
     const at = (k, lat, dy) => {
@@ -39,6 +41,8 @@ export function buildCuts(track, style) {
       const col = Math.floor(k / 3) % 2 ? dA : dB;
       const hw = cut.hw;
       dirt.quad(at(k, -hw, 0.06), at(k, hw, 0.06), at(k + 1, hw, 0.06), at(k + 1, -hw, 0.06), col);
+      // naváděcí čára jako u vjezdu do boxů
+      if (k % 4 < 2) dirt.quad(at(k, -0.3, 0.08), at(k, 0.3, 0.08), at(k + 1, 0.3, 0.08), at(k + 1, -0.3, 0.08), guide);
       for (const side of [-1, 1]) {
         // na straně k trati val začíná až za mezerou ve svodidle
         if (side === -cut.side && (k < cut.k0 || k >= cut.k1)) continue;
@@ -53,6 +57,22 @@ export function buildCuts(track, style) {
           berm.quad(q2[3], q2[2], q2[1], q2[0], top);
         }
       }
+    }
+    // šipky ve vjezdu
+    for (const k of [2, 8, 14]) {
+      dirt.quad(at(k, -3, 0.09), at(k + 1, 0, 0.09), at(k + 2, 0, 0.09), at(k + 1, -3, 0.09), guide);
+      dirt.quad(at(k + 1, 0, 0.09), at(k, 3, 0.09), at(k + 1, 3, 0.09), at(k + 2, 0, 0.09), guide);
+    }
+    // čára z asfaltu k vjezdu
+    const lead = (rel, lat) => {
+      const p = track.sampleAt(cut.s0 + rel, lat, {});
+      return [p.x, p.y + 0.05, p.z];
+    };
+    for (let rel = -60; rel < 0; rel += 6) {
+      const l0 = cut.side * lerp(track.hw - 2.5, track.edge - 2.5, (rel + 60) / 60);
+      const l1 = cut.side * lerp(track.hw - 2.5, track.edge - 2.5, (rel + 63) / 60);
+      const q = [lead(rel, l0 - 0.3), lead(rel, l0 + 0.3), lead(rel + 3, l1 + 0.3), lead(rel + 3, l1 - 0.3)];
+      dirt.quad(...q, guide);
     }
     const road = new THREE.Mesh(dirt.build(), new THREE.MeshLambertMaterial({ vertexColors: true }));
     road.receiveShadow = true;
@@ -70,15 +90,33 @@ export function buildCuts(track, style) {
     });
     rocks.castShadow = true;
     group.add(rocks);
-    // značka u vjezdu: stojí na konci svodidla a míří proti jízdě
-    const entry = track.sampleAt(cut.s0 + cut.gapIn, cut.side * (track.edge + 0.6), {});
-    const before = track.sampleAt(cut.s0 + cut.gapIn - 30, 0, {});
-    const sign = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 1.6), new THREE.MeshBasicMaterial({ map: textBoard('ZKRATKA') }));
-    sign.position.set(entry.x, entry.y + 2.6, entry.z);
-    sign.rotation.y = Math.atan2(before.x - entry.x, before.z - entry.z);
-    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.2, 2, 0.2), new THREE.MeshLambertMaterial({ color: 0x2a2d33 }));
-    leg.position.set(entry.x, entry.y + 0.9, entry.z);
-    group.add(sign, leg);
+    // sloupky po okrajích ukazují, kudy cesta vede už z dálky
+    const posts = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.12, 0.16, 1.1, 6), new THREE.MeshLambertMaterial({ color: 0xffc21a }), 2 * Math.ceil(cut.n / 4));
+    let count = 0;
+    for (let k = 0; k < cut.n; k += 4) {
+      for (const side of [-1, 1]) {
+        if (side === -cut.side && (k < cut.k0 || k >= cut.k1)) continue;
+        m.makeTranslation(...at(k, side * (cut.hw - 0.2), 0.55));
+        posts.setMatrixAt(count++, m);
+      }
+    }
+    posts.count = count;
+    posts.computeBoundingSphere();
+    group.add(posts);
+    // značky: jedna s předstihem, druhá stojí na konci svodidla; obě míří proti jízdě
+    const board = textBoard(cut.side < 0 ? '◀ ZKRATKA' : 'ZKRATKA ▶');
+    const legGeo = new THREE.BoxGeometry(0.2, 3, 0.2);
+    const legMat = new THREE.MeshLambertMaterial({ color: 0x2a2d33 });
+    for (const rel of [cut.gapIn - 70, cut.gapIn]) {
+      const spot = track.sampleAt(cut.s0 + rel, cut.side * (track.edge + 0.6), {});
+      const before = track.sampleAt(cut.s0 + rel - 30, 0, {});
+      const sign = new THREE.Mesh(new THREE.PlaneGeometry(6.4, 2.4), new THREE.MeshBasicMaterial({ map: board }));
+      sign.position.set(spot.x, spot.y + 3.6, spot.z);
+      sign.rotation.y = Math.atan2(before.x - spot.x, before.z - spot.z);
+      const leg = new THREE.Mesh(legGeo, legMat);
+      leg.position.set(spot.x, spot.y + 1.2, spot.z);
+      group.add(sign, leg);
+    }
   }
   return group;
 }

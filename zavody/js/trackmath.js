@@ -324,6 +324,7 @@ export class Cut {
     this.track = track;
     this.spec = spec;
     this.hw = spec.width / 2;
+    this.dirt = spec.dirt ?? 1;
     this.s0 = a.s;
     this.span = (b.s - a.s + L) % L;
     this.side = Math.sign((via[1][0] - a.cx) * a.rx + (via[1][1] - a.cz) * a.rz) || 1;

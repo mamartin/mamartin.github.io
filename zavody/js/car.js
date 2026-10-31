@@ -789,7 +789,7 @@ export class Car {
     this.surface = this.cut ? SURF_OFF : tr.surfaceAt(P.lat);
     const off = this.surface === SURF_OFF;
     // podíl auta mimo asfalt: kola přejíždějí okraj postupně, takže přilnavost se mění plynule
-    const offTarget = this.cut ? 1 : clamp((Math.abs(P.lat) - tr.hw - tr.curbW + V.halfWidth) / (2 * V.halfWidth), 0, 1);
+    const offTarget = this.cut ? this.cut.dirt : clamp((Math.abs(P.lat) - tr.hw - tr.curbW + V.halfWidth) / (2 * V.halfWidth), 0, 1);
     this.offMix += (offTarget - this.offMix) * Math.min(1, dt * 8);
     const mix = this.offMix;
     const roadGrip = (this.surface === SURF_ROAD ? 1 : 0.95) * (biome.roadGrip ?? 1) * (biome.wet ? V.wetGrip : 1);
@@ -969,6 +969,11 @@ export class Car {
         back = Math.abs(m.lat) < lim - 1;
       }
       if (back) {
+        // kdo zkratku projel celou, dostane na výjezdu turbo
+        if (this.cutFrom < cut.k0 && P.cutK >= cut.k1) {
+          this.turbo = TURBO_TIME[2];
+          this.turboFired = 3;
+        }
         this.cut = null;
         tr.project(this.x, this.z, P.i, P);
       }
@@ -978,6 +983,7 @@ export class Car {
         this.cut = c;
         P.cutK = -1;
         c.project(this.x, this.z, P);
+        this.cutFrom = P.cutK;
       }
     }
   }
