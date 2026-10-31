@@ -918,7 +918,7 @@ export function buildScenery(track, terrain, biomeKey, biome, quality, seed) {
     group.add(buildStreetLamps(track, 26));
   }
 
-  extra.stand = new Stand(track, terrain, rng, quality);
+  extra.stand = new Stand(track, terrain, rng, quality, biome.night);
   group.add(extra.stand.root);
   group.add(buildAdBoards(track, terrain, rng, biome.night));
   group.add(buildCornerSigns(track), buildRoadPoles(track), buildCuts(track, biome.track), buildTunnels(track));

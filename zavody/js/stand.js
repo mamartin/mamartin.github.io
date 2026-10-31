@@ -31,6 +31,27 @@ export function standArea(track, terrain) {
   };
 }
 
+// V noci tribuna svítí bez skutečných světel: každé by zdražilo stínování celé scény,
+// takže se materiály rozsvítí vlastní barvou a pod střechou jsou jen zářící reflektory.
+const FLOOD = 0.62;
+const FLOOD_TINT = 'vec3(1.0, 0.95, 0.85)';
+
+function floodlit(mat) {
+  mat.onBeforeCompile = (sh) => {
+    sh.fragmentShader = sh.fragmentShader.replace('#include <emissivemap_fragment>', `
+      #include <emissivemap_fragment>
+      totalEmissiveRadiance += diffuseColor.rgb * ${FLOOD_TINT} * ${FLOOD.toFixed(2)};
+    `);
+  };
+  mat.customProgramCacheKey = () => 'floodlit';
+  return mat;
+}
+
+// beton a další jednobarevné plochy
+function standMaterial(color, night, glow) {
+  return new THREE.MeshLambertMaterial(night ? { color, emissive: color, emissiveIntensity: glow } : { color });
+}
+
 // --- diváci -----------------------------------------------------------------
 
 const PART = { shirt: 0, skin: 1, hair: 2, legs: 3, flag: 4 };
@@ -118,7 +139,7 @@ const crowdShaderColor = /* glsl */ `
   else if (aPart > 2.5 && aPart < 3.5) vColor = vec3(0.08, 0.09, 0.13);
 `;
 
-function buildCrowd(rng, len, quality) {
+function buildCrowd(rng, len, quality, night) {
   const detail = quality !== 'low';
   const perRow = 60;
   const geo = spectatorGeometry(detail);
@@ -131,7 +152,12 @@ function buildCrowd(rng, len, quality) {
     sh.vertexShader = crowdShaderHead + sh.vertexShader
       .replace('#include <begin_vertex>', crowdShaderPose)
       .replace('#include <color_vertex>', crowdShaderColor);
+    if (night) sh.fragmentShader = sh.fragmentShader.replace('#include <emissivemap_fragment>', `
+      #include <emissivemap_fragment>
+      totalEmissiveRadiance += diffuseColor.rgb * ${FLOOD_TINT} * ${FLOOD.toFixed(2)};
+    `);
   };
+  mat.customProgramCacheKey = () => `crowd-${night}`;
   const mesh = new THREE.InstancedMesh(geo, mat, max);
   const m = new THREE.Matrix4(), c = new THREE.Color();
   const shirts = ['#d7263d', '#f2c230', '#2c6fd1', '#ffffff', '#1f9d55', '#f07b2c', '#222222', '#b14fc5'];
@@ -182,10 +208,9 @@ function bunGeometry() {
   ]);
 }
 
-const paintedMat = () => new THREE.MeshLambertMaterial({ vertexColors: true });
 
 // stojí v první řadě a mává buchtou, ať ji jde z trati poznat
-function buildGranny() {
+function buildGranny(night) {
   const body = new THREE.Group();
   const still = mergeGeometries([
     vertexPainted(new THREE.CylinderGeometry(0.17, 0.33, 0.92, 8).translate(0, 0.46, 0), '#3f6e9c'),
@@ -196,7 +221,8 @@ function buildGranny() {
     vertexPainted(new THREE.ConeGeometry(0.1, 0.16, 4).translate(-0.17, 0.95, 0), '#d7263d'),
     vertexPainted(new THREE.BoxGeometry(0.08, 0.34, 0.08).translate(0, 0.62, -0.26), '#3f6e9c'),
   ]);
-  const torso = new THREE.Mesh(still, paintedMat());
+  const paint = new THREE.MeshLambertMaterial({ vertexColors: true });
+  const torso = new THREE.Mesh(still, night ? floodlit(paint) : paint);
   body.add(torso);
   const arm = new THREE.Group();
   arm.position.set(0.02, 0.8, 0.22);
@@ -314,7 +340,7 @@ class Confetti {
 const FLASH_LIFE = 0.13;
 
 export class Stand {
-  constructor(track, terrain, rng, quality) {
+  constructor(track, terrain, rng, quality, night) {
     const side = standSide(track, terrain);
     this.rng = rng;
     this.time = 0;
@@ -329,8 +355,8 @@ export class Stand {
     // lokální +z = směr trati, lokální -x = pravá strana trati; řady stoupají do -x
     group.rotation.y = track.hd[0];
     const len = STAND_LEN;
-    const concrete = new THREE.MeshLambertMaterial({ color: 0x9aa0a6 });
-    const seatsMat = new THREE.MeshLambertMaterial({ color: 0x2f5fa8 });
+    const concrete = standMaterial(0x9aa0a6, night, 0.3);
+    const seatsMat = standMaterial(0x2f5fa8, night, 0.42);
     const parts = [];
     for (let r = 0; r < ROWS; r++) {
       const g = new THREE.BoxGeometry(1.6, 0.9 + r * 0.9, len);
@@ -352,12 +378,12 @@ export class Stand {
       seatParts.push(g);
     }
     flip.add(new THREE.Mesh(mergeGeometries(seatParts), seatsMat));
-    const crowd = buildCrowd(rng, len, quality);
+    const crowd = buildCrowd(rng, len, quality, night);
     this.uniforms = crowd.uniforms;
     flip.add(crowd.mesh);
     // střecha
     const roofH = 0.9 + ROWS * 0.9 + 3.2;
-    const roof = new THREE.Mesh(new THREE.BoxGeometry(ROWS * 1.6 + 2.5, 0.35, len + 2), new THREE.MeshLambertMaterial({ color: 0xe8e8e8 }));
+    const roof = new THREE.Mesh(new THREE.BoxGeometry(ROWS * 1.6 + 2.5, 0.35, len + 2), standMaterial(0xe8e8e8, night, 0.2));
     roof.position.set(-(ROWS * 1.6) / 2 - 0.4, roofH, 0);
     roof.castShadow = true;
     flip.add(roof);
@@ -367,12 +393,25 @@ export class Stand {
       post.position.set(-0.4, roofH / 2, z);
       flip.add(post);
     }
+    if (night) {
+      const lamps = new THREE.InstancedMesh(new THREE.BoxGeometry(1.2, 0.14, 3), new THREE.MeshBasicMaterial({ color: new THREE.Color(3.4, 3.1, 2.6) }), 20);
+      const m = new THREE.Matrix4();
+      for (let i = 0; i < 20; i++) {
+        m.setPosition(i % 2 ? -2.4 : -8.6, roofH - 0.25, -len / 2 + 3.5 + (i >> 1) * 7);
+        lamps.setMatrixAt(i, m);
+      }
+      lamps.computeBoundingSphere();
+      flip.add(lamps);
+    }
     // bába a její transparent pod střechou (text nezrcadlíme, proto mimo flip)
-    this.granny = buildGranny();
+    this.granny = buildGranny(night);
     this.granny.body.position.set(-0.8, 1.2, GRANNY_Z);
     flip.add(this.granny.body);
     group.add(flip);
-    const banner = new THREE.Mesh(new THREE.PlaneGeometry(14, 1.75), new THREE.MeshLambertMaterial({ map: bannerTexture() }));
+    const bannerMap = bannerTexture();
+    const banner = new THREE.Mesh(new THREE.PlaneGeometry(14, 1.75), new THREE.MeshLambertMaterial(
+      night ? { map: bannerMap, emissive: 0xffffff, emissiveMap: bannerMap, emissiveIntensity: FLOOD } : { map: bannerMap },
+    ));
     banner.position.set(side * 0.9, roofH - 0.7, GRANNY_Z);
     banner.rotation.y = (side * Math.PI) / 2;
     group.add(banner);
