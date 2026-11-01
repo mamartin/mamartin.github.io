@@ -1,5 +1,5 @@
 {
-  "stazeno": "2026-10-31T10:48:49.388Z",
+  "stazeno": "2026-11-01T11:45:40.406Z",
   "zdroje": [
     {
       "id": "openai",
@@ -7,7 +7,7 @@
       "typ": "lab",
       "url": "https://openai.com/news/rss.xml",
       "ok": true,
-      "pocet": 11
+      "pocet": 8
     },
     {
       "id": "anthropic",
@@ -16,7 +16,7 @@
       "url": "https://raw.githubusercontent.com/Olshansk/rss-feeds/main/feeds/feed_anthropic_news.xml",
       "poznamka": "neoficiální feed (Anthropic RSS nemá)",
       "ok": true,
-      "pocet": 1
+      "pocet": 0
     },
     {
       "id": "deepmind",
@@ -24,7 +24,7 @@
       "typ": "lab",
       "url": "https://deepmind.google/blog/rss.xml",
       "ok": true,
-      "pocet": 2
+      "pocet": 1
     },
     {
       "id": "google",
@@ -40,7 +40,7 @@
       "typ": "lab",
       "url": "https://huggingface.co/blog/feed.xml",
       "ok": true,
-      "pocet": 7
+      "pocet": 5
     },
     {
       "id": "verge",
@@ -72,7 +72,7 @@
       "typ": "data",
       "url": "https://news.ycombinator.com",
       "ok": true,
-      "pocet": 18
+      "pocet": 14
     },
     {
       "id": "hf-modely",
@@ -92,6 +92,55 @@
     }
   ],
   "clanky": [
+    {
+      "zdroj": "willison",
+      "nazev": "How We Took Over ChatGPT Accounts",
+      "url": "https://simonwillison.net/2026/Oct/31/how-we-took-over-chatgpt-accounts/",
+      "datum": "2026-10-31T23:15:22.000Z",
+      "popis": "How We Took Over ChatGPT Accounts Parameter Labs describe an exploit they found against ChatGPT's implementation of the artifacts pattern (OpenAI used to call this \"Canvas\" but it looks like the latest revision is called HTML previews ), where interactive custom HTML apps are displayed in a sandboxed iframe. It's important that HTML in these stays tightly sandboxed to avoid untrusted code…"
+    },
+    {
+      "zdroj": "willison",
+      "nazev": "datasette-llm 0.1a9",
+      "url": "https://simonwillison.net/2026/Oct/31/datasette-llm/",
+      "datum": "2026-10-31T22:10:01.000Z",
+      "popis": "Release: datasette-llm 0.1a9 I have some big upgrades to Datasette Agent in the pipeline, but in the meantime here's a tiny user experience improvement to the underlying datasette-llm plugin. It now picks up the default model used by LLM , which means you can start using Datasette Agent without needing to explicitly configure a default model: uvx --with datasette-agent datasette content.db…"
+    },
+    {
+      "zdroj": "techcrunch",
+      "nazev": "Apple CEO says the company doesn’t ‘want to ship AI for AI’s sake’",
+      "url": "https://techcrunch.com/2026/10/31/apple-ceo-says-the-company-doesnt-want-to-ship-ai-for-ais-sake/",
+      "datum": "2026-10-31T21:41:00.000Z",
+      "popis": "Apple's new CEO defended the company's current position in the AI landscape."
+    },
+    {
+      "zdroj": "techcrunch",
+      "nazev": "4 days left: How TechCrunch Founder Summit helps you make more useful connections to scale",
+      "url": "https://techcrunch.com/2026/10/31/4-days-left-how-techcrunch-founder-summit-helps-you-make-more-useful-connections-to-scale/",
+      "datum": "2026-10-31T21:36:07.000Z",
+      "popis": "On November 4 at Boston’s SoWa Power Station, get ready for a full day packed with meaningful networking opportunities, actionable insights, and connections that could change the trajectory of your idea and startup. Register before all prices go up at the door."
+    },
+    {
+      "zdroj": "techcrunch",
+      "nazev": "Judge allows NAACP lawsuit over xAI data center pollution to move forward",
+      "url": "https://techcrunch.com/2026/10/31/judge-allows-naacp-lawsuit-over-xai-data-center-pollution-to-move-forward/",
+      "datum": "2026-10-31T21:17:03.000Z",
+      "popis": "An NAACP lawsuit accuses the SpaceX-owned AI company of violating the Clean Air Act."
+    },
+    {
+      "zdroj": "techcrunch",
+      "nazev": "OpenAI reportedly lowers funding target for new round",
+      "url": "https://techcrunch.com/2026/10/31/openai-reportedly-lowers-funding-target-for-new-round/",
+      "datum": "2026-10-31T16:12:55.000Z",
+      "popis": "OpenAI’s latest funding round doesn't seem to be living up to expectations."
+    },
+    {
+      "zdroj": "verge",
+      "nazev": "I built an AI Tamagotchi before Meta could",
+      "url": "https://www.theverge.com/gadgets/1013375/muse-charm-gadgets-preview-waveshare-esp32-claude-vibe-code",
+      "datum": "2026-10-31T16:05:00.000Z",
+      "popis": "Mark Zuckerberg's Meta made AI look so stinking cute by giving it a squishy little face - and this holiday season, he wants to sell you a Muse Charm so you can carry your jolly AI helper around like a Tamagotchi. But I won't be buying one, because we have Muse Charm at home. It […]"
+    },
     {
       "zdroj": "techcrunch",
       "nazev": "Nvidia weighs playing the cosigner for Nscale’s AI data center in West Virginia",
@@ -198,32 +247,11 @@
       "popis": "The first TPU in space is running a Google DeepMind Gemma 4 model and writing cheesy poetry."
     },
     {
-      "zdroj": "techcrunch",
-      "nazev": "Theranos whistleblower Tyler Shultz warns that the AI boom is ‘a great opportunity to go deceive people’",
-      "url": "https://techcrunch.com/2026/10/30/theranos-whistleblower-tyler-shultz-warns-that-the-ai-boom-is-a-great-opportunity-to-go-deceive-people/",
-      "datum": "2026-10-30T16:03:45.000Z",
-      "popis": "The cautionary Theranos tale takes on a new significance in the AI era, when companies that have never turned a profit are raising capital at trillion-dollar valuations."
-    },
-    {
       "zdroj": "verge",
       "nazev": "Pope Leo calls for the disarmament of AI: ‘Machines are tools, not persons’",
       "url": "https://www.theverge.com/ai-artificial-intelligence/1023188/pope-leo-disarm-ai",
       "datum": "2026-10-30T14:58:06.000Z",
       "popis": "Pope Leo XIV says AI systems should be \"disarmed,\" adding that humans \"have the responsibility to guide, change and, when necessary, reject its applications.\" In Friday's Papal Address, Pope Leo encourages United Nations member states to \"take concrete steps toward banning lethal autonomous weapons\" during their meeting in Geneva next month. The address reflects many […]"
-    },
-    {
-      "zdroj": "techcrunch",
-      "nazev": "Skip the small talk: Make game-changing connections at TechCrunch Founder Summit with Braindate",
-      "url": "https://techcrunch.com/2026/10/30/skip-the-small-talk-make-game-changing-connections-at-techcrunch-founder-summit-with-braindate/",
-      "datum": "2026-10-30T14:00:00.000Z",
-      "popis": "At TechCrunch Founder Summit 2026, happening November 4 at SoWa Power Station in Boston, networking powered by Braindate is designed to make those conversations easier to find, whether they are in 1:1 or small-group on-site meetings. Register before the event starts to save up to $100 on your pass, plus get a second for free."
-    },
-    {
-      "zdroj": "techcrunch",
-      "nazev": "DoorDash said it’s only received ‘several hundred’ orders from AI agents",
-      "url": "https://techcrunch.com/2026/10/30/doordash-said-its-only-received-several-hundred-orders-from-ai-agents/",
-      "datum": "2026-10-30T13:54:25.000Z",
-      "popis": "DoorDash said that it is open to working with third-party agent makers."
     },
     {
       "zdroj": "verge",
@@ -238,13 +266,6 @@
       "url": "https://www.theverge.com/ai-artificial-intelligence/1023054/altman-cheeky-pint-ai-math-interview",
       "datum": "2026-10-30T13:01:14.000Z",
       "popis": "After months of bombarding mathematicians with a relentless stream of AI-generated results, OpenAI CEO Sam Altman says he sympathizes with researchers struggling to make sense of it all. But he has no intention of stopping - and hints there could be much more to come from the company's stockpile of discoveries. \"I think, on net, […]"
-    },
-    {
-      "zdroj": "techcrunch",
-      "nazev": "5 days left: Your last chance to connect, scale, and save at TechCrunch Founder Summit 2026",
-      "url": "https://techcrunch.com/2026/10/30/5-days-left-your-last-chance-to-connect-scale-and-save-at-techcrunch-founder-summit-2026/",
-      "datum": "2026-10-30T13:00:00.000Z",
-      "popis": "5 days to save up to $100, plus a second pass for free to TechCrunch Founder Summit 2026 in Boston on November 4. Register now."
     },
     {
       "zdroj": "verge",
@@ -266,13 +287,6 @@
       "url": "https://openai.com/index/community-safety-report-and-new-protections-for-teens",
       "datum": "2026-10-30T09:00:00.000Z",
       "popis": "OpenAI is strengthening violence prevention in ChatGPT with expanded safeguards, earlier interventions, and a new commitment to public safety reporting."
-    },
-    {
-      "zdroj": "verge",
-      "nazev": "Wikipedia’s operator says a bad AI copyright ruling could threaten the open web",
-      "url": "https://www.theverge.com/policy/1022880/wikipedia-openai-new-york-times-copyright",
-      "datum": "2026-10-30T09:00:00.000Z",
-      "popis": "The Wikimedia Foundation is staking out a middle ground in a group of landmark AI copyright cases, pushing courts to legally protect large language models (LLMs) training on copyrighted work - but not chatbots regurgitating that work to users. An overly black-and-white ruling, it says, could either deprive Wikipedians of useful AI-based tools or endanger […]"
     },
     {
       "zdroj": "openai",
@@ -392,215 +406,120 @@
       "url": "https://openai.com/index/openai-servicenow-partnership-expansion",
       "datum": "2026-10-28T13:15:00.000Z",
       "popis": "OpenAI and ServiceNow expand their partnership to bring OpenAI models and agents into ServiceNow and ServiceNow workflows into ChatGPT and Codex."
-    },
-    {
-      "zdroj": "willison",
-      "nazev": "Quoting Terk Terkowitz",
-      "url": "https://simonwillison.net/2026/Oct/28/terk-terkowitz/",
-      "datum": "2026-10-28T10:09:07.000Z",
-      "popis": "If your work does not benefit from current AI tooling, that is a finding, not a failing. Document why, share it with your community of peers, bring it to your manager, and work to find solutions. An engineer who can explain where AI does not yet help their work is demonstrating the judgement we are asking for. &mdash; Terk Terkowitz , An update from Amazon engineering leadership on the role of…"
-    },
-    {
-      "zdroj": "openai",
-      "nazev": "The future of the firm",
-      "url": "https://openai.com/index/the-future-of-the-firm",
-      "datum": "2026-10-28T10:00:00.000Z",
-      "popis": "How AI might enter the org chart—beneath, beside, and between us."
-    },
-    {
-      "zdroj": "openai",
-      "nazev": "Legora is building the agentic operating system for legal work",
-      "url": "https://openai.com/index/legora",
-      "datum": "2026-10-28T09:30:00.000Z",
-      "popis": "See how Legora uses OpenAI models, ChatGPT, and Codex to accelerate legal workflows, expand contract analysis, and free lawyers to focus on higher-value work."
-    },
-    {
-      "zdroj": "anthropic",
-      "nazev": "AI for Science expands to foundations and research institutions",
-      "url": "https://www.anthropic.com/news/ai-for-science-expands-foundations-research-institutions",
-      "datum": "2026-10-28T00:00:00.000Z",
-      "popis": "We’re highlighting 20 scientific foundations, institutions, and research groups around the world that we’ve partnered with in an expansion of our AI for Science program."
-    },
-    {
-      "zdroj": "willison",
-      "nazev": "Game Boy Color on My Conference Badge",
-      "url": "https://simonwillison.net/2026/Oct/27/game-boy-color-on-my-conference-badge/",
-      "datum": "2026-10-27T19:34:18.000Z",
-      "popis": "Game Boy Color on My Conference Badge I'm at GitHub Universe this week and, similar to last year , the conference badge is a full-blown color screen computer. I've been hacking around with it again, and then I ran into with Steve Francia... who worked with Gemini to get a full NES emulator working on it, and then went a step further and deployed an emulator for both the Game Boy and the Game Boy…"
-    },
-    {
-      "zdroj": "huggingface",
-      "nazev": "Build specialized multimodal models with LFM3",
-      "url": "https://huggingface.co/blog/LiquidAI/lfm3",
-      "datum": "2026-10-27T17:16:52.000Z",
-      "popis": ""
-    },
-    {
-      "zdroj": "huggingface",
-      "nazev": "Can we trust LLMs to judge whether a research idea is novel?",
-      "url": "https://huggingface.co/blog/allenai/novelty-bench",
-      "datum": "2026-10-27T16:12:42.000Z",
-      "popis": ""
-    },
-    {
-      "zdroj": "deepmind",
-      "nazev": "Genie 4: A new generation of world simulation",
-      "url": "https://deepmind.google/blog/genie-4-a-new-generation-of-world-simulation/",
-      "datum": "2026-10-27T16:01:38.000Z",
-      "popis": "Genie 4: our new world model unlocking unprecedented realism in real-time simulation."
-    },
-    {
-      "zdroj": "openai",
-      "nazev": "Retell uses OpenAI models to help power 100M monthly calls",
-      "url": "https://openai.com/index/retell-ai",
-      "datum": "2026-10-27T15:00:00.000Z",
-      "popis": "GPT-6 Astra tops Retell’s voice agent benchmark, while Codex helps it reach a $1.6M annual revenue run rate per employee."
     }
   ],
   "hn": [
     {
-      "nazev": "Backdoor in Claude Code for VS Code extension on the Cursor Marketplace",
-      "url": "https://phorion.io/blog/offical-claude-code-vsx-compromise/",
-      "diskuse": "https://news.ycombinator.com/item?id=50300683",
-      "body": 902,
-      "komentare": 532,
-      "datum": "2026-10-30T07:09:12Z"
+      "nazev": "Anthropic blocks users for anything touching training larger models",
+      "url": "https://twitter.com/jiahaoshao1/status/2116475922190922088",
+      "diskuse": "https://news.ycombinator.com/item?id=50319358",
+      "body": 380,
+      "komentare": 219,
+      "datum": "2026-10-31T19:39:19Z"
     },
     {
-      "nazev": "Backdoors in official Claude Code extensions",
-      "url": "https://cyberplace.social/@GossiTheDog/117528831681803563",
-      "diskuse": "https://news.ycombinator.com/item?id=50302334",
-      "body": 655,
-      "komentare": 17,
-      "datum": "2026-10-30T11:05:53Z"
+      "nazev": "Do the math: How we took over ChatGPT accounts",
+      "url": "https://www.parameter.ai/labs/we-found-a-gap-at-openai",
+      "diskuse": "https://news.ycombinator.com/item?id=50314699",
+      "body": 337,
+      "komentare": 165,
+      "datum": "2026-10-31T10:30:11Z"
     },
     {
-      "nazev": "AI isn't replacing SREs, it's deskilling them",
-      "url": "https://newsletter.signoz.io/p/ai-isnt-replacing-sres-its-deskilling",
-      "diskuse": "https://news.ycombinator.com/item?id=50305693",
-      "body": 601,
-      "komentare": 452,
-      "datum": "2026-10-30T15:52:18Z"
-    },
-    {
-      "nazev": "Claude Code VS Code extension with backdoor released on Cursor marketplace",
-      "url": "https://doublepulsar.com/anthropic-hacked-to-deliver-remote-access-trojan-to-claude-developer-laptops-worldwide-1148a92baae2",
-      "diskuse": "https://news.ycombinator.com/item?id=50301983",
-      "body": 399,
-      "komentare": 1,
-      "datum": "2026-10-30T10:22:51Z"
-    },
-    {
-      "nazev": "Anthropic may not secure investment-grade rating after IPO, Blackstone says",
-      "url": "https://www.ft.com/content/59383c7f-8d82-493f-bf01-d2e862a1018f",
-      "diskuse": "https://news.ycombinator.com/item?id=50307219",
-      "body": 310,
-      "komentare": 257,
-      "datum": "2026-10-30T17:27:25Z"
-    },
-    {
-      "nazev": "Proton's CEO Cancels AI 'Re-Interviews'",
-      "url": "https://www.404media.co/protons-ceo-cancels-ai-re-interviews/",
-      "diskuse": "https://news.ycombinator.com/item?id=50307183",
-      "body": 275,
-      "komentare": 231,
-      "datum": "2026-10-30T17:24:45Z"
-    },
-    {
-      "nazev": "Show HN: A working Nintendo in ~1GB of Qwen weights",
-      "url": "https://github.com/dbreunig/nesformer",
-      "diskuse": "https://news.ycombinator.com/item?id=50306442",
-      "body": 255,
-      "komentare": 122,
-      "datum": "2026-10-30T16:40:22Z"
-    },
-    {
-      "nazev": "US tech stocks see sharp falls over AI cost fears",
-      "url": "https://www.bbc.co.uk/news/articles/cvwy72e0n72yo",
-      "diskuse": "https://news.ycombinator.com/item?id=50306008",
-      "body": 255,
-      "komentare": 283,
-      "datum": "2026-10-30T16:13:02Z"
-    },
-    {
-      "nazev": "Cisco gives engineer unlimited AI tokens to rewrite legacy code",
-      "url": "https://fortune.com/2026/10/30/cisco-president-jeetu-patel-gen-z-27-year-old-unlimited-ai-tokens-rewrite-legacy-code-entry-level-jobs/",
-      "diskuse": "https://news.ycombinator.com/item?id=50304122",
-      "body": 200,
-      "komentare": 231,
-      "datum": "2026-10-30T14:08:20Z"
+      "nazev": "Malware uses LLMs to rank victims by how much they're worth",
+      "url": "https://blog.talosintelligence.com/appraisal-by-ai-model-driven-victim-prioritization-in-the-volta-infostealer/",
+      "diskuse": "https://news.ycombinator.com/item?id=50316531",
+      "body": 249,
+      "komentare": 131,
+      "datum": "2026-10-31T14:29:03Z"
     },
     {
       "nazev": "OpenAI raises less than half of $30B target",
       "url": "https://www.wsj.com/tech/ai/openai-raises-less-than-half-of-30-billion-target-in-latest-round-91aecdc5",
       "diskuse": "https://news.ycombinator.com/item?id=50312922",
-      "body": 153,
-      "komentare": 141,
+      "body": 184,
+      "komentare": 192,
       "datum": "2026-10-31T03:22:44Z"
     },
     {
-      "nazev": "Ask HN: Are you tired too in this AI era?",
-      "url": "https://news.ycombinator.com/item?id=50301479",
-      "diskuse": "https://news.ycombinator.com/item?id=50301479",
-      "body": 144,
-      "komentare": 139,
-      "datum": "2026-10-30T09:17:43Z"
+      "nazev": "GPT-5.6 Sol can beat Factorio on peaceful mode",
+      "url": "https://ryanmadden.net/gpt-56-beats-factorio/",
+      "diskuse": "https://news.ycombinator.com/item?id=50318871",
+      "body": 172,
+      "komentare": 184,
+      "datum": "2026-10-31T18:50:34Z"
     },
     {
-      "nazev": "Show HN: I Turned DOOM into a Transformer",
-      "url": "https://github.com/mottopanikeiku/doomformer",
-      "diskuse": "https://news.ycombinator.com/item?id=50297697",
-      "body": 127,
-      "komentare": 35,
-      "datum": "2026-10-29T23:25:46Z"
+      "nazev": "ChatGPT and Codex usage limits merging",
+      "url": "https://help.openai.com/en/articles/20001625-understanding-chatgpt-and-codex-usage-limits",
+      "diskuse": "https://news.ycombinator.com/item?id=50320588",
+      "body": 157,
+      "komentare": 97,
+      "datum": "2026-10-31T21:49:07Z"
     },
     {
-      "nazev": "Anthropic Cracking Down on Video Game Rewrites",
-      "url": "https://twitter.com/chasmmmmmmmmmmm/status/2116062991686721968",
-      "diskuse": "https://news.ycombinator.com/item?id=50304358",
-      "body": 107,
-      "komentare": 104,
-      "datum": "2026-10-30T14:22:52Z"
+      "nazev": "Anthropic takes steps to block Claude from reverse-engineering video games",
+      "url": "https://mashable.com/tech/anthropic-takes-steps-to-block-video-game-cloning-and-reverse-engineering",
+      "diskuse": "https://news.ycombinator.com/item?id=50320255",
+      "body": 150,
+      "komentare": 96,
+      "datum": "2026-10-31T21:07:58Z"
     },
     {
-      "nazev": "Anthropic to receive high 'junk' rating from credit agencies following IPO",
-      "url": "https://techcrunch.com/2026/10/30/anthropic-expected-to-receive-high-junk-rating-from-credit-agencies-following-ipo-report-says/",
-      "diskuse": "https://news.ycombinator.com/item?id=50311311",
-      "body": 88,
-      "komentare": 63,
-      "datum": "2026-10-30T23:08:12Z"
+      "nazev": "Brazilian Court Sanctions Lawyers for Prompt Injection in Court Filing",
+      "url": "https://jetstream.security/insights/brazilian-court-sanctions-prompt-injection-filing/",
+      "diskuse": "https://news.ycombinator.com/item?id=50322173",
+      "body": 148,
+      "komentare": 60,
+      "datum": "2026-11-01T02:19:53Z"
     },
     {
-      "nazev": "Wall Street closes sharply lower as AI cash burn fears spark tech selloff",
-      "url": "https://www.reuters.com/business/nasdaq-futures-tumble-amazon-intel-results-deepen-ai-spending-woes-2026-10-30/",
-      "diskuse": "https://news.ycombinator.com/item?id=50310431",
-      "body": 58,
-      "komentare": 11,
-      "datum": "2026-10-30T21:32:35Z"
+      "nazev": "The AI cost of JavaScript frameworks",
+      "url": "https://nolanlawson.com/2026/10/28/the-ai-cost-of-javascript-frameworks/",
+      "diskuse": "https://news.ycombinator.com/item?id=50323088",
+      "body": 99,
+      "komentare": 56,
+      "datum": "2026-11-01T06:06:19Z"
     },
     {
-      "nazev": "Neal Stephenson on AI and What Comes Next [video]",
-      "url": "https://www.youtube.com/watch?v=Ii-aeW5pHPQ",
-      "diskuse": "https://news.ycombinator.com/item?id=50304280",
-      "body": 53,
-      "komentare": 24,
-      "datum": "2026-10-30T14:18:34Z"
-    },
-    {
-      "nazev": "Some Thing is Happening A note from the AI companies",
-      "url": "https://alanbellows.com/some-thing-is-happening/",
-      "diskuse": "https://news.ycombinator.com/item?id=50305724",
-      "body": 47,
-      "komentare": 11,
-      "datum": "2026-10-30T15:53:42Z"
-    },
-    {
-      "nazev": "Fiber lasts decades, GPUs last three years: the AI boom isn't the dot-com boom [video]",
-      "url": "https://www.youtube.com/watch?v=MENoB3Rex28",
-      "diskuse": "https://news.ycombinator.com/item?id=50302407",
-      "body": 41,
+      "nazev": "The Impact of Generative AI on Critical Thinking: Self-Reported (2025)",
+      "url": "https://dl.acm.org/doi/full/10.1145/3706598.3713778",
+      "diskuse": "https://news.ycombinator.com/item?id=50318401",
+      "body": 78,
       "komentare": 53,
-      "datum": "2026-10-30T11:16:15Z"
+      "datum": "2026-10-31T18:02:29Z"
+    },
+    {
+      "nazev": "AI startup hacks Anthropic, gains access to employee details, internal messages",
+      "url": "https://www.indiatoday.in/technology/news/story/ai-startup-hacks-anthropic-in-12-hours-gains-access-to-employee-details-and-internal-messages-3025452-2026-10-26",
+      "diskuse": "https://news.ycombinator.com/item?id=50315990",
+      "body": 74,
+      "komentare": 18,
+      "datum": "2026-10-31T13:25:10Z"
+    },
+    {
+      "nazev": "Anthropic's Claude AI blocks video game cloning and reverse-engineering",
+      "url": "https://www.tomshardware.com/tech-industry/artificial-intelligence/anthropics-ai-model-is-now-blocking-attempts-at-video-game-recreation-and-cloning-users-also-claim-non-malicious-generic-reverse-engineering-tasks-are-blocked",
+      "diskuse": "https://news.ycombinator.com/item?id=50315987",
+      "body": 71,
+      "komentare": 42,
+      "datum": "2026-10-31T13:25:00Z"
+    },
+    {
+      "nazev": "AI text watermarking and quality loss",
+      "url": "https://blog.keyvan.net/p/ai-text-watermarking-and-quality",
+      "diskuse": "https://news.ycombinator.com/item?id=50320599",
+      "body": 56,
+      "komentare": 8,
+      "datum": "2026-10-31T21:50:13Z"
+    },
+    {
+      "nazev": "Why Anthropic's filing crushed tech stocks",
+      "url": "https://www.thebignewsletter.com/p/why-anthropics-filing-crushed-tech",
+      "diskuse": "https://news.ycombinator.com/item?id=50315574",
+      "body": 53,
+      "komentare": 79,
+      "datum": "2026-10-31T12:32:10Z"
     }
   ],
   "modely": [
@@ -609,9 +528,9 @@
       "autor": "Nanbeige",
       "nazev": "Nanbeige4.3-33B",
       "uloha": "text-generation",
-      "lajky": 818,
-      "stazeni": 13832,
-      "trend": 797,
+      "lajky": 950,
+      "stazeni": 15795,
+      "trend": 812,
       "vytvoreno": "2026-10-24T02:49:18.000Z",
       "url": "https://huggingface.co/Nanbeige/Nanbeige4.3-33B"
     },
@@ -620,9 +539,9 @@
       "autor": "deepseek-ai",
       "nazev": "DeepSeek-V4.1-Flash-1017",
       "uloha": "image-text-to-text",
-      "lajky": 4051,
-      "stazeni": 156373,
-      "trend": 786,
+      "lajky": 4158,
+      "stazeni": 170353,
+      "trend": 723,
       "vytvoreno": "2026-10-17T02:40:38.000Z",
       "url": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017"
     },
@@ -631,9 +550,9 @@
       "autor": "LiquidAI",
       "nazev": "LFM3-1.7B",
       "uloha": "text-generation",
-      "lajky": 593,
-      "stazeni": 32933,
-      "trend": 570,
+      "lajky": 652,
+      "stazeni": 37568,
+      "trend": 609,
       "vytvoreno": "2026-10-23T21:35:42.000Z",
       "url": "https://huggingface.co/LiquidAI/LFM3-1.7B"
     },
@@ -642,9 +561,9 @@
       "autor": "nvidia",
       "nazev": "NVIDIA-Nemotron-3.5-Transcribe-30B-A4B",
       "uloha": "automatic-speech-recognition",
-      "lajky": 516,
-      "stazeni": 24357,
-      "trend": 484,
+      "lajky": 565,
+      "stazeni": 29364,
+      "trend": 523,
       "vytvoreno": "2026-10-07T22:50:21.000Z",
       "url": "https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Transcribe-30B-A4B"
     },
@@ -653,9 +572,9 @@
       "autor": "mistralai",
       "nazev": "Mistral-Large-4-1T-A52B",
       "uloha": "image-text-to-text",
-      "lajky": 1367,
-      "stazeni": 2945,
-      "trend": 421,
+      "lajky": 1417,
+      "stazeni": 4576,
+      "trend": 458,
       "vytvoreno": "2026-09-30T18:35:13.000Z",
       "url": "https://huggingface.co/mistralai/Mistral-Large-4-1T-A52B"
     },
@@ -664,9 +583,9 @@
       "autor": "baidu",
       "nazev": "Unlimited-OCR-2",
       "uloha": "image-text-to-text",
-      "lajky": 466,
-      "stazeni": 69231,
-      "trend": 421,
+      "lajky": 492,
+      "stazeni": 109519,
+      "trend": 429,
       "vytvoreno": "2026-10-26T03:57:46.000Z",
       "url": "https://huggingface.co/baidu/Unlimited-OCR-2"
     },
@@ -675,114 +594,90 @@
       "autor": "Lightricks",
       "nazev": "LTX-2.5",
       "uloha": "image-to-video",
-      "lajky": 10010,
-      "stazeni": 2441077,
-      "trend": 379,
+      "lajky": 10133,
+      "stazeni": 2431846,
+      "trend": 374,
       "vytvoreno": "2026-07-23T07:55:24.000Z",
       "url": "https://huggingface.co/Lightricks/LTX-2.5"
-    },
-    {
-      "id": "RecursiveSI/flint",
-      "autor": "RecursiveSI",
-      "nazev": "flint",
-      "uloha": "text-generation",
-      "lajky": 1269,
-      "stazeni": 23079,
-      "trend": 356,
-      "vytvoreno": "2026-10-21T14:20:58.000Z",
-      "url": "https://huggingface.co/RecursiveSI/flint"
-    },
-    {
-      "id": "ISTA-DASLab/DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF",
-      "autor": "ISTA-DASLab",
-      "nazev": "DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF",
-      "uloha": "text-generation",
-      "lajky": 510,
-      "stazeni": 2076624,
-      "trend": 335,
-      "vytvoreno": "2026-10-23T09:43:05.000Z",
-      "url": "https://huggingface.co/ISTA-DASLab/DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF"
     },
     {
       "id": "ccore/Qwen3.5-4B-3D-Coder",
       "autor": "ccore",
       "nazev": "Qwen3.5-4B-3D-Coder",
       "uloha": null,
-      "lajky": 359,
-      "stazeni": 29615,
-      "trend": 328,
+      "lajky": 432,
+      "stazeni": 44825,
+      "trend": 370,
       "vytvoreno": "2026-10-25T05:43:34.000Z",
       "url": "https://huggingface.co/ccore/Qwen3.5-4B-3D-Coder"
     },
     {
-      "id": "XHToken/Spark-X2.6-4B",
-      "autor": "XHToken",
-      "nazev": "Spark-X2.6-4B",
-      "uloha": "text-generation",
-      "lajky": 931,
-      "stazeni": 14515,
-      "trend": 325,
-      "vytvoreno": "2026-10-19T03:19:51.000Z",
-      "url": "https://huggingface.co/XHToken/Spark-X2.6-4B"
+      "id": "abenzerps/Qwen-Image-2.1-Uncensored-Quantized",
+      "autor": "abenzerps",
+      "nazev": "Qwen-Image-2.1-Uncensored-Quantized",
+      "uloha": "text-to-image",
+      "lajky": 5443,
+      "stazeni": 2548468,
+      "trend": 300,
+      "vytvoreno": "2026-09-20T15:51:13.000Z",
+      "url": "https://huggingface.co/abenzerps/Qwen-Image-2.1-Uncensored-Quantized"
     },
     {
       "id": "black-forest-labs/flux-3-image-klein-comfy",
       "autor": "black-forest-labs",
       "nazev": "flux-3-image-klein-comfy",
       "uloha": "image-to-image",
-      "lajky": 2149,
-      "stazeni": 925236,
-      "trend": 316,
+      "lajky": 2221,
+      "stazeni": 970633,
+      "trend": 299,
       "vytvoreno": "2026-10-14T12:00:13.000Z",
       "url": "https://huggingface.co/black-forest-labs/flux-3-image-klein-comfy"
+    },
+    {
+      "id": "XHToken/Spark-X2.6-4B",
+      "autor": "XHToken",
+      "nazev": "Spark-X2.6-4B",
+      "uloha": "text-generation",
+      "lajky": 942,
+      "stazeni": 16707,
+      "trend": 298,
+      "vytvoreno": "2026-10-19T03:19:51.000Z",
+      "url": "https://huggingface.co/XHToken/Spark-X2.6-4B"
+    },
+    {
+      "id": "RecursiveSI/flint",
+      "autor": "RecursiveSI",
+      "nazev": "flint",
+      "uloha": "text-generation",
+      "lajky": 1283,
+      "stazeni": 26703,
+      "trend": 292,
+      "vytvoreno": "2026-10-21T14:20:58.000Z",
+      "url": "https://huggingface.co/RecursiveSI/flint"
     }
   ],
   "vyzkum": [
     {
-      "nazev": "Intrinsic Distribution Matching",
-      "url": "https://huggingface.co/papers/2610.39633",
-      "arxiv": "https://arxiv.org/abs/2610.39633",
-      "hlasy": 239,
-      "datum": "2026-10-29T00:00:00.000Z",
-      "souhrn": "One-step and few-step text-to-image generation must accurately render the details specified in the prompt despite limited opportunities for refinement. Distribution matching distillation (DMD) uses score differences to bring the generated distribution closer to a reference distribution. Following prior work, we estimate this difference with internal velocity branches, avoiding a separate fake-score network. We ask whether an explicit moment constraint improves this learned score supervision. A…"
+      "nazev": "Look Only When Needed: Certificate-Guided Visual Routing for Efficient Diffusion VLMs",
+      "url": "https://huggingface.co/papers/2610.36671",
+      "arxiv": "https://arxiv.org/abs/2610.36671",
+      "hlasy": 100,
+      "datum": "2026-10-27T00:00:00.000Z",
+      "souhrn": "Diffusion vision-language models (DVLMs) process their entire input at every denoising step. Since visual tokens make up 89-97% of this input on the benchmarks we study, most of the decoding computation is spent repeatedly processing the same image. Visual token pruning methods partially relieve this burden by removing part of the visual tokens, but they lose the removed information and still process the remaining image at every step. To measure how often the image is actually needed, we…"
     },
     {
       "nazev": "A-RSI: Adaptive Task Refresh for Zero-Data Multimodal Self-Improvement",
       "url": "https://huggingface.co/papers/2610.38568",
       "arxiv": "https://arxiv.org/abs/2610.38568",
-      "hlasy": 159,
+      "hlasy": 68,
       "datum": "2026-10-28T00:00:00.000Z",
       "souhrn": "Recursive self-improvement requires models not only to acquire useful training experience, but also to decide when their current experience has ceased to be useful. Existing methods often focus on what experience to generate next, while paying less attention to when fresh experience should be introduced. Many also construct training targets through self-consistency or majority voting, making supervision depend on the model's own uncertain predictions. We address these two questions separately:…"
-    },
-    {
-      "nazev": "Your Benchmark Is an Empirical Measure Over Difficulty",
-      "url": "https://huggingface.co/papers/2610.29927",
-      "arxiv": "https://arxiv.org/abs/2610.29927",
-      "hlasy": 144,
-      "datum": "2026-10-21T00:00:00.000Z",
-      "souhrn": "A benchmark is not merely a collection of test questions; it naturally induces an empirical measure over difficulty. In this work, we develop this measure-based view of benchmark evaluation. This perspective allows us to identify and formalize two central failure modes: measure mismatch, where the benchmark difficulty distribution differs from the intended difficulty distribution, and coverage gaps, where uncovered regions along the difficulty axis prevent benchmarks from detecting meaningful…"
-    },
-    {
-      "nazev": "Youtu-Parsing-Omni: One Encoder, One Schema, All Modalities",
-      "url": "https://huggingface.co/papers/2610.39301",
-      "arxiv": "https://arxiv.org/abs/2610.39301",
-      "hlasy": 134,
-      "datum": "2026-10-29T00:00:00.000Z",
-      "souhrn": "We present Youtu-Parsing-Omni, an omni-modal parser that converts documents, images, audio, and video into structured records grounded in space and time, providing a perception layer for agents that read, locate, and cite evidence across modalities. Its design rests on one encoder for every modality and one schema for every task. Youtu-Omni-Encoder, initialized from a pre-trained language model to strengthen text reading, encodes all modalities with shared weights in a unified space-time…"
-    },
-    {
-      "nazev": "Look Only When Needed: Certificate-Guided Visual Routing for Efficient Diffusion VLMs",
-      "url": "https://huggingface.co/papers/2610.36671",
-      "arxiv": "https://arxiv.org/abs/2610.36671",
-      "hlasy": 94,
-      "datum": "2026-10-27T00:00:00.000Z",
-      "souhrn": "Diffusion vision-language models (DVLMs) process their entire input at every denoising step. Since visual tokens make up 89-97% of this input on the benchmarks we study, most of the decoding computation is spent repeatedly processing the same image. Visual token pruning methods partially relieve this burden by removing part of the visual tokens, but they lose the removed information and still process the remaining image at every step. To measure how often the image is actually needed, we…"
     },
     {
       "nazev": "Proving and Improving the Platonic Representation Hypothesis with JEPAs",
       "url": "https://huggingface.co/papers/2610.39302",
       "arxiv": "https://arxiv.org/abs/2610.39302",
-      "hlasy": 55,
+      "hlasy": 60,
       "datum": "2026-10-29T00:00:00.000Z",
       "souhrn": "Whether models trained on different modalities converge to the same representation of the world is central to AI. The Platonic Representation Hypothesis (PRH) conjectures that they do as they scale, but without a proof it offers neither a guarantee nor a recipe. We turn the hypothesis into a theorem. First, we prove a Platonic Representation Theorem: Joint-Embedding Predictive Architectures (JEPAs) trained separately on any number of modalities learn the same representation up to one rotation…"
     },
@@ -790,23 +685,15 @@
       "nazev": "L3G-World: Real-Time Infinite World Generation with Latent 3D Gaussian Memory",
       "url": "https://huggingface.co/papers/2610.40614",
       "arxiv": "https://arxiv.org/abs/2610.40614",
-      "hlasy": 37,
+      "hlasy": 39,
       "datum": "2026-10-29T00:00:00.000Z",
       "souhrn": "Interactive world models generate visual content conditioned on user actions, yet maintaining spatial consistency over long-horizon exploration in real time remains challenging. Existing approaches rely on either temporal context or explicit 3D memory, both of which scale poorly because memory grows with the length of the generated stream. Moreover, explicit 3D memories condition latent video generators by re-encoding RGB renderings, which precludes real-time generation. In this paper, we…"
-    },
-    {
-      "nazev": "Read, Allocate, Route: Role-Coupled Tokenization for Pixel-Space Generative Transformers",
-      "url": "https://huggingface.co/papers/2610.40647",
-      "arxiv": "https://arxiv.org/abs/2610.40647",
-      "hlasy": 36,
-      "datum": "2026-10-29T00:00:00.000Z",
-      "souhrn": "Pixel-space generative Transformers typically use one token per image patch, so capturing finer detail requires more tokens and makes global attention increasingly expensive. We observe that finer detail does not necessarily require more global communication: low-frequency structure benefits from global exchange, while high-frequency detail can be modeled locally. Based on this insight, we introduce SpecSlot, a pixel-space rectified-flow Transformer that decouples output detail from the length…"
     },
     {
       "nazev": "WorkFactory: Turning Professional Intents into Executable Work for Scalable Agent Training",
       "url": "https://huggingface.co/papers/2610.37161",
       "arxiv": "https://arxiv.org/abs/2610.37161",
-      "hlasy": 31,
+      "hlasy": 36,
       "datum": "2026-10-27T00:00:00.000Z",
       "souhrn": "Scaling supervised training for working agents requires diverse professional tasks that yield reliable expert demonstrations. However, missing or inconsistent task information can obstruct teacher execution and weaken the resulting supervision. We propose WorkFactory, a scalable framework for constructing coherent and executable professional tasks. Starting from professional intents, information-level planning builds an information support graph to guide task instantiation, explicitly…"
     },
@@ -817,6 +704,38 @@
       "hlasy": 28,
       "datum": "2026-10-23T00:00:00.000Z",
       "souhrn": "Locating relevant evidence in long inputs is a core capability of Multimodal Large Language Models. Prior studies attribute this capability to retrieval heads, a sparse set of attention heads that transfer information from the context to the output. However, these analyses are confined to a limited set of modalities and the corresponding models. Moreover, how retrieval heads can be leveraged to enhance the model calls for further exploration. In this paper, we ask whether this mechanism…"
+    },
+    {
+      "nazev": "Read, Allocate, Route: Role-Coupled Tokenization for Pixel-Space Generative Transformers",
+      "url": "https://huggingface.co/papers/2610.40647",
+      "arxiv": "https://arxiv.org/abs/2610.40647",
+      "hlasy": 24,
+      "datum": "2026-10-29T00:00:00.000Z",
+      "souhrn": "Pixel-space generative Transformers typically use one token per image patch, so capturing finer detail requires more tokens and makes global attention increasingly expensive. We observe that finer detail does not necessarily require more global communication: low-frequency structure benefits from global exchange, while high-frequency detail can be modeled locally. Based on this insight, we introduce SpecSlot, a pixel-space rectified-flow Transformer that decouples output detail from the length…"
+    },
+    {
+      "nazev": "HairDeck: Animation-Ready Stylized Hair Cards from a Single Image",
+      "url": "https://huggingface.co/papers/2610.40599",
+      "arxiv": "https://arxiv.org/abs/2610.40599",
+      "hlasy": 22,
+      "datum": "2026-10-29T00:00:00.000Z",
+      "souhrn": "The hair of stylized characters in games and avatars is built from hair cards: artist-placed ribbons whose geometry is the visible hair, animated by spring bones. Existing image-based methods produce realistic hair or a single fused mesh, while CHARM, the only generator of stylized hair cards, decodes a hairstyle autoregressively as a long sequence of control points. Observing that a card hairstyle is an unordered set of artist-defined primitives, we propose HairDeck, which generates it as…"
+    },
+    {
+      "nazev": "VibeGame: Prompt-to-Game Development with AI-Native Engine and Self-Evolving Adversarial Agent Team",
+      "url": "https://huggingface.co/papers/2610.33106",
+      "arxiv": "https://arxiv.org/abs/2610.33106",
+      "hlasy": 22,
+      "datum": "2026-10-22T00:00:00.000Z",
+      "souhrn": "Large language model agents have enabled software development through natural-language interaction, but extending this paradigm to end-to-end game development remains challenging. Building a playable game requires coordinating code, scenes, assets, animations, physics, and configurations, while allowing developers to validate their integrated behavior through interactive testing. We introduce VibeGame, a framework for creating complete 2D game projects from natural-language prompts and…"
+    },
+    {
+      "nazev": "Your Benchmark Is an Empirical Measure Over Difficulty",
+      "url": "https://huggingface.co/papers/2610.29927",
+      "arxiv": "https://arxiv.org/abs/2610.29927",
+      "hlasy": 21,
+      "datum": "2026-10-21T00:00:00.000Z",
+      "souhrn": "A benchmark is not merely a collection of test questions; it naturally induces an empirical measure over difficulty. In this work, we develop this measure-based view of benchmark evaluation. This perspective allows us to identify and formalize two central failure modes: measure mismatch, where the benchmark difficulty distribution differs from the intended difficulty distribution, and coverage gaps, where uncovered regions along the difficulty axis prevent benchmarks from detecting meaningful…"
     }
   ]
 }
