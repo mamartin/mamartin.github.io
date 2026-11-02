@@ -45,6 +45,32 @@ export function subdivideRing(r, maxLen) {
 }
 
 // nejmenší obepsaný obdélník podle směrů hran: [kratší strana, delší strana]
+// nejmenší opsaný obdélník jako rámec: osa u podél delší strany, rozsahy a (podél u) a b (napříč)
+export function minRectFrame(r) {
+  let best = null;
+  for (let i = 0; i < r.length; i++) {
+    const q = r[(i + 1) % r.length];
+    const l = Math.hypot(q[0] - r[i][0], q[1] - r[i][1]);
+    if (l < 0.3) continue;
+    let ux = (q[0] - r[i][0]) / l, uz = (q[1] - r[i][1]) / l;
+    let a0 = Infinity, a1 = -Infinity, b0 = Infinity, b1 = -Infinity;
+    for (const p of r) {
+      const a = p[0] * ux + p[1] * uz, b = -p[0] * uz + p[1] * ux;
+      a0 = Math.min(a0, a); a1 = Math.max(a1, a);
+      b0 = Math.min(b0, b); b1 = Math.max(b1, b);
+    }
+    const area = (a1 - a0) * (b1 - b0);
+    if (best && area >= best.area) continue;
+    if (b1 - b0 > a1 - a0) {
+      // otočit o 90°, ať u míří podél delší strany
+      [ux, uz] = [-uz, ux];
+      [a0, a1, b0, b1] = [b0, b1, -a1, -a0];
+    }
+    best = { area, ux, uz, a0, a1, b0, b1 };
+  }
+  return best;
+}
+
 export function minRect(r) {
   let best = null, bestA = Infinity;
   for (let i = 0; i < r.length; i++) {

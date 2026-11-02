@@ -24,12 +24,16 @@ export class Track {
     this.speedProfile = this.computeSpeedProfile(22 * this.roadGrip, 19 * this.roadGrip, 60);
     this.profiles = new Map([['car', this.speedProfile]]);
     this.cuts = def.cut ? [new Cut(this, def.cut)] : [];
-    this.tunnels = (def.tunnels || []).map(([from, to]) => {
-      const a = this.project(from[0], from[1], -1, {}).s, b = this.project(to[0], to[1], -1, {}).s;
-      const fwd = ((b - a + this.L) % this.L) < this.L / 2;
-      const s0 = fwd ? a : b;
-      return { s0, len: (fwd ? b - a + this.L : a - b + this.L) % this.L };
-    });
+    this.tunnels = (def.tunnels || []).map((span) => this.spanOf(span));
+    this.setts = (def.sett || []).map((span) => this.spanOf(span));
+  }
+
+  // úsek trati mezi dvěma body ve světě (kratším směrem), sedí i na obrácené trati
+  spanOf([from, to]) {
+    const a = this.project(from[0], from[1], -1, {}).s, b = this.project(to[0], to[1], -1, {}).s;
+    const fwd = ((b - a + this.L) % this.L) < this.L / 2;
+    const s0 = fwd ? a : b;
+    return { s0, len: (fwd ? b - a + this.L : a - b + this.L) % this.L };
   }
 
   // proměnlivá šířka: def.widths = [[metr od startu, šířka], ...], mezi úseky plynulý přechod
@@ -61,6 +65,10 @@ export class Track {
 
   inTunnel(s) {
     return this.tunnels.some((t) => ((s - t.s0 + this.L) % this.L) < t.len);
+  }
+
+  onSett(s) {
+    return this.setts.some((t) => ((s - t.s0 + this.L) % this.L) < t.len);
   }
 
   // rychlostní profil pro jiný typ vozu: přilnavost a maximálka poměrem k autu
@@ -238,13 +246,16 @@ export class Track {
     const { map: roadTex, surface } = makeRoadTextures(style, quality);
     roadTex.anisotropy = anisotropy;
     const road = new StripBuilder();
-    const tile = ROAD_TILE;
+    const sett = new StripBuilder();
     for (let k = 0; k < N; k++) {
       const n = (k + 1) % N;
+      // kostky mají vlastní texturu bez čar, dlaždice zhruba čtvercová
+      const strip = this.onSett(this.s[k]) ? sett : road;
+      const tile = strip === sett ? SETT_TILE : ROAD_TILE;
       const v0 = this.s[k] / tile;
       const v1 = (n === 0 ? this.L : this.s[n]) / tile;
       const ha = this.hwAt(k), hb = this.hwAt(n);
-      road.quad(
+      strip.quad(
         this.point(k, -ha), this.point(k, ha), this.point(n, hb), this.point(n, -hb),
         null,
         [0, v0, 1, v0, 1, v1, 0, v1],
@@ -255,6 +266,15 @@ export class Track {
     roadMesh.receiveShadow = true;
     this.roadMat = roadMat; // proměnlivé počasí mění vzhled silnice za jízdy
     group.add(roadMesh, this.buildRubber());
+    if (sett.count) {
+      const map = makeSettTexture(quality);
+      map.anisotropy = anisotropy;
+      const settMesh = new THREE.Mesh(sett.build(), style.wet
+        ? new THREE.MeshStandardMaterial({ map, roughness: 0.35, metalness: 0.1 })
+        : new THREE.MeshLambertMaterial({ map }));
+      settMesh.receiveShadow = true;
+      group.add(settMesh);
+    }
 
     // Obrubníky (jen v zatáčkách) – červenobílé pruhy
     const curb = new StripBuilder();
@@ -539,6 +559,7 @@ export class StripBuilder {
 }
 
 const ROAD_TILE = 32; // metrů asfaltu na jedno opakování textury
+const SETT_TILE = 12; // metrů dlažby na jedno opakování textury
 const ROAD_W = { low: 256, medium: 512, high: 1024, ultra: 1024 };
 
 // zrno přes celý obrázek; kamínky dělá vzácný větší výkyv
@@ -581,6 +602,37 @@ function softEllipse(g, x, y, rx, ry, inner, outer) {
   g.arc(0, 0, 1, 0, Math.PI * 2);
   g.fill();
   g.restore();
+}
+
+// žulové kostky v řádcích napříč silnicí, spáry tmavé
+function makeSettTexture(quality) {
+  const W = quality === 'low' ? 256 : 512;
+  const c = document.createElement('canvas');
+  c.width = c.height = W;
+  const g = c.getContext('2d', { willReadFrequently: true });
+  g.fillStyle = '#4f4d49';
+  g.fillRect(0, 0, W, W);
+  const rng = new RNG(31);
+  const rows = 60, row = W / rows; // 12 m na 60 řad, kostka asi 20 cm
+  for (let r = 0; r < rows; r++) {
+    for (let x = -rng.range(0, 1) * row; x < W;) {
+      const w = row * rng.range(0.85, 1.3);
+      const v = rng.range(118, 162);
+      g.fillStyle = `rgb(${v + 4},${v + 2},${v - 3})`;
+      g.fillRect(x + 1, r * row + 1, w - 2, row - 2);
+      x += w;
+    }
+  }
+  grain(g, W, W, (d, i, v) => {
+    const a = v * 14;
+    d[i] += a;
+    d[i + 1] += a;
+    d[i + 2] += a;
+  });
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
 }
 
 function makeRoadTextures(style, quality) {
@@ -645,7 +697,8 @@ function makeRoadTextures(style, quality) {
   g.fillRect(W - 12 * k, 0, 7 * k, H);
   if (style.centerLine) {
     g.fillStyle = style.centerLine;
-    for (let i = 0; i < 4; i++) g.fillRect(W / 2 - 3 * k, (i * H) / 4, 6 * k, H * 0.225);
+    const dash = style.centerDash ?? 0.9; // podíl čáry v jednom úseku 8 m
+    for (let i = 0; i < 4; i++) g.fillRect(W / 2 - 3 * k, (i * H) / 4, 6 * k, (H / 4) * dash);
   }
   // barva čar je místy sjetá
   g.fillStyle = style.asphalt;

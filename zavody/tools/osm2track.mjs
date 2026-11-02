@@ -7,11 +7,12 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { localProjection } from './lib/geo.mjs';
+import { localProjection, wgsToKrovak } from './lib/geo.mjs';
+import { loadRuian, ruianAt } from './lib/ruian.mjs';
 import { buildGraph, routeLoop, edgeKey, douglasPeucker } from './lib/roads.mjs';
 import { sampleAxis, rotateAxis, fitTrack, countCorners } from './lib/axis.mjs';
 import { loadDem } from './lib/dem.mjs';
-import { cleanRing, signedArea, simplifyRing, subdivideRing, minRect, clipRing, joinOuter, pointInRing } from './lib/poly.mjs';
+import { cleanRing, signedArea, simplifyRing, subdivideRing, minRect, minRectFrame, clipRing, joinOuter, pointInRing } from './lib/poly.mjs';
 import { buildCenterline, validateCenterline } from '../js/trackmath.js';
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
@@ -22,6 +23,7 @@ const LOOP = 'A';
 const START = [-140, -8];     // v souřadnicích loops.json: rovný kus Pražské za radnicí, jede se na východ
 const WIDTH_MIN = 10, WIDTH_MAX = 13, WIDTH_SCALE = 1.5;
 const RUNOFF = 3;
+const STAND_S = 1020;         // tribuna na louce u Pražské, kde nic nezakryje (na startu by schovala obchody)
 const REACH = 400;            // budovy a další kulisy do této vzdálenosti od osy
 const MARGIN = 560;           // výšková mřížka a plochy kolem obdélníku trati
 const DEM_CELL = 12;
@@ -86,7 +88,7 @@ const def = {
   seed: 2263,
   smooth: 2,
   scene: 'data/dobris.json',
-  credit: 'Mapová data © přispěvatelé OpenStreetMap (ODbL), výškopis © ČÚZK (CC BY 4.0)',
+  credit: 'Mapová data © přispěvatelé OpenStreetMap (ODbL), výškopis a RÚIAN © ČÚZK (CC BY 4.0)',
   points,
 };
 const cl = buildCenterline(def);
@@ -95,6 +97,7 @@ if (!check.ok) throw new Error(`Trať neprošla validací hry: ${JSON.stringify(
 
 // profil šířky: pro každý vzorek osy hry nejbližší vzorek osy z OSM
 const clWidth = new Float32Array(cl.N);
+const clAxis = new Int32Array(cl.N);
 {
   let j = 0;
   for (let k = 0; k < cl.N; k++) {
@@ -105,6 +108,7 @@ const clWidth = new Float32Array(cl.N);
       if (d < bd) { bd = d; best = i; }
     }
     j = best;
+    clAxis[k] = best;
     clWidth[k] = widthAt(best);
   }
 }
@@ -115,6 +119,21 @@ for (let k = 0; k < cl.N; k += 10) {
   if (!widthProfile.length || widthProfile[widthProfile.length - 1][1] !== w) widthProfile.push([s, w]);
 }
 def.widths = widthProfile;
+
+// místo tribuny a úseky s kostkami (surface=sett) jako body ve světě, ať sedí i v obráceném směru
+const at = (k, lat = 0) => [+(cl.px[k] + cl.rx[k] * lat).toFixed(1), +(cl.pz[k] + cl.rz[k] * lat).toFixed(1)];
+{
+  const k = Math.round(STAND_S / cl.step);
+  def.stand = at(k, widest / 2 + RUNOFF + 13);
+}
+def.sett = [];
+for (let k = 0, run = -1; k <= cl.N; k++) {
+  const on = k < cl.N && loop.edges[axis[clAxis[k]].seg].way.tags.surface === 'sett';
+  if (on && run < 0) run = k;
+  if (on || run < 0) continue;
+  if (cl.s[k - 1] - cl.s[run] > 20) def.sett.push([at(run), at(k - 1)]);
+  run = -1;
+}
 
 // --- pomocné dotazy na osu ----------------------------------------------------
 
@@ -175,6 +194,9 @@ const WALLS = {
   centre: ['#e9c46a', '#e8b79a', '#f1e3c6', '#cfdcc0', '#f0d9a8', '#d9a98c', '#efece3', '#c7d3dc'],
   block: ['#d8d8d2', '#e6e2d6', '#c8d0d4', '#e3d3b5', '#cfd6c4'],
   plain: ['#b9b6ae', '#a9a79f', '#c4c0b6'],
+  // podle panoramat: u startu bílé a krémové domy, východ náměstí světle modrý, krémový a žlutý
+  start: ['#f3efe6', '#efe7d6', '#f1e3c6', '#ece6d8'],
+  squareEast: ['#c7d3dc', '#bccfdd', '#f1e3c6', '#efe0b0', '#e9c46a', '#f0d9a8'],
 };
 const ROOFS = {
   tile: ['#9c4a32', '#8a3f2e', '#a85a3c', '#7d3a2c', '#6b5147'],
@@ -190,20 +212,35 @@ const colourIndex = (palette, value) => {
   if (!palette.includes(hex)) palette.push(hex);
   return palette.indexOf(hex);
 };
+// stavební objekt RÚIAN k budově: podle ref:ruian:building, jinak podle těžiště
+const ruian = loadRuian(join(DATA, 'ruian'));
+const ruianByCode = new Map(ruian.map((o) => [o.code, o]));
+function ruianOf(t, latlon) {
+  const byRef = ruianByCode.get(+t['ref:ruian:building']);
+  if (byRef) return byRef;
+  const la = latlon.reduce((s, p) => s + p[0], 0) / latlon.length, lo = latlon.reduce((s, p) => s + p[1], 0) / latlon.length;
+  return ruianAt(ruian, ...wgsToKrovak(la, lo));
+}
 const pick = (list, id) => list[(Math.imul(id, 2654435761) >>> 16) % list.length];
 
 const centreLine = [toGame(49.7811, 14.1672), toGame(49.7813, 14.1717)];
-function nearCentre(x, z) {
+// poloha vůči ose Mírového náměstí: t od západu (0) na východ (1), d kolmo
+function alongCentre(x, z) {
   const [a, b] = centreLine;
   const dx = b[0] - a[0], dz = b[1] - a[1];
   const t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (z - a[1]) * dz) / (dx * dx + dz * dz)));
-  return Math.hypot(x - a[0] - dx * t, z - a[1] - dz * t) < 120;
+  return { t, d: Math.hypot(x - a[0] - dx * t, z - a[1] - dz * t) };
 }
+const nearCentre = (x, z) => alongCentre(x, z).d < 120;
+const START_ZONE = 75;            // domy kolem startu (počátek souřadnic)
+const onSquareEast = (x, z) => { const c = alongCentre(x, z); return c.t > 0.55 && c.d < 45; };
 
-function massing(t, areaM2, short) {
+// levels: počet podlaží z RÚIAN, jinak z OSM (import z RÚIAN bývá starší)
+function massing(t, areaM2, short, levels = parseFloat(t['building:levels'])) {
   const kind = t.building;
-  const levels = parseFloat(t['building:levels']);
-  const tagged = parseFloat(t.height);
+  let tagged = parseFloat(t.height);
+  // věžák 49589262: 15 podlaží a height=60, přes 4 m na podlaží je výška v OSM chybná
+  if (levels > 0 && tagged > levels * 3.6) tagged = NaN;
   let shape = ROOF[t['roof:shape']];
   if (shape === undefined) {
     const wide = areaM2 > 900;
@@ -229,7 +266,8 @@ function styleOf(e, t, x, z, shape, wall) {
   const id = e.id;
   const blocks = wall >= 12;
   const plain = ['garage', 'garages', 'shed', 'industrial', 'warehouse', 'service'].includes(t.building);
-  const wallSet = plain ? WALLS.plain : blocks ? WALLS.block : nearCentre(x, z) ? WALLS.centre : WALLS.house;
+  const wallSet = plain ? WALLS.plain : blocks ? WALLS.block : Math.hypot(x, z) < START_ZONE ? WALLS.start
+    : onSquareEast(x, z) ? WALLS.squareEast : nearCentre(x, z) ? WALLS.centre : WALLS.house;
   const roofSet = shape === ROOF.flat ? ROOFS.flat : (id % 7 === 0 ? ROOFS.grey : ROOFS.tile);
   const w = t['building:colour'] ? colourIndex(wallPalette, t['building:colour']) : null;
   const r = t['roof:colour'] ? colourIndex(roofPalette, t['roof:colour']) : null;
@@ -333,7 +371,9 @@ for (const e of area) {
     if (signedArea(r) < 0) r.reverse();
     const areaM2 = Math.abs(signedArea(r));
     const [short] = minRect(r);
-    const m = massing(t, areaM2, short);
+    const so = ruianOf(t, latlon);
+    if (so) bump('levelsFromRuian');
+    const m = massing(t, areaM2, short, so?.levels);
     const cx = r.reduce((s, p) => s + p[0], 0) / r.length, cz = r.reduce((s, p) => s + p[1], 0) / r.length;
     const st = styleOf(e, t, cx, cz, m.shape, m.wall);
     buildings.push([dm(m.wall), dm(m.roof), m.shape, st.wall, st.roof, ...flat(r)]);
@@ -404,7 +444,8 @@ for (const e of area) {
 }
 
 const paved = [];
-// Mírové náměstí nemá v OSM plochu: obrys dá obal jeho ulic včetně pruhů kolem
+// Mírové náměstí nemá v OSM plochu: obrys dá obal jeho ulic včetně pruhů kolem;
+// musí zůstat první plochou 'square', podle toho hra pozná, kam patří historické lampy
 {
   const pts = [];
   for (const w of roads) if (w.tags.name === 'Mírové náměstí') for (const p of w.geometry) pts.push(toGame(p.lat, p.lon));
@@ -432,6 +473,77 @@ for (const e of extra) {
     const r = cleanRing(raw);
     if (r.length < 3 || r.reduce((m, p) => Math.min(m, axisDist(p[0], p[1])), Infinity) > REACH) continue;
     paved.push([kind, ...flat(simplifyRing(r, 0.8))]);
+  }
+}
+
+// Zaparkovaná auta: OSM nemá parking:lane, ale plochy parkovišť ano, často s orientation a capacity.
+// Stání se rozvrhnou do řad podél delší strany, obsazené jsou zhruba dvě třetiny.
+const CAR_W = 2.6, CAR_L = 5.2, CAR_GAP = 6.2, AISLE = 6, OCCUPIED = 0.65;
+const houseRings = [...buildings, ...landmarks.map((l) => [0, 0, 0, 0, 0, ...l.p])].map((b) => {
+  const r = [];
+  for (let i = 5; i + 1 < b.length; i += 2) r.push([b[i] / 10, b[i + 1] / 10]);
+  const xs = r.map((p) => p[0]), zs = r.map((p) => p[1]);
+  return { r, box: [Math.min(...xs), Math.min(...zs), Math.max(...xs), Math.max(...zs)] };
+});
+const inHouse = (x, z) => houseRings.some((h) => x > h.box[0] && x < h.box[2] && z > h.box[1] && z < h.box[3] && pointInRing(x, z, h.r));
+const hash01 = (a, b) => (Math.imul(a ^ Math.imul(b, 0x9e3779b1), 0x85ebca6b) >>> 0) / 4294967296;
+const cars = [];
+for (const e of extra) {
+  const t = e.tags;
+  if (t?.amenity !== 'parking' || !closed(e) || ['underground', 'multi-storey', 'rooftop'].includes(t.parking)) continue;
+  for (const raw of ringsOf(e)) {
+    const r = cleanRing(raw);
+    if (r.length < 3 || r.reduce((m, p) => Math.min(m, axisDist(p[0], p[1])), Infinity) > REACH) continue;
+    const f = minRectFrame(r);
+    const depth = f.b1 - f.b0;
+    const parallel = t.orientation === 'parallel' || (!t.orientation && depth < 4.5);
+    // řady napříč plochou: podélná stání po 2,6 m, kolmá do dvojic zády k sobě s uličkou;
+    // úzký pás u ulice (null) sleduje vlastní střed, obrysy v OSM bývají mělčí než auto a lomené
+    const need = parallel ? CAR_W : CAR_L;
+    const rows = [];
+    if (depth < 2 * need) rows.push(null);
+    else if (parallel) for (let b = f.b0 + CAR_W / 2; b <= f.b1 - CAR_W / 2 + 0.3; b += CAR_W) rows.push(b);
+    else {
+      for (let b = f.b0; b + CAR_L <= f.b1 + 0.3; b += 2 * CAR_L + AISLE) {
+        rows.push(b + CAR_L / 2);
+        if (b + 2 * CAR_L <= f.b1 + 0.3) rows.push(b + 1.5 * CAR_L);
+      }
+    }
+    const pitch = parallel ? CAR_GAP : CAR_W;
+    const slots = [];
+    const toXZ = (a, b) => [f.ux * a - f.uz * b, f.uz * a + f.ux * b];
+    for (const row of rows) {
+      const n = Math.floor((f.a1 - f.a0) / pitch);
+      const start = (f.a0 + f.a1) / 2 - ((n - 1) * pitch) / 2;
+      for (let i = 0; i < n; i++) {
+        const a = start + i * pitch;
+        let b = row, hb = need / 2 - 0.3;
+        if (row === null) {
+          // nejdelší úsek napříč pásem, který leží v ploše
+          let best = [0, 0];
+          for (let s = f.b0, run = null; s <= f.b1 + 0.25; s += 0.25) {
+            if (s <= f.b1 && pointInRing(...toXZ(a, s), r)) run ??= s;
+            else if (run !== null) { if (s - run > best[1] - best[0]) best = [run, s]; run = null; }
+          }
+          if (best[1] - best[0] < need * 0.7) continue;
+          b = (best[0] + best[1]) / 2;
+          hb = 0;
+        }
+        const at = (da, db) => toXZ(a + da, b + db);
+        const [x, z] = at(0, 0);
+        const ha = (parallel ? CAR_L : CAR_W) / 2 - 0.3;
+        if (![[0, 0], [-ha, -hb], [ha, -hb], [-ha, hb], [ha, hb]].every(([da, db]) => pointInRing(...at(da, db), r))) continue;
+        const n2 = nearAxis(x, z);
+        if ((n2 && n2.d < clearance(n2.k) + 1.5) || inHouse(x, z)) continue;
+        // směr auta: podél u u podélného stání, jinak napříč; náhodně čelem tam nebo zpět
+        const dx = parallel ? f.ux : -f.uz, dz = parallel ? f.uz : f.ux;
+        const flip = hash01(e.id, slots.length + 7) < 0.5 ? Math.PI : 0;
+        slots.push([x, z, Math.atan2(dx, dz) + flip]);
+      }
+    }
+    const cap = Math.round((+t.capacity || slots.length) * OCCUPIED);
+    const taken = slots.filter((_, i) => hash01(e.id, i) < OCCUPIED).slice(0, cap);
+    for (const [x, z, hd] of taken) cars.push(dm(x), dm(z), Math.round(hd * 100));
   }
 }
 
@@ -531,11 +643,11 @@ if (holes) throw new Error(`Výšková mřížka nemá data v ${holes} bodech, d
 const scene = {
   v: 1,
   license: 'ODbL-1.0',
-  credit: 'Mapová data © přispěvatelé OpenStreetMap, licence ODbL 1.0. Výškopis DMR 5G © ČÚZK, CC BY 4.0, převzorkováno a vyhlazeno.',
+  credit: 'Mapová data © přispěvatelé OpenStreetMap, licence ODbL 1.0. Výškopis DMR 5G © ČÚZK, CC BY 4.0, převzorkováno a vyhlazeno. Počty podlaží z RÚIAN © ČÚZK, CC BY 4.0.',
   origin: { lat: +lat0.toFixed(6), lon: +lon0.toFixed(6), base: +base.toFixed(2) },
   dem: { x0: Math.round(bounds.minX), z0: Math.round(bounds.minZ), cell: DEM_CELL, nx, nz, h: heights },
   palette: { wall: wallPalette, roof: roofPalette, plain: WALLS.plain.map((c) => wallPalette.indexOf(c)) },
-  buildings, landmarks, areas, water, paved, streets, paths, streams, barriers, lamps, trees, treeRows, statues, chimneys,
+  buildings, landmarks, areas, water, paved, streets, paths, streams, barriers, lamps, trees, treeRows, statues, chimneys, cars,
 };
 
 mkdirSync(join(GAME, 'data'), { recursive: true });
@@ -579,6 +691,6 @@ const c = countCorners(cl);
 console.log(`trať: ${(cl.L / 1000).toFixed(2)} km, bodů ${def.points.length}, min. R ${check.minRadius.toFixed(1)} m, min. odstup ${check.minSeparation.toFixed(0)} m, stoupání okamžité ${(check.maxGrade * 100).toFixed(1)} % / přes 50 m ${(grade50 * 100).toFixed(1)} %, zatáčky ${c.count} (ostré ${c.tight}), odchylka výšky od DMR max. ${maxDiff.toFixed(2)} m`);
 console.log(`šířky: ${[...new Set(def.widths.map((w) => w[1]))].sort((a, b) => a - b).join(', ')} m, úseků ${def.widths.length}, start ${lat0.toFixed(5)}, ${lon0.toFixed(5)}`);
 console.log('statistika:', JSON.stringify(stats));
-console.log(`počty: areas ${areas.length}, water ${water.length}, paved ${paved.length}, streets ${streets.length}, paths ${paths.length}, streams ${streams.length}, barriers ${barriers.length}, lamps ${lamps.length / 2}, trees ${trees.length / 2}, treeRows ${treeRows.length}`);
+console.log(`počty: areas ${areas.length}, water ${water.length}, paved ${paved.length}, streets ${streets.length}, paths ${paths.length}, streams ${streams.length}, barriers ${barriers.length}, lamps ${lamps.length / 2}, trees ${trees.length / 2}, treeRows ${treeRows.length}, cars ${cars.length / 3}`);
 console.log('hladiny:', water.filter((w) => w.name).map((w) => `${w.name} ${w.level === null ? '?' : ((w.level / 10 + base).toFixed(1) + ' m')}`).join(', '));
-console.log(`velikost: celkem ${(json.length / 1024).toFixed(0)} kB (dem ${size(scene.dem)}, budovy ${size(buildings)}, dominanty ${size(landmarks)}, plochy ${size(areas)}, voda ${size(water)}, zpevněné ${size(paved)}, ulice ${size(streets)}, cesty ${size(paths)}, potoky ${size(streams)}, zdi ${size(barriers)})`);
+console.log(`velikost: celkem ${(json.length / 1024).toFixed(0)} kB (dem ${size(scene.dem)}, budovy ${size(buildings)}, dominanty ${size(landmarks)}, plochy ${size(areas)}, voda ${size(water)}, zpevněné ${size(paved)}, ulice ${size(streets)}, cesty ${size(paths)}, potoky ${size(streams)}, zdi ${size(barriers)}, auta ${size(cars)})`);

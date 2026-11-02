@@ -3,14 +3,16 @@
 // po dlaždicích, takže celé město stojí jen pár volání kreslení.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { RNG } from './rng.js';
+import { RNG, clamp } from './rng.js';
 import { instancedChunks, colored, spruceGeometry, broadleafGeometry, farSpruceGeometry, farBroadleafGeometry } from './scenery.js';
 import { pointInRing } from './terrain.js';
 import { part, vertex, addBuilding, areaOf, color, fenceLine, mix, toMesh, triangulate } from './mass.js';
-import { buildLandmarks } from './landmarks.js';
+import { buildLandmarks, CASTLE_GRAVEL } from './landmarks.js';
 
 // jak daleko od osy trati ještě něco vrhá stín
 const SHADOW_REACH = 70;
+// pás lesa podél trati, kde stojí hustý listnatý porost
+const FOREST_EDGE = 60;
 
 const pairs = (a, from = 0) => {
   const out = [];
@@ -36,6 +38,7 @@ function decode(raw) {
     trees: pairs(raw.trees),
     statues: pairs(raw.statues),
     chimneys: raw.chimneys.map((c) => ({ x: c[0] / 10, z: c[1] / 10, height: c[2] / 10 })),
+    cars: Array.from({ length: Math.floor((raw.cars?.length ?? 0) / 3) }, (_, i) => ({ x: raw.cars[i * 3] / 10, z: raw.cars[i * 3 + 1] / 10, hd: raw.cars[i * 3 + 2] / 100 })),
   };
 }
 
@@ -136,6 +139,7 @@ export function paintGround(town, track, terrain, quality, anisotropy) {
   ctx.globalAlpha = 1;
   // zeleň na náměstí je v datech: plocha je jen obal jeho ulic, proto až pod ní
   fillRings(ctx, town.paved.filter((a) => a.kind === 'square').map((a) => a.ring), '#aaa69c');
+  if (town.landmarks.some((l) => l.id === 'zamek')) fillRings(ctx, CASTLE_GRAVEL, '#cdc2a6');
   for (const kind of ['field', 'grass', 'lawn', 'allotments', 'forest', 'park', 'garden', 'cemetery', 'pitch']) {
     fillRings(ctx, town.areas.filter((a) => a.kind === kind).map((a) => a.ring), AREA_COLORS[kind]);
   }
@@ -220,6 +224,45 @@ function buildWater(town) {
   return mesh;
 }
 
+// nejbližší místo na trati; nápovědu dá mřížka terénu, ať se nehledá po celé trati
+function nearTrack(track, terrain, x, z) {
+  const i = clamp(Math.round((x - terrain.x0) / terrain.cell), 0, terrain.nx - 1);
+  const j = clamp(Math.round((z - terrain.z0) / terrain.cell), 0, terrain.nz - 1);
+  const o = track.project(x, z, terrain.near[j * terrain.nx + i]);
+  o.edge = track.edgeAt(track.indexAt(o.s));
+  return o;
+}
+
+// Silnice ve hře je širší než skutečná, takže stromořadí, zdi a ploty podél ní by padly
+// do výběhu. Bod souběžné čáry se odsune za okraj výběhu, napříč jdoucí čára zůstane
+// (a kus ve výběhu se pak vynechá). dir = směr čáry v bodě.
+function pushOut(track, terrain, p, dir, gap) {
+  const o = nearTrack(track, terrain, p[0], p[1]);
+  if (Math.abs(o.lat) >= o.edge + gap) return p;
+  // směr trati je kolmý na její pravou stranu (rx, rz)
+  if (Math.abs(dir[0] * o.rz - dir[1] * o.rx) < 0.8) return p;
+  const lat = (Math.sign(o.lat) || 1) * (o.edge + gap);
+  return [o.cx + o.rx * lat, o.cz + o.rz * lat];
+}
+
+function unit(p, q) {
+  const l = Math.hypot(q[0] - p[0], q[1] - p[1]) || 1;
+  return [(q[0] - p[0]) / l, (q[1] - p[1]) / l];
+}
+
+// čára rozdělená po nejvýš 4 m s odsunutými body
+function pushLine(track, terrain, line, gap) {
+  const out = [];
+  for (let i = 0; i + 1 < line.length; i++) {
+    const p = line[i], q = line[i + 1], dir = unit(p, q);
+    const n = Math.ceil(Math.hypot(q[0] - p[0], q[1] - p[1]) / 4);
+    for (let k = 0; k < n; k++) out.push(pushOut(track, terrain, mix(p, q, k / n), dir, gap));
+  }
+  const l = line.length;
+  if (l > 1) out.push(pushOut(track, terrain, line[l - 1], unit(line[l - 2], line[l - 1]), gap));
+  return out;
+}
+
 // maska míst, kam nesmí strom: ulice, domy, voda, náměstí a trať
 function occupancy(town, track, terrain, buildings) {
   const { c, ctx, sx, sy } = worldCanvas(terrain, Math.ceil(((terrain.nx - 1) * terrain.cell) / 2));
@@ -273,19 +316,30 @@ function buildGreenery(town, track, terrain, buildings, density, shadows, rng) {
   const leaf = (x, z) => place(broad, x, z, 0.24, 1.25);
   const pine = (x, z) => place(spruce, x, z, 0.3, 1.25);
   for (const p of town.trees) if (!near(p[0], p[1])) leaf(p[0], p[1]);
+  const inside = (x, z) => buildings.some((r) => pointInRing(x, z, r));
   for (const line of town.treeRows) {
     for (let i = 0; i + 1 < line.length; i++) {
       const p = line[i], q = line[i + 1], len = Math.hypot(q[0] - p[0], q[1] - p[1]);
       for (let d = 0; d < len; d += 9) {
         const m = mix(p, q, d / len);
         if (!near(m[0], m[1])) leaf(m[0], m[1]);
+        else {
+          const t = pushOut(track, terrain, m, unit(p, q), 2.2);
+          if (t !== m && !terrain.keepOut(t[0], t[1]) && !inside(t[0], t[1])) leaf(t[0], t[1]);
+        }
       }
     }
   }
   // v OSM je skoro žádný strom: lesy, parky a zahrady se osadí podle ploch a domů
   const scale = 1 / Math.sqrt(density);
   for (const a of town.areas) {
-    if (a.kind === 'forest') plantArea(a.ring, 17 * scale, rng, free, (x, z) => (rng.chance(0.68) ? pine : leaf)(x, z));
+    // u trati je podle ortofota hustý listnatý porost (zámecký park), dál smrčiny
+    if (a.kind === 'forest') {
+      plantArea(a.ring, 8.5 * scale, rng, free, (x, z) => {
+        if (terrain.distAt(x, z) < FOREST_EDGE) (rng.chance(0.8) ? leaf : pine)(x, z);
+        else if (rng.chance(0.25)) (rng.chance(0.68) ? pine : leaf)(x, z); // dál hustota jako dřív (17 m)
+      });
+    }
     else if (a.kind === 'park') plantArea(a.ring, 27 * scale, rng, free, leaf);
     else if (a.kind === 'lawn') plantArea(a.ring, 11 * scale, rng, free, leaf);
     else if (a.kind === 'cemetery') plantArea(a.ring, 24 * scale, rng, free, pine);
@@ -311,7 +365,10 @@ function buildGreenery(town, track, terrain, buildings, density, shadows, rng) {
 }
 
 function buildLamps(town, track, terrain, rng) {
-  const items = town.lamps.filter((p) => terrain.distAt(p[0], p[1]) > track.edge + 0.5).map((p) => ({
+  // první plocha náměstí v datech je Mírové náměstí (osm2track ji skládá z jeho ulic)
+  const squares = town.paved.filter((a) => a.kind === 'square').slice(0, 1).map((a) => a.ring);
+  const historic = [];
+  const items =town.lamps.filter((p) => terrain.distAt(p[0], p[1]) > track.edge + 0.5).map((p) => ({
     x: p[0], y: terrain.heightAt(p[0], p[1]), z: p[1], ry: rng.range(0, 6.28),
   }));
   // OSM zná jen 42 lamp, podél trati se doplní po stranách střídavě
@@ -321,14 +378,53 @@ function buildLamps(town, track, terrain, rng) {
     const p = track.point(k, lat);
     if (terrain.keepOut(p[0], p[2])) continue;
     const dx = track.px[k] - p[0], dz = track.pz[k] - p[2];
-    items.push({ x: p[0], y: terrain.heightAt(p[0], p[2]), z: p[2], ry: Math.atan2(-dz, dx) });
+    const lamp = { x: p[0], y: terrain.heightAt(p[0], p[2]), z: p[2], ry: Math.atan2(-dz, dx) };
+    // na náměstí stojí podle panoramat historické lampy se dvěma koulemi, rameno podél ulice
+    if (squares.some((r) => pointInRing(p[0], p[2], r))) historic.push({ ...lamp, ry: lamp.ry + Math.PI / 2 });
+    else items.push(lamp);
   }
+  const mat = new THREE.MeshLambertMaterial({ vertexColors: true });
   const geo = mergeGeometries([
     colored(new THREE.CylinderGeometry(0.06, 0.1, 7.2, 5).translate(0, 3.6, 0), '#5c6168'),
     colored(new THREE.BoxGeometry(1.8, 0.07, 0.09).translate(0.9, 7.1, 0), '#5c6168'),
     colored(new THREE.BoxGeometry(0.55, 0.1, 0.22).translate(1.7, 7.05, 0), '#ded9c8'),
   ]);
-  return instancedChunks(geo, new THREE.MeshLambertMaterial({ vertexColors: true }), items, { castShadow: false, chunk: 320 });
+  const iron = '#2f3833', globe = '#f4f0e0';
+  const old = mergeGeometries([
+    colored(new THREE.CylinderGeometry(0.2, 0.26, 0.9, 6).translate(0, 0.45, 0).toNonIndexed(), iron),
+    colored(new THREE.CylinderGeometry(0.07, 0.12, 3.6, 6).translate(0, 2.6, 0).toNonIndexed(), iron),
+    colored(new THREE.BoxGeometry(1.3, 0.07, 0.07).translate(0, 4.25, 0).toNonIndexed(), iron),
+    ...[-0.6, 0.6].map((x) => colored(new THREE.IcosahedronGeometry(0.24, 1).translate(x, 4.55, 0), globe)),
+    ...[-0.6, 0.6].map((x) => colored(new THREE.ConeGeometry(0.1, 0.16, 6).translate(x, 4.86, 0).toNonIndexed(), iron)),
+  ]);
+  const group = new THREE.Group();
+  group.add(instancedChunks(geo, mat, items, { castShadow: false, chunk: 320 }));
+  if (historic.length) group.add(instancedChunks(old, mat, historic, { castShadow: false, chunk: 320 }));
+  return group;
+}
+
+// zaparkovaná auta z ploch parkovišť (rozvrh stání dělá tools/osm2track.mjs)
+const CAR_COLORS = ['#e8e8e6', '#e8e8e6', '#b9bcc0', '#b9bcc0', '#7c8086', '#2a2c30', '#2a2c30', '#2f4a6e', '#9c2a26', '#4f5f4a', '#d9d4c5', '#6d2f3a'];
+
+function buildCars(town, track, terrain, shadows) {
+  const rng = new RNG(91);
+  const items = town.cars.filter((c) => terrain.distAt(c.x, c.z) > track.edge + 1.5 && !terrain.keepOut(c.x, c.z)).map((c) => ({
+    x: c.x, y: terrain.heightAt(c.x, c.z), z: c.z, ry: c.hd, color: rng.pick(CAR_COLORS),
+  }));
+  // bílá karoserie dostane barvu instance, okna a kola zůstanou tmavá
+  const geo = mergeGeometries([
+    colored(new THREE.BoxGeometry(1.76, 0.68, 4.3).translate(0, 0.62, 0), '#ffffff'),
+    colored(new THREE.BoxGeometry(1.56, 0.52, 2.2).translate(0, 1.22, -0.25), '#4a525c'),
+    colored(new THREE.BoxGeometry(1.5, 0.08, 1.9).translate(0, 1.5, -0.3), '#ffffff'),
+    ...[-1.35, 1.35].map((z) => colored(new THREE.BoxGeometry(1.84, 0.56, 0.64).translate(0, 0.28, z), '#1d1e20')),
+  ]);
+  const mat = new THREE.MeshLambertMaterial({ vertexColors: true });
+  const close = (t) => shadows && terrain.distAt(t.x, t.z) < SHADOW_REACH;
+  const group = new THREE.Group();
+  group.name = 'cars';
+  group.add(instancedChunks(geo, mat, items.filter(close), { castShadow: true, chunk: 260 }));
+  group.add(instancedChunks(geo, mat, items.filter((t) => !close(t)), { castShadow: false, chunk: 520 }));
+  return group;
 }
 
 export function buildTown(town, track, terrain, quality, seed, anisotropy) {
@@ -357,8 +453,17 @@ export function buildTown(town, track, terrain, quality, seed, anisotropy) {
     });
   }
   for (const l of town.landmarks) placed.push(l.ring);
-  const clear = (x, z) => terrain.distAt(x, z) >= track.edge + 1 && !terrain.keepOut(x, z);
-  for (const b of town.barriers) fenceLine(tileOf, terrain, b.line, FENCES[b.type], clear);
+  // hrubá mřížka stačí daleko od trati, u ní rozhoduje přesná vzdálenost
+  const clear = (x, z) => {
+    if (terrain.keepOut(x, z)) return false;
+    if (terrain.distAt(x, z) > track.edge + 12) return true;
+    const o = nearTrack(track, terrain, x, z);
+    return Math.abs(o.lat) >= o.edge + 0.6;
+  };
+  for (const b of town.barriers) {
+    const near = b.line.some((p) => terrain.distAt(p[0], p[1]) < track.edge + 12);
+    fenceLine(tileOf, terrain, near ? pushLine(track, terrain, b.line, 1) : b.line, FENCES[b.type], clear);
+  }
   group.add(buildLandmarks(town, track, terrain, tileOf, shadows, anisotropy));
 
   const wallMat = new THREE.MeshLambertMaterial({ map: windowTexture(rng, anisotropy), vertexColors: true });
@@ -370,5 +475,6 @@ export function buildTown(town, track, terrain, quality, seed, anisotropy) {
   group.add(buildWater(town));
   group.add(buildGreenery(town, track, terrain, placed, density, shadows, rng));
   group.add(buildLamps(town, track, terrain, rng));
+  group.add(buildCars(town, track, terrain, shadows));
   return group;
 }

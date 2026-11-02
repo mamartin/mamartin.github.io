@@ -107,6 +107,7 @@ export const BIOMES = {
     terrain: { groundA: '#5f8a3f', groundB: '#4c7436', groundC: '#86a049', rock: '#7d7b72', nearTrack: '#8a8880', shore: '#a89d78', flat: false },
     track: {
       asphalt: '#44464b', curbA: '#c8342c', curbB: '#efeee8', lineColor: '#e4e1d6',
+      centerLine: '#e4e1d6', centerDash: 0.375, // přerušovaná čára jako ve městě: 3 m čára, 5 m mezera
       shoulderA: '#b0ada5', shoulderB: '#a9a69e',
       barrier: 'rail', barrierA: '#c3c7cc', barrierB: '#b8bdc3', barrierTop: '#d6d9dc', postColor: '#80868e',
       gantry: '#1f2b45', bannerBg: '#10223f',

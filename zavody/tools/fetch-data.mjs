@@ -1,7 +1,8 @@
 // Stáhne surová data pro trať Dobříš do tools/data/ (necommituje se).
-// Použití: node fetch-data.mjs [osm] [dmr]     (bez argumentu stáhne obojí)
+// Použití: node fetch-data.mjs [osm] [dmr] [ruian]     (bez argumentu stáhne vše)
 //
-// OSM přes Overpass API (ODbL), výškopis DMR 5G z ATOM služby ČÚZK po listech LAZ.
+// OSM přes Overpass API (ODbL), výškopis DMR 5G z ATOM služby ČÚZK po listech LAZ,
+// počty podlaží z RÚIAN (výměnný formát VFR obce Dobříš, otevřená data ČÚZK).
 // Bodové getSamples na ImageServeru ČÚZK vrací 403, proto listy.
 
 import { writeFileSync, mkdirSync, existsSync, createWriteStream } from 'node:fs';
@@ -15,6 +16,7 @@ const DATA = join(dirname(fileURLToPath(import.meta.url)), 'data');
 const UA = 'mamartin-zavody-track-tool/0.2';
 const BBOX = '49.760,14.135,49.800,14.205';
 const SHEETS = ['DOBR66', 'DOBR67', 'DOBR56', 'DOBR57'];
+const OBEC = 540111; // Dobříš
 
 const QUERIES = {
   osm_roads: `[out:json][timeout:120][bbox:${BBOX}];
@@ -72,6 +74,27 @@ async function sheet(id) {
   return laz;
 }
 
+// VFR vychází k poslednímu dni měsíce, zkusí se poslední tři
+async function ruian() {
+  const dir = join(DATA, 'ruian');
+  mkdirSync(dir, { recursive: true });
+  for (let back = 0; back < 3; back++) {
+    const d = new Date();
+    d.setUTCDate(1);
+    d.setUTCMonth(d.getUTCMonth() - back);
+    d.setUTCDate(0);
+    const day = d.toISOString().slice(0, 10).replaceAll('-', '');
+    const res = await fetch(`https://vdp.cuzk.gov.cz/vymenny_format/soucasna/${day}_OB_${OBEC}_UKSH.xml.zip`, { headers: { 'User-Agent': UA } });
+    if (!res.ok) continue;
+    const zip = join(dir, 'obec.zip');
+    await pipeline(Readable.fromWeb(res.body), createWriteStream(zip));
+    execFileSync('unzip', ['-oq', zip, '-d', dir]);
+    console.log(`RÚIAN ${day}: staženo`);
+    return;
+  }
+  throw new Error('RÚIAN: výměnný soubor obce není k dispozici');
+}
+
 const want = process.argv.slice(2);
 const all = !want.length;
 mkdirSync(DATA, { recursive: true });
@@ -81,3 +104,4 @@ if (all || want.includes('dmr')) {
   for (const id of SHEETS) files.push(await sheet(id));
   execFileSync('node', [join(DATA, '..', 'laz2grid.mjs'), join(DATA, 'dmr/grid.bin'), ...files], { stdio: 'inherit' });
 }
+if (all || want.includes('ruian')) await ruian();

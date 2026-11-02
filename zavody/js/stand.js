@@ -19,11 +19,19 @@ function standSide(track, terrain) {
   return probe(1) >= probe(-1) ? 1 : -1;
 }
 
+// kde tribuna stojí: u startu, nebo u bodu def.stand = [x, z] na jeho straně trati
+function standPlace(track, terrain) {
+  const at = track.def.stand;
+  if (!at) return { s: -10, side: standSide(track, terrain), hd: track.hd[0] };
+  const p = track.project(at[0], at[1]);
+  return { s: p.s, side: Math.sign(p.lat) || 1, hd: track.hd[track.indexAt(p.s)] };
+}
+
 // půdorys tribuny se střechou a rezervou na koruny stromů
 export function standArea(track, terrain) {
-  const side = standSide(track, terrain);
-  const base = track.pointS(-10, side * (track.edge + 3));
-  const sin = Math.sin(track.hd[0]), cos = Math.cos(track.hd[0]);
+  const { s, side, hd } = standPlace(track, terrain);
+  const base = track.pointS(s, side * (track.edge + 3));
+  const sin = Math.sin(hd), cos = Math.cos(hd);
   return (x, z) => {
     const dx = x - base[0], dz = z - base[2];
     const away = -side * (dx * cos - dz * sin); // od trati
@@ -341,7 +349,7 @@ const FLASH_LIFE = 0.13;
 
 export class Stand {
   constructor(track, terrain, rng, quality, night) {
-    const side = standSide(track, terrain);
+    const { s, side, hd } = standPlace(track, terrain);
     this.rng = rng;
     this.time = 0;
     this.cheerTimer = 0;
@@ -350,10 +358,10 @@ export class Stand {
     this.root = new THREE.Group();
     const group = new THREE.Group();
     this.group = group;
-    const base = track.pointS(-10, side * (track.edge + 3));
+    const base = track.pointS(s, side * (track.edge + 3));
     group.position.set(base[0], base[1] - 0.3, base[2]);
     // lokální +z = směr trati, lokální -x = pravá strana trati; řady stoupají do -x
-    group.rotation.y = track.hd[0];
+    group.rotation.y = hd;
     const len = STAND_LEN;
     const concrete = standMaterial(0x9aa0a6, night, 0.3);
     const seatsMat = standMaterial(0x2f5fa8, night, 0.42);
@@ -441,6 +449,10 @@ export class Stand {
   // bába hodí buchtu na auto vítěze; onHit se zavolá při dopadu
   throwBun(car, onHit) {
     this.granny.bun.getWorldPosition(this.bun.position);
+    // tribuna může stát daleko od cíle: buchta pak přiletí zpoza auta
+    if (Math.hypot(this.bun.position.x - car.x, this.bun.position.z - car.z) > 120) {
+      this.bun.position.set(car.x - Math.sin(car.hd) * 30, car.y + 4, car.z - Math.cos(car.hd) * 30);
+    }
     this.granny.bun.visible = false;
     this.bun.visible = true;
     this.bunFlight = { t: 0, car, onHit, x: this.bun.position.x, y: this.bun.position.y, z: this.bun.position.z };

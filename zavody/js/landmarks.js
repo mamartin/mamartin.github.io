@@ -12,7 +12,7 @@ import {
 const WHITE = color('#ffffff');
 const CREAM = color('#e8dcc0');
 const STUCCO = color('#f3eee2');
-const SALMON = color('#c98673');
+const SALMON = color('#e4b09a');
 const SLATE = color('#43464c');
 const SLATE_TOP = color('#54575d');
 const SOOT = color('#34373b');
@@ -55,18 +55,19 @@ function castleTexture(anisotropy) {
   c.width = 128;
   c.height = 512;
   const ctx = c.getContext('2d');
-  const trim = '#e8dcc0', wall = '#c98673', glass = '#34424e', frame = '#f5f1e6';
+  // světle lososová omítka a bílé lizény mezi osami oken jako na panoramatech
+  const trim = '#ece4d2', wall = '#e4b09a', glass = '#34424e', frame = '#f5f1e6', lesene = '#f4f0e7';
   for (const row of [0, 256]) {
     ctx.fillStyle = wall;
     ctx.fillRect(0, row, 128, 256);
+    const side = row ? 18 : 9; // rizalit má lizény širší
+    ctx.fillStyle = lesene;
+    ctx.fillRect(0, row, side, 256);
+    ctx.fillRect(128 - side, row, side, 256);
     ctx.fillStyle = trim;
     ctx.fillRect(0, row, 128, 12); // kladí pod římsou
     ctx.fillRect(0, row + 122, 128, 9); // kordonová římsa
     ctx.fillRect(0, row + 232, 128, 24); // sokl
-    if (row) {
-      ctx.fillRect(0, row, 18, 256); // lizény rizalitu
-      ctx.fillRect(110, row, 18, 256);
-    }
     // patro
     ctx.fillStyle = trim;
     ctx.fillRect(38, row + 28, 52, 84);
@@ -78,7 +79,7 @@ function castleTexture(anisotropy) {
     ctx.fillRect(63, row + 38, 2, 66);
     ctx.fillRect(47, row + 66, 34, 2);
     // přízemí v obloukové nice
-    archWindow(ctx, 44, row + 144, 40, 78, trim, row ? '#2a2f35' : '#a96a59');
+    archWindow(ctx, 44, row + 144, 40, 78, trim, row ? '#2a2f35' : '#c48772');
     if (!row) {
       ctx.fillStyle = frame;
       ctx.fillRect(50, row + 165, 28, 52);
@@ -149,6 +150,11 @@ const WINGS = [
   { a: [395, -37.7], b: [502.6, -64.5], hw: 7.6, stacks: [-40, -14, 20, 42] },
   { a: [482.9, -60], b: [496.6, -5], hw: 7.4, stacks: [-16, 16] },
   { a: [411.5, 20], b: [517.5, -7.3], hw: 6.9, stacks: [-38, -18, 22, 40] },
+];
+// štěrk vnitřního dvora a předzámčí; trávníky se sochou a parterem jsou v OSM a kreslí se přes něj
+export const CASTLE_GRAVEL = [
+  [[395, -38], [411, 20], [497, -5], [483, -60]],
+  [[392, -48], [400, -75], [418, -94], [470, -91], [507, -79], [502, -66]],
 ];
 const AXIS_S = unit(106, -27.3), AXIS_N = unit(107.6, -26.8);
 const RISALITS = [
