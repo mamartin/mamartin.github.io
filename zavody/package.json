@@ -1,0 +1,13 @@
+{
+  "name": "zavody-test",
+  "private": true,
+  "type": "module",
+  "description": "Automatický test hry: data trati Dobříš, závody autopilotem v headless prohlížeči a měření výkonu. Hra sama build ani balíčky nepotřebuje.",
+  "scripts": {
+    "test": "node tools/check-scene.mjs && node test/run.mjs"
+  },
+  "devDependencies": {
+    "playwright": "1.63.0",
+    "three": "0.169.0"
+  }
+}
