@@ -26,3 +26,11 @@ Limity, tratě, počet kol a zrychlení jsou na jednom místě v `test/limits.mj
 
 Ladicí rozhraní hry je `window.__game` (blok „debug / testy“ na konci `js/main.js`): `start`, `autopilot`, `setTimeScale`,
 `toMenu`, `selectTrack`, `aimSun`, `info`, `race`, `world`, `scene`, `camera`, `renderer`.
+
+## Podrobné měření vykreslování
+
+`node test/perf-lod.mjs` (po `npm install`) měří cenu vykreslování po celé trati Dobříš: kamera za autem v každém
+bodě po 10 m, jedno vykreslení se stíny, průměr a maximum volání a trojúhelníků pro vysokou i nízkou kvalitu.
+`--breakdown` je rozdělí podle částí scény (terén, trať, domy, stromy…), `--shots složka` uloží snímky zblízka
+a zdálky, `--race` přidá závod autopilotem (2 kola tam i zpět) a `--quality none --race` pustí jen závod.
+Auta na roštu v menu se do měření nepočítají. Limity nemá, slouží k porovnání před a po změně.

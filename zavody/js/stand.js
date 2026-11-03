@@ -2,9 +2,12 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { clamp } from './rng.js';
+import { hideBeyond } from './lod.js';
 
 const STAND_LEN = 70;
 const ROWS = 7;
+// odkud se dav na tribuně nekreslí (m od středu tribuny) podle kvality grafiky
+const CROWD_REACH = { low: 220, medium: 280, high: 340, ultra: 420 };
 const GRANNY_Z = -8; // vedle startovního roštu, ať ji jde vidět už při odpočtu
 const seatX = (r) => -(1.2 + r * 1.6) + 0.05;
 const seatY = (r) => 0.9 + r * 0.9 + 0.3;
@@ -388,7 +391,8 @@ export class Stand {
     flip.add(new THREE.Mesh(mergeGeometries(seatParts), seatsMat));
     const crowd = buildCrowd(rng, len, quality, night);
     this.uniforms = crowd.uniforms;
-    flip.add(crowd.mesh);
+    // 300 diváků má desítky tisíc trojúhelníků, z dálky jsou ale menší než pixel
+    flip.add(hideBeyond(crowd.mesh, CROWD_REACH[quality] ?? 320));
     // střecha
     const roofH = 0.9 + ROWS * 0.9 + 3.2;
     const roof = new THREE.Mesh(new THREE.BoxGeometry(ROWS * 1.6 + 2.5, 0.35, len + 2), standMaterial(0xe8e8e8, night, 0.2));

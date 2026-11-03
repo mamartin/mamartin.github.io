@@ -1,19 +1,30 @@
 // Kulisy trati podle skutečného města: data z OSM a DMR (viz tools/README.md) se načtou
 // až při výběru trati. Pozemek je jedna namalovaná textura terénu, budovy jsou sloučené
-// po dlaždicích, takže celé město stojí jen pár volání kreslení.
+// po blocích 300 m (na nízké kvalitě 400 m): blok mimo záběr se nekreslí a za mlhou zmizí celý. Stromy, auta a lampy
+// mají po čtvercích stupně podrobnosti podle vzdálenosti kamery (viz lod.js).
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { RNG, clamp } from './rng.js';
-import { instancedChunks, colored, spruceGeometry, broadleafGeometry, farSpruceGeometry, farBroadleafGeometry } from './scenery.js';
+import { colored, spruceGeometry, broadleafGeometry, farSpruceGeometry, farBroadleafGeometry } from './scenery.js';
 import { pointInRing } from './terrain.js';
 import { part, vertex, addBuilding, areaOf, color, fenceLine, mix, toMesh, triangulate } from './mass.js';
 import { buildLandmarks, CASTLE_GRAVEL } from './landmarks.js';
 import { buildRoadSigns } from './roadsigns.js';
+import { lodAt, instancedLevels } from './lod.js';
 
 // jak daleko od osy trati ještě něco vrhá stín
 const SHADOW_REACH = 70;
 // pás lesa podél trati, kde stojí hustý listnatý porost
 const FOREST_EDGE = 60;
+// Strana bloku domů a čtverce stromů, aut a lamp (m): menší se lépe ořezávají, větší stojí
+// méně volání kreslení. Na nízké kvalitě (slabý procesor) větší. Dohled na drobnosti násobí
+// vzdálenosti, kde se zjednoduší nebo zmizí.
+const VIEW = {
+  low: { block: 400, chunk: 360, reach: 0.6 },
+  medium: { block: 300, chunk: 240, reach: 0.8 },
+  high: { block: 300, chunk: 240, reach: 1 },
+  ultra: { block: 300, chunk: 240, reach: 1.25 },
+};
 
 const pairs = (a, from = 0) => {
   const out = [];
@@ -357,7 +368,7 @@ function plantArea(ring, spacing, rng, free, put) {
   }
 }
 
-function buildGreenery(town, track, terrain, buildings, density, shadows, rng) {
+function buildGreenery(town, track, terrain, buildings, density, shadows, rng, view) {
   const blocked = occupancy(town, track, terrain, buildings);
   const near = (x, z) => terrain.distAt(x, z) < track.edge + 1.5 || terrain.keepOut(x, z);
   // Stromy z DMP 1G stojí na svých místech s výškou podle skenu (šíře koruny je z výšky). Sken má
@@ -422,17 +433,37 @@ function buildGreenery(town, track, terrain, buildings, density, shadows, rng) {
   const mat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
   const group = new THREE.Group();
   group.name = 'greenery';
-  // stín padá jen kolem auta, takže plný model a stín má jen to, co je u trati
+  // Stín padá jen kolem auta, takže plný model a stín má jen to, co je u trati, a jen zblízka.
+  // Dál stačí silueta, ještě dál jednoduchý tvar a za mlhou nic.
   const close = (t) => shadows && terrain.distAt(t.x, t.z) < SHADOW_REACH;
   const far = (t) => !close(t);
-  group.add(instancedChunks(spruceGeometry(), mat, spruce.filter(close), { castShadow: true, chunk: 260 }));
-  group.add(instancedChunks(broadleafGeometry(), mat, broad.filter(close), { castShadow: true, chunk: 260 }));
-  group.add(instancedChunks(farSpruceGeometry(), mat, spruce.filter(far), { castShadow: false, chunk: 520 }));
-  group.add(instancedChunks(farBroadleafGeometry(), mat, broad.filter(far), { castShadow: false, chunk: 520 }));
+  const { reach, cull, half } = view;
+  const d1 = 140 * reach + half, d2 = 360 * reach + half;
+  const [fullS, farS] = [spruceGeometry(), farSpruceGeometry()];
+  const [fullB, farB] = [broadleafGeometry(), farBroadleafGeometry()];
+  // nejdál oba druhy jedním tvarem a voláním, barvu druhu nese barva instance
+  const tinted = (list, hex) => list.map((t) => ({ ...t, color: new THREE.Color(t.color).multiply(color(hex)).getHex() }));
+  const tiny = [...tinted(spruce, '#305f31'), ...tinted(broad, '#72a040')];
+  group.add(instancedLevels([
+    [0, [[fullS, spruce.filter(close), true], [fullB, broad.filter(close), true], [farS, spruce.filter(far)], [farB, broad.filter(far)]]],
+    [d1, [[farS, spruce], [farB, broad]]],
+    [d2, [[tinyTreeGeometry(), tiny]]],
+  ], mat, { chunk: view.chunk, cull }));
   return group;
 }
 
-function buildLamps(town, track, terrain, rng) {
+// nejvzdálenější stromy: čtyřboký dvojjehlan bez kmene, nejširší v dolní třetině (smrk i koruna)
+function tinyTreeGeometry() {
+  const g = new THREE.OctahedronGeometry(1, 0);
+  const p = g.attributes.position;
+  for (let i = 0; i < p.count; i++) {
+    const y = p.getY(i);
+    p.setXYZ(i, p.getX(i) * 2.6, y > 0 ? 3.0 + y * 4.6 : 3.0 + y * 1.6, p.getZ(i) * 2.6);
+  }
+  return colored(g, '#ffffff');
+}
+
+function buildLamps(town, track, terrain, rng, view) {
   // první plocha náměstí v datech je Mírové náměstí (osm2track ji skládá z jeho ulic)
   const squares = town.paved.filter((a) => a.kind === 'square').slice(0, 1).map((a) => a.ring);
   const historic = [];
@@ -465,16 +496,17 @@ function buildLamps(town, track, terrain, rng) {
     ...[-0.6, 0.6].map((x) => colored(new THREE.IcosahedronGeometry(0.24, 1).translate(x, 4.55, 0), globe)),
     ...[-0.6, 0.6].map((x) => colored(new THREE.ConeGeometry(0.1, 0.16, 6).translate(x, 4.86, 0).toNonIndexed(), iron)),
   ]);
+  // tenký sloup je dál než pár set metrů menší než pixel
+  const opts = { chunk: view.chunk, cull: Math.min(view.cull, 320 * view.reach + view.half) };
   const group = new THREE.Group();
-  group.add(instancedChunks(geo, mat, items, { castShadow: false, chunk: 320 }));
-  if (historic.length) group.add(instancedChunks(old, mat, historic, { castShadow: false, chunk: 320 }));
+  group.add(instancedLevels([[0, [[geo, items], [old, historic]]]], mat, opts));
   return group;
 }
 
 // zaparkovaná auta z ploch parkovišť (rozvrh stání dělá tools/osm2track.mjs)
 const CAR_COLORS = ['#e8e8e6', '#e8e8e6', '#b9bcc0', '#b9bcc0', '#7c8086', '#2a2c30', '#2a2c30', '#2f4a6e', '#9c2a26', '#4f5f4a', '#d9d4c5', '#6d2f3a'];
 
-function buildCars(town, track, terrain, shadows) {
+function buildCars(town, track, terrain, shadows, view) {
   const rng = new RNG(91);
   const items = town.cars.filter((c) => terrain.distAt(c.x, c.z) > track.edge + 1.5 && !terrain.keepOut(c.x, c.z)).map((c) => ({
     x: c.x, y: terrain.heightAt(c.x, c.z), z: c.z, ry: c.hd, color: rng.pick(CAR_COLORS),
@@ -490,9 +522,15 @@ function buildCars(town, track, terrain, shadows) {
   const close = (t) => shadows && terrain.distAt(t.x, t.z) < SHADOW_REACH;
   const group = new THREE.Group();
   group.name = 'cars';
-  group.add(instancedChunks(geo, mat, items.filter(close), { castShadow: true, chunk: 260 }));
-  group.add(instancedChunks(geo, mat, items.filter((t) => !close(t)), { castShadow: false, chunk: 520 }));
+  const opts = { chunk: view.chunk, cull: Math.min(view.cull, 380 * view.reach + view.half) };
+  group.add(instancedLevels([[0, [[geo, items.filter(close), true], [geo, items.filter((t) => !close(t))]]]], mat, opts));
   return group;
+}
+
+function joinParts(a, b) {
+  if (!b.pos.length) return a;
+  if (!a.pos.length) return b;
+  return { pos: a.pos.concat(b.pos), nor: a.nor.concat(b.nor), col: a.col.concat(b.col), uv: a.uv.concat(b.uv) };
 }
 
 // (x, z, self) → leží bod v jiném obrysu než self? Mřížka po 16 m, ať se nehledá ve všech domech.
@@ -511,18 +549,22 @@ function ringIndex(rings) {
   return (x, z, self) => (grid.get(`${Math.floor(x / CELL)},${Math.floor(z / CELL)}`) ?? []).some((j) => j !== self && pointInRing(x, z, rings[j]));
 }
 
-export function buildTown(town, track, terrain, quality, seed, anisotropy) {
+// fogFar: kde mlha vše zakryje; za ní se nic nekreslí
+export function buildTown(town, track, terrain, quality, seed, anisotropy, fogFar = Infinity) {
   const rng = new RNG(seed);
   const shadows = quality !== 'low';
   const density = quality === 'low' ? 0.5 : quality === 'medium' ? 0.75 : 1;
+  const v = VIEW[quality] ?? VIEW.high, BLOCK = v.block;
+  // hranice úrovní se měří od středu čtverce, proto + polovina jeho úhlopříčky
+  const view = { ...v, half: v.chunk * 0.71, cull: fogFar + v.chunk * 0.71 };
   const group = new THREE.Group();
   group.name = 'town';
   const tiles = new Map();
   const tileOf = (x, z) => {
     const near = shadows && terrain.distAt(x, z) < SHADOW_REACH;
-    const size = near ? 260 : 520;
-    const key = `${near}:${Math.floor(x / size)}:${Math.floor(z / size)}`;
-    if (!tiles.has(key)) tiles.set(key, { walls: part(), plain: part(), shops: part(), near });
+    const bx = Math.floor(x / BLOCK), bz = Math.floor(z / BLOCK);
+    const key = `${near}:${bx}:${bz}`;
+    if (!tiles.has(key)) tiles.set(key, { walls: part(), plain: part(), shops: part(), near, block: `${bx}:${bz}` });
     return tiles.get(key);
   };
   const plainWalls = new Set(town.palette.plain);
@@ -556,18 +598,30 @@ export function buildTown(town, track, terrain, quality, seed, anisotropy) {
   }
   group.add(buildLandmarks(town, track, terrain, tileOf, shadows, anisotropy));
 
+  // Stěny bez oken, střechy a ploty mají všude stejné UV (0, 0), tedy bílý roh textury oken:
+  // s okny se proto kreslí jedním voláním. Konstantní UV nemá derivace, takže se vždy
+  // čte nejostřejší mipmapa a barva zůstane přesně barvou vrcholů.
   const wallMat = new THREE.MeshLambertMaterial({ map: windowTexture(rng, anisotropy), vertexColors: true });
-  const plainMat = new THREE.MeshLambertMaterial({ vertexColors: true });
   const shopMat = new THREE.MeshLambertMaterial({ map: shopTexture(anisotropy), vertexColors: true });
+  const blocks = new Map();
   for (const t of tiles.values()) {
-    if (t.walls.pos.length) group.add(toMesh(t.walls, wallMat, t.near));
-    if (t.plain.pos.length) group.add(toMesh(t.plain, plainMat, t.near));
-    if (t.shops.pos.length) group.add(toMesh(t.shops, shopMat, t.near));
+    if (!blocks.has(t.block)) blocks.set(t.block, new THREE.Group());
+    const b = blocks.get(t.block);
+    const solid = joinParts(t.walls, t.plain);
+    if (solid.pos.length) b.add(toMesh(solid, wallMat, t.near));
+    if (t.shops.pos.length) b.add(toMesh(t.shops, shopMat, t.near));
+  }
+  // blok za mlhou se nekreslí; hranice od středu bloku, proto + polovina úhlopříčky
+  for (const [key, b] of blocks) {
+    const [bx, bz] = key.split(':').map(Number);
+    const lod = lodAt({ x: (bx + 0.5) * BLOCK, z: (bz + 0.5) * BLOCK }, [[b, 0], [null, fogFar + BLOCK * 0.71]]);
+    lod.name = 'blok';
+    group.add(lod);
   }
   group.add(buildWater(town));
-  group.add(buildGreenery(town, track, terrain, placed, density, shadows, rng));
-  group.add(buildLamps(town, track, terrain, rng));
-  group.add(buildCars(town, track, terrain, shadows));
+  group.add(buildGreenery(town, track, terrain, placed, density, shadows, rng, view));
+  group.add(buildLamps(town, track, terrain, rng, view));
+  group.add(buildCars(town, track, terrain, shadows, view));
   group.add(buildRoadSigns(town, track, terrain, anisotropy, (x, z) => neighbourAt(x, z, -1)));
   return group;
 }
