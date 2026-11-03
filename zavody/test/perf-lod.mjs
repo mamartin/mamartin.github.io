@@ -5,6 +5,7 @@
 //   node zavody/test/perf-lod.mjs                        vysoká a nízká kvalita
 //   node zavody/test/perf-lod.mjs --quality high,medium,low --track dobris --step 10
 //   node zavody/test/perf-lod.mjs --race                 navíc závod autopilotem: 2 kola tam i zpět
+//   node zavody/test/perf-lod.mjs --quality none --race  jen závod
 //   node zavody/test/perf-lod.mjs --shots out/           snímky zblízka a zdálky do složky
 //   node zavody/test/perf-lod.mjs --breakdown            průměr volání a trojúhelníků po částech scény
 //
@@ -25,7 +26,7 @@ const opt = (name, def) => {
   const i = args.indexOf(`--${name}`);
   return i < 0 ? def : args[i + 1];
 };
-const QUALITIES = opt('quality', 'high,low').split(',');
+const QUALITIES = opt('quality', 'high,low').split(',').filter((q) => q && q !== 'none');
 const TRACK = opt('track', 'dobris');
 const STEP = Number(opt('step', 10));
 const SHOTS = opt('shots', null);
