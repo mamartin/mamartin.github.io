@@ -3,7 +3,7 @@
 // Spuštění: node --test test/systems-ghost.test.mjs
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { GhostRecorder, GhostPlayer } from '../js/ghost.js';
+import { GhostRecorder, GhostPlayer, validGhost } from '../js/ghost.js';
 
 const STEP = 1 / 120;
 const SPEED = 50; // m/s po ose x, kolo = 1000 m
@@ -64,4 +64,17 @@ test('poslední kolo (auto v cíli už se nezaznamenává) vrátí jeho snímky'
   assert.equal(data.frames.length / 4, 40);
   assert.equal(data.frames[0], 0);
   assert.equal(data.frames[4], 6);
+});
+
+test('poškozený uložený ghost se nepoužije (dřív auto-ghost na NaN a nový rekord se neuložil)', () => {
+  const frames = Array.from({ length: 40 }, (_, i) => i);
+  assert.equal(validGhost({ time: 30, rate: 20, frames }), true);
+  for (const g of [
+    null, {}, 'x',
+    { time: 30, rate: 20, frames: 'abcdefghijklmnopqrstuvwxyz' },
+    { time: 30, frames },
+    { rate: 20, frames },
+    { time: 30, rate: 20, frames: [...frames.slice(0, 39), null] },
+    { time: 30, rate: 20, frames: frames.slice(0, 38) },
+  ]) assert.equal(validGhost(g), false, JSON.stringify(g));
 });

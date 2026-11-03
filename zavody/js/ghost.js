@@ -42,6 +42,10 @@ export class GhostRecorder {
   }
 }
 
+// uložený ghost, který jde přehrát (poškozené uložení se bere jako žádný ghost)
+export const validGhost = (g) => !!g && Array.isArray(g.frames) && g.frames.length > 8 && g.frames.length % 4 === 0
+  && g.rate > 0 && g.time > 0 && g.frames.every(Number.isFinite);
+
 export class GhostPlayer {
   constructor(data) {
     this.data = data;

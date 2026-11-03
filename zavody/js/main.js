@@ -31,7 +31,7 @@ import { CameraRig } from './camera.js';
 import { Effects } from './effects.js';
 import { GearBox, rpmForSpeed } from './audio.js';
 import { HUD, formatTime, formatDelta, trackOutline } from './hud.js';
-import { GhostRecorder, GhostPlayer } from './ghost.js';
+import { GhostRecorder, GhostPlayer, validGhost } from './ghost.js';
 import { Pickups, ITEM_NAMES } from './pickups.js';
 import { clamp } from './rng.js';
 import { applyKeys } from './keys.js';
@@ -1007,10 +1007,9 @@ async function startRaceInner() {
     // ghost: vlastní nejlepší kolo, nebo rychlejší ghost, který poslal kamarád
     const own = store.ghost(w.def.id, race.player.kind);
     const friend = sharedGhost(w.def.id);
-    const valid = (g) => g && g.frames && g.frames.length > 8;
-    const useFriend = valid(friend) && (!valid(own) || friend.time < own.time);
+    const useFriend = validGhost(friend) && (!validGhost(own) || friend.time < own.time);
     const data = useFriend ? friend : own;
-    if (valid(data)) {
+    if (validGhost(data)) {
       G.ghost = new GhostPlayer(data);
       // jméno přišlo v odkazu od kohokoliv, do HUD jen jako text
       if (useFriend) hud.sub(`Honíš ghost: ${esc(friend.name ?? 'Kamarád')} · ${formatTime(friend.time)}`, 3.5);
@@ -1292,7 +1291,7 @@ function processEvents() {
         // ghost nejlepšího kola
         const ghost = G.recorder.finish(e.lapTime);
         const stored = store.ghost(w.def.id, car.kind);
-        if (!stored || e.lapTime < stored.time) store.saveGhost(w.def.id, ghost, car.kind);
+        if (!validGhost(stored) || e.lapTime < stored.time) store.saveGhost(w.def.id, ghost, car.kind);
         // v časovce jezdíme hned proti nejlepšímu kolu
         if (race.mode === 'time' && (!G.ghost || e.lapTime < G.ghost.data.time)) {
           G.ghost = new GhostPlayer(ghost);
