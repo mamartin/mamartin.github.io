@@ -1845,6 +1845,7 @@ Object.assign(G, {
   },
   toMenu,
   selectTrack,
+  aimSun: (x, y, z) => G.world && aimSun(G.world, x, y, z),
   info: () => ({ fps: G.fps, calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures, auto: { ...auto, res: resScale } }),
 });
 
