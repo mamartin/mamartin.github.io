@@ -103,7 +103,7 @@ for (const b of scene.buildings) {
   if (a > 0) ccw++;
   if (w < 0) inside++;
   worst = Math.min(worst, w);
-  if (b[0] <= 0 || b[1] < 0 || b[2] < 0 || b[2] > 4 || !scene.palette.wall[b[3]] || !scene.palette.roof[b[4]]) bad++;
+  if (b[0] <= 0 || b[1] < 0 || b[2] < 0 || b[2] > 5 || !scene.palette.wall[b[3]] || !scene.palette.roof[b[4]]) bad++;
 }
 ok(inside === 0, `žádná fasáda v silnici ani výběhu: nejmenší odstup za výběhem ${worst.toFixed(2)} m, domů v zákazu ${inside}`);
 ok(bad === 0, `budovy mají platnou výšku, střechu a barvy (${scene.buildings.length} ks)`);

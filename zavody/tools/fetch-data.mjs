@@ -1,5 +1,5 @@
 // Stáhne surová data pro trať Dobříš do tools/data/ (necommituje se).
-// Použití: node fetch-data.mjs [osm] [dmr] [ruian]     (bez argumentu stáhne vše)
+// Použití: node fetch-data.mjs [osm] [dmr] [dmp] [ruian] [osm_shops …]     (bez argumentu stáhne vše)
 //
 // OSM přes Overpass API (ODbL), výškopis DMR 5G z ATOM služby ČÚZK po listech LAZ,
 // počty podlaží z RÚIAN (výměnný formát VFR obce Dobříš, otevřená data ČÚZK).
@@ -33,6 +33,9 @@ nwr["natural"~"^(water|wood|tree_row|scrub|wetland)$"];node["natural"="tree"];nw
 way["barrier"~"^(wall|fence|hedge|retaining_wall)$"];node["highway"="street_lamp"];nwr["office"="government"];
 nwr["name"~"radnice|Radnice|[Mm]ěstský úřad|[Mm]ěsto Dobříš"];way["highway"~"^(footway|path|steps|cycleway)$"];);
 out body geom;`,
+  osm_shops: `[out:json][timeout:120][bbox:${BBOX}];
+(nwr["shop"];nwr["amenity"~"^(restaurant|cafe|pub|bar|fast_food|bank|pharmacy|post_office|ice_cream)$"];node["highway"="crossing"];);
+out tags center;`,
   osm_extra: `[out:json][timeout:120][bbox:${BBOX}];
 (nwr["place"="square"];nwr["amenity"="parking"];way["area:highway"];way["highway"]["area"="yes"];way["man_made"="bridge"];);
 out body geom;`,
@@ -60,17 +63,18 @@ async function overpass(name) {
   throw new Error(`Overpass nedal ${name}`);
 }
 
-async function sheet(id) {
-  const dir = join(DATA, 'dmr');
+// list LAZ z DMR 5G (terén) nebo DMP 1G (povrch včetně budov)
+async function sheet(id, product = 'DMR5G') {
+  const dir = join(DATA, product === 'DMR5G' ? 'dmr' : 'dmp');
   mkdirSync(join(dir, `raw_${id}`), { recursive: true });
   const laz = join(dir, `raw_${id}`, `${id}.laz`);
   if (existsSync(laz)) return laz;
   const zip = join(dir, `${id}.zip`);
-  const res = await fetch(`https://openzu.cuzk.gov.cz/opendata/DMR5G/epsg-5514/${id}.zip`, { headers: { 'User-Agent': UA } });
+  const res = await fetch(`https://openzu.cuzk.gov.cz/opendata/${product}/epsg-5514/${id}.zip`, { headers: { 'User-Agent': UA } });
   if (!res.ok) throw new Error(`${id}: ${res.status}`);
   await pipeline(Readable.fromWeb(res.body), createWriteStream(zip));
   execFileSync('unzip', ['-oq', zip, '-d', join(dir, `raw_${id}`)]);
-  console.log(`${id}: staženo`);
+  console.log(`${product} ${id}: staženo`);
   return laz;
 }
 
@@ -98,10 +102,11 @@ async function ruian() {
 const want = process.argv.slice(2);
 const all = !want.length;
 mkdirSync(DATA, { recursive: true });
-if (all || want.includes('osm')) for (const name of Object.keys(QUERIES)) await overpass(name);
+for (const name of Object.keys(QUERIES)) if (all || want.includes('osm') || want.includes(name)) await overpass(name);
 if (all || want.includes('dmr')) {
   const files = [];
   for (const id of SHEETS) files.push(await sheet(id));
   execFileSync('node', [join(DATA, '..', 'laz2grid.mjs'), join(DATA, 'dmr/grid.bin'), ...files], { stdio: 'inherit' });
 }
+if (all || want.includes('dmp')) for (const id of SHEETS) await sheet(id, 'DMP1G');
 if (all || want.includes('ruian')) await ruian();

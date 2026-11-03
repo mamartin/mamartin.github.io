@@ -4,11 +4,12 @@
 // Souřadnice výstupu jsou herní: x na východ, z na jih, počátek na startu.
 // Kulisy jsou v JSON zaokrouhlené na decimetry (celá čísla), výšky v dm nad nejnižším bodem trati.
 
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { localProjection, wgsToKrovak } from './lib/geo.mjs';
 import { loadRuian, ruianAt } from './lib/ruian.mjs';
+import { loadRoofPoints, roofOf } from './lib/dmp.mjs';
 import { buildGraph, routeLoop, edgeKey, douglasPeucker } from './lib/roads.mjs';
 import { sampleAxis, rotateAxis, fitTrack, countCorners } from './lib/axis.mjs';
 import { loadDem } from './lib/dem.mjs';
@@ -42,6 +43,7 @@ const STREET_W = { secondary: 8, secondary_link: 6, tertiary: 7, tertiary_link: 
 
 const read = (name) => JSON.parse(readFileSync(join(DATA, name), 'utf8')).elements;
 const dem = loadDem(join(DATA, 'dmr/grid.bin'));
+const roofPoints = await loadRoofPoints(join(DATA, 'dmp')); // DMP 1G, bez něj se výšky odhadnou
 const roads = read('osm_roads.json').filter((e) => e.type === 'way');
 const area = read('osm_area.json');
 const extra = read('osm_extra.json');
@@ -88,7 +90,7 @@ const def = {
   seed: 2263,
   smooth: 2,
   scene: 'data/dobris.json',
-  credit: 'Mapová data © přispěvatelé OpenStreetMap (ODbL), výškopis a RÚIAN © ČÚZK (CC BY 4.0)',
+  credit: 'Mapová data © přispěvatelé OpenStreetMap (ODbL), výškopis, DMP a RÚIAN © ČÚZK (CC BY 4.0)',
   points,
 };
 const cl = buildCenterline(def);
@@ -126,14 +128,19 @@ const at = (k, lat = 0) => [+(cl.px[k] + cl.rx[k] * lat).toFixed(1), +(cl.pz[k] 
   const k = Math.round(STAND_S / cl.step);
   def.stand = at(k, widest / 2 + RUNOFF + 13);
 }
-def.sett = [];
-for (let k = 0, run = -1; k <= cl.N; k++) {
-  const on = k < cl.N && loop.edges[axis[clAxis[k]].seg].way.tags.surface === 'sett';
-  if (on && run < 0) run = k;
-  if (on || run < 0) continue;
-  if (cl.s[k - 1] - cl.s[run] > 20) def.sett.push([at(run), at(k - 1)]);
-  run = -1;
+// souvislé úseky osy, kde platí test, delší než minLen metrů
+function spansWhere(test, minLen = 20) {
+  const out = [];
+  for (let k = 0, run = -1; k <= cl.N; k++) {
+    const on = k < cl.N && test(k);
+    if (on && run < 0) run = k;
+    if (on || run < 0) continue;
+    if (cl.s[k - 1] - cl.s[run] > minLen) out.push([at(run), at(k - 1)]);
+    run = -1;
+  }
+  return out;
 }
+def.sett = spansWhere((k) => loop.edges[axis[clAxis[k]].seg].way.tags.surface === 'sett');
 
 // --- pomocné dotazy na osu ----------------------------------------------------
 
@@ -189,6 +196,9 @@ const LANDMARKS = {
   49589320: 'zamek', 49589317: 'trojice', 49589363: 'kriz', 30103766: 'radnice', 48876694: 'synagoga', 30103752: 'vargac', 49589359: 'oranzerie',
 };
 const ROOF = { gabled: 0, hipped: 1, flat: 2, pyramidal: 3, skillion: 4, mansard: 1, half_hipped: 1, 'half-hipped': 1, gambrel: 0, round: 0, dome: 3 };
+// tvar podle bodů DMP 1G; 5 = sedlová s hřebenem napříč delší strany (SHAPE.CROSS ve hře)
+const ROOF_CROSS = 5;
+const MEASURED_SHAPE = { gable: ROOF.gabled, hip: ROOF.hipped, flat: ROOF.flat, cross: ROOF_CROSS };
 const WALLS = {
   house: ['#efe7d6', '#f3efe6', '#e6d3a8', '#e8c9a6', '#d9d6cf', '#ddd3bd', '#cfd2c8'],
   centre: ['#e9c46a', '#e8b79a', '#f1e3c6', '#cfdcc0', '#f0d9a8', '#d9a98c', '#efece3', '#c7d3dc'],
@@ -235,9 +245,15 @@ const nearCentre = (x, z) => alongCentre(x, z).d < 120;
 const START_ZONE = 75;            // domy kolem startu (počátek souřadnic)
 const onSquareEast = (x, z) => { const c = alongCentre(x, z); return c.t > 0.55 && c.d < 45; };
 
-// levels: počet podlaží z RÚIAN, jinak z OSM (import z RÚIAN bývá starší)
-function massing(t, areaM2, short, levels = parseFloat(t['building:levels'])) {
+// levels: počet podlaží z RÚIAN, jinak z OSM (import z RÚIAN bývá starší);
+// measured: okap, střecha a plochost změřené v DMP 1G mají přednost před vším ostatním
+function massing(t, areaM2, short, levels = parseFloat(t['building:levels']), measured = null) {
   const kind = t.building;
+  if (measured) {
+    const shape = ROOF[t['roof:shape']] ?? MEASURED_SHAPE[measured.shape];
+    const roof = shape === ROOF.flat ? 0 : Math.max(0.8, Math.min(9, shape === ROOF_CROSS ? 9 : short * 0.75, measured.roof));
+    return { wall: Math.max(2.4, measured.wall), roof, shape };
+  }
   let tagged = parseFloat(t.height);
   // věžák 49589262: 15 podlaží a height=60, přes 4 m na podlaží je výška v OSM chybná
   if (levels > 0 && tagged > levels * 3.6) tagged = NaN;
@@ -372,8 +388,10 @@ for (const e of area) {
     const areaM2 = Math.abs(signedArea(r));
     const [short] = minRect(r);
     const so = ruianOf(t, latlon);
-    if (so) bump('levelsFromRuian');
-    const m = massing(t, areaM2, short, so?.levels);
+    const measured = roofPoints && roofOf(roofPoints, latlon.map(([la, lo]) => wgsToKrovak(la, lo)), dem.krovak);
+    if (measured) bump('heightFromDmp');
+    else if (so) bump('levelsFromRuian');
+    const m = massing(t, areaM2, short, so?.levels, measured);
     const cx = r.reduce((s, p) => s + p[0], 0) / r.length, cz = r.reduce((s, p) => s + p[1], 0) / r.length;
     const st = styleOf(e, t, cx, cz, m.shape, m.wall);
     buildings.push([dm(m.wall), dm(m.roof), m.shape, st.wall, st.roof, ...flat(r)]);
@@ -488,6 +506,36 @@ const houseRings = [...buildings, ...landmarks.map((l) => [0, 0, 0, 0, 0, ...l.p
 const inHouse = (x, z) => houseRings.some((h) => x > h.box[0] && x < h.box[2] && z > h.box[1] && z < h.box[3] && pointInRing(x, z, h.r));
 const hash01 = (a, b) => (Math.imul(a ^ Math.imul(b, 0x9e3779b1), 0x85ebca6b) >>> 0) / 4294967296;
 const cars = [];
+
+// výlohy: domy, ve kterých OSM eviduje obchod, restauraci, banku, lékárnu nebo poštu (index do buildings)
+const poiShops = existsSync(join(DATA, 'osm_shops.json')) ? read('osm_shops.json') : [];
+const shops = [];
+for (const e of poiShops) {
+  if (e.tags?.highway === 'crossing') continue;
+  const ll = e.center ?? e;
+  if (ll.lat === undefined) continue;
+  const [x, z] = toGame(ll.lat, ll.lon);
+  const i = houseRings.findIndex((h) => x > h.box[0] && x < h.box[2] && z > h.box[1] && z < h.box[3] && pointInRing(x, z, h.r));
+  if (i >= 0 && i < buildings.length && !shops.includes(i)) shops.push(i);
+}
+shops.sort((a, b) => a - b);
+
+// přechody s vodorovným značením ležící na trati, jako body ve světě; aspoň 15 m od sebe a 30 m od startu
+const MARKED = new Set(['zebra', 'uncontrolled', 'traffic_signals', 'marked']);
+const crossings = [];
+for (const e of poiShops) {
+  const t = e.tags;
+  if (t?.highway !== 'crossing' || e.type !== 'node') continue;
+  const marks = t['crossing:markings'];
+  if (!(MARKED.has(t.crossing) || (marks && marks !== 'no'))) continue;
+  if (t.crossing === 'unmarked') continue;
+  const [x, z] = toGame(e.lat, e.lon);
+  const n = nearAxis(x, z);
+  if (!n || n.d > 4 || cl.s[n.k] < 30 || cl.s[n.k] > cl.L - 30) continue;
+  if (crossings.some((c) => Math.abs(c.s - cl.s[n.k]) < 15)) continue;
+  crossings.push({ s: cl.s[n.k], p: at(n.k) });
+}
+def.crossings = crossings.sort((a, b) => a.s - b.s).map((c) => c.p);
 for (const e of extra) {
   const t = e.tags;
   if (t?.amenity !== 'parking' || !closed(e) || ['underground', 'multi-storey', 'rooftop'].includes(t.parking)) continue;
@@ -643,12 +691,16 @@ if (holes) throw new Error(`Výšková mřížka nemá data v ${holes} bodech, d
 const scene = {
   v: 1,
   license: 'ODbL-1.0',
-  credit: 'Mapová data © přispěvatelé OpenStreetMap, licence ODbL 1.0. Výškopis DMR 5G © ČÚZK, CC BY 4.0, převzorkováno a vyhlazeno. Počty podlaží z RÚIAN © ČÚZK, CC BY 4.0.',
+  credit: 'Mapová data © přispěvatelé OpenStreetMap, licence ODbL 1.0. Výškopis DMR 5G © ČÚZK, CC BY 4.0, převzorkováno a vyhlazeno. Výšky budov z DMP 1G a počty podlaží z RÚIAN © ČÚZK, CC BY 4.0.',
   origin: { lat: +lat0.toFixed(6), lon: +lon0.toFixed(6), base: +base.toFixed(2) },
   dem: { x0: Math.round(bounds.minX), z0: Math.round(bounds.minZ), cell: DEM_CELL, nx, nz, h: heights },
   palette: { wall: wallPalette, roof: roofPalette, plain: WALLS.plain.map((c) => wallPalette.indexOf(c)) },
-  buildings, landmarks, areas, water, paved, streets, paths, streams, barriers, lamps, trees, treeRows, statues, chimneys, cars,
+  buildings, landmarks, areas, water, paved, streets, paths, streams, barriers, lamps, trees, treeRows, statues, chimneys, cars, shops,
 };
+
+// centrum (Mírové náměstí a Pražská u startu): místo svodidel obrubník a sloupky, jízda se nemění
+const URBAN_START = 140;
+def.urban = spansWhere((k) => alongCentre(cl.px[k], cl.pz[k]).d < 50 || Math.hypot(cl.px[k], cl.pz[k]) < URBAN_START);
 
 mkdirSync(join(GAME, 'data'), { recursive: true });
 const json = JSON.stringify(scene);
@@ -691,6 +743,6 @@ const c = countCorners(cl);
 console.log(`trať: ${(cl.L / 1000).toFixed(2)} km, bodů ${def.points.length}, min. R ${check.minRadius.toFixed(1)} m, min. odstup ${check.minSeparation.toFixed(0)} m, stoupání okamžité ${(check.maxGrade * 100).toFixed(1)} % / přes 50 m ${(grade50 * 100).toFixed(1)} %, zatáčky ${c.count} (ostré ${c.tight}), odchylka výšky od DMR max. ${maxDiff.toFixed(2)} m`);
 console.log(`šířky: ${[...new Set(def.widths.map((w) => w[1]))].sort((a, b) => a - b).join(', ')} m, úseků ${def.widths.length}, start ${lat0.toFixed(5)}, ${lon0.toFixed(5)}`);
 console.log('statistika:', JSON.stringify(stats));
-console.log(`počty: areas ${areas.length}, water ${water.length}, paved ${paved.length}, streets ${streets.length}, paths ${paths.length}, streams ${streams.length}, barriers ${barriers.length}, lamps ${lamps.length / 2}, trees ${trees.length / 2}, treeRows ${treeRows.length}, cars ${cars.length / 3}`);
+console.log(`počty: areas ${areas.length}, water ${water.length}, paved ${paved.length}, streets ${streets.length}, paths ${paths.length}, streams ${streams.length}, barriers ${barriers.length}, lamps ${lamps.length / 2}, trees ${trees.length / 2}, treeRows ${treeRows.length}, cars ${cars.length / 3}, shops ${shops.length}, přechody ${def.crossings.length}`);
 console.log('hladiny:', water.filter((w) => w.name).map((w) => `${w.name} ${w.level === null ? '?' : ((w.level / 10 + base).toFixed(1) + ' m')}`).join(', '));
 console.log(`velikost: celkem ${(json.length / 1024).toFixed(0)} kB (dem ${size(scene.dem)}, budovy ${size(buildings)}, dominanty ${size(landmarks)}, plochy ${size(areas)}, voda ${size(water)}, zpevněné ${size(paved)}, ulice ${size(streets)}, cesty ${size(paths)}, potoky ${size(streams)}, zdi ${size(barriers)}, auta ${size(cars)})`);

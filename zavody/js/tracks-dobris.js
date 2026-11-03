@@ -11,9 +11,11 @@ export const DOBRIS = {
   seed: 2263,
   smooth: 2,
   scene: 'data/dobris.json',
-  credit: 'Mapová data © přispěvatelé OpenStreetMap (ODbL), výškopis a RÚIAN © ČÚZK (CC BY 4.0)',
+  credit: 'Mapová data © přispěvatelé OpenStreetMap (ODbL), výškopis, DMP a RÚIAN © ČÚZK (CC BY 4.0)',
   stand: [718.9,-479.8],
   sett: [[[-382.2,24],[-285.6,27.2]]],
+  crossings: [[147.2,-13.8],[236.2,-27.2],[421.7,-92.2],[394.6,-697.1],[187,-651.2],[-50.9,-489.8],[-122.4,-340.3],[-155,-327.3],[-582.9,-445.2],[-540.1,-290.6],[-504.3,-185],[-147.6,9.5],[-61.9,3.4]],
+  urban: [[[0,0],[139.3,-12.6]],[[-396,-20.7],[-2,0.1]]],
   // poměr šířek mezi úseky: [metr od startu, šířka silnice]
   widths: [[0,12.5],[20,13],[40,12.5],[60,12],[1358,11.5],[1377,10],[2496,10.5],[2515,10],[2974,11],[2993,12],[3512,12.5],[3531,13],[3591,12.5],[3630,12],[3890,12.5]],
   points: [

@@ -1,5 +1,6 @@
 // Trať: středová čára + dotazy pro fyziku/AI + 3D geometrie silnice.
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { buildCenterline, smoothCircular, Cut } from './trackmath.js';
 import { clamp, angleDiff, RNG } from './rng.js';
 import { BIOMES, WET_GRIP, SNOW_GRIP } from './biomes.js';
@@ -26,6 +27,10 @@ export class Track {
     this.cuts = def.cut ? [new Cut(this, def.cut)] : [];
     this.tunnels = (def.tunnels || []).map((span) => this.spanOf(span));
     this.setts = (def.sett || []).map((span) => this.spanOf(span));
+    // centrum města: místo svodidel a červenobílých obrubníků kamenný obrubník a sloupky (jen vzhled)
+    this.urbans = (def.urban || []).map((span) => this.spanOf(span));
+    // přechody pro chodce jako body ve světě
+    this.crossings = (def.crossings || []).map(([x, z]) => this.project(x, z, -1, {}).s);
   }
 
   // úsek trati mezi dvěma body ve světě (kratším směrem), sedí i na obrácené trati
@@ -69,6 +74,10 @@ export class Track {
 
   onSett(s) {
     return this.setts.some((t) => ((s - t.s0 + this.L) % this.L) < t.len);
+  }
+
+  onUrban(s) {
+    return this.urbans.some((t) => ((s - t.s0 + this.L) % this.L) < t.len);
   }
 
   // rychlostní profil pro jiný typ vozu: přilnavost a maximálka poměrem k autu
@@ -275,21 +284,33 @@ export class Track {
       settMesh.receiveShadow = true;
       group.add(settMesh);
     }
+    if (this.crossings.length) group.add(this.buildCrossings());
 
     // Obrubníky (jen v zatáčkách) – červenobílé pruhy
     const curb = new StripBuilder();
     const cA = new THREE.Color(style.curbA), cB = new THREE.Color(style.curbB);
+    // v centru úzký kamenný obrubník po celé délce místo červenobílého v zatáčkách
+    const kA = new THREE.Color('#c4c0b7'), kB = new THREE.Color('#b6b2a9');
+    const urban = Uint8Array.from(this.s, (s) => this.onUrban(s));
     for (let k = 0; k < N; k++) {
       const n = (k + 1) % N;
-      if (!this.curbMask[k]) continue;
-      const c = Math.floor(this.s[k] / 3) % 2 ? cA : cB;
+      if (!this.curbMask[k] && !urban[k]) continue;
+      const c = urban[k] ? (Math.floor(this.s[k] / 1.2) % 2 ? kA : kB) : Math.floor(this.s[k] / 3) % 2 ? cA : cB;
+      const w = urban[k] ? KERB_W : cw, top = urban[k] ? 0.13 : 0.07;
       const ha = this.hwAt(k), hb = this.hwAt(n);
       for (const side of [-1, 1]) {
-        const a0 = side * ha, a1 = side * hb, b0 = side * (ha + cw), b1 = side * (hb + cw);
+        const a0 = side * ha, a1 = side * hb, b0 = side * (ha + w), b1 = side * (hb + w);
         const q = side > 0
-          ? [this.point(k, a0, 0.02), this.point(k, b0, 0.07), this.point(n, b1, 0.07), this.point(n, a1, 0.02)]
-          : [this.point(k, b0, 0.07), this.point(k, a0, 0.02), this.point(n, a1, 0.02), this.point(n, b1, 0.07)];
+          ? [this.point(k, a0, top), this.point(k, b0, top), this.point(n, b1, top), this.point(n, a1, top)]
+          : [this.point(k, b0, top), this.point(k, a0, top), this.point(n, a1, top), this.point(n, b1, top)];
+        if (!urban[k]) { q[side > 0 ? 0 : 1][1] -= 0.05; q[side > 0 ? 3 : 2][1] -= 0.05; }
         curb.quad(q[0], q[1], q[2], q[3], c);
+        // líc obrubníku směrem k vozovce
+        if (urban[k]) {
+          const f = [this.point(k, a0, 0), this.point(k, a0, top), this.point(n, a1, top), this.point(n, a1, 0)];
+          if (side > 0) curb.quad(f[3], f[2], f[1], f[0], kB);
+          else curb.quad(f[0], f[1], f[2], f[3], kB);
+        }
       }
     }
     if (curb.count) {
@@ -307,14 +328,16 @@ export class Track {
       const col = Math.floor(this.s[k] / 5) % 2 ? shA : shB;
       const ha = this.hwAt(k), hb = this.hwAt(n);
       const curbed = this.curbMask[k] && this.curbMask[n];
+      // v centru je krajnice chodník ve výšce obrubníku
+      const inset = urban[k] ? KERB_W : curbed ? cw : 0, y = urban[k] ? 0.13 : 0;
       for (const side of [-1, 1]) {
-        const a0 = side * (curbed ? ha + cw : ha), a1 = side * (curbed ? hb + cw : hb);
+        const a0 = side * (ha + inset), a1 = side * (hb + inset);
         const b0 = side * this.edgeAt(k), b1 = side * this.edgeAt(n);
-        if (side > 0) sh.quad(this.point(k, a0), this.point(k, b0), this.point(n, b1), this.point(n, a1), col);
-        else sh.quad(this.point(k, b0), this.point(k, a0), this.point(n, a1), this.point(n, b1), col);
+        if (side > 0) sh.quad(this.point(k, a0, y), this.point(k, b0, y), this.point(n, b1, y), this.point(n, a1, y), col);
+        else sh.quad(this.point(k, b0, y), this.point(k, a0, y), this.point(n, a1, y), this.point(n, b1, y), col);
         // zástěra na vnějším okraji, aby nebyla vidět mezera k terénu
-        if (side > 0) sh.quad(this.point(k, b0), this.point(k, b0, -3), this.point(n, b1, -3), this.point(n, b1), skirt);
-        else sh.quad(this.point(k, b0, -3), this.point(k, b0), this.point(n, b1), this.point(n, b1, -3), skirt);
+        if (side > 0) sh.quad(this.point(k, b0, y), this.point(k, b0, -3), this.point(n, b1, -3), this.point(n, b1, y), skirt);
+        else sh.quad(this.point(k, b0, -3), this.point(k, b0, y), this.point(n, b1, y), this.point(n, b1, -3), skirt);
       }
     }
     const shMesh = new THREE.Mesh(sh.build(), new THREE.MeshLambertMaterial({ vertexColors: true }));
@@ -373,6 +396,7 @@ export class Track {
       const n = (k + 1) % N;
       const seg = Math.floor(this.s[k] / (period * 2));
       const col = seg % 2 ? colA : colB;
+      if (this.onUrban(this.s[k])) continue;
       for (const side of [-1, 1]) {
         if (this.cutAt(this.s[k], side)) continue;
         const ik = side * (this.edgeAt(k) + 0.05), ok = side * (this.edgeAt(k) + 0.05 + t);
@@ -412,6 +436,7 @@ export class Track {
       const p = [0, 0, 0];
       let i = 0;
       for (let k = 0; k < N; k += every) {
+        if (this.onUrban(this.s[k])) continue;
         for (const side of [-1, 1]) {
           if (this.cutAt(this.s[k], side)) continue;
           this.point(k, side * (this.edgeAt(k) + 0.2), 0, p);
@@ -424,7 +449,43 @@ export class Track {
       posts.computeBoundingSphere();
       group.add(posts);
     }
+    if (this.urbans.length) group.add(this.buildBollards());
     return group;
+  }
+
+  // zebra: pruhy 0,5 m podél osy, mezery 0,5 m, přes celou šířku silnice
+  buildCrossings() {
+    const b = new StripBuilder();
+    const white = new THREE.Color('#e6e4dc');
+    for (const s of this.crossings) {
+      const hw = this.hwAt(this.indexAt(s)) - 0.6;
+      for (let lat = -hw; lat + 0.5 <= hw; lat += 1) {
+        b.quad(this.pointS(s - 1.75, lat, 0.035), this.pointS(s - 1.75, lat + 0.5, 0.035),
+          this.pointS(s + 1.75, lat + 0.5, 0.035), this.pointS(s + 1.75, lat, 0.035), white);
+      }
+    }
+    const mesh = new THREE.Mesh(b.build(), new THREE.MeshLambertMaterial({ vertexColors: true }));
+    mesh.receiveShadow = true;
+    return mesh;
+  }
+
+  // sloupky na okraji chodníku v centru, kde nestojí svodidlo
+  buildBollards() {
+    const geo = mergeGeometries([
+      new THREE.CylinderGeometry(0.08, 0.1, 0.85, 6).translate(0, 0.42, 0),
+      new THREE.CylinderGeometry(0.11, 0.11, 0.08, 6).translate(0, 0.88, 0),
+    ]);
+    const every = Math.max(1, Math.round(3.6 / this.step));
+    const items = [];
+    for (let k = 0; k < this.N; k += every) {
+      if (!this.onUrban(this.s[k])) continue;
+      for (const side of [-1, 1]) if (!this.cutAt(this.s[k], side)) items.push(this.point(k, side * (this.edgeAt(k) + 0.15)));
+    }
+    const mesh = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial({ color: 0x3a3e44 }), items.length);
+    const m = new THREE.Matrix4();
+    items.forEach((p, i) => mesh.setMatrixAt(i, m.makeTranslation(p[0], p[1], p[2])));
+    mesh.computeBoundingSphere();
+    return mesh;
   }
 
   buildGantry(style) {
@@ -560,6 +621,7 @@ export class StripBuilder {
 
 const ROAD_TILE = 32; // metrů asfaltu na jedno opakování textury
 const SETT_TILE = 12; // metrů dlažby na jedno opakování textury
+const KERB_W = 0.3; // šířka kamenného obrubníku v centru
 const ROAD_W = { low: 256, medium: 512, high: 1024, ultra: 1024 };
 
 // zrno přes celý obrázek; kamínky dělá vzácný větší výkyv

@@ -2,7 +2,10 @@
 import * as THREE from 'three';
 
 export const FLOOR = 3; // metrů na patro i na okno
-export const SHAPE = { GABLE: 0, HIP: 1, FLAT: 2, TENT: 3, SHED: 4 };
+export const SHAPE = { GABLE: 0, HIP: 1, FLAT: 2, TENT: 3, SHED: 4, CROSS: 5 }; // CROSS: sedlová s hřebenem napříč
+const BLOCK_PITCH = 3.8; // rozestup oken na fasádě vysokých domů
+const BLANK = [0, 0, 0.5, 0.5]; // roh buňky textury, kde žádné okno není
+const SHOP_H = 3.6, SHOP_W = 4.5; // výška přízemí s výlohou a šířka jedné výlohy
 
 export function orientedBox(r) {
   let best = null;
@@ -39,6 +42,7 @@ function roofProfile(shape, hl, hw) {
   if (shape === SHAPE.TENT) {
     return { at: (a, d) => Math.max(0, Math.min(1 - Math.abs(d) / hw, 1 - Math.abs(a) / hl)), lines: [[hw, hl, 0], [hw, -hl, 0]] };
   }
+  if (shape === SHAPE.CROSS) return { at: (a) => Math.max(0, 1 - Math.abs(a) / hl), lines: [[1, 0, 0]] };
   if (shape === SHAPE.SHED) return { at: (a, d) => (d + hw) / (2 * hw), lines: [] };
   return { at: () => 0, lines: [] };
 }
@@ -116,7 +120,8 @@ export const areaOf = (r) => r.reduce((s, p, i) => {
   return s + p[0] * q[1] - q[0] * p[1];
 }, 0);
 
-export function addBuilding(tile, terrain, ringIn, { wall, roof, shape, face, top, plain, uvOf }) {
+// shopFront(x, z): bod 6 m před stěnou leží na ulici, kam patří výloha (jen u domů s obchodem)
+export function addBuilding(tile, terrain, ringIn, { wall, roof, shape, face, top, plain, uvOf, shopFront }) {
   const ring = areaOf(ringIn) > 0 ? ringIn : [...ringIn].reverse();
   const box = orientedBox(ring);
   const A = (p) => (p[0] - box.cx) * box.ux + (p[1] - box.cz) * box.uz;
@@ -141,14 +146,27 @@ export function addBuilding(tile, terrain, ringIn, { wall, roof, shape, face, to
 
   const out = plain ? tile.plain : tile.walls;
   const shade = face.clone().multiplyScalar(0.8);
+  // patrové domy mají okna řidší; dlouhý dům s plochou střechou má štítové stěny bez oken jako panelák
+  const pitch = wall >= 12 ? BLOCK_PITCH : FLOOR;
+  const blankEnds = wall >= 7 && shape === SHAPE.FLAT && box.hl > box.hw * 1.4;
   rim.forEach((p, i) => {
     const q = rim[(i + 1) % rim.length];
     const dx = q[0] - p[0], dz = q[1] - p[1], len = Math.hypot(dx, dz);
     if (len < 0.05) return;
     const n = [dz / len, 0, -dx / len];
-    const cells = !plain && len >= 2.2 ? Math.max(1, Math.round(len / FLOOR)) : 0;
-    const uv = uvOf ? uvOf(len, low, eave) : cells ? [0, cells / 4, (low - eave) / (FLOOR * 4), 0] : null;
-    panel(out, [p[0], low, p[1]], [p[0], eave, p[1]], [q[0], eave, q[1]], [q[0], low, q[1]], n, shade, face, uv);
+    const end = blankEnds && Math.abs(dx * box.ux + dz * box.uz) < 0.4 * len;
+    const cells = !plain && len >= 2.2 ? Math.max(1, Math.round(len / pitch)) : 0;
+    const uv = uvOf ? uvOf(len, low, eave) : end ? BLANK : cells ? [0, cells / 4, (low - eave) / (FLOOR * 4), 0] : null;
+    const mx = (p[0] + q[0]) / 2 + n[0] * 6, mz = (p[1] + q[1]) / 2 + n[2] * 6;
+    const shopY = eave - wall + SHOP_H;
+    if (shopFront && cells && !end && len >= 3 && eave - shopY >= 2.4 && shopFront(mx, mz)) {
+      // výloha v přízemí, nad ní okna pater zarovnaná od římsy
+      const v = (low - shopY) / SHOP_H;
+      panel(tile.shops, [p[0], low, p[1]], [p[0], shopY, p[1]], [q[0], shopY, q[1]], [q[0], low, q[1]], n, shade, face,
+        [0, Math.max(1, Math.round(len / SHOP_W)), v, 1]);
+      panel(out, [p[0], shopY, p[1]], [p[0], eave, p[1]], [q[0], eave, q[1]], [q[0], shopY, q[1]], n, face, face,
+        [0, cells / 4, (shopY - eave) / (FLOOR * 4), 0]);
+    } else panel(out, [p[0], low, p[1]], [p[0], eave, p[1]], [q[0], eave, q[1]], [q[0], low, q[1]], n, shade, face, uv);
     const yp = roofY(p), yq = roofY(q);
     if (yp > eave + 0.02 || yq > eave + 0.02) panel(out, [p[0], eave, p[1]], [p[0], yp, p[1]], [q[0], yq, q[1]], [q[0], eave, q[1]], n, face, face);
   });

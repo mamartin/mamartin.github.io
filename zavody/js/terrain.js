@@ -320,11 +320,33 @@ export class Terrain {
     const mat = this.groundMap
       ? new THREE.MeshLambertMaterial({ map: this.groundMap })
       : new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: palette.flat ?? true });
+    const detail = this.groundMap?.userData.detail;
+    if (detail) withDetailMap(mat, detail);
     const mesh = new THREE.Mesh(g, mat);
     mesh.receiveShadow = true;
     mesh.name = 'terrain';
     return mesh;
   }
+}
+
+// Jemnější textura země v obdélníku u trati přes hrubou; na okraji se 30 m prolínají, ať není vidět šev.
+function withDetailMap(mat, { map, rect }) {
+  mat.onBeforeCompile = (sh) => {
+    sh.uniforms.detailMap = { value: map };
+    sh.uniforms.detailRect = { value: new THREE.Vector4(rect.x0, rect.z0, rect.w, rect.h) };
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\nvarying vec2 vGroundXZ;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvGroundXZ = position.xz;');
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', '#include <common>\nuniform sampler2D detailMap;\nuniform vec4 detailRect;\nvarying vec2 vGroundXZ;')
+      .replace('#include <map_fragment>', `#include <map_fragment>
+      {
+        vec2 duv = (vGroundXZ - detailRect.xy) / detailRect.zw;
+        vec2 inner = min(duv, 1.0 - duv) * detailRect.zw;
+        float w = smoothstep(0.0, 30.0, min(inner.x, inner.y));
+        if (w > 0.0) diffuseColor.rgb = mix(diffuseColor.rgb, texture2D(detailMap, vec2(duv.x, 1.0 - duv.y)).rgb, w);
+      }`);
+  };
 }
 
 export function pointInRing(x, z, r) {

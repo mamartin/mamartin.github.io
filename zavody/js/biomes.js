@@ -96,8 +96,9 @@ export const BIOMES = {
     name: 'Maloměsto',
     sky: { top: '#3d7cc9', horizon: '#d3e3ec', bottom: '#9fb2b5', glow: 0.6 },
     sunDir: [0.46, 0.68, 0.36],
-    sun: { color: '#fff1da', intensity: 2.7 },
-    hemi: { sky: '#dbe8ff', ground: '#6e6c58', intensity: 1.3 },
+    sun: { color: '#fff1da', intensity: 2.6 },
+    // světlejší odraz od dlažby a omítek: fasády ve stínu nemají tmavnout do cihlové
+    hemi: { sky: '#dbe8ff', ground: '#8e8a76', intensity: 1.5 },
     fog: { color: '#c9dce6', near: 240, far: 1350 },
     exposure: 1.0,
     night: false,
