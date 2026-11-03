@@ -938,6 +938,9 @@ async function startRaceInner() {
   $('pause').hidden = true;
   G.paused = false;
   G.placeSaid = -99;
+  // stav vázaný na minulý závod: zhasnutí semaforu po startu a poloha ghostu na trati
+  G.lightsOff = 0;
+  G.ghostProj = null;
   clearRace();
   if (S.mode === 'cup' && !G.cup) G.cup = newCup();
   if (S.mode !== 'cup') G.cup = null;
