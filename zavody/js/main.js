@@ -40,6 +40,7 @@ import { addDamage, disposeDamage } from './damage.js';
 import { encodeGhost, decodeGhost, sharedGhost, saveSharedGhost } from './ghostshare.js';
 import { bindKeysUI, refreshKeysUI, keyPanelHtml, itemKeyLabel, keyPlayer, keysSignature, playerColor, pauseHint } from './keysui.js';
 import { Post } from './post.js';
+import { splitLarge, setViewScale } from './lod.js';
 import { TrackEditor, customToDef, decodeTrack, checkDef } from './editor.js';
 
 const STEP = 1 / 120;
@@ -128,8 +129,11 @@ function resizeView() {
   if (G.race) for (const h of huds) h.resize();
 }
 
-// stíny: vlastní volba, jinak podle kvality grafiky
-const shadowLevel = () => S.shadows || (S.quality === 'low' ? 'off' : S.quality === 'ultra' ? 'sharp' : 'normal');
+// automatická kvalita: co hra ubrala sama, když dlouho nestíhala (platí do ruční změny nastavení)
+const auto = { shadows: false, view: 1 };
+
+// stíny: vlastní volba, jinak podle kvality grafiky (a automatické kvality)
+const shadowLevel = () => S.shadows || (S.quality === 'low' || auto.shadows ? 'off' : S.quality === 'ultra' ? 'sharp' : 'normal');
 
 // efekty přes obraz jen pro vysokou kvalitu, ty nejdražší jen pro Ultra
 function setupPost() {
@@ -149,18 +153,49 @@ function setupPost() {
   }
 }
 
-// když hra stabilně nestíhá, ubere nejdřív drahé efekty, pak rozlišení: plynulost je pro řízení důležitější
+// Když hra dlouhodobě nestíhá, ubere nejdřív drahé efekty, pak stíny, dohled a nakonec rozlišení:
+// plynulost je pro řízení důležitější. Stíny zvolené ručně v nastavení nechá, ruční změna
+// kvality vrátí vše zpět. Po každém kroku chvíli počká, než se snímky ustálí.
 let slowTicks = 0;
 function watchFps() {
-  if (G.screen !== 'race' || document.hidden) return;
-  slowTicks = G.fps < 54 ? slowTicks + 1 : 0;
-  if (slowTicks < 3) return;
-  slowTicks = 0;
+  if (G.screen !== 'race' || document.hidden || G.paused) return;
+  slowTicks = G.fps < 54 ? slowTicks + 1 : Math.min(0, slowTicks);
+  if (slowTicks < 4) return;
+  slowTicks = -4;
+  let what = null;
   if (G.post?.heavy) G.post.heavy = false;
-  else if (resScale > 0.6) {
+  else if (!S.shadows && shadowLevel() !== 'off') {
+    auto.shadows = true;
+    applyShadows();
+    what = 'vypnuté stíny';
+  } else if (auto.view > 0.6) {
+    setView(auto.view > 0.8 ? 0.75 : 0.6);
+    what = 'kratší dohled';
+  } else if (resScale > 0.6) {
     resScale = Math.max(0.6, resScale - 0.14);
     resizeView();
+    what = 'nižší rozlišení';
   }
+  if (what) for (const h of G.huds ?? []) h.sub(`Grafika se přizpůsobila výkonu: ${what}`, 3);
+}
+
+function applyShadows() {
+  const on = shadowLevel() !== 'off';
+  renderer.shadowMap.enabled = on;
+  // svět postavený bez stínů nemá stínovou mapu, zapnout je jde jen novým načtením
+  if (G.world) G.world.lights.sun.castShadow = on && !!G.world.lights.sun.userData.axes;
+}
+
+// dohled: mlha i hranice, kde se kulisy zjednoduší nebo zmizí (viz lod.js)
+function setView(v) {
+  auto.view = v;
+  if (G.world) setViewScale(G.world.group, v);
+}
+
+function resetAuto() {
+  auto.shadows = false;
+  setView(1);
+  resScale = 1;
 }
 
 window.addEventListener('resize', resizeView);
@@ -236,10 +271,12 @@ async function loadWorld(id) {
   if (town) terrain.groundMap = paintGround(town, track, terrain, S.quality, renderer.capabilities.getMaxAnisotropy());
   const group = new THREE.Group();
   group.add(terrain.buildMesh(biome.terrain));
-  group.add(track.buildMeshes(biome.track, renderer.capabilities.getMaxAnisotropy(), S.quality));
+  // dlouhé pásy a svodidla trati po čtvercích, ať se kreslí jen to, co je v záběru (jen velké sítě,
+  // malé by přidaly víc volání kreslení, než ušetří)
+  group.add(splitLarge(track.buildMeshes(biome.track, renderer.capabilities.getMaxAnisotropy(), S.quality), 500, 8000));
   const scenery = buildScenery(track, terrain, def.biome, biome, S.quality, def.seed + 3);
   group.add(scenery.group);
-  if (town) group.add(buildTown(town, track, terrain, S.quality, def.seed + 5, renderer.capabilities.getMaxAnisotropy()));
+  if (town) group.add(buildTown(town, track, terrain, S.quality, def.seed + 5, renderer.capabilities.getMaxAnisotropy(), biome.fog.far));
   const lights = buildLights(biome, S.quality, shadowLevel());
   group.add(lights.group);
   const sky = buildSky(biome, S.quality);
@@ -248,6 +285,7 @@ async function loadWorld(id) {
   scene.background = new THREE.Color(biome.fog.color);
   renderer.toneMappingExposure = biome.exposure;
   renderer.shadowMap.enabled = shadowLevel() !== 'off';
+  if (auto.view < 1) setViewScale(group, auto.view);
 
   // odrazy na autech a vodě z oblohy
   const envScene = new THREE.Scene();
@@ -696,7 +734,7 @@ function bindMenu() {
         return;
       }
       refreshMenu();
-      resScale = 1;
+      resetAuto();
       applyPixelRatio();
       await loadWorld(currentTrackId());
       G.screen = 'menu';
@@ -706,6 +744,7 @@ function bindMenu() {
     b.addEventListener('click', async () => {
       if (shadowLevel() === b.dataset.shadow) return;
       S.shadows = b.dataset.shadow;
+      auto.shadows = false;
       store.save();
       refreshMenu();
       await loadWorld(currentTrackId());
@@ -1626,7 +1665,22 @@ function aimHeadlamp(w, car) {
   lamp.target.position.set(car.x + fx * 34, car.y - 0.6, car.z + fz * 34);
 }
 
+// zkrácený dohled zkrátí i mlhu, jen po dobu kreslení (počasí ji mění po svém)
 function renderViews(w) {
+  const fog = scene.fog;
+  if (auto.view === 1 || !fog) return drawViews(w);
+  const { near, far } = fog;
+  fog.near *= auto.view;
+  fog.far *= auto.view;
+  try {
+    drawViews(w);
+  } finally {
+    fog.near = near;
+    fog.far = far;
+  }
+}
+
+function drawViews(w) {
   const race = G.screen === 'race' ? G.race : null;
   w.sky.userData.time.value = performance.now() / 1000;
   const players = race ? race.players : [];
@@ -1789,7 +1843,7 @@ Object.assign(G, {
   },
   toMenu,
   selectTrack,
-  info: () => ({ fps: G.fps, calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures }),
+  info: () => ({ fps: G.fps, calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures, auto: { ...auto, res: resScale } }),
 });
 
 boot().catch((e) => {

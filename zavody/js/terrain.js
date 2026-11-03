@@ -291,21 +291,22 @@ export class Terrain {
         col[v * 3 + 2] = c.b * shade;
       }
     }
-    const idx = new Uint32Array((nx - 1) * (nz - 1) * 6);
+    // Terén je rozdělený na čtverce po CHUNK buňkách se společnými vrcholy: mimo záběr se
+    // nekreslí, jinak by se celá mřížka (statisíce trojúhelníků) kreslila v každém snímku.
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    const all = new Uint32Array((nx - 1) * (nz - 1) * 6);
     let t = 0;
     for (let j = 0; j < nz - 1; j++) {
       for (let i = 0; i < nx - 1; i++) {
         const a = j * nx + i, b = a + 1, cc = a + nx, d = cc + 1;
-        idx[t++] = a; idx[t++] = cc; idx[t++] = b;
-        idx[t++] = b; idx[t++] = cc; idx[t++] = d;
+        all[t++] = a; all[t++] = cc; all[t++] = b;
+        all[t++] = b; all[t++] = cc; all[t++] = d;
       }
     }
-    const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    g.setAttribute('color', new THREE.BufferAttribute(col, 3));
-    g.setIndex(new THREE.BufferAttribute(idx, 1));
+    g.setIndex(new THREE.BufferAttribute(all, 1));
     g.computeVertexNormals();
-    g.computeBoundingSphere();
     // namalovaná zem (ulice, parky, pole) místo barev ve vrcholech
     if (this.groundMap) {
       const uv = new Float32Array(V * 2);
@@ -322,10 +323,38 @@ export class Terrain {
       : new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: palette.flat ?? true });
     const detail = this.groundMap?.userData.detail;
     if (detail) withDetailMap(mat, detail);
-    const mesh = new THREE.Mesh(g, mat);
-    mesh.receiveShadow = true;
-    mesh.name = 'terrain';
-    return mesh;
+    const group = new THREE.Group();
+    group.name = 'terrain';
+    const CHUNK = Math.max(8, Math.round(560 / cell));
+    for (let j0 = 0; j0 < nz - 1; j0 += CHUNK) {
+      for (let i0 = 0; i0 < nx - 1; i0 += CHUNK) {
+        const j1 = Math.min(nz - 1, j0 + CHUNK), i1 = Math.min(nx - 1, i0 + CHUNK);
+        const idx = new Uint32Array((j1 - j0) * (i1 - i0) * 6);
+        let k = 0;
+        for (let j = j0; j < j1; j++) {
+          for (let i = i0; i < i1; i++) {
+            const a = j * nx + i, b = a + 1, cc = a + nx, d = cc + 1;
+            idx[k++] = a; idx[k++] = cc; idx[k++] = b;
+            idx[k++] = b; idx[k++] = cc; idx[k++] = d;
+          }
+        }
+        const cg = new THREE.BufferGeometry();
+        for (const key of Object.keys(g.attributes)) cg.setAttribute(key, g.attributes[key]);
+        cg.setIndex(new THREE.BufferAttribute(idx, 1));
+        // obal jen z vrcholů tohoto čtverce, ne z celé mřížky
+        let y0 = Infinity, y1 = -Infinity;
+        for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+          y0 = Math.min(y0, h[j * nx + i]);
+          y1 = Math.max(y1, h[j * nx + i]);
+        }
+        cg.boundingBox = new THREE.Box3(new THREE.Vector3(x0 + i0 * cell, y0, z0 + j0 * cell), new THREE.Vector3(x0 + i1 * cell, y1, z0 + j1 * cell));
+        cg.boundingSphere = cg.boundingBox.getBoundingSphere(new THREE.Sphere());
+        const mesh = new THREE.Mesh(cg, mat);
+        mesh.receiveShadow = true;
+        group.add(mesh);
+      }
+    }
+    return group;
   }
 }
 
