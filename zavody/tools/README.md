@@ -13,6 +13,8 @@ node check-scene.mjs       # ověří vygenerované soubory
 `node fetch-data.mjs osm`, `dmr`, `dmp` nebo `ruian` stáhne jen část dat, jméno dotazu (třeba `osm_shops` nebo `osm_signs`) jen ten dotaz. Průzkum okruhů je v `loops.mjs` a `preview.mjs`
 (průjezdní body v `loops.json`), pohled shora na hotovou scénu dá `preview-scene.mjs`.
 
+Test celé hry (tahle kontrola, závody autopilotem v headless prohlížeči a měření výkonu) je `npm test` ve složce `zavody`, viz `../test/README.md`.
+
 ## Zdroje dat
 
 - **OpenStreetMap** přes Overpass API, licence ODbL 1.0. `data/dobris.json` je odvozená databáze, proto je označená ODbL.
