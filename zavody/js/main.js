@@ -1398,7 +1398,13 @@ function processEvents() {
 
   if (G.pickups) {
     const near = (x, z) => Math.max(...race.players.map((c) => clamp(1 - Math.hypot(x - c.x, z - c.z) / 120, 0, 1)));
-    const keyFor = (car) => (solo ? `${itemKeyLabel(0, 1)} nebo X` : itemKeyLabel(car.humanIndex, 2));
+    // klávesa podle nastavení hráče; tlačítko X jen tehdy, když má hráč připojený ovladač
+    const keyFor = (car) => {
+      const i = solo ? 0 : car.humanIndex || 0;
+      const key = itemKeyLabel(i, solo ? 1 : 2);
+      const prof = solo ? 'solo' : i === 0 ? 'p1' : 'p2';
+      return input.padFor(prof) ? `${key} nebo 🎮 X` : key;
+    };
     for (const e of G.pickups.events) {
       if (e.type === 'box') audio.pickup();
       else if (e.type === 'incoming') {
