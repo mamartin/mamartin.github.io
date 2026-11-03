@@ -750,6 +750,45 @@ if (existsSync(join(DATA, 'osm_signs.json'))) {
   }
 }
 
+// Autobusy na nádraží: skupina aspoň čtyř nástupišť stejného jména je stanoviště (na Dobříši
+// Mírové náměstí 1–9). U části z nich stojí autobus na nejbližší silnici, nástupiště má po pravé ruce.
+const BUS_L = 12, BUS_W = 2.55, BUS_STAND = 0.6;
+const buses = [];
+if (existsSync(join(DATA, 'osm_signs.json'))) {
+  const stops = read('osm_signs.json').filter((e) => e.type === 'node' && e.tags?.highway === 'bus_stop' && e.tags.name);
+  const count = new Map();
+  for (const e of stops) count.set(e.tags.name, (count.get(e.tags.name) ?? 0) + 1);
+  const lanes = roads.filter((w) => STREET_W[w.tags.highway] && w.tags.service !== 'parking_aisle');
+  for (const e of stops.filter((s) => count.get(s.tags.name) >= 4).sort((a, b) => a.id - b.id)) {
+    if (hash01(e.id, 3) > BUS_STAND) continue;
+    const p = toGame(e.lat, e.lon);
+    if (axisDist(p[0], p[1]) > REACH) continue;
+    let best = null;
+    for (const w of lanes) {
+      const g = w.geometry;
+      for (let k = 0; k + 1 < g.length; k++) {
+        const a = toGame(g[k].lat, g[k].lon), b = toGame(g[k + 1].lat, g[k + 1].lon);
+        const dx = b[0] - a[0], dz = b[1] - a[1], l2 = dx * dx + dz * dz || 1;
+        const s = Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dz) / l2));
+        const f = [a[0] + dx * s, a[1] + dz * s], d = Math.hypot(p[0] - f[0], p[1] - f[1]);
+        if (!best || d < best.d) best = { d, f, dx, dz };
+      }
+    }
+    if (!best || best.d > 12) continue;
+    // směr jízdy tak, aby nástupiště bylo vpravo (vpravo od (dx, dz) je (-dz, dx))
+    const l = Math.hypot(best.dx, best.dz) || 1;
+    let ux = best.dx / l, uz = best.dz / l;
+    if ((p[0] - best.f[0]) * -uz + (p[1] - best.f[1]) * ux < 0) { ux = -ux; uz = -uz; }
+    // bok autobusu 0,3 m od nástupiště
+    const off = Math.max(0, best.d - BUS_W / 2 - 0.3);
+    const x = best.f[0] - uz * off, z = best.f[1] + ux * off;
+    const ends = [-1, -0.5, 0, 0.5, 1].map((t) => [x + ux * t * (BUS_L / 2), z + uz * t * (BUS_L / 2)]);
+    if (ends.some(([ex, ez]) => { const n = nearAxis(ex, ez); return (n && n.d < clWidth[n.k] / 2 + RUNOFF + BUS_W / 2 + 0.3) || inHouse(ex, ez); })) continue;
+    if (buses.some((b) => Math.hypot(b[0] - x, b[1] - z) < BUS_L + 1)) continue;
+    buses.push([x, z, Math.atan2(ux, uz)]);
+  }
+}
+
 const paths = [];
 for (const e of area) {
   const h = e.tags?.highway;
@@ -867,6 +906,7 @@ const scene = {
   dem: { x0: Math.round(bounds.minX), z0: Math.round(bounds.minZ), cell: DEM_CELL, nx, nz, h: heights },
   palette: { wall: wallPalette, roof: roofPalette, plain: WALLS.plain.map((c) => wallPalette.indexOf(c)) },
   buildings, landmarks, areas, water, paved, streets, paths, streams, barriers, lamps, trees, treeRows, canopy, statues, chimneys, cars, shops, signs, signNames,
+  buses: buses.flatMap(([x, z, hd]) => [dm(x), dm(z), Math.round(hd * 100)]),
 };
 
 // centrum (Mírové náměstí a Pražská u startu): místo svodidel obrubník a sloupky, jízda se nemění
@@ -914,6 +954,6 @@ const c = countCorners(cl);
 console.log(`trať: ${(cl.L / 1000).toFixed(2)} km, bodů ${def.points.length}, min. R ${check.minRadius.toFixed(1)} m, min. odstup ${check.minSeparation.toFixed(0)} m, stoupání okamžité ${(check.maxGrade * 100).toFixed(1)} % / přes 50 m ${(grade50 * 100).toFixed(1)} %, zatáčky ${c.count} (ostré ${c.tight}), odchylka výšky od DMR max. ${maxDiff.toFixed(2)} m`);
 console.log(`šířky: ${[...new Set(def.widths.map((w) => w[1]))].sort((a, b) => a - b).join(', ')} m, úseků ${def.widths.length}, start ${lat0.toFixed(5)}, ${lon0.toFixed(5)}`);
 console.log('statistika:', JSON.stringify(stats));
-console.log(`počty: areas ${areas.length}, water ${water.length}, paved ${paved.length}, streets ${streets.length}, paths ${paths.length}, streams ${streams.length}, barriers ${barriers.length}, lamps ${lamps.length / 2}, trees ${trees.length / 2}, treeRows ${treeRows.length}, cars ${cars.length / 3}, shops ${shops.length}, přechody ${def.crossings.length}, značky ${signs.length / 5}, stromy z DMP ${canopy.length / 4}`);
+console.log(`počty: areas ${areas.length}, water ${water.length}, paved ${paved.length}, streets ${streets.length}, paths ${paths.length}, streams ${streams.length}, barriers ${barriers.length}, lamps ${lamps.length / 2}, trees ${trees.length / 2}, treeRows ${treeRows.length}, cars ${cars.length / 3}, autobusy ${buses.length}, shops ${shops.length}, přechody ${def.crossings.length}, značky ${signs.length / 5}, stromy z DMP ${canopy.length / 4}`);
 console.log('hladiny:', water.filter((w) => w.name).map((w) => `${w.name} ${w.level === null ? '?' : ((w.level / 10 + base).toFixed(1) + ' m')}`).join(', '));
 console.log(`velikost: celkem ${(json.length / 1024).toFixed(0)} kB (dem ${size(scene.dem)}, budovy ${size(buildings)}, dominanty ${size(landmarks)}, plochy ${size(areas)}, voda ${size(water)}, zpevněné ${size(paved)}, ulice ${size(streets)}, cesty ${size(paths)}, potoky ${size(streams)}, zdi ${size(barriers)}, auta ${size(cars)})`);

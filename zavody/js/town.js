@@ -55,6 +55,7 @@ function decode(raw) {
     signs: Array.from({ length: Math.floor((raw.signs?.length ?? 0) / 5) }, (_, i) => ({ kind: raw.signs[i * 5], value: raw.signs[i * 5 + 1], x: raw.signs[i * 5 + 2] / 10, z: raw.signs[i * 5 + 3] / 10, ry: raw.signs[i * 5 + 4] / 100 })),
     signNames: raw.signNames ?? [],
     cars: Array.from({ length: Math.floor((raw.cars?.length ?? 0) / 3) }, (_, i) => ({ x: raw.cars[i * 3] / 10, z: raw.cars[i * 3 + 1] / 10, hd: raw.cars[i * 3 + 2] / 100 })),
+    buses: Array.from({ length: Math.floor((raw.buses?.length ?? 0) / 3) }, (_, i) => ({ x: raw.buses[i * 3] / 10, z: raw.buses[i * 3 + 1] / 10, hd: raw.buses[i * 3 + 2] / 100 })),
   };
 }
 
@@ -527,6 +528,37 @@ function buildCars(town, track, terrain, shadows, view) {
   return group;
 }
 
+// autobusy u nástupišť autobusového nádraží (stání určuje tools/osm2track.mjs), čelem k +z
+const BUS_COLORS = ['#f2f2ef', '#f2f2ef', '#e6dcc2', '#c9372c', '#2f66ad'];
+
+function buildBuses(town, track, terrain, shadows, view) {
+  const rng = new RNG(57);
+  const items = town.buses.filter((b) => terrain.distAt(b.x, b.z) > track.edge + 1.3 && !terrain.keepOut(b.x, b.z)).map((b) => ({
+    x: b.x, y: terrain.heightAt(b.x, b.z), z: b.z, ry: b.hd, color: rng.pick(BUS_COLORS),
+  }));
+  const group = new THREE.Group();
+  group.name = 'buses';
+  if (!items.length) return group;
+  // karoserie a střešní kryt dostanou barvu instance, okna, kola a pás pod okny jsou tmavé
+  const glass = '#2b333c';
+  const geo = mergeGeometries([
+    colored(new THREE.BoxGeometry(2.5, 2.55, 11.9).translate(0, 1.62, 0), '#ffffff'),
+    colored(new THREE.BoxGeometry(2.54, 1.0, 10.4).translate(0, 2.15, -0.45), glass),
+    colored(new THREE.BoxGeometry(2.3, 1.55, 0.08).translate(0, 1.95, 5.95), glass),
+    colored(new THREE.BoxGeometry(2.0, 1.2, 0.08).translate(0, 2.2, -5.95), glass),
+    colored(new THREE.BoxGeometry(2.52, 0.14, 11.92).translate(0, 1.2, 0), '#55595e'),
+    colored(new THREE.BoxGeometry(1.7, 0.24, 0.06).translate(0, 2.78, 5.98), '#e8a92e'),
+    // dveře na pravém boku (vpravo od směru +z je −x)
+    ...[4.6, 0.4, -3.8].map((z) => colored(new THREE.BoxGeometry(0.06, 2.2, 1.2).translate(-1.26, 1.45, z), glass)),
+    colored(new THREE.BoxGeometry(1.6, 0.3, 3.2).translate(0, 3.05, -2.4), '#ffffff'),
+    ...[3.6, -2.7].map((z) => colored(new THREE.BoxGeometry(2.56, 0.9, 1.0).translate(0, 0.45, z), '#1d1e20')),
+  ]);
+  const mat = new THREE.MeshLambertMaterial({ vertexColors: true });
+  const opts = { chunk: view.chunk, cull: Math.min(view.cull, 500 * view.reach + view.half) };
+  group.add(instancedLevels([[0, [[geo, items, shadows]]]], mat, opts));
+  return group;
+}
+
 function joinParts(a, b) {
   if (!b.pos.length) return a;
   if (!a.pos.length) return b;
@@ -622,6 +654,7 @@ export function buildTown(town, track, terrain, quality, seed, anisotropy, fogFa
   group.add(buildGreenery(town, track, terrain, placed, density, shadows, rng, view));
   group.add(buildLamps(town, track, terrain, rng, view));
   group.add(buildCars(town, track, terrain, shadows, view));
+  group.add(buildBuses(town, track, terrain, shadows, view));
   group.add(buildRoadSigns(town, track, terrain, anisotropy, (x, z) => neighbourAt(x, z, -1)));
   return group;
 }

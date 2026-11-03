@@ -136,6 +136,10 @@ for (let i = 0; i + 4 < signs.length; i += 5) {
   if (gap(signs[i + 2] / 10, signs[i + 3] / 10) < -0.1) badSign++;
 }
 ok(badSign === 0, `značky mají platný druh, hodnotu a stojí za výběhem (${signs.length / 5} ks)`);
+const buses = scene.buses ?? [];
+let badBus = buses.length % 3;
+for (let i = 0; i + 2 < buses.length; i += 3) if (gap(buses[i] / 10, buses[i + 1] / 10) < 1.2) badBus++;
+ok(badBus === 0, `autobusy stojí mimo silnici a výběh (${buses.length / 3} ks)`);
 
 // 6) povinné náležitosti
 const size = readFileSync(join(ROOT, '../data/dobris.json')).length;
