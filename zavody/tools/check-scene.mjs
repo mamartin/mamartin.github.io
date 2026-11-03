@@ -123,6 +123,20 @@ const ringGap = (p) => {
 for (const l of scene.landmarks) ok(ringGap(l.p) >= 0, `dominanta ${l.id}: odstup za výběhem ${ringGap(l.p).toFixed(1)} m`);
 for (const w of scene.water) if (ringGap(w.p) < 25) ok(ringGap(w.p) >= 0, `voda ${w.name ?? '(bez jména)'}: odstup za výběhem ${ringGap(w.p).toFixed(1)} m`);
 
+// stromy z DMP: čtveřice x, z, výška, poloměr koruny; značky: druh, hodnota, x, z, natočení
+const canopy = scene.canopy ?? [];
+let badTree = canopy.length % 4;
+for (let i = 0; i + 3 < canopy.length; i += 4) if (!(canopy[i + 2] >= 40 && canopy[i + 2] <= 450 && canopy[i + 3] >= 10 && canopy[i + 3] <= 70)) badTree++;
+ok(badTree === 0, `stromy z DMP mají výšku 4–45 m a korunu 1–7 m (${canopy.length / 4} ks)`);
+const signs = scene.signs ?? [];
+let badSign = signs.length % 5;
+for (let i = 0; i + 4 < signs.length; i += 5) {
+  const [kind, value] = [signs[i], signs[i + 1]];
+  if (kind < 0 || kind > 6 || ((kind === 3 || kind === 4) && !scene.signNames[value]) || (kind === 2 && !(value >= 10 && value <= 130))) badSign++;
+  if (gap(signs[i + 2] / 10, signs[i + 3] / 10) < -0.1) badSign++;
+}
+ok(badSign === 0, `značky mají platný druh, hodnotu a stojí za výběhem (${signs.length / 5} ks)`);
+
 // 6) povinné náležitosti
 const size = readFileSync(join(ROOT, '../data/dobris.json')).length;
 ok(size < 500 * 1024, `velikost souboru ${(size / 1024).toFixed(0)} kB`);

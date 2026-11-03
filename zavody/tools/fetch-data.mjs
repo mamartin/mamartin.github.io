@@ -36,6 +36,10 @@ out body geom;`,
   osm_shops: `[out:json][timeout:120][bbox:${BBOX}];
 (nwr["shop"];nwr["amenity"~"^(restaurant|cafe|pub|bar|fast_food|bank|pharmacy|post_office|ice_cream)$"];node["highway"="crossing"];);
 out tags center;`,
+  osm_signs: `[out:json][timeout:120][bbox:${BBOX}];
+(node["traffic_sign"];node["highway"~"^(stop|give_way|bus_stop|traffic_signals|speed_camera)$"];
+node["public_transport"="platform"];way["traffic_sign"];);
+out body geom;`,
   osm_extra: `[out:json][timeout:120][bbox:${BBOX}];
 (nwr["place"="square"];nwr["amenity"="parking"];way["area:highway"];way["highway"]["area"="yes"];way["man_made"="bridge"];);
 out body geom;`,

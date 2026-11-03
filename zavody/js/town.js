@@ -8,6 +8,7 @@ import { instancedChunks, colored, spruceGeometry, broadleafGeometry, farSpruceG
 import { pointInRing } from './terrain.js';
 import { part, vertex, addBuilding, areaOf, color, fenceLine, mix, toMesh, triangulate } from './mass.js';
 import { buildLandmarks, CASTLE_GRAVEL } from './landmarks.js';
+import { buildRoadSigns } from './roadsigns.js';
 
 // jak daleko od osy trati ještě něco vrhá stín
 const SHADOW_REACH = 70;
@@ -36,9 +37,12 @@ function decode(raw) {
     barriers: raw.barriers.map((b) => ({ type: b[0], line: pairs(b, 1) })),
     lamps: pairs(raw.lamps),
     trees: pairs(raw.trees),
+    canopy: Array.from({ length: Math.floor((raw.canopy?.length ?? 0) / 4) }, (_, i) => ({ x: raw.canopy[i * 4] / 10, z: raw.canopy[i * 4 + 1] / 10, h: raw.canopy[i * 4 + 2] / 10, r: raw.canopy[i * 4 + 3] / 10 })),
     statues: pairs(raw.statues),
     chimneys: raw.chimneys.map((c) => ({ x: c[0] / 10, z: c[1] / 10, height: c[2] / 10 })),
     shops: new Set(raw.shops ?? []),
+    signs: Array.from({ length: Math.floor((raw.signs?.length ?? 0) / 5) }, (_, i) => ({ kind: raw.signs[i * 5], value: raw.signs[i * 5 + 1], x: raw.signs[i * 5 + 2] / 10, z: raw.signs[i * 5 + 3] / 10, ry: raw.signs[i * 5 + 4] / 100 })),
+    signNames: raw.signNames ?? [],
     cars: Array.from({ length: Math.floor((raw.cars?.length ?? 0) / 3) }, (_, i) => ({ x: raw.cars[i * 3] / 10, z: raw.cars[i * 3 + 1] / 10, hd: raw.cars[i * 3 + 2] / 100 })),
   };
 }
@@ -356,7 +360,11 @@ function plantArea(ring, spacing, rng, free, put) {
 function buildGreenery(town, track, terrain, buildings, density, shadows, rng) {
   const blocked = occupancy(town, track, terrain, buildings);
   const near = (x, z) => terrain.distAt(x, z) < track.edge + 1.5 || terrain.keepOut(x, z);
-  const free = (x, z) => !blocked(x, z) && !near(x, z);
+  // Stromy z DMP 1G stojí na svých místech s výškou podle skenu (šíře koruny je z výšky). Sken má
+  // vegetaci jen ve větších porostech, zahrady a stromořadí se proto dál osazují, ale jen tam,
+  // kde do 8 m žádný změřený strom nestojí.
+  const measured = ringIndex(town.canopy.map((t) => [[t.x - 8, t.z - 8], [t.x + 8, t.z - 8], [t.x + 8, t.z + 8], [t.x - 8, t.z + 8]]));
+  const free = (x, z) => !blocked(x, z) && !near(x, z) && !measured(x, z, -1);
   const spruce = [], broad = [];
   const place = (list, x, z, hue, size) => {
     const s = size * rng.range(0.85, 1.25);
@@ -367,13 +375,21 @@ function buildGreenery(town, track, terrain, buildings, density, shadows, rng) {
   };
   const leaf = (x, z) => place(broad, x, z, 0.24, 1.25);
   const pine = (x, z) => place(spruce, x, z, 0.3, 1.25);
-  for (const p of town.trees) if (!near(p[0], p[1])) leaf(p[0], p[1]);
   const inside = (x, z) => buildings.some((r) => pointInRing(x, z, r));
+  for (const t of town.canopy) {
+    if (near(t.x, t.z) || inside(t.x, t.z)) continue;
+    broad.push({
+      x: t.x, y: terrain.heightAt(t.x, t.z) - 0.2, z: t.z, s: clamp(t.r / 2.6, 0.5, 2.4), sy: clamp(t.h / 7.3, 0.55, 4), ry: rng.range(0, 6.28),
+      color: new THREE.Color().setHSL(0.24 + rng.range(-0.03, 0.03), 0.42, rng.range(0.72, 1)).getHex(),
+    });
+  }
+  for (const p of town.trees) if (!near(p[0], p[1]) && !measured(p[0], p[1], -1)) leaf(p[0], p[1]);
   for (const line of town.treeRows) {
     for (let i = 0; i + 1 < line.length; i++) {
       const p = line[i], q = line[i + 1], len = Math.hypot(q[0] - p[0], q[1] - p[1]);
       for (let d = 0; d < len; d += 9) {
         const m = mix(p, q, d / len);
+        if (measured(m[0], m[1], -1)) continue;
         if (!near(m[0], m[1])) leaf(m[0], m[1]);
         else {
           const t = pushOut(track, terrain, m, unit(p, q), 2.2);
@@ -479,6 +495,22 @@ function buildCars(town, track, terrain, shadows) {
   return group;
 }
 
+// (x, z, self) → leží bod v jiném obrysu než self? Mřížka po 16 m, ať se nehledá ve všech domech.
+function ringIndex(rings) {
+  const CELL = 16, grid = new Map();
+  rings.forEach((r, i) => {
+    const xs = r.map((p) => p[0]), zs = r.map((p) => p[1]);
+    for (let gx = Math.floor(Math.min(...xs) / CELL); gx <= Math.floor(Math.max(...xs) / CELL); gx++) {
+      for (let gz = Math.floor(Math.min(...zs) / CELL); gz <= Math.floor(Math.max(...zs) / CELL); gz++) {
+        const key = `${gx},${gz}`;
+        if (!grid.has(key)) grid.set(key, []);
+        grid.get(key).push(i);
+      }
+    }
+  });
+  return (x, z, self) => (grid.get(`${Math.floor(x / CELL)},${Math.floor(z / CELL)}`) ?? []).some((j) => j !== self && pointInRing(x, z, rings[j]));
+}
+
 export function buildTown(town, track, terrain, quality, seed, anisotropy) {
   const rng = new RNG(seed);
   const shadows = quality !== 'low';
@@ -498,14 +530,16 @@ export function buildTown(town, track, terrain, quality, seed, anisotropy) {
   // výloha patří na stěnu do trati nebo na náměstí
   const squares = town.paved.filter((a) => a.kind === 'square').map((a) => a.ring);
   const shopFront = (x, z) => terrain.distAt(x, z) < track.edge + 6 || squares.some((r) => pointInRing(x, z, r));
-  town.buildings.forEach((b, i) => {
+  const standing = town.buildings.map((b, i) => ({ ...b, shop: town.shops.has(i) })).filter((b) => !b.ring.some((p) => terrain.keepOut(p[0], p[1])));
+  const neighbourAt = ringIndex([...standing.map((b) => b.ring), ...town.landmarks.map((l) => l.ring)]);
+  standing.forEach((b, i) => {
     const c = b.ring[0];
-    if (b.ring.some((p) => terrain.keepOut(p[0], p[1]))) return;
     placed.push(b.ring);
     addBuilding(tileOf(c[0], c[1]), terrain, b.ring, {
       wall: b.wall, roof: b.roof, shape: b.shape,
       face: color(town.palette.wall[b.face]), top: color(town.palette.roof[b.top]), plain: plainWalls.has(b.face),
-      shopFront: town.shops.has(i) ? shopFront : null,
+      shopFront: b.shop ? shopFront : null,
+      party: (x, z) => neighbourAt(x, z, i), wings: true,
     });
   });
   for (const l of town.landmarks) placed.push(l.ring);
@@ -534,5 +568,6 @@ export function buildTown(town, track, terrain, quality, seed, anisotropy) {
   group.add(buildGreenery(town, track, terrain, placed, density, shadows, rng));
   group.add(buildLamps(town, track, terrain, rng));
   group.add(buildCars(town, track, terrain, shadows));
+  group.add(buildRoadSigns(town, track, terrain, anisotropy, (x, z) => neighbourAt(x, z, -1)));
   return group;
 }

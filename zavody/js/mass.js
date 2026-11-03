@@ -120,13 +120,152 @@ export const areaOf = (r) => r.reduce((s, p, i) => {
   return s + p[0] * q[1] - q[0] * p[1];
 }, 0);
 
+// --- křídla domů do L, T a U: každé dostane vlastní střechu ---------------------
+
+// obdélník kolem obrysu natočený podle směru u (osa a = u)
+function frameAlong(r, ux, uz) {
+  let a0 = Infinity, a1 = -Infinity, b0 = Infinity, b1 = -Infinity;
+  for (const p of r) {
+    const a = p[0] * ux + p[1] * uz, b = -p[0] * uz + p[1] * ux;
+    a0 = Math.min(a0, a); a1 = Math.max(a1, a);
+    b0 = Math.min(b0, b); b1 = Math.max(b1, b);
+  }
+  return { ux, uz, a0, a1, b0, b1 };
+}
+function frameBox(f) {
+  const ca = (f.a0 + f.a1) / 2, cb = (f.b0 + f.b1) / 2;
+  return { ux: f.ux, uz: f.uz, cx: ca * f.ux - cb * f.uz, cz: ca * f.uz + cb * f.ux, hl: (f.a1 - f.a0) / 2, hw: Math.max(0.5, (f.b1 - f.b0) / 2) };
+}
+
+// část obrysu, kde nx·x + nz·z <= c
+function clipHalf(ring, nx, nz, c) {
+  const out = [];
+  ring.forEach((p, i) => {
+    const q = ring[(i + 1) % ring.length];
+    const a = nx * p[0] + nz * p[1] - c, b = nx * q[0] + nz * q[1] - c;
+    if (a <= 1e-6) out.push(p);
+    if ((a < -1e-6 && b > 1e-6) || (a > 1e-6 && b < -1e-6)) out.push(mix(p, q, a / (a - b)));
+  });
+  return out.filter((p, i) => Math.hypot(p[0] - out[(i + 1) % out.length][0], p[1] - out[(i + 1) % out.length][1]) > 0.05);
+}
+
+const fillOf = (r) => {
+  const b = orientedBox(r);
+  return Math.abs(areaOf(r)) / 2 / (4 * b.hl * b.hw);
+};
+
+// Obrys se řeže čarou z vnitřního rohu podél jeho hrany, dokud z něj nejsou skoro obdélníky.
+// Řez musí obrys protnout jen jednou (u U by čára přes obě ramena dala tři kusy).
+export function splitWings(ring, depth = 0) {
+  const n = ring.length;
+  const whole = fillOf(ring);
+  if (depth >= 3 || n < 6 || whole > 0.9) return [{ ring, cuts: [] }];
+  let best = null;
+  ring.forEach((v, i) => {
+    const a = ring[(i - 1 + n) % n], b = ring[(i + 1) % n];
+    if ((v[0] - a[0]) * (b[1] - v[1]) - (v[1] - a[1]) * (b[0] - v[0]) >= 0) return; // vypouklý roh
+    for (const p of [a, b]) {
+      const dx = v[0] - p[0], dz = v[1] - p[1], l = Math.hypot(dx, dz);
+      if (l < 0.8) continue;
+      const nx = -dz / l, nz = dx / l, c = nx * v[0] + nz * v[1];
+      let changes = 0, last = 0;
+      for (const q of [...ring, ring[0]]) {
+        const s = nx * q[0] + nz * q[1] - c;
+        const sg = s > 0.05 ? 1 : s < -0.05 ? -1 : 0;
+        if (sg && last && sg !== last) changes++;
+        if (sg) last = sg;
+      }
+      if (changes !== 2) continue;
+      const A = clipHalf(ring, nx, nz, c), B = clipHalf(ring, -nx, -nz, -c);
+      if (A.length < 3 || B.length < 3) continue;
+      const aA = Math.abs(areaOf(A)) / 2, aB = Math.abs(areaOf(B)) / 2;
+      if (aA < 12 || aB < 12 || orientedBox(A).hw < 1.5 || orientedBox(B).hw < 1.5) continue;
+      // při shodě vyhraje řez, který nechá hlavní křídlo celé
+      const score = (fillOf(A) * aA + fillOf(B) * aB) / (aA + aB) + 0.01 * Math.max(aA, aB) / (aA + aB);
+      if (!best || score > best.score) best = { score, A, B, cut: { nx, nz, c } };
+    }
+  });
+  if (!best || best.score < whole + 0.08) return [{ ring, cuts: [] }];
+  return [...splitWings(best.A, depth + 1), ...splitWings(best.B, depth + 1)].map((w) => ({ ...w, cuts: [best.cut, ...w.cuts] }));
+}
+
+// Střechy křídel: hlavní (největší) křídlo má hřeben po delší straně, ostatní kolmo na řez,
+// prodloužený pod střechu sousedního křídla, takže se v úžlabí protnou samy.
+function wingRoofs(ring, shape, roof) {
+  const wings = splitWings(ring);
+  if (wings.length < 2) return null;
+  const kind = shape === SHAPE.HIP ? SHAPE.HIP : SHAPE.GABLE;
+  const area = (w) => Math.abs(areaOf(w.ring));
+  const main = wings.reduce((m, w) => (area(w) > area(m) ? w : m));
+  const mainBox = orientedBox(main.ring);
+  const top = Math.min(roof, mainBox.hw * 1.4), pitch = top / mainBox.hw;
+  return wings.map((w) => {
+    let box = mainBox, ext = null;
+    if (w !== main) {
+      const on = (cut) => w.ring.filter((p) => Math.abs(cut.nx * p[0] + cut.nz * p[1] - cut.c) < 0.05).length >= 2;
+      const cut = w.cuts.find(on);
+      if (!cut) return null;
+      const f = frameAlong(w.ring, cut.nx, cut.nz);
+      const hw = (f.b1 - f.b0) / 2, out = hw + 0.3;
+      // strana řezu: křídlo leží na straně, kde nx·x + nz·z < c, nebo naopak
+      const toward = f.a1 <= cut.c + 0.05 ? 1 : -1;
+      const ac = toward > 0 ? f.a1 : f.a0;
+      const ea = ac + toward * out;
+      const rect = [[ac, f.b0], [ea, f.b0], [ea, f.b1], [ac, f.b1]].map(([a, b]) => [a * f.ux - b * f.uz, a * f.uz + b * f.ux]);
+      const mid = [(rect[0][0] + rect[2][0]) / 2, (rect[0][1] + rect[2][1]) / 2];
+      if (toward > 0) f.a1 = ea; else f.a0 = ea;
+      box = frameBox(f);
+      if (areaOf(rect) < 0) rect.reverse();
+      ext = pointInPoly(mid, ring) ? rect : null;
+    }
+    return { ring: w.ring, ext, box, shape: kind, roof: Math.min(top, pitch * box.hw), cuts: w.cuts };
+  });
+}
+
+function pointInPoly(p, r) {
+  let inside = false;
+  for (let i = 0, j = r.length - 1; i < r.length; j = i++) {
+    if ((r[i][1] > p[1]) !== (r[j][1] > p[1]) && p[0] < ((r[j][0] - r[i][0]) * (p[1] - r[i][1])) / (r[j][1] - r[i][1]) + r[i][0]) inside = !inside;
+  }
+  return inside;
+}
+
+// úseky stěny p→q, které přiléhají k sousednímu domu (společná zeď, bez oken)
+function partyRuns(p, q, n, len, party) {
+  const steps = Math.max(2, Math.ceil(len));
+  const runs = [];
+  for (let k = 0; k < steps; k++) {
+    const t = (k + 0.5) / steps;
+    const blank = party(p[0] + (q[0] - p[0]) * t + n[0], p[1] + (q[1] - p[1]) * t + n[2]);
+    const last = runs[runs.length - 1];
+    if (last && last.blank === blank) last.t1 = (k + 1) / steps;
+    else runs.push({ t0: k / steps, t1: (k + 1) / steps, blank });
+  }
+  // kousky kratší než okno se přidají k sousedům
+  for (let i = runs.length - 1; i > 0; i--) {
+    if ((runs[i].t1 - runs[i].t0) * len < 1.5 || (runs[i - 1].t1 - runs[i - 1].t0) * len < 1.5) {
+      runs[i - 1] = { t0: runs[i - 1].t0, t1: runs[i].t1, blank: runs[i - 1].blank && runs[i].blank };
+      runs.splice(i, 1);
+    }
+  }
+  return runs;
+}
+
 // shopFront(x, z): bod 6 m před stěnou leží na ulici, kam patří výloha (jen u domů s obchodem)
-export function addBuilding(tile, terrain, ringIn, { wall, roof, shape, face, top, plain, uvOf, shopFront }) {
+// party(x, z): bod leží v sousedním domě, stěna k němu je společná a nemá okna; wings: dům do L, T a U dostane střechu po křídlech
+export function addBuilding(tile, terrain, ringIn, { wall, roof, shape, face, top, plain, uvOf, shopFront, party, wings }) {
   const ring = areaOf(ringIn) > 0 ? ringIn : [...ringIn].reverse();
   const box = orientedBox(ring);
-  const A = (p) => (p[0] - box.cx) * box.ux + (p[1] - box.cz) * box.uz;
-  const D = (p) => -(p[0] - box.cx) * box.uz + (p[1] - box.cz) * box.ux;
-  const prof = roofProfile(shape, box.hl, box.hw);
+  const sloped = shape === SHAPE.GABLE || shape === SHAPE.HIP || shape === SHAPE.CROSS;
+  const roofs = (wings && sloped && roof > 0 && wingRoofs(ring, shape, roof)) || [{ ring, ext: null, box, shape, roof, cuts: [] }];
+  if (roofs.some((r) => !r)) roofs.splice(0, roofs.length, { ring, ext: null, box, shape, roof, cuts: [] });
+  for (const r of roofs) {
+    const b = r.box;
+    r.A = (p) => (p[0] - b.cx) * b.ux + (p[1] - b.cz) * b.uz;
+    r.D = (p) => -(p[0] - b.cx) * b.uz + (p[1] - b.cz) * b.ux;
+    r.prof = roofProfile(r.shape, b.hl, b.hw);
+    r.fns = r.prof.lines.map(([a, bb, c]) => (p) => a * r.A(p) + bb * r.D(p) + c);
+  }
   let sum = 0, low = Infinity;
   for (const p of ring) {
     const h = terrain.heightAt(p[0], p[1]);
@@ -135,20 +274,20 @@ export function addBuilding(tile, terrain, ringIn, { wall, roof, shape, face, to
   }
   const eave = sum / ring.length + wall;
   low -= 0.6;
-  const roofY = (p) => eave + roof * prof.at(A(p), D(p));
+  const heightOf = (r, p) => eave + r.roof * r.prof.at(r.A(p), r.D(p));
 
-  let rim = ring, tris = triangulate(ring);
-  for (const [a, b, c] of prof.lines) {
-    const f = (p) => a * A(p) + b * D(p) + c;
-    rim = splitRing(rim, f);
-    tris = splitTriangles(tris, f);
-  }
+  // horní hrana stěn sleduje střechu křídla, kterému stěna patří; řezy mezi křídly dělí obrys taky
+  let rim = ring;
+  for (const r of roofs) for (const f of [...r.fns, ...r.cuts.map((c) => (p) => c.nx * p[0] + c.nz * p[1] - c.c)]) rim = splitRing(rim, f);
+  const ownerOf = (m) => (roofs.length > 1 && roofs.find((r) => pointInPoly(m, r.ring))) || roofs[0];
 
   const out = plain ? tile.plain : tile.walls;
   const shade = face.clone().multiplyScalar(0.8);
   // patrové domy mají okna řidší; dlouhý dům s plochou střechou má štítové stěny bez oken jako panelák
   const pitch = wall >= 12 ? BLOCK_PITCH : FLOOR;
   const blankEnds = wall >= 7 && shape === SHAPE.FLAT && box.hl > box.hw * 1.4;
+  const wallPanel = (a, b, n, uv) => panel(out, [a[0], low, a[1]], [a[0], eave, a[1]], [b[0], eave, b[1]], [b[0], low, b[1]], n, shade, face, uv);
+  const windows = (len) => [0, Math.max(1, Math.round(len / pitch)) / 4, (low - eave) / (FLOOR * 4), 0];
   rim.forEach((p, i) => {
     const q = rim[(i + 1) % rim.length];
     const dx = q[0] - p[0], dz = q[1] - p[1], len = Math.hypot(dx, dz);
@@ -156,23 +295,50 @@ export function addBuilding(tile, terrain, ringIn, { wall, roof, shape, face, to
     const n = [dz / len, 0, -dx / len];
     const end = blankEnds && Math.abs(dx * box.ux + dz * box.uz) < 0.4 * len;
     const cells = !plain && len >= 2.2 ? Math.max(1, Math.round(len / pitch)) : 0;
-    const uv = uvOf ? uvOf(len, low, eave) : end ? BLANK : cells ? [0, cells / 4, (low - eave) / (FLOOR * 4), 0] : null;
+    const runs = party && cells && !end && !uvOf ? partyRuns(p, q, n, len, party) : null;
+    const uv = uvOf ? uvOf(len, low, eave) : end ? BLANK : cells ? windows(len) : null;
     const mx = (p[0] + q[0]) / 2 + n[0] * 6, mz = (p[1] + q[1]) / 2 + n[2] * 6;
     const shopY = eave - wall + SHOP_H;
-    if (shopFront && cells && !end && len >= 3 && eave - shopY >= 2.4 && shopFront(mx, mz)) {
+    if (runs && (runs.length > 1 || runs[0].blank)) {
+      // u souseda zůstane stěna slepá, zbytek má okna jako obvykle
+      for (const r of runs) {
+        const l = (r.t1 - r.t0) * len;
+        wallPanel(mix(p, q, r.t0), mix(p, q, r.t1), n, r.blank || l < 2.2 ? BLANK : windows(l));
+      }
+    } else if (shopFront && cells && !end && len >= 3 && eave - shopY >= 2.4 && shopFront(mx, mz)) {
       // výloha v přízemí, nad ní okna pater zarovnaná od římsy
       const v = (low - shopY) / SHOP_H;
       panel(tile.shops, [p[0], low, p[1]], [p[0], shopY, p[1]], [q[0], shopY, q[1]], [q[0], low, q[1]], n, shade, face,
         [0, Math.max(1, Math.round(len / SHOP_W)), v, 1]);
       panel(out, [p[0], shopY, p[1]], [p[0], eave, p[1]], [q[0], eave, q[1]], [q[0], shopY, q[1]], n, face, face,
         [0, cells / 4, (shopY - eave) / (FLOOR * 4), 0]);
-    } else panel(out, [p[0], low, p[1]], [p[0], eave, p[1]], [q[0], eave, q[1]], [q[0], low, q[1]], n, shade, face, uv);
-    const yp = roofY(p), yq = roofY(q);
+    } else wallPanel(p, q, n, uv);
+    const own = ownerOf([(p[0] + q[0]) / 2 - n[0] * 0.05, (p[1] + q[1]) / 2 - n[2] * 0.05]);
+    const yp = heightOf(own, p), yq = heightOf(own, q);
     if (yp > eave + 0.02 || yq > eave + 0.02) panel(out, [p[0], eave, p[1]], [p[0], yp, p[1]], [q[0], yq, q[1]], [q[0], eave, q[1]], n, face, face);
   });
-  for (const t of tris) {
-    const [a, b, c] = t.map((p) => [p[0], roofY(p), p[1]]);
-    roofTriangle(tile.plain, a, b, c, top);
+  for (const r of roofs) {
+    let tris = triangulate(r.ring);
+    if (r.ext) tris.push(...triangulate(r.ext));
+    for (const f of r.fns) tris = splitTriangles(tris, f);
+    for (const t of tris) roofTriangle(tile.plain, ...t.map((p) => [p[0], heightOf(r, p), p[1]]), top);
+    // štít na řezu: vidět je jen tam, kde je toto křídlo vyšší než sousední (prodloužené křídlo ho nepotřebuje)
+    if (!r.ext) r.ring.forEach((p, i) => {
+      const q = r.ring[(i + 1) % r.ring.length];
+      const len = Math.hypot(q[0] - p[0], q[1] - p[1]);
+      if (len < 0.3 || !r.cuts.some((c) => [p, q].every((v) => Math.abs(c.nx * v[0] + c.nz * v[1] - c.c) < 0.05))) return;
+      const n = [(q[1] - p[1]) / len, 0, -(q[0] - p[0]) / len];
+      const ts = [0, 1];
+      for (const f of r.fns) {
+        const a = f(p), b = f(q);
+        if ((a > 1e-6 && b < -1e-6) || (a < -1e-6 && b > 1e-6)) ts.push(a / (a - b));
+      }
+      ts.sort((x, y) => x - y);
+      for (let k = 0; k + 1 < ts.length; k++) {
+        const a = mix(p, q, ts[k]), b = mix(p, q, ts[k + 1]), ya = heightOf(r, a), yb = heightOf(r, b);
+        if (ya > eave + 0.02 || yb > eave + 0.02) panel(out, [a[0], eave, a[1]], [a[0], ya, a[1]], [b[0], yb, b[1]], [b[0], eave, b[1]], n, face, face);
+      }
+    });
   }
   return { box, eave, ground: sum / ring.length, low };
 }

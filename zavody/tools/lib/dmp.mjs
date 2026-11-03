@@ -1,5 +1,5 @@
-// Body střech z DMP 1G (ČÚZK, LAZ po listech SM5): třída 6 = budovy, souřadnice S-JTSK.
-// Z nich se pro každý půdorys odhadne výška okapu, hřebene a jestli je střecha plochá.
+// Body z DMP 1G (ČÚZK, LAZ po listech SM5), souřadnice S-JTSK: třída 6 = budovy, 5 = vysoká vegetace.
+// Z budov se pro každý půdorys odhadne výška okapu, hřebene a jestli je střecha plochá, z vegetace koruny stromů.
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { createLazPerf } from 'laz-perf';
@@ -7,15 +7,26 @@ import { pointInRing, minRectFrame } from './poly.mjs';
 
 const CELL = 8;   // mřížka pro hledání bodů v půdorysu
 const ROOF = 6;   // třída LAS „budova“
+const TREE = 5;   // třída LAS „vysoká vegetace“
 
-// načte všechny listy z dir/raw_*/*.laz; bez dat vrací null
-export async function loadRoofPoints(dir) {
+function indexPoints(e, n, z) {
+  const grid = new Map();
+  for (let i = 0; i < e.length; i++) {
+    const key = `${Math.floor(e[i] / CELL)},${Math.floor(n[i] / CELL)}`;
+    if (!grid.has(key)) grid.set(key, []);
+    grid.get(key).push(i);
+  }
+  return { e, n, z, grid, count: e.length };
+}
+
+// načte všechny listy z dir/raw_*/*.laz: body budov (roofs) a vysoké vegetace (trees); bez dat vrací null
+export async function loadDmp(dir) {
   if (!existsSync(dir)) return null;
   const files = readdirSync(dir).filter((d) => d.startsWith('raw_'))
     .flatMap((d) => readdirSync(join(dir, d)).filter((f) => f.endsWith('.laz')).map((f) => join(dir, d, f)));
   if (!files.length) return null;
   const Laz = await createLazPerf();
-  const e = [], n = [], z = [];
+  const out = { [ROOF]: [[], [], []], [TREE]: [[], [], []] };
   for (const f of files) {
     const buf = readFileSync(f);
     const dv = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
@@ -29,22 +40,53 @@ export async function loadRoofPoints(dir) {
     for (let i = 0; i < count; i++) {
       zip.getPoint(p);
       const v = new DataView(Laz.HEAPU8.buffer, p, rec);
-      if ((v.getUint8(15) & 31) !== ROOF) continue;
-      e.push(v.getInt32(0, true) * scale[0] + offset[0]);
-      n.push(v.getInt32(4, true) * scale[1] + offset[1]);
-      z.push(v.getInt32(8, true) * scale[2] + offset[2]);
+      const list = out[v.getUint8(15) & 31];
+      if (!list) continue;
+      list[0].push(v.getInt32(0, true) * scale[0] + offset[0]);
+      list[1].push(v.getInt32(4, true) * scale[1] + offset[1]);
+      list[2].push(v.getInt32(8, true) * scale[2] + offset[2]);
     }
     zip.delete();
     Laz._free(p);
     Laz._free(filePtr);
   }
-  const grid = new Map();
-  for (let i = 0; i < e.length; i++) {
-    const key = `${Math.floor(e[i] / CELL)},${Math.floor(n[i] / CELL)}`;
-    if (!grid.has(key)) grid.set(key, []);
-    grid.get(key).push(i);
+  return { roofs: indexPoints(...out[ROOF]), trees: indexPoints(...out[TREE]) };
+}
+
+// Stromy z bodů vegetace: model výšek porostu po 2 m, vrcholy jsou místní maxima v okolí
+// velikosti koruny. box: [e0, n0, e1, n1] v S-JTSK; vrací [{ e, n, h, r }] (výška a poloměr koruny v m).
+const CHM = 2;
+export function treesOf(pts, ground, [e0, n0, e1, n1]) {
+  const nx = Math.ceil((e1 - e0) / CHM), ny = Math.ceil((n1 - n0) / CHM);
+  const raw = new Float32Array(nx * ny);
+  for (let i = 0; i < pts.count; i++) {
+    const x = pts.e[i], y = pts.n[i];
+    if (x < e0 || x >= e1 || y < n0 || y >= n1) continue;
+    const h = pts.z[i] - ground(x, y);
+    if (!(h > 2 && h < 45)) continue;
+    const c = Math.floor((y - n0) / CHM) * nx + Math.floor((x - e0) / CHM);
+    if (h > raw[c]) raw[c] = h;
   }
-  return { e, n, z, grid, count: e.length };
+  // body jsou na tvar koruny moc řídké, šíře se proto odhadne z výšky (r ≈ 0,3 h)
+  const out = [];
+  for (let j = 4; j < ny - 4; j++) {
+    for (let i = 4; i < nx - 4; i++) {
+      const c = j * nx + i, h = raw[c];
+      if (h < 4) continue;
+      const r = Math.max(1.5, Math.min(6, 0.3 * h));
+      const R = Math.max(1, Math.min(4, Math.round(r / CHM)));
+      let top = true;
+      for (let dj = -R; dj <= R && top; dj++) {
+        for (let di = -R; di <= R; di++) {
+          if (!di && !dj || di * di + dj * dj > R * R) continue;
+          const o = raw[c + dj * nx + di];
+          if (o > h || (o === h && dj * nx + di < 0)) { top = false; break; }
+        }
+      }
+      if (top) out.push({ e: e0 + (i + 0.5) * CHM, n: n0 + (j + 0.5) * CHM, h, r });
+    }
+  }
+  return out;
 }
 
 const quantile = (sorted, q) => sorted[Math.min(sorted.length - 1, Math.max(0, Math.round(q * (sorted.length - 1))))];
