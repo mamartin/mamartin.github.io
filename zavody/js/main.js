@@ -1287,7 +1287,6 @@ function processEvents() {
       if (solo) {
         // ghost nejlepšího kola
         const ghost = G.recorder.finish(e.lapTime);
-        G.recorder.reset();
         const stored = store.ghost(w.def.id, car.kind);
         if (!stored || e.lapTime < stored.time) store.saveGhost(w.def.id, ghost, car.kind);
         // v časovce jezdíme hned proti nejlepšímu kolu

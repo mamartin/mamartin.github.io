@@ -3,19 +3,28 @@ import { angleDiff } from './rng.js';
 
 const RATE = 20; // snímků za sekundu
 
+// Snímek k se přehrává v čase k / RATE od startu kola, proto se první snímek bere hned v kroku,
+// kdy kolo začalo, a další přesně po 1 / RATE. Kolo se dělí v kroku fyziky, kdy auto projelo
+// cílem (podle car.lap), ne až při zpracování události: v jednom snímku obrazovky je víc kroků.
 export class GhostRecorder {
   constructor() {
-    this.frames = [];
-    this.acc = 0;
+    this.reset();
   }
   reset() {
     this.frames = [];
     this.acc = 0;
+    this.lap = null;
+    this.done = null; // snímky právě dokončeného kola, dokud si je nevezme finish()
   }
   sample(dt, car) {
-    this.acc += dt;
-    while (this.acc >= 1 / RATE) {
-      this.acc -= 1 / RATE;
+    if (this.lap != null && car.lap !== this.lap) {
+      this.done = this.frames;
+      this.frames = [];
+      this.acc = 0;
+    }
+    this.lap = car.lap;
+    while (this.acc <= 1e-9) {
+      this.acc += 1 / RATE;
       this.frames.push(
         Math.round(car.x * 100) / 100,
         Math.round(car.y * 100) / 100,
@@ -23,9 +32,13 @@ export class GhostRecorder {
         Math.round(car.hd * 1000) / 1000,
       );
     }
+    this.acc -= dt;
   }
+  // ghost dokončeného kola (záznam dalšího kola už mezitím běží dál)
   finish(lapTime) {
-    return { time: lapTime, rate: RATE, frames: this.frames.slice() };
+    const frames = this.done || this.frames;
+    this.done = null;
+    return { time: lapTime, rate: RATE, frames: frames.slice() };
   }
 }
 
