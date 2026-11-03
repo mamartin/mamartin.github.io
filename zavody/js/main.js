@@ -30,6 +30,7 @@ import { emitEffects } from './carfx.js';
 import { CameraRig } from './camera.js';
 import { Effects } from './effects.js';
 import { GearBox, rpmForSpeed } from './audio.js';
+import { streetProfile, onKerb } from './acoustics.js';
 import { HUD, formatTime, formatDelta, trackOutline } from './hud.js';
 import { GhostRecorder, GhostPlayer, validGhost } from './ghost.js';
 import { Pickups, ITEM_NAMES } from './pickups.js';
@@ -279,6 +280,9 @@ async function loadWorld(id) {
   const scenery = buildScenery(track, terrain, def.biome, biome, S.quality, def.seed + 3);
   group.add(scenery.group);
   if (town) group.add(buildTown(town, track, terrain, S.quality, def.seed + 5, renderer.capabilities.getMaxAnisotropy(), biome.fog.far));
+  // ozvěna ulic podle domů kolem trati, jednou při stavbě (až po tribuně, kvůli domům, které jí ustoupí)
+  const streets = town ? streetProfile(town, track, terrain) : null;
+  audio.setStreets(streets);
   const lights = buildLights(biome, S.quality, shadowLevel());
   group.add(lights.group);
   const sky = buildSky(biome, S.quality);
@@ -309,7 +313,7 @@ async function loadWorld(id) {
   const rain = wet ? buildRain(S.quality === 'low' ? 1500 : S.quality === 'medium' ? 2600 : 4000) : null;
   if (rain) group.add(rain.points);
   G.world = {
-    def, biome, track, terrain, group, sky, lights, effects, envRT, showcase: [], stand: scenery.extra.stand, snowmen: scenery.extra.snowmen, snow: scenery.extra.snow, rain, wet, snowy,
+    def, biome, track, terrain, group, sky, lights, effects, envRT, streets, showcase: [], stand: scenery.extra.stand, snowmen: scenery.extra.snowmen, snow: scenery.extra.snow, rain, wet, snowy,
   };
   if (mix) {
     G.world.mix = true;
@@ -1561,6 +1565,15 @@ function frame(now) {
       }
       G.lastThrottle = thr;
       const skidOf = (c) => (c.skidding ? clamp(c.slip * 3 + (c.controls.handbrake ? 0.3 : 0), 0, 1) : 0);
+      // město: klepnutí kamenného obrubníku v centru a dlažba náměstí
+      if (w.streets) {
+        G.kerbs ??= [];
+        humans.forEach((c, i) => {
+          const on = race.state === 'running' && onKerb(w.track, c, G.kerbs[i]);
+          if (on !== !!G.kerbs[i] && race.state === 'running' && c.speed > 2 && $('results').hidden) audio.kerb(on, c.speed);
+          G.kerbs[i] = on;
+        });
+      }
       audio.update({
         active: $('results').hidden,
         rpm,
@@ -1572,6 +1585,8 @@ function frame(now) {
         rain: w.wet,
         rivals,
         kind: p.kind,
+        streetS: w.streets ? p.proj.s : null,
+        sett: !!w.streets && humans.some((c) => c.surface !== SURF_OFF && !c.cut && w.track.onSett(c.proj.s)),
       });
 
       humans.forEach((c, i) => {

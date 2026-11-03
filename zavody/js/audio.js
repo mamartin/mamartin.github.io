@@ -142,6 +142,8 @@ export class AudioEngine {
     this.engineVolume = 1;
     this.voiceOn = true;
     this.csVoice = null;
+    this.streets = null; // profil ulic trati (acoustics.js), jinde null
+    this.street = null; // uzly zvuku města, vzniknou až na trati s domy
   }
 
   init() {
@@ -177,9 +179,137 @@ export class AudioEngine {
     this.nitro = this.loopNoise('bandpass', 1300, 0.7);
     this.offroad = this.loopNoise('lowpass', 260, 1.0);
     this.rain = this.loopNoise('bandpass', 1700, 0.35);
+    this.applyStreets();
+  }
+
+  // --- město -------------------------------------------------------------------
+  // Trať s domy (Dobříš): odraz motoru od stěn po stranách, dozvuk sevřené ulice, dlažba
+  // náměstí a klepnutí kamenného obrubníku. Na ostatních tratích je celá větev odpojená
+  // od výstupu, takže se ani nepočítá.
+  setStreets(profile) {
+    this.streets = profile || null;
+    this.applyStreets();
+  }
+
+  applyStreets() {
+    if (!this.ctx) return;
+    const on = !!this.streets;
+    if (on && !this.street) this.street = this.buildStreet();
+    const k = this.street;
+    if (!k || k.on === on) return;
+    k.on = on;
+    if (on) k.out.connect(this.master);
+    else k.out.disconnect();
+    k.last = null;
+  }
+
+  buildStreet() {
+    const ctx = this.ctx;
+    const out = ctx.createGain();
+    // odraz nese hlavně střed a výšky motoru, hluboké dunění by jen zahušťovalo
+    const send = ctx.createGain();
+    const hp = ctx.createBiquadFilter();
+    hp.type = 'highpass';
+    hp.frequency.value = 140;
+    hp.Q.value = 0.5;
+    send.connect(hp);
+    this.player.gain.connect(send);
+    const rivalSend = ctx.createGain();
+    rivalSend.gain.value = 0.6;
+    rivalSend.connect(send);
+    for (const v of this.rivals) v.pan.connect(rivalSend);
+    // odraz od stěny vlevo a vpravo: zpoždění podle vzdálenosti domu, zní z jeho strany
+    const echo = (pan) => {
+      const d = ctx.createDelay(0.4);
+      d.delayTime.value = 0.08;
+      const f = ctx.createBiquadFilter();
+      f.type = 'lowpass';
+      f.frequency.value = 2600;
+      const g = ctx.createGain();
+      g.gain.value = 0;
+      const p = ctx.createStereoPanner();
+      p.pan.value = pan;
+      hp.connect(d).connect(f).connect(g).connect(p).connect(out);
+      return { d, g };
+    };
+    const left = echo(-0.8), right = echo(0.8);
+    // dozvuk ulice: krátká syntetická odezva, jen do sevřených úseků
+    const rev = ctx.createGain();
+    rev.gain.value = 0;
+    const conv = ctx.createConvolver();
+    conv.buffer = streetImpulse(ctx);
+    hp.connect(rev).connect(conv).connect(out);
+    // dlažba: šum s rychlým chvěním podle rychlosti (kostky pod koly), odráží se i od domů
+    const sett = this.loopNoiseTo('bandpass', 320, 0.9, out);
+    sett.g.connect(send);
+    const am = ctx.createGain();
+    am.gain.value = 0.6;
+    sett.f.disconnect();
+    sett.f.connect(am).connect(sett.g);
+    const lfo = ctx.createOscillator();
+    lfo.type = 'triangle';
+    lfo.frequency.value = 20;
+    const depth = ctx.createGain();
+    depth.gain.value = 0.4;
+    lfo.connect(depth).connect(am.gain);
+    lfo.start();
+    return { on: false, out, send, left, right, rev, sett, lfo, last: null };
+  }
+
+  // průběžně ze snímku: s.streetS = metr trati hráče 1, s.sett = kola hráče jedou po dlažbě náměstí
+  updateStreet(s, t) {
+    const k = this.street;
+    if (!k?.on) return;
+    const P = this.streets;
+    const live = s.active && s.streetS != null;
+    const i = live ? P.at(s.streetS) : -1;
+    const v = clamp(s.speed / 40, 0, 1);
+    const tgt = live
+      ? [P.left[i] * 0.38, P.right[i] * 0.38, P.wet[i] * 0.9, P.dl[i], P.dr[i], s.sett ? 0.07 + v * 0.2 : 0]
+      : [0, 0, 0, 0, 0, 0];
+    // parametry se posílají jen při znatelné změně (méně práce pro hlavní vlákno i zvuk)
+    const last = k.last;
+    if (last && tgt.every((x, j) => Math.abs(x - last[j]) < 0.004)) return;
+    k.last = tgt;
+    k.left.g.gain.setTargetAtTime(tgt[0], t, 0.12);
+    k.right.g.gain.setTargetAtTime(tgt[1], t, 0.12);
+    k.rev.gain.setTargetAtTime(tgt[2], t, 0.2);
+    if (live) {
+      k.left.d.delayTime.setTargetAtTime(clamp(tgt[3], 0.01, 0.38), t, 0.25);
+      k.right.d.delayTime.setTargetAtTime(clamp(tgt[4], 0.01, 0.38), t, 0.25);
+    }
+    k.sett.g.gain.setTargetAtTime(tgt[5], t, 0.06);
+    k.sett.f.frequency.setTargetAtTime(240 + v * 420, t, 0.1);
+    // kostka zhruba po 12 cm, ale chvění nad pár desítek Hz už ucho slyší jako tón
+    k.lfo.frequency.setTargetAtTime(clamp(s.speed / 0.6, 6, 45), t, 0.1);
+  }
+
+  // kamenný obrubník v centru: up = vyjetí na chodník, jinak sjetí; přední a pak zadní kola
+  kerb(up, speed) {
+    const k = this.street;
+    if (!this.ctx || !k?.on) return;
+    const s = clamp(speed / 25, 0.3, 1) * (up ? 1 : 0.6);
+    const gap = clamp(2.6 / Math.max(speed, 1), 0.04, 0.3);
+    for (const [when, m] of [[0, 1], [gap, 0.8]]) {
+      const t = this.ctx.currentTime + when;
+      const o = this.ctx.createOscillator();
+      o.frequency.setValueAtTime(up ? 95 : 75, t);
+      o.frequency.exponentialRampToValueAtTime(42, t + 0.12);
+      const g = this.ctx.createGain();
+      o.connect(g).connect(this.master);
+      g.connect(k.send);
+      this.env(g, t, 0.004, 0.42 * s * m, 0.14);
+      o.start(t);
+      o.stop(t + 0.2);
+      this.burst(0.07, 'lowpass', 1500, 0.2 * s * m, 300, when, [this.master, k.send]);
+    }
   }
 
   loopNoise(type, freq, q) {
+    return this.loopNoiseTo(type, freq, q, this.master);
+  }
+
+  loopNoiseTo(type, freq, q, dest) {
     const ctx = this.ctx;
     const src = ctx.createBufferSource();
     src.buffer = this.noiseBuf;
@@ -190,7 +320,7 @@ export class AudioEngine {
     f.Q.value = q;
     const g = ctx.createGain();
     g.gain.value = 0;
-    src.connect(f).connect(g).connect(this.master);
+    src.connect(f).connect(g).connect(dest);
     src.start();
     return { src, f, g };
   }
@@ -226,6 +356,7 @@ export class AudioEngine {
     this.offroad.g.gain.setTargetAtTime(s.active && s.offroad ? clamp(s.speed / 30, 0, 1) * 0.32 : 0, t, 0.08);
     // šum deště: tichý podklad, s rychlostí trochu zesílí (kapky na kapotě)
     this.rain.g.gain.setTargetAtTime(s.active && s.rain ? 0.035 + clamp(s.speed / 60, 0, 1) * 0.03 : 0, t, 0.3);
+    this.updateStreet(s, t);
   }
 
   silence() {
@@ -251,7 +382,7 @@ export class AudioEngine {
     o.stop(t + dur + 0.05);
   }
 
-  burst(dur, type, freq, peak, sweepTo, when = 0) {
+  burst(dur, type, freq, peak, sweepTo, when = 0, dests = null) {
     if (!this.ctx) return;
     const t = this.ctx.currentTime + when;
     const src = this.ctx.createBufferSource();
@@ -261,7 +392,8 @@ export class AudioEngine {
     f.frequency.setValueAtTime(freq, t);
     if (sweepTo) f.frequency.exponentialRampToValueAtTime(sweepTo, t + dur);
     const g = this.ctx.createGain();
-    src.connect(f).connect(g).connect(this.master);
+    src.connect(f).connect(g);
+    for (const d of dests || [this.master]) g.connect(d);
     this.env(g, t, 0.005, peak, dur);
     src.start(t, Math.random() * 1.5);
     src.stop(t + dur + 0.05);
@@ -385,6 +517,24 @@ export class AudioEngine {
     this.burst(1.1, 'lowpass', 1400, 0.9, 120);
     this.tone(48, 0.6, 'sine', 0.6);
   }
+}
+
+// Odezva ulice: stereo šum s exponenciálním doznívání (~0,8 s), časem tmavší (výšky pohltí
+// omítka a vzduch). Krátká, aby se motor v ulici nerozmazal.
+function streetImpulse(ctx) {
+  const rate = ctx.sampleRate, len = Math.floor(rate * 0.9), pre = Math.floor(rate * 0.012);
+  const buf = ctx.createBuffer(2, len, rate);
+  for (let ch = 0; ch < 2; ch++) {
+    const d = buf.getChannelData(ch);
+    let lp = 0;
+    for (let i = pre; i < len; i++) {
+      const t = (i - pre) / rate;
+      const a = 0.55 - 0.45 * Math.min(1, t / 0.6); // podíl nového vzorku: čím později, tím tmavší
+      lp += a * (Math.random() * 2 - 1 - lp);
+      d[i] = lp * Math.exp(-t * 8.6);
+    }
+  }
+  return buf;
 }
 
 // --- hudba -------------------------------------------------------------------
