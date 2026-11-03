@@ -1434,6 +1434,9 @@ function frame(now) {
         G.acc -= STEP;
         steps++;
       }
+      // víc kroků se do snímku nevejde (velké zrychlení): zbytek zahodit, jinak dluh roste dál
+      // a vykreslení aut extrapoluje daleko před skutečnou polohu
+      if (G.acc >= STEP) G.acc = 0;
       const alpha = G.acc / STEP;
       if (G.pickups) {
         G.pickups.update(dt, [G.wantUse[0] || !!input.touch.item, G.wantUse[1]]);
