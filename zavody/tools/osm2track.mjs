@@ -687,7 +687,8 @@ if (existsSync(join(DATA, 'osm_signs.json'))) {
     if (kind === undefined || e.type !== 'node') continue;
     const p = toGame(e.lat, e.lon);
     if (axisDist(p[0], p[1]) > REACH) continue;
-    const value = kind === SIGN.maxspeed ? +t.maxspeed || 0 : kind === SIGN.city_limit || kind === SIGN.bus_stop ? nameIndex(t.name ?? '') : 0;
+    // semafor: hodnota 1 = na trati (stožár s výložníkem nad pruhem), 0 = na vedlejší ulici (sloupek)
+    let value = kind === SIGN.maxspeed ? +t.maxspeed || 0 : kind === SIGN.city_limit || kind === SIGN.bus_stop ? nameIndex(t.name ?? '') : 0;
     const host = onWay.get(e.id)?.[0];
     let dir = null, half = null;
     if (host) {
@@ -704,6 +705,7 @@ if (existsSync(join(DATA, 'osm_signs.json'))) {
       }
       dir = fwd;
       const onTrack = (i > 0 && loop.used.has(edgeKey(host.w.nodes[i - 1], e.id))) || (i + 1 < host.w.nodes.length && loop.used.has(edgeKey(e.id, host.w.nodes[i + 1])));
+      if (kind === SIGN.traffic_signals) value = onTrack ? 1 : 0;
       const n = nearAxis(p[0], p[1]);
       half = onTrack && n ? clWidth[n.k] / 2 + RUNOFF + 0.6 : (STREET_W[host.w.tags.highway] ?? 6) / 2 + 1.2;
     }

@@ -1,5 +1,7 @@
 // Dopravní značky a zastávky z OSM (rozmístění a natočení dělá tools/osm2track.mjs).
 // Všechny desky jsou v jedné textuře, takže značky stojí dvě volání kreslení: desky a sloupky.
+// Semafory jsou prostorové (stožár s výložníkem podle panoramat křižovatky Pražská × Mírové náměstí)
+// a světla se střídají v cyklu, hlavní silnice (trať) proti vedlejší.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { colored } from './scenery.js';
@@ -57,13 +59,6 @@ function plateOf(kind, value, names) {
       word(ctx, stop ? town : 'Zastávka', 168, 40, 24, INK, 150);
       word(ctx, stop ?? town ?? '', 168, 82, 26, INK, 150);
     } };
-    case SIGN.SIGNALS: return { w: 0.38, h: 0.95, y: 2.5, px: [52, 128], draw: (ctx) => {
-      ctx.fillStyle = '#26282b'; ctx.fillRect(0, 0, 52, 128);
-      ['#d2312b', '#e3a92a', '#3fae4f'].forEach((c, k) => {
-        ctx.fillStyle = c;
-        ctx.beginPath(); ctx.arc(26, 22 + k * 42, 15, 0, Math.PI * 2); ctx.fill();
-      });
-    } };
     default: return { w: 0.5, h: 0.36, y: 3.2, px: [128, 92], draw: (ctx) => { // radar
       ctx.fillStyle = '#9aa0a6'; ctx.fillRect(0, 0, 128, 92);
       ctx.fillStyle = '#26282b';
@@ -104,7 +99,12 @@ function atlas(plates, anisotropy) {
 export function buildRoadSigns(town, track, terrain, anisotropy, inHouse) {
   const group = new THREE.Group();
   group.name = 'road-signs';
-  const items = town.signs.filter((s) => !terrain.keepOut(s.x, s.z) && terrain.distAt(s.x, s.z) > track.edge + 0.4 && !inHouse(s.x, s.z));
+  // přesná vzdálenost od osy: mřížka terénu (po 10 m) by vyřadila i značky stojící těsně za výběhem
+  const clear = (s) => { const p = track.project(s.x, s.z); return Math.abs(p.lat) - track.edgeAt(p.i); };
+  const all = town.signs.filter((s) => !terrain.keepOut(s.x, s.z) && clear(s) > 0.3 && !inHouse(s.x, s.z));
+  const signals = all.filter((s) => s.kind === SIGN.SIGNALS);
+  if (signals.length) group.add(buildSignals(signals, track, terrain));
+  const items = all.filter((s) => s.kind !== SIGN.SIGNALS);
   if (!items.length) return group;
   const plates = new Map();
   for (const s of items) {
@@ -145,5 +145,74 @@ export function buildRoadSigns(town, track, terrain, anisotropy, inHouse) {
   g.setAttribute('uv', new THREE.Float32BufferAttribute(faces.uv, 2));
   group.add(new THREE.Mesh(g, new THREE.MeshLambertMaterial({ map, vertexColors: true, alphaTest: 0.5 })));
   group.add(new THREE.Mesh(mergeGeometries(poles), new THREE.MeshLambertMaterial({ vertexColors: true })));
+  return group;
+}
+
+// cyklus 40 s: hlavní silnice zelená 0–18, žlutá 18–21, červená 21–40 (od 38 i se žlutou);
+// vedlejší červená do 22, červená se žlutou 22–23, zelená 23–36, žlutá 36–39
+const CYCLE = 40;
+function lit(main, t) {
+  if (main) return t < 18 ? [0, 0, 1] : t < 21 ? [0, 1, 0] : t < 38 ? [1, 0, 0] : [1, 1, 0];
+  return t < 22 ? [1, 0, 0] : t < 23 ? [1, 1, 0] : t < 36 ? [0, 0, 1] : t < 39 ? [0, 1, 0] : [1, 0, 0];
+}
+
+const LENS = [['#ff2a1f', '#3a1411'], ['#ffb31a', '#3a2a0f'], ['#2ee05a', '#0f3019']];
+const GREY = '#9aa0a6', HEAD = '#26282b';
+
+// návěstidlo: tři světla nad sebou, střed (x, y, z) v rámu sloupu, líc na +z
+function head(body, lenses, x, y, z) {
+  body.push(colored(new THREE.BoxGeometry(0.34, 0.96, 0.22).translate(x, y, z).toNonIndexed(), HEAD));
+  for (let k = 0; k < 3; k++) {
+    const ly = y + 0.3 - k * 0.3;
+    body.push(colored(new THREE.BoxGeometry(0.28, 0.03, 0.16).translate(x, ly + 0.13, z + 0.19).toNonIndexed(), HEAD));
+    lenses[k].push(new THREE.CircleGeometry(0.1, 10).translate(x, ly, z + 0.115));
+  }
+}
+
+function buildSignals(items, track, terrain) {
+  const group = new THREE.Group();
+  group.name = 'traffic-signals';
+  const body = [], lenses = [0, 1].map(() => [[], [], []]);
+  const m = new THREE.Matrix4(), up = new THREE.Vector3(0, 1, 0);
+  for (const s of items) {
+    const nx = Math.sin(s.ry), nz = Math.cos(s.ry);
+    const local = [], loc = [[], [], []];
+    if (s.value === 1) {
+      // stožár s výložníkem šikmo nad pruh, kterým řidič přijíždí, a opakovač na sloupu
+      const p = track.project(s.x, s.z);
+      const arm = THREE.MathUtils.clamp(Math.abs(p.lat) - track.hwAt(p.i) / 2, 3, 8);
+      local.push(colored(new THREE.CylinderGeometry(0.09, 0.12, 6.6, 8).translate(0, 3.3, 0).toNonIndexed(), GREY));
+      local.push(colored(new THREE.CylinderGeometry(0.055, 0.07, Math.hypot(arm, 0.7), 6)
+        .rotateZ(Math.atan2(arm, 0.7)).translate(-arm / 2, 6.05, 0).toNonIndexed(), GREY));
+      local.push(colored(new THREE.CylinderGeometry(0.03, 0.03, 0.55, 5).translate(-arm, 6.1, 0.05).toNonIndexed(), GREY));
+      head(local, loc, -arm, 5.35, 0.05);
+      head(local, loc, 0, 2.6, 0.12);
+    } else {
+      local.push(colored(new THREE.CylinderGeometry(0.055, 0.065, 3.4, 6).translate(0, 1.7, 0).toNonIndexed(), GREY));
+      head(local, loc, 0, 2.75, 0.12);
+    }
+    const main = s.value === 1 ? 0 : 1;
+    // rám: x vpravo od řidiče, který hledí na líc, y nahoru, z k řidiči
+    m.makeBasis(new THREE.Vector3(nz, 0, -nx), up, new THREE.Vector3(nx, 0, nz)).setPosition(s.x, terrain.heightAt(s.x, s.z), s.z);
+    for (const g of local) body.push(g.applyMatrix4(m));
+    loc.forEach((list, k) => list.forEach((g) => lenses[main][k].push(g.applyMatrix4(m))));
+  }
+  group.add(new THREE.Mesh(mergeGeometries(body), new THREE.MeshLambertMaterial({ vertexColors: true })));
+  // světla nesvítí podle osvětlení scény; barvy se přepnou při vykreslení, ať nepotřebují vlastní smyčku
+  const mats = [0, 1].map(() => LENS.map(([on]) => new THREE.MeshBasicMaterial({ color: on })));
+  let last = -1;
+  const update = () => {
+    const t = Math.floor(((performance.now() / 1000) % CYCLE) * 4) / 4;
+    if (t === last) return;
+    last = t;
+    mats.forEach((row, gi) => lit(gi === 0, t).forEach((on, k) => row[k].color.set(LENS[k][on ? 0 : 1])));
+  };
+  lenses.forEach((row, gi) => row.forEach((list, k) => {
+    if (!list.length) return;
+    const mesh = new THREE.Mesh(mergeGeometries(list), mats[gi][k]);
+    mesh.onBeforeRender = update;
+    group.add(mesh);
+  }));
+  update();
   return group;
 }

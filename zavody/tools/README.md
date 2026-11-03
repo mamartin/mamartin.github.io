@@ -40,7 +40,7 @@ Souřadnice jsou herní (x na východ, z na jih, počátek na startu) v decimetr
 - `cars`: trojice x, z, směr v setinách radiánu (zaparkovaná auta v plochách parkovišť)
 - `buses`: trojice x, z, směr v setinách radiánu (autobusy u nástupišť stanovišť, která mají v OSM aspoň čtyři zastávky stejného jména: Mírové náměstí a železniční stanice; autobus stojí u zhruba 60 % nástupišť, nástupiště má vpravo)
 - `shops`: indexy budov z `buildings`, ve kterých je podle OSM obchod, restaurace, banka a podobně (dostanou výlohy)
-- `signs`: pětice druh, hodnota, x, z, natočení v setinách radiánu; druh 0 dej přednost, 1 stop, 2 nejvyšší rychlost (hodnota km/h), 3 obec, 4 zastávka (hodnota je index do `signNames`), 5 semafor, 6 radar
+- `signs`: pětice druh, hodnota, x, z, natočení v setinách radiánu; druh 0 dej přednost, 1 stop, 2 nejvyšší rychlost (hodnota km/h), 3 obec, 4 zastávka (hodnota je index do `signNames`), 5 semafor (hodnota 1 na trati, 0 na vedlejší ulici), 6 radar
 
 V `js/tracks-dobris.js` jsou navíc `stand` (bod ve světě, u kterého stojí tribuna) a úseky `sett` (kostky podle `surface=sett`) a `urban` (centrum s obrubníkem a chodníkem místo svodidla), oba od a do jako body ve světě. `crossings` jsou body přechodů pro chodce. Body místo metrů od startu sedí i na obrácené trati.
 
@@ -94,4 +94,5 @@ Co ve hře neodpovídá skutečné Dobříši a proč. Ostatní (osa ulic, půdo
 
 - Dopravní značky, semafory, radary a zastávky jsou jen ty, které jsou v OSM (51 kolem trati). Uzel značky leží v OSM na ose silnice, ve hře stojí vpravo od řidiče, kterému platí (podle `direction`), a kde by padla do výběhu, ustoupí za něj.
 - Kresba značek je zjednodušená. Deska zastávky je obecná, jen se jménem zastávky z OSM.
+- Semafory jsou jen na jediné světelné křižovatce Pražská × Mírové náměstí (4 návěstidla z OSM). Tvar podle panoramat: na trati pozinkovaný stožár se šikmým výložníkem nad pruhem a opakovačem na sloupu, na vedlejších ramenech k náměstí sloupek. Světla se střídají v obecném 40s cyklu (hlavní proti vedlejší), skutečný signální plán neznáme a na jízdu nemají vliv.
 - Autobusy jsou kulisa: OSM ví, kde jsou nástupiště, ne kdy tam co stojí. Autobus (obecný 12m, barvy bez označení dopravce) stojí u zhruba 60 % nástupišť na Mírovém náměstí a u železniční stanice; kde by zasáhl do výběhu trati nebo do jiného autobusu, chybí.
