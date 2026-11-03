@@ -238,7 +238,8 @@ export class Terrain {
     return this.dist[j * this.nx + i];
   }
 
-  buildMesh(palette) {
+  // chunk: strana čtverce v metrech (víc menších čtverců = méně trojúhelníků, víc volání kreslení)
+  buildMesh(palette, chunk = 560) {
     const { nx, nz, cell, x0, z0, h } = this;
     const V = nx * nz;
     const pos = new Float32Array(V * 3);
@@ -325,7 +326,7 @@ export class Terrain {
     if (detail) withDetailMap(mat, detail);
     const group = new THREE.Group();
     group.name = 'terrain';
-    const CHUNK = Math.max(8, Math.round(560 / cell));
+    const CHUNK = Math.max(8, Math.round(chunk / cell));
     for (let j0 = 0; j0 < nz - 1; j0 += CHUNK) {
       for (let i0 = 0; i0 < nx - 1; i0 += CHUNK) {
         const j1 = Math.min(nz - 1, j0 + CHUNK), i1 = Math.min(nx - 1, i0 + CHUNK);

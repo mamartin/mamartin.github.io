@@ -270,10 +270,12 @@ async function loadWorld(id) {
   const terrain = new Terrain(track, def.biome, { seed: def.seed, lake: def.lake, cell, dem: town?.dem, water: town?.water });
   if (town) terrain.groundMap = paintGround(town, track, terrain, S.quality, renderer.capabilities.getMaxAnisotropy());
   const group = new THREE.Group();
-  group.add(terrain.buildMesh(biome.terrain));
+  // na nízké kvalitě (slabý procesor) větší čtverce terénu a trati: méně volání kreslení
+  const low = S.quality === 'low';
+  group.add(terrain.buildMesh(biome.terrain, low ? 840 : 560));
   // dlouhé pásy a svodidla trati po čtvercích, ať se kreslí jen to, co je v záběru (jen velké sítě,
   // malé by přidaly víc volání kreslení, než ušetří)
-  group.add(splitLarge(track.buildMeshes(biome.track, renderer.capabilities.getMaxAnisotropy(), S.quality), 500, 8000));
+  group.add(splitLarge(track.buildMeshes(biome.track, renderer.capabilities.getMaxAnisotropy(), S.quality), low ? 800 : 500, 8000));
   const scenery = buildScenery(track, terrain, def.biome, biome, S.quality, def.seed + 3);
   group.add(scenery.group);
   if (town) group.add(buildTown(town, track, terrain, S.quality, def.seed + 5, renderer.capabilities.getMaxAnisotropy(), biome.fog.far));
