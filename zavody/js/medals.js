@@ -14,7 +14,7 @@ export const MEDALS = [
 ];
 
 const KEY = 'turbo-okruh-ref';
-const VERSION = 4;
+const VERSION = 5; // 5: AI se stopou podle šířky silnice (jiné referenční časy)
 let cache = null;
 
 function load() {
