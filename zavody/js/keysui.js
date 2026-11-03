@@ -19,7 +19,7 @@ const playerTitle = (i, name) => (name && name !== `Hráč ${i + 1}` ? `Hráč $
 // otisk kláves: když se změní, rozcvička ve dvou se ukáže znovu
 export const keysSignature = () => JSON.stringify([KEYMAP.p1, KEYMAP.p2]);
 
-const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+export const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 
 // --- obrázek klávesnice ------------------------------------------------------------------
 

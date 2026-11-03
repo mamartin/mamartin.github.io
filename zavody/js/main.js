@@ -38,7 +38,7 @@ import { applyKeys } from './keys.js';
 import { WeatherShift } from './weather.js';
 import { addDamage, disposeDamage } from './damage.js';
 import { encodeGhost, decodeGhost, sharedGhost, saveSharedGhost } from './ghostshare.js';
-import { bindKeysUI, refreshKeysUI, keyPanelHtml, itemKeyLabel, keyPlayer, keysSignature, playerColor, pauseHint } from './keysui.js';
+import { bindKeysUI, refreshKeysUI, keyPanelHtml, itemKeyLabel, keyPlayer, keysSignature, playerColor, pauseHint, esc } from './keysui.js';
 import { Post } from './post.js';
 import { TrackEditor, customToDef, decodeTrack, checkDef } from './editor.js';
 
@@ -1009,7 +1009,8 @@ async function startRaceInner() {
     const data = useFriend ? friend : own;
     if (valid(data)) {
       G.ghost = new GhostPlayer(data);
-      if (useFriend) hud.sub(`Honíš ghost: ${friend.name} · ${formatTime(friend.time)}`, 3.5);
+      // jméno přišlo v odkazu od kohokoliv, do HUD jen jako text
+      if (useFriend) hud.sub(`Honíš ghost: ${esc(friend.name ?? 'Kamarád')} · ${formatTime(friend.time)}`, 3.5);
       G.ghostMesh = createCarMesh(useFriend ? 0xffb35c : 0x9fd8ff, { ghost: true, kind: race.player.kind });
       G.ghostMesh.root.visible = false;
       scene.add(G.ghostMesh.root);
