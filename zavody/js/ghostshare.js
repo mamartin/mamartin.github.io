@@ -41,9 +41,14 @@ export async function encodeGhost(trackId, kind, name, ghost) {
   return `${head}.${zip ? 'z' : 'r'}${b64(bytes)}`;
 }
 
+// odkaz může kdokoliv upravit: neplatná hlavička vyhodí chybu, jméno je jen krátký text
 export async function decodeGhost(str) {
   const [head, data] = str.split('.');
   const h = JSON.parse(new TextDecoder().decode(unb64(head)));
+  if (!h || typeof h !== 'object' || typeof h.t !== 'string' || typeof data !== 'string') throw new Error('hlavička');
+  if (!(h.ms > 0 && h.ms < 36e5)) throw new Error('čas kola');
+  if (h.r != null && !(h.r >= 5 && h.r <= 120)) throw new Error('frekvence');
+  h.n = typeof h.n === 'string' ? h.n.trim().slice(0, 40) : '';
   let bytes = unb64(data.slice(1));
   if (data[0] === 'z') bytes = await pipe(bytes, DecompressionStream, 'deflate-raw');
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
