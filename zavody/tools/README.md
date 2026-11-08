@@ -149,7 +149,7 @@ Co ve hře neodpovídá skutečné Dobříši a proč. Ostatní (osa ulic, půdo
 - Drobnosti ulic (`js/streetdetail.js`) jsou kulisa bez dat: poklopy, kanálové vpusti u obrubníku, záplaty a zalité praskliny v asfaltu, koše a lavičky na chodníku jsou rozmístěné náhodně (stále stejně), mimo přechody a start.
 - Les do 60 m od trati je hustší a ze 4/5 listnatý jako na ortofotu u Pražské (zámecký park), OSM druh dřevin skoro neuvádí; mezery mezi změřenými stromy se doplňují. Dál od trati převažují smrky.
 - Zaparkovaná auta stojí jen v plochách parkovišť z OSM (řady podle `orientation`, nejvýš `capacity`, obsazenost asi 65 %). Stání podél ulic OSM nezná a stání, která padnou do širšího výběhu trati, odpadají.
-- Život ve městě je kulisa bez dat: lidé u přechodů, diváci na startovní rovince (160 m na obě strany) a v centru za sloupky, chodci na chodnících a auta čekající v bočních ulicích (širších než 5 m) na výjezd do trati jsou rozmístění náhodně. Všichni stojí za okrajem trati a nehýbou se.
+- Život ve městě je kulisa bez dat: lidé u přechodů, diváci na startovní rovince (160 m na obě strany) a v centru za sloupky, chodci na chodnících a auta čekající v bočních ulicích (širších než 5 m) na výjezd do trati jsou rozmístění náhodně. Všichni stojí za okrajem trati. Postavy (`js/people.js`) jsou kvádry s jednou malou texturou (512 × 128 px) s 8 druhy oblečení, obličejem a vlasy nebo kšiltovkou; druh i pohyb si shader odvodí z polohy instance, barva instance obarví jen oblečení. Diváci se pohupují a část z nich občas zvedne ruce, chodci a auta stojí.
 - Noční závod (volba Noc) svítí lampami z OSM a doplněnými podél trati: kruh světla pod každou lampou je obecný, okna svítí náhodně (asi třetina), výlohy všechny.
 
 **Značky**

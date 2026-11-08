@@ -2,25 +2,12 @@
 // a v centru za sloupky, chodci na chodnících a auta čekající v bočních ulicích u trati.
 // Všichni stojí za okrajem trati (track.edgeAt), auta závodu se jich nedotknou.
 import * as THREE from 'three';
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { RNG } from './rng.js';
-import { colored } from './scenery.js';
+import { personGeometry, personMaterial, tickPeople } from './people.js';
 import { instancedLevels } from './lod.js';
 
 const CLOTHES = ['#2f4a6e', '#9c2a26', '#e8e6df', '#3b3f45', '#5d7a4a', '#c79a3a', '#6d2f3a', '#8a8f96', '#2a2c30', '#d26a3c', '#4b6fa8', '#efe2c4'];
 const SPECTATOR_REACH = 160; // m od startu na obě strany: rovinka s diváky
-
-// postava čelem k +z (asi 60 trojúhelníků, diváků jsou stovky): trup s rukama dostane barvu instance,
-// nohy, hlava a vlasy mají své
-function personGeometry() {
-  const body = colored(new THREE.BoxGeometry(0.56, 0.6, 0.24).translate(0, 1.17, 0), '#ffffff');
-  const rest = mergeGeometries([
-    colored(new THREE.BoxGeometry(0.34, 0.86, 0.18).translate(0, 0.43, 0).toNonIndexed(), '#353c48'),
-    colored(new THREE.IcosahedronGeometry(0.12, 0).translate(0, 1.6, 0), '#e2b79b'),
-    colored(new THREE.BoxGeometry(0.2, 0.07, 0.2).translate(0, 1.69, -0.01).toNonIndexed(), '#3a2a22'),
-  ]);
-  return { body, rest };
-}
 
 // blocked(x, z): v domě, na ploše, kam nic nepatří (terrain.keepOut a obrysy domů dodá town.js)
 export function buildLife(town, track, terrain, { view, night, seed, blocked }) {
@@ -31,7 +18,7 @@ export function buildLife(town, track, terrain, { view, night, seed, blocked }) 
     return { x: p.x, z: p.z, hd: p.hd };
   };
   // postava na místě (s, strana, odstup od okraje), čelem k trati nebo podél ní
-  const place = (s, side, out, facing) => {
+  const place = (s, side, out, facing, fan = false) => {
     const k = track.indexAt(s);
     const lat = side * (track.edgeAt(k) + out);
     const p = at(s, lat);
@@ -39,7 +26,7 @@ export function buildLife(town, track, terrain, { view, night, seed, blocked }) 
     if (track.openEdge(s, side, [p.x, 0, p.z]) || track.cutAt(s, side)) return;
     // k trati: směr -strana * pravá ruka
     const ry = facing === 'track' ? p.hd + (side > 0 ? Math.PI / 2 : -Math.PI / 2) + rng.range(-0.5, 0.5) : p.hd + (rng.next() < 0.5 ? 0 : Math.PI);
-    people.push({ x: p.x, y: terrain.heightAt(p.x, p.z), z: p.z, ry, s: rng.range(0.92, 1.08), color: rng.pick(CLOTHES) });
+    people.push({ x: p.x, y: terrain.heightAt(p.x, p.z), z: p.z, ry, s: rng.range(0.92, 1.08), color: rng.pick(CLOTHES), fan });
   };
   const urban = (s) => track.onUrban(s);
   const L = track.L;
@@ -58,7 +45,7 @@ export function buildLife(town, track, terrain, { view, night, seed, blocked }) 
     if (!start && !centre) continue;
     for (const side of [-1, 1]) {
       for (const [row, p] of [[0.6, 0.5], [1.4, 0.28], [2.2, 0.1]]) {
-        if (rng.next() < p) place(s + rng.range(-0.4, 0.4), side, row + rng.range(-0.15, 0.15), 'track');
+        if (rng.next() < p) place(s + rng.range(-0.4, 0.4), side, row + rng.range(-0.15, 0.15), 'track', true);
       }
     }
   }
@@ -76,11 +63,16 @@ export function buildLife(town, track, terrain, { view, night, seed, blocked }) 
   group.name = 'life';
   const opts = { cull: Math.min(view.cull, 260 * view.reach) };
   if (people.length) {
-    // bez stínů: stovky drobných postav by stínovou mapu zdražily víc, než přidají
-    const { body, rest } = personGeometry();
-    const mat = new THREE.MeshLambertMaterial({ vertexColors: true });
-    group.add(instancedLevels([[0, [[body, people]]]], mat, opts));
-    group.add(instancedLevels([[0, [[rest, people.map(({ color, ...t }) => t)]]]], mat, opts));
+    // bez stínů: stovky drobných postav by stínovou mapu zdražily víc, než přidají; fanoušci (diváci)
+    // se hýbou, ostatní stojí (people.js), každá skupina je jedno volání kreslení
+    const geo = personGeometry();
+    for (const fans of [true, false]) {
+      const list = people.filter((t) => t.fan === fans);
+      if (!list.length) continue;
+      const pool = instancedLevels([[0, [[geo, list]]]], personMaterial(fans), opts);
+      pool.traverse((o) => { if (o.isMesh) o.onBeforeRender = tickPeople; });
+      group.add(pool);
+    }
   }
   group.userData.people = people.length;
   return group;
