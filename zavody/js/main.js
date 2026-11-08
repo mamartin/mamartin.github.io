@@ -50,6 +50,11 @@ const STEP = 1 / 120;
 
 if (!S.quality) S.quality = isTouch || Math.min(screen.width, screen.height) < 700 ? 'medium' : 'high';
 if (isTouch) document.body.classList.add('touch-ui');
+// s připojeným ovladačem je v nastavení i volba vibrací (ovladač vibruje při nárazu, turbu, zásahu)
+const padUi = () => document.body.classList.toggle('pad-ui', input.pads().length > 0);
+window.addEventListener('gamepadconnected', padUi);
+window.addEventListener('gamepaddisconnected', padUi);
+padUi();
 
 applyKeys(S.keys || {});
 
@@ -1304,13 +1309,13 @@ function processEvents() {
       hudOf(e.car).sub(perfect ? '<span class="good">Perfektní start!</span>' : '<span class="bad">Předčasný start</span> · kola se protáčejí', 2);
       if (perfect) audio.perfectStart();
       else audio.wheelspin();
-      buzz(perfect ? 25 : [40, 30, 40]);
+      buzz(perfect ? 25 : [40, 30, 40], e.car);
     } else if (e.type === 'overtake') {
       const h = hudOf(e.car);
       h.sub(`<span class="good">${e.rival && e.rival === race.rival ? 'Předjel jsi rivala' : 'Předjetí'}</span>${e.rival ? ` · ${e.rival.name}` : ''}`, 1.6);
       h.flashPlace();
       audio.overtake(e.place);
-      buzz(20);
+      buzz(20, e.car);
       // hlas jen pro stupně vítězů a ne moc často
       if (e.car === p && e.place <= 3 && race.time - G.placeSaid > 10) {
         G.placeSaid = race.time;
@@ -1319,7 +1324,7 @@ function processEvents() {
     } else if (e.type === 'turbo' && e.car.isPlayer) {
       hudOf(e.car).sub(`<span class="good">Mini-turbo ${'I'.repeat(e.level)}</span>`, 1);
       audio.turbo(e.level);
-      buzz(15 + e.level * 10);
+      buzz(15 + e.level * 10, e.car);
     } else if (e.type === 'driftFail' && e.car.isPlayer) {
       hudOf(e.car).sub('<span class="bad">Drift přerušen</span>', 1);
     } else if (e.type === 'lap' && e.car.isPlayer) {
@@ -1388,7 +1393,7 @@ function processEvents() {
         if (!car.isPlayer) continue;
         audio.impact(e.strength);
         rigs[car.humanIndex].addShake(Math.min(0.8, e.strength * 0.06));
-        buzz(Math.min(60, 15 + e.strength * 4));
+        buzz(Math.min(60, 15 + e.strength * 4), car);
       }
     } else if (e.type === 'respawn' && e.car.isPlayer) {
       hudOf(e.car).sub('Zpět na trati', 1.2);
@@ -1409,7 +1414,7 @@ function processEvents() {
       if (e.type === 'box') audio.pickup();
       else if (e.type === 'incoming') {
         audio.incoming();
-        buzz(40);
+        buzz(40, e.car);
       }
       else if (e.type === 'got') hudOf(e.car).sub(`${ITEM_NAMES[e.item]} · ${keyFor(e.car)}`, 1.6);
       else if (e.type === 'fire') { if (near(e.car.x, e.car.z) > 0.2) audio.launch(); }
@@ -1417,7 +1422,7 @@ function processEvents() {
         if (near(e.x, e.z) > 0.05) audio.explosion();
         if (e.target.isPlayer) {
           rigs[e.target.humanIndex].addShake(1.1);
-          buzz([90, 50, 90]);
+          buzz([90, 50, 90], e.target);
           hudOf(e.target).message('Zásah!', 'warn', 1.2);
         }
         if (e.by && e.by.isPlayer && e.by !== e.target) hudOf(e.by).sub(`Trefa · ${e.target.name}`, 1.6);

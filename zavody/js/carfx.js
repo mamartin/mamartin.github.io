@@ -88,7 +88,7 @@ export function emitEffects(dt) {
       if (car.isPlayer) {
         audio.impact(car.impact);
         view.rigs[car.humanIndex].addShake(Math.min(0.9, car.impact * 0.05));
-        buzz(Math.min(70, 10 + car.impact * 4));
+        buzz(Math.min(70, 10 + car.impact * 4), car);
       }
     }
   }

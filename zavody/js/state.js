@@ -29,7 +29,38 @@ export const music = new Music(audio);
 // kamery, jejich ovládání a kořen HUD (nastaví main.js)
 export const view = {};
 
-// vibrace telefonu (Android; iPhone vibrace z prohlížeče nepodporuje)
-export function buzz(pattern) {
-  if (isTouch && S.haptics !== false && navigator.vibrate) navigator.vibrate(pattern);
+// Vibrace telefonu (Android; iPhone vibrace z prohlížeče nepodporuje) a ovladače hráče.
+// Vzor je jako u navigator.vibrate: délka v ms, nebo [zap, vyp, zap, …]. S autem vibruje ovladač
+// hráče, který ho řídí (u dvou hráčů každý svůj); bez auta ovladač hráče 1.
+export function buzz(pattern, car = null) {
+  if (S.haptics !== false) {
+    if (isTouch && navigator.vibrate) navigator.vibrate(pattern);
+    rumble(pattern, car);
+  }
+}
+
+function rumble(pattern, car) {
+  const humans = G.race?.players.length ?? 1;
+  const i = car?.humanIndex ?? 0;
+  const pad = input.padFor(humans < 2 ? 'solo' : i === 0 ? 'p1' : 'p2');
+  const act = pad?.vibrationActuator;
+  if (!act?.playEffect) return;
+  const parts = Array.isArray(pattern) ? pattern : [pattern];
+  // motor ovladače se roztáčí pomaleji než vibrace telefonu: pulz o něco delší, síla podle délky;
+  // nový efekt přeruší běžící, proto další pulzy vzoru až po uplynutí předchozích
+  const pulse = (ms) => {
+    const m = Math.min(1, Math.max(0.25, ms / 80));
+    act.playEffect('dual-rumble', {
+      duration: Math.min(250, ms * 1.4 + 40),
+      strongMagnitude: m,
+      weakMagnitude: Math.min(1, m + 0.2),
+    }).catch(() => {});
+  };
+  let at = 0;
+  for (let k = 0; k < parts.length; k += 2) {
+    const ms = parts[k];
+    if (at === 0) pulse(ms);
+    else setTimeout(() => pulse(ms), at);
+    at += ms + (parts[k + 1] ?? 0);
+  }
 }

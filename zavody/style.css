@@ -1277,6 +1277,7 @@ body:not(.items-on) .touch-right .t-item { display: none; }
 .pick-custom button:hover { background: #24365a; }
 #gar-random { justify-self: start; }
 body:not(.touch-ui) .touch-only { display: none; }
+body.pad-ui .pad-opt { display: grid; }
 body.tilt-steer .touch-left { display: none; }
 
 /* záznam: mapa trati s auty a průběžné pořadí */
