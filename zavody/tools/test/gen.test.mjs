@@ -3,7 +3,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spansOf, lanesOf, realWidth, roadWidth, matchAxis } from '../gen/track.mjs';
-import { massing, ROOF, ROOF_CROSS } from '../gen/buildings.mjs';
+import { massing, ROOF, ROOF_CROSS, facadeOf, FACADE } from '../gen/buildings.mjs';
+import { roofColour, quantize, vivid, hexOf } from '../gen/ortho.mjs';
+import { decodePng } from '../lib/png.mjs';
+import { deflateSync } from 'node:zlib';
 import { areaKind, hullOf } from '../gen/surfaces.mjs';
 import { affineFrom, hash01, flat, ringOf, nearestOnLines, closed } from '../gen/util.mjs';
 import { addSpace, clearRoad, shiftClear } from '../gen/space.mjs';
@@ -133,4 +136,54 @@ test('peakOf: věž kostela v bodech DMP', () => {
   assert.ok(Math.abs(p.e - 1003) < 1.5 && Math.abs(p.n - 2006) < 1.5);
   assert.ok(p.nave && p.nave.ridge > 12 && p.nave.ridge <= 14 && p.nave.eave >= 8 && p.nave.eave < 12);
   assert.equal(peakOf(indexPoints([], [], []), ring, () => 300), null);
+});
+
+test('styl fasády podle druhu budovy, střechy a polohy', () => {
+  assert.equal(facadeOf({ building: 'school' }, ROOF.flat, 9, false), FACADE.ribbon);
+  assert.equal(facadeOf({ building: 'apartments' }, ROOF.flat, 30, false), FACADE.panel);
+  assert.equal(facadeOf({ building: 'apartments' }, ROOF.hipped, 14, false), 0); // činžák se šikmou střechou
+  assert.equal(facadeOf({ building: 'apartments' }, ROOF.hipped, 20, false), FACADE.panel);
+  assert.equal(facadeOf({ building: 'warehouse' }, ROOF.flat, 12, false), 0);
+  assert.equal(facadeOf({ building: 'house' }, ROOF.gabled, 9, true), FACADE.old);
+  assert.equal(facadeOf({ building: 'house' }, ROOF.gabled, 9, false), 0);
+});
+
+// PNG 2 × 2 RGB (filtr 0 a 1) -> pixely
+function png(w, h, rows) {
+  const chunk = (type, data) => {
+    const b = Buffer.alloc(12 + data.length);
+    b.writeUInt32BE(data.length, 0);
+    b.write(type, 4, 'latin1');
+    data.copy(b, 8);
+    return b; // CRC čtečka nekontroluje
+  };
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(w, 0); ihdr.writeUInt32BE(h, 4); ihdr[8] = 8; ihdr[9] = 2;
+  return Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), chunk('IHDR', ihdr),
+    chunk('IDAT', deflateSync(Buffer.from(rows.flat()))), chunk('IEND', Buffer.alloc(0))]);
+}
+
+test('PNG: filtry řádků', () => {
+  // řádek 0 bez filtru, řádek 1 filtr Sub (rozdíl od levého pixelu)
+  const img = decodePng(png(2, 2, [[0, 10, 20, 30, 40, 50, 60], [1, 5, 5, 5, 1, 1, 1]]));
+  assert.deepEqual([img.w, img.h], [2, 2]);
+  assert.deepEqual([...img.rgb], [10, 20, 30, 40, 50, 60, 5, 5, 5, 6, 6, 6]);
+});
+
+test('ortofoto: barva střechy je medián uvnitř půdorysu bez zeleně, paleta je stálá', () => {
+  // střecha 10 × 10 m cihlová, v rohu koruna stromu, kolem šedá silnice
+  const at = (e, n) => (e < 0 || e > 10 || n < 0 || n > 10 ? [120, 120, 120] : e > 7 && n > 7 ? [60, 120, 50] : [200, 150, 140]);
+  const c = roofColour({ at, mpp: 1 }, [[0, 0], [10, 0], [10, 10], [0, 10]]);
+  assert.deepEqual(c, [200, 150, 140]);
+  // mimo stažené dlaždice nic
+  assert.equal(roofColour({ at: () => null, mpp: 1 }, [[0, 0], [10, 0], [10, 10], [0, 10]]), null);
+  const cols = [[200, 150, 140], [205, 152, 141], [90, 90, 92], [95, 94, 96], [240, 240, 238]];
+  const a = quantize(cols, 3), b = quantize(cols, 3);
+  assert.deepEqual(a, b);
+  assert.equal(a.label[0], a.label[1]);
+  assert.notEqual(a.label[0], a.label[2]);
+  // zamlžená pálená taška je po úpravě sytější a tmavší
+  const [r, g] = vivid([201, 158, 146]);
+  assert.ok(r - g > 201 - 158 && r < 201);
+  assert.equal(hexOf([255, 0, 16]), '#ff0010');
 });

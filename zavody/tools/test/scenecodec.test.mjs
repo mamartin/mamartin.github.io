@@ -13,6 +13,7 @@ const scene = {
   palette: { wall: ['#ffffff'], roof: ['#000000'], plain: [0] },
   buildings: [[90, 30, 0, 0, 0, 10, 20, 50, 20, 50, -60], [45, 0, 2, 0, 0, -12345, 678, -12000, 700, -12000, 900]],
   levels: [0, 5],
+  facades: [0, 2, 1, 3],
   landmarks: [{ id: 'kostel', name: 'Sv. Jakub', p: [1, 2, 3, 4, 5, 6], peak: [1, 2, 3, 4, 5, 0, 0] }],
   areas: [['forest', 0, 0, 100, 0, 100, 100], ['park', -5, -5, 5, -5, 0, 5]],
   water: [{ name: null, level: null, p: [0, 0, 1, 0, 1, 1] }],

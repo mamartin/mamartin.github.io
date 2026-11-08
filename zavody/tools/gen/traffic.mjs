@@ -247,7 +247,7 @@ function crossingSignalsStep(g) {
   g.stats.crossingSignals = placed.length;
 }
 
-// city.markings: středové ostrůvky kruhových objezdů, kterými trať projíždí ([x, z, poloměr] ve hře);
+// city.markings: středové ostrůvky kruhových objezdů, kterými trať projíždí ([x, z, poloměr] ve hře, [.., 1] přejízdný);
 // ostrůvek začíná za okrajem chodníku na vnitřní straně, širší trať než skutečná ho proto zmenší
 function islandsStep(g) {
   const { roads, toGame, nearAxis, cl, clWidth, def } = g;
@@ -267,6 +267,13 @@ function islandsStep(g) {
     for (let k = 0; k < cl.N; k++) room = Math.min(room, Math.hypot(cl.px[k] - cx, cl.pz[k] - cz) - clWidth[k] / 2 - RUNOFF - 0.2);
     const r = Math.min(R - 4.5, room);
     if (r >= 1) def.islands.push([+cx.toFixed(1), +cz.toFixed(1), +r.toFixed(1)]);
+    // malý objezd, přes jehož střed trať vede (širší a vyhlazená): přejízdný střed z kostek v úrovni vozovky
+    else if (R >= 5 && R < 16) {
+      const n = nearAxis(cx, cz);
+      const rm = n ? Math.min(R - 4.5, 5, clWidth[n.k] / 2 - n.d - 0.5) : 0;
+      if (rm >= 2) def.islands.push([+cx.toFixed(1), +cz.toFixed(1), +rm.toFixed(1), 1]);
+      else g.bump('islandOffRoad');
+    }
   }
   g.stats.islands = def.islands.length;
 }

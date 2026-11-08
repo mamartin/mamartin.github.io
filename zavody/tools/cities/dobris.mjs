@@ -29,6 +29,8 @@ export default {
   // --- centrum: osa náměstí od západu na východ; podle ní barvy fasád a obrubník místo svodidla ---
   centre: [[49.7811, 14.1672], [49.7813, 14.1717]],
   urban: { start: 140, centre: 50 }, // m od startu, m od osy náměstí
+  markings: true, // značení, kostky, semafory na přechodech a ostrůvky kruhových objezdů podle OSM
+  parcels: true, // zpevněné dvory, ploty zahrad k ulici a podlaží pro okna podle katastru (RÚIAN)
   // vlastní palety fasád podle panoramat: u startu bílé a krémové domy, východ náměstí světle modrý, krémový a žlutý
   walls: {
     start: ['#f3efe6', '#efe7d6', '#f1e3c6', '#ece6d8'],

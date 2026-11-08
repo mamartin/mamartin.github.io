@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { clamp, angleDiff, lerp } from './rng.js';
-import { SURF_ROAD, SURF_OFF } from './track.js';
+import { SURF_ROAD, SURF_OFF, settGrip } from './track.js';
 import { S } from './state.js';
 
 export const CAR = {
@@ -821,7 +821,9 @@ export class Car {
     const offTarget = this.cut ? this.cut.dirt : clamp((Math.abs(P.lat) - tr.hwAt(P.i) - tr.curbW + V.halfWidth) / (2 * V.halfWidth), 0, 1);
     this.offMix += (offTarget - this.offMix) * Math.min(1, dt * 8);
     const mix = this.offMix;
-    const roadGrip = (this.surface === SURF_ROAD ? 1 : 0.95) * (biome.roadGrip ?? 1) * (biome.wet ? V.wetGrip : 1);
+    // dlažba náměstí a přejízdný střed objezdu: méně přilnavosti a drncání (zvuk, kamera, ovladač podle car.onSett)
+    this.onSett = !off && !this.cut && (tr.onSett(P.s) || (tr.islands.length > 0 && tr.onIsland(this.x, this.z)));
+    const roadGrip = (this.surface === SURF_ROAD ? 1 : 0.95) * (biome.roadGrip ?? 1) * (biome.wet ? V.wetGrip : 1) * (this.onSett ? settGrip(biome.wet) : 1);
     // volant točený zpátky k asfaltu pomáhá, aby se dalo vrátit i z tvrdého povrchu v ostré zatáčce
     const rejoin = this.cut ? 0 : Math.max(0, -Math.sign(P.lat) * this.steer);
     const gripMul = lerp(roadGrip, (biome.offGrip ?? 0.6) * (1 + 0.4 * rejoin), mix);

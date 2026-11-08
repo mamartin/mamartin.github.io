@@ -11,7 +11,7 @@ const VERSION = 1;
 // Záznamy [předpona řetězců…, hlava celých čísel…, x, z, x, z, …]: počet čísel hlavy, která se nepočítají jako body.
 const RECORDS = { buildings: 5, areas: 0, paved: 0, streets: 1, paths: 0, streams: 0, treeRows: 0, barriers: 1 };
 // Ploché řady n-tic: délka n-tice (rozdíl se bere od stejného sloupce předchozí n-tice).
-const ROWS = { lamps: 2, trees: 2, statues: 2, canopy: 4, cars: 3, signs: 5, buses: 3, levels: 2, shops: 1 };
+const ROWS = { lamps: 2, trees: 2, statues: 2, canopy: 4, cars: 3, signs: 5, buses: 3, levels: 2, facades: 2, shops: 1 };
 
 class Writer {
   constructor() { this.buf = new Uint8Array(1 << 16); this.n = 0; }

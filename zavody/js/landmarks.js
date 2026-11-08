@@ -627,6 +627,7 @@ export function buildLandmarks(town, track, terrain, tileOf, shadows, anisotropy
     'kostel-jakub': (l) => l.peak && buildJakub(l, terrain, church, tile(l).plain),
     'kostel-vojtech': (l) => l.peak && buildVojtech(l, terrain, church, tile(l).plain),
     'dul-vojtech': (l) => l.peak && buildDulVojtech(l, terrain, church, tile(l).plain),
+    'dul-sevcin': (l) => l.peak && buildDulVojtech(l, terrain, church, tile(l).plain), // stejný typ zděné těžní věže
     'sh-ambit': (l) => buildAmbit(l, terrain, far.walls, far.plain),
     'sh-bazilika': (l) => buildBasilica(l, terrain, far.walls, far.plain),
     ...Object.fromEntries(['plzenska', 'breznicka', 'prazska', 'mnisecka'].map((k) => [`sh-kaple-${k}`, (l) => buildCornerChapel(l, terrain, far.walls, far.plain)])),

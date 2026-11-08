@@ -6,6 +6,9 @@ export const SHAPE = { GABLE: 0, HIP: 1, FLAT: 2, TENT: 3, SHED: 4, CROSS: 5 }; 
 const BLOCK_PITCH = 3.8; // rozestup oken na fasádě vysokých domů
 const BLANK = [0, 0, 0.5, 0.5]; // roh buňky textury, kde žádné okno není
 const SHOP_H = 3.6, SHOP_W = 4.5; // výška přízemí s výlohou a šířka jedné výlohy
+// styl fasády ze scény (tools/gen/buildings.mjs FACADE): pásová okna, panelák s lodžiemi, starý dům s římsou
+export const FACADE = { RIBBON: 1, PANEL: 2, OLD: 3 };
+const RIBBON_PITCH = 3.0, GROUND_H = 4.2; // šířka pole pásových oken, výška přízemí starého domu
 
 export function orientedBox(r) {
   let best = null;
@@ -253,7 +256,7 @@ function partyRuns(p, q, n, len, party) {
 
 // shopFront(x, z): bod 6 m před stěnou leží na ulici, kam patří výloha (jen u domů s obchodem)
 // party(x, z): bod leží v sousedním domě, stěna k němu je společná a nemá okna; wings: dům do L, T a U dostane střechu po křídlech
-export function addBuilding(tile, terrain, ringIn, { wall, roof, shape, face, top, plain, uvOf, shopFront, party, wings, levels }) {
+export function addBuilding(tile, terrain, ringIn, { wall, roof, shape, face, top, plain, uvOf, shopFront, party, wings, levels, facade = 0 }) {
   const ring = areaOf(ringIn) > 0 ? ringIn : [...ringIn].reverse();
   const box = orientedBox(ring);
   const sloped = shape === SHAPE.GABLE || shape === SHAPE.HIP || shape === SHAPE.CROSS;
@@ -283,29 +286,50 @@ export function addBuilding(tile, terrain, ringIn, { wall, roof, shape, face, to
 
   const out = plain ? tile.plain : tile.walls;
   const shade = face.clone().multiplyScalar(0.8);
+  // okna podle stylu: pásová a lodžie mají vlastní texturu (jiná část dlaždice), jinak obyčejná okna
+  const styled = !plain && !uvOf && (facade === FACADE.RIBBON ? tile.ribbon : facade === FACADE.PANEL ? tile.panel : null);
+  const old = !plain && !uvOf && facade === FACADE.OLD && wall >= GROUND_H + 2;
   // patrové domy mají okna řidší; dlouhý dům s plochou střechou má štítové stěny bez oken jako panelák
-  const pitch = wall >= 12 ? BLOCK_PITCH : FLOOR;
+  const pitch = facade === FACADE.RIBBON ? RIBBON_PITCH : wall >= 12 ? BLOCK_PITCH : FLOOR;
   const blankEnds = wall >= 7 && shape === SHAPE.FLAT && box.hl > box.hw * 1.4;
-  const wallPanel = (a, b, n, uv) => panel(out, [a[0], low, a[1]], [a[0], eave, a[1]], [b[0], eave, b[1]], [b[0], low, b[1]], n, shade, face, uv);
+  const wallPanel = (a, b, n, uv, o = out) => panel(o, [a[0], low, a[1]], [a[0], eave, a[1]], [b[0], eave, b[1]], [b[0], low, b[1]], n, shade, face, uv);
   // výška řady oken: s počtem podlaží z katastru stěna na patra, jinak po 3 m
   const rowH = levels ? Math.min(4.5, Math.max(2.6, wall / levels)) : FLOOR;
-  const windows = (len) => [0, Math.max(1, Math.round(len / pitch)) / 4, (low - eave) / (rowH * 4), 0];
+  // stěna rozdělená střechou (valba, křídla) na kusy: okna se počítají po celé původní hraně obrysu,
+  // aby navazovala a sloupce textury (lodžie) se střídaly i přes hranice kusů
+  const along = (p, q) => {
+    for (let i = 0; i < ring.length; i++) {
+      const a = ring[i], b = ring[(i + 1) % ring.length];
+      const L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      if (L < 0.05) continue;
+      const t = (v) => ((v[0] - a[0]) * (b[0] - a[0]) + (v[1] - a[1]) * (b[1] - a[1])) / (L * L);
+      const off = (v) => Math.abs((v[0] - a[0]) * (b[1] - a[1]) - (v[1] - a[1]) * (b[0] - a[0])) / L;
+      const t0 = t(p), t1 = t(q);
+      if (off(p) < 0.02 && off(q) < 0.02 && t0 > -1e-3 && t1 < 1 + 1e-3 && t1 > t0) return { L, t0, t1 };
+    }
+    return null;
+  };
+  const vLow = (low - eave) / (rowH * 4);
   rim.forEach((p, i) => {
     const q = rim[(i + 1) % rim.length];
     const dx = q[0] - p[0], dz = q[1] - p[1], len = Math.hypot(dx, dz);
     if (len < 0.05) return;
     const n = [dz / len, 0, -dx / len];
     const end = blankEnds && Math.abs(dx * box.ux + dz * box.uz) < 0.4 * len;
-    const cells = !plain && len >= 2.2 ? Math.max(1, Math.round(len / pitch)) : 0;
+    const edge = along(p, q) ?? { L: len, t0: 0, t1: 1 };
+    const cellsAll = !plain && edge.L >= 2.2 ? Math.max(1, Math.round(edge.L / pitch)) : 0;
+    const cells = cellsAll && len >= 0.3 ? cellsAll * (edge.t1 - edge.t0) : 0;
+    const u0 = (edge.t0 * cellsAll) / 4, u1 = (edge.t1 * cellsAll) / 4;
+    const windows = (f0 = 0, f1 = 1) => [u0 + (u1 - u0) * f0, u0 + (u1 - u0) * f1, vLow, 0];
     const runs = party && cells && !end && !uvOf ? partyRuns(p, q, n, len, party) : null;
-    const uv = uvOf ? uvOf(len, low, eave) : end ? BLANK : cells ? windows(len) : null;
+    const uv = uvOf ? uvOf(len, low, eave) : end ? BLANK : cells ? windows() : null;
     const mx = (p[0] + q[0]) / 2 + n[0] * 6, mz = (p[1] + q[1]) / 2 + n[2] * 6;
     const shopY = eave - wall + SHOP_H;
     if (runs && (runs.length > 1 || runs[0].blank)) {
       // u souseda zůstane stěna slepá, zbytek má okna jako obvykle
       for (const r of runs) {
-        const l = (r.t1 - r.t0) * len;
-        wallPanel(mix(p, q, r.t0), mix(p, q, r.t1), n, r.blank || l < 2.2 ? BLANK : windows(l));
+        const blank = r.blank || (r.t1 - r.t0) * len < 0.3;
+        wallPanel(mix(p, q, r.t0), mix(p, q, r.t1), n, blank ? BLANK : windows(r.t0, r.t1), !blank && styled ? styled : out);
       }
     } else if (shopFront && cells && !end && len >= 3 && eave - shopY >= 2.4 && shopFront(mx, mz)) {
       // výloha v přízemí, nad ní okna pater zarovnaná od římsy
@@ -313,12 +337,33 @@ export function addBuilding(tile, terrain, ringIn, { wall, roof, shape, face, to
       panel(tile.shops, [p[0], low, p[1]], [p[0], shopY, p[1]], [q[0], shopY, q[1]], [q[0], low, q[1]], n, shade, face,
         [0, Math.max(1, Math.round(len / SHOP_W)), v, 1]);
       panel(out, [p[0], shopY, p[1]], [p[0], eave, p[1]], [q[0], eave, q[1]], [q[0], shopY, q[1]], n, face, face,
-        [0, cells / 4, (shopY - eave) / (FLOOR * 4), 0]);
+        [u0, u1, (shopY - eave) / (FLOOR * 4), 0]);
+    } else if (styled && cells && !end) {
+      panel(styled, [p[0], low, p[1]], [p[0], eave, p[1]], [q[0], eave, q[1]], [q[0], low, q[1]], n, shade, face, uv);
+    } else if (old && cells && !end) {
+      // vyšší přízemí: jedna řada oken roztažená přes celé přízemí, patra nad ním zarovnaná od římsy
+      const gy = eave - wall + GROUND_H;
+      panel(out, [p[0], low, p[1]], [p[0], gy, p[1]], [q[0], gy, q[1]], [q[0], low, q[1]], n, shade, face, [u0, u1, -0.25, 0]);
+      panel(out, [p[0], gy, p[1]], [p[0], eave, p[1]], [q[0], eave, q[1]], [q[0], gy, q[1]], n, face, face, [u0, u1, (gy - eave) / (rowH * 4), 0]);
     } else wallPanel(p, q, n, uv);
     const own = ownerOf([(p[0] + q[0]) / 2 - n[0] * 0.05, (p[1] + q[1]) / 2 - n[2] * 0.05]);
     const yp = heightOf(own, p), yq = heightOf(own, q);
     if (yp > eave + 0.02 || yq > eave + 0.02) panel(out, [p[0], eave, p[1]], [p[0], yp, p[1]], [q[0], yq, q[1]], [q[0], eave, q[1]], n, face, face);
   });
+  // starý dům: profilovaná římsa pod střechou (líc a podhled) a tmavší sokl
+  if (old) {
+    const cornice = face.clone().lerp(WHITE, 0.35), under = face.clone().multiplyScalar(0.62), plinth = face.clone().multiplyScalar(0.55);
+    const outer = offsetRing(ring, 0.32), y0 = eave - 0.5;
+    ring.forEach((p, i) => {
+      const j = (i + 1) % ring.length, q = ring[j], a = outer[i], b = outer[j];
+      const len = Math.hypot(q[0] - p[0], q[1] - p[1]);
+      if (len < 0.05) return;
+      const n = [(q[1] - p[1]) / len, 0, -(q[0] - p[0]) / len];
+      panel(out, [a[0], y0, a[1]], [a[0], eave, a[1]], [b[0], eave, b[1]], [b[0], y0, b[1]], n, cornice, cornice);
+      panel(out, [p[0], y0, p[1]], [a[0], y0, a[1]], [b[0], y0, b[1]], [q[0], y0, q[1]], [0, -1, 0], under, under);
+    });
+    wallRing(out, offsetRing(ring, 0.05), low, eave - wall + 0.7, plinth, plinth);
+  }
   for (const r of roofs) {
     let tris = triangulate(r.ring);
     if (r.ext) tris.push(...triangulate(r.ext));
@@ -359,6 +404,7 @@ export function toMesh(o, mat, castShadow) {
 }
 
 const colorCache = new Map();
+const WHITE = new THREE.Color('#ffffff');
 export function color(hex) {
   if (!colorCache.has(hex)) colorCache.set(hex, new THREE.Color(hex));
   return colorCache.get(hex);

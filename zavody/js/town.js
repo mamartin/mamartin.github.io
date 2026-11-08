@@ -12,6 +12,7 @@ import { buildLandmarks, CASTLE_GRAVEL } from './landmarks.js';
 import { buildRoadSigns } from './roadsigns.js';
 import { lodAt, instancedLevels } from './lod.js';
 import { readScene } from './scenecodec.js';
+import { buildLife, waitingCars } from './townlife.js';
 
 // jak daleko od osy trati ještě něco vrhá stín
 const SHADOW_REACH = 70;
@@ -39,6 +40,7 @@ function decode(raw) {
     water: raw.water.map((w) => ({ ring: pairs(w.p), level: w.level / 10 })),
     buildings: raw.buildings.map((b) => ({ wall: b[0] / 10, roof: b[1] / 10, shape: b[2], face: b[3], top: b[4], ring: pairs(b, 5) })),
     levels: new Map(Array.from({ length: Math.floor((raw.levels?.length ?? 0) / 2) }, (_, i) => [raw.levels[i * 2], raw.levels[i * 2 + 1]])),
+    facades: new Map(Array.from({ length: Math.floor((raw.facades?.length ?? 0) / 2) }, (_, i) => [raw.facades[i * 2], raw.facades[i * 2 + 1]])),
     landmarks: raw.landmarks.map((l) => ({ ...l, ring: pairs(l.p) })),
     areas: raw.areas.map((a) => ({ kind: a[0], ring: pairs(a, 1) })),
     paved: raw.paved.map((a) => ({ kind: a[0], ring: pairs(a, 1) })),
@@ -213,7 +215,7 @@ function paintRect(town, track, rect, size, anisotropy) {
 }
 
 // bílá stěna s okny, barvu fasády dodají vrcholy; rohy buněk zůstávají čisté pro plné plochy
-function windowTexture(rng, anisotropy) {
+function windowTexture(rng, anisotropy, rects = []) {
   const S = 64;
   const c = document.createElement('canvas');
   c.width = c.height = S * 4;
@@ -229,6 +231,7 @@ function windowTexture(rng, anisotropy) {
       ctx.fillRect(x - 1.5, y - 1.5, w + 3, h + 3);
       ctx.fillStyle = ['#46586a', '#3c4c5e', '#55697a', '#40505c'][rng.int(0, 3)];
       ctx.fillRect(x, y, w, h);
+      rects.push([x, y, w, h]);
       ctx.fillStyle = 'rgba(255,255,255,0.16)';
       ctx.fillRect(x, y, w, h * 0.34);
       ctx.fillStyle = '#f7f6f2';
@@ -243,7 +246,100 @@ function windowTexture(rng, anisotropy) {
   return tex;
 }
 
+// pásová okna (školy, úřady): v každém patře souvislý pás skla s úzkými sloupky, pod ním parapet
+function ribbonTexture(anisotropy, rects = []) {
+  const S = 64;
+  const c = document.createElement('canvas');
+  c.width = c.height = S * 4;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, S * 4, S * 4);
+  for (let j = 0; j < 4; j++) {
+    const y = j * S + 10, h = 30;
+    ctx.fillStyle = '#d9d6ce';
+    ctx.fillRect(0, y - 3, S * 4, h + 6);
+    ctx.fillStyle = ['#4a5d6e', '#42566a', '#506476', '#46596b'][j];
+    ctx.fillRect(0, y, S * 4, h);
+    for (let x = 0; x < S * 4; x += S / 2) rects.push([x + 2, y, S / 2 - 2, h]);
+    ctx.fillStyle = 'rgba(255,255,255,0.14)';
+    ctx.fillRect(0, y, S * 4, h * 0.35);
+    ctx.fillStyle = '#e8e6e0';
+    for (let x = 0; x < S * 4; x += S / 2) ctx.fillRect(x, y, 2, h);
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.anisotropy = anisotropy;
+  return tex;
+}
+
+// panelák: sloupce oken a lodžií (tmavé zapuštění, světlý parapet přes spodní část, balkonové dveře vzadu)
+function panelTexture(rng, anisotropy, rects = []) {
+  const S = 64;
+  const c = document.createElement('canvas');
+  c.width = c.height = S * 4;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, S * 4, S * 4);
+  for (let j = 0; j < 4; j++) {
+    for (let i = 0; i < 4; i++) {
+      const x0 = i * S, y0 = j * S;
+      if (i === 1 || i === 2) {
+        // dvě buňky tvoří jednu širokou lodžii: zapuštění ve stínu přes celou výšku patra, vzadu dveře a okno,
+        // vpředu šedý betonový parapet s horní hranou
+        const l = i === 1 ? 4 : 0, r = i === 2 ? 4 : 0;
+        ctx.fillStyle = '#5a5853';
+        ctx.fillRect(x0 + l, y0, S - l - r, S);
+        ctx.fillStyle = ['#2f3b47', '#36424f', '#2b3640'][rng.int(0, 2)];
+        if (i === 1) { ctx.fillRect(x0 + 18, y0 + 6, 20, 40); rects.push([x0 + 18, y0 + 6, 20, 30]); } // dveře
+        else { ctx.fillRect(x0 + 6, y0 + 6, 34, 24); rects.push([x0 + 6, y0 + 6, 34, 24]); } // okno
+        ctx.fillStyle = '#a9adb0';
+        ctx.fillRect(x0 + l, y0 + 36, S - l - r, 28); // parapet
+        ctx.fillStyle = '#d6d8d9';
+        ctx.fillRect(x0 + l, y0 + 36, S - l - r, 3);
+        ctx.fillStyle = 'rgba(0,0,0,0.25)';
+        ctx.fillRect(x0 + l, y0, S - l - r, 5); // stín pod stropní deskou
+      } else {
+        const x = x0 + 14, y = y0 + 12, w = 36, h = 30;
+        ctx.fillStyle = '#e2dfd8';
+        ctx.fillRect(x - 3, y - 3, w + 6, h + 6);
+        ctx.fillStyle = ['#46586a', '#3c4c5e', '#55697a'][rng.int(0, 2)];
+        ctx.fillRect(x, y, w, h);
+        rects.push([x, y, w, h]);
+        ctx.fillStyle = '#f7f6f2';
+        ctx.fillRect(x + w / 2 - 1, y, 2, h);
+      }
+    }
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.anisotropy = anisotropy;
+  return tex;
+}
+
 // přízemí s výlohou: světlá stěna (barvu dodají vrcholy), tmavý štít nad výlohou, sokl dole
+// v noci rozsvícená okna: černá textura se stejným rozložením, část oken teple svítí (emissiveMap materiálu)
+function litTexture(rects, rng, share, size = 256, wrapT = true) {
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#000000';
+  ctx.fillRect(0, 0, size, size);
+  for (const [x, y, w, h] of rects) {
+    if (rng.next() > share) continue;
+    ctx.fillStyle = rng.next() < 0.12 ? '#8fa8d8' : ['#ffcf86', '#ffdca2', '#f6c070', '#ffe6bd'][rng.int(0, 3)];
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.fillRect(x, y + h * 0.7, w, h * 0.3); // parapet a záclona dole tmavší
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.wrapS = THREE.RepeatWrapping;
+  if (wrapT) tex.wrapT = THREE.RepeatWrapping;
+  return tex;
+}
+
 function shopTexture(anisotropy) {
   const c = document.createElement('canvas');
   c.width = c.height = 128;
@@ -467,7 +563,7 @@ function tinyTreeGeometry() {
   return colored(g, '#ffffff');
 }
 
-function buildLamps(town, track, terrain, rng, view) {
+function buildLamps(town, track, terrain, rng, view, night = false) {
   // první plocha náměstí v datech je Mírové náměstí (osm2track ji skládá z jeho ulic)
   const squares = town.paved.filter((a) => a.kind === 'square').slice(0, 1).map((a) => a.ring);
   const historic = [];
@@ -504,15 +600,96 @@ function buildLamps(town, track, terrain, rng, view) {
   const opts = { cull: Math.min(view.cull, 320 * view.reach) };
   const group = new THREE.Group();
   group.add(instancedLevels([[0, [[geo, items], [old, historic]]]], mat, opts));
+  if (night) {
+    // svítidla září (bloom) a pod nimi je teplý kruh světla na silnici a chodníku
+    const heads = new THREE.MeshLambertMaterial({ color: 0x000000, emissive: '#ffd59a', emissiveIntensity: 3 });
+    const head = new THREE.BoxGeometry(0.5, 0.06, 0.2).translate(1.7, 6.99, 0);
+    const globes = mergeGeometries([-0.6, 0.6].map((x) => new THREE.IcosahedronGeometry(0.25, 1).translate(x, 4.55, 0)));
+    group.add(instancedLevels([[0, [[head, items], [globes, historic]]]], heads, { cull: Math.min(view.cull, 600 * view.reach) }));
+    const spots = [
+      ...items.map((l) => [l.x + Math.cos(l.ry) * 1.7, l.z - Math.sin(l.ry) * 1.7]),
+      ...historic.map((l) => [l.x, l.z]),
+    ].filter(([x, z]) => terrain.distAt(x, z) < track.edge + 25);
+    group.add(buildLightPools(spots, track, terrain));
+  }
   return group;
 }
 
-// středové ostrůvky kruhových objezdů (track.def.islands): kamenný obrubník po terénu a tráva
+// kruhy světla lamp: síť 5 × 5 po silnici, chodníku a terénu, jedno volání kreslení, sčítání barev
+function buildLightPools(spots, track, terrain) {
+  const R = 8.5, N = 5;
+  const pos = [], uv = [], idx = [];
+  const at = {};
+  const heightAt = (x, z) => {
+    if (terrain.distAt(x, z) > track.edge + 4) return terrain.heightAt(x, z);
+    track.project(x, z, -1, at);
+    const a = Math.abs(at.lat);
+    return a <= track.hwAt(at.i) ? at.y : a <= track.edgeAt(at.i) ? at.y + 0.13 : terrain.heightAt(x, z);
+  };
+  for (const [cx, cz] of spots) {
+    const base = pos.length / 3;
+    for (let j = 0; j < N; j++) {
+      for (let i = 0; i < N; i++) {
+        const x = cx + (i / (N - 1) * 2 - 1) * R, z = cz + (j / (N - 1) * 2 - 1) * R;
+        pos.push(x, heightAt(x, z) + 0.06, z);
+        uv.push(i / (N - 1), j / (N - 1));
+      }
+    }
+    for (let j = 0; j + 1 < N; j++) {
+      for (let i = 0; i + 1 < N; i++) {
+        const a = base + j * N + i;
+        idx.push(a, a + N, a + 1, a + 1, a + N, a + N + 1);
+      }
+    }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  geo.setIndex(idx);
+  geo.computeBoundingSphere();
+  const c = document.createElement('canvas');
+  c.width = c.height = 64;
+  const ctx = c.getContext('2d');
+  const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+  grad.addColorStop(0, 'rgba(255,255,255,1)');
+  grad.addColorStop(0.45, 'rgba(255,255,255,0.45)');
+  grad.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 64, 64);
+  const tex = new THREE.CanvasTexture(c);
+  const mat = new THREE.MeshBasicMaterial({
+    map: tex, color: '#b9874c', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false,
+    polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4,
+  });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.name = 'lightPools';
+  mesh.renderOrder = 1;
+  return mesh;
+}
+
+// středové ostrůvky kruhových objezdů (track.def.islands): kamenný obrubník po terénu a tráva, přejízdný střed z kostek
 function buildIslands(track, terrain) {
   const o = part();
   const kerb = color('#b6b2a9'), grass = color('#6a9446');
-  for (const [cx, cz, r] of track.def.islands ?? []) {
+  const sett = color('#7f7b74'), kerbFlat = color('#c9c5bb'), at = {};
+  for (const [cx, cz, r, flat] of track.def.islands ?? []) {
     const n = Math.max(16, Math.round(r * 2.2));
+    if (flat) {
+      // přejízdný střed: obruba z bílé žuly a mírně vyklenutá dlažba nad vozovkou (výška podle trati, ne terénu)
+      const road = (x, z, dy) => { track.project(x, z, -1, at); return [x, at.y + dy, z]; };
+      const ringAt = (f, dy) => Array.from({ length: n }, (_, i) => {
+        const a = (i / n) * Math.PI * 2;
+        return road(cx + Math.cos(a) * r * f, cz + Math.sin(a) * r * f, dy);
+      });
+      const outer = ringAt(1, 0.04), inner = ringAt(1 - 0.35 / r, 0.06), mid = road(cx, cz, 0.14);
+      for (let i = 0; i < n; i++) {
+        const j = (i + 1) % n;
+        tri(o, outer[i], inner[i], inner[j], kerbFlat);
+        tri(o, outer[i], inner[j], outer[j], kerbFlat);
+        tri(o, inner[i], mid, inner[j], sett);
+      }
+      continue;
+    }
     const ring = Array.from({ length: n }, (_, i) => {
       const a = (i / n) * Math.PI * 2;
       const x = cx + Math.cos(a) * r, z = cz + Math.sin(a) * r;
@@ -538,7 +715,7 @@ function buildIslands(track, terrain) {
 // zaparkovaná auta z ploch parkovišť (rozvrh stání dělá tools/osm2track.mjs)
 const CAR_COLORS = ['#e8e8e6', '#e8e8e6', '#b9bcc0', '#b9bcc0', '#7c8086', '#2a2c30', '#2a2c30', '#2f4a6e', '#9c2a26', '#4f5f4a', '#d9d4c5', '#6d2f3a'];
 
-function buildCars(town, track, terrain, shadows, view) {
+function buildCars(town, track, terrain, shadows, view, extra = [], night = false) {
   const rng = new RNG(91);
   // u trati rozhoduje místní šířka (podélné stání hned za chodníkem), jinde stačí hrubá vzdálenost
   const free = (c) => {
@@ -546,8 +723,8 @@ function buildCars(town, track, terrain, shadows, view) {
     const o = nearTrack(track, terrain, c.x, c.z);
     return Math.abs(o.lat) > o.edge + 1.1;
   };
-  const items = town.cars.filter((c) => free(c) && !terrain.keepOut(c.x, c.z)).map((c) => ({
-    x: c.x, y: terrain.heightAt(c.x, c.z), z: c.z, ry: c.hd, color: rng.pick(CAR_COLORS),
+  const items = [...town.cars, ...extra].filter((c) => free(c) && !terrain.keepOut(c.x, c.z)).map((c) => ({
+    x: c.x, y: terrain.heightAt(c.x, c.z), z: c.z, ry: c.hd, color: rng.pick(CAR_COLORS), waiting: c.waiting,
   }));
   // bílá karoserie dostane barvu instance, okna a kola zůstanou tmavá
   const geo = mergeGeometries([
@@ -562,6 +739,14 @@ function buildCars(town, track, terrain, shadows, view) {
   group.name = 'cars';
   const opts = { cull: Math.min(view.cull, 380 * view.reach) };
   group.add(instancedLevels([[0, [[geo, items.filter(close), true], [geo, items.filter((t) => !close(t))]]]], mat, opts));
+  // v noci svítí auta čekající na výjezd (přední světla a koncová)
+  const waiting = items.filter((t) => t.waiting).map(({ color, ...t }) => t);
+  if (night && waiting.length) {
+    const front = mergeGeometries([-0.6, 0.6].map((x) => new THREE.BoxGeometry(0.3, 0.14, 0.05).translate(x, 0.72, 2.16)));
+    const rear = mergeGeometries([-0.62, 0.62].map((x) => new THREE.BoxGeometry(0.26, 0.12, 0.05).translate(x, 0.76, -2.16)));
+    group.add(instancedLevels([[0, [[front, waiting]]]], new THREE.MeshLambertMaterial({ color: 0, emissive: '#fff3d8', emissiveIntensity: 4 }), opts));
+    group.add(instancedLevels([[0, [[rear, waiting]]]], new THREE.MeshLambertMaterial({ color: 0, emissive: '#ff2a1a', emissiveIntensity: 2.5 }), opts));
+  }
   return group;
 }
 
@@ -619,7 +804,7 @@ function ringIndex(rings) {
 }
 
 // fogFar: kde mlha vše zakryje; za ní se nic nekreslí
-export function buildTown(town, track, terrain, quality, seed, anisotropy, fogFar = Infinity) {
+export function buildTown(town, track, terrain, quality, seed, anisotropy, fogFar = Infinity, night = false) {
   const rng = new RNG(seed);
   const shadows = quality !== 'low';
   const density = quality === 'low' ? 0.5 : quality === 'medium' ? 0.75 : 1;
@@ -633,7 +818,7 @@ export function buildTown(town, track, terrain, quality, seed, anisotropy, fogFa
     const near = shadows && terrain.distAt(x, z) < SHADOW_REACH;
     const bx = Math.floor(x / BLOCK), bz = Math.floor(z / BLOCK);
     const key = `${near}:${bx}:${bz}`;
-    if (!tiles.has(key)) tiles.set(key, { walls: part(), plain: part(), shops: part(), near, block: `${bx}:${bz}` });
+    if (!tiles.has(key)) tiles.set(key, { walls: part(), plain: part(), shops: part(), ribbon: part(), panel: part(), near, block: `${bx}:${bz}` });
     return tiles.get(key);
   };
   const plainWalls = new Set(town.palette.plain);
@@ -641,7 +826,7 @@ export function buildTown(town, track, terrain, quality, seed, anisotropy, fogFa
   // výloha patří na stěnu do trati nebo na náměstí
   const squares = town.paved.filter((a) => a.kind === 'square').map((a) => a.ring);
   const shopFront = (x, z) => terrain.distAt(x, z) < track.edge + 6 || squares.some((r) => pointInRing(x, z, r));
-  const standing = town.buildings.map((b, i) => ({ ...b, shop: town.shops.has(i), levels: town.levels.get(i) })).filter((b) => !b.ring.some((p) => terrain.keepOut(p[0], p[1])));
+  const standing = town.buildings.map((b, i) => ({ ...b, shop: town.shops.has(i), levels: town.levels.get(i), facade: town.facades?.get(i) ?? 0 })).filter((b) => !b.ring.some((p) => terrain.keepOut(p[0], p[1])));
   const neighbourAt = ringIndex([...standing.map((b) => b.ring), ...town.landmarks.map((l) => l.ring)]);
   standing.forEach((b, i) => {
     const c = b.ring[0];
@@ -650,7 +835,7 @@ export function buildTown(town, track, terrain, quality, seed, anisotropy, fogFa
       wall: b.wall, roof: b.roof, shape: b.shape,
       face: color(town.palette.wall[b.face]), top: color(town.palette.roof[b.top]), plain: plainWalls.has(b.face),
       shopFront: b.shop ? shopFront : null,
-      party: (x, z) => neighbourAt(x, z, i), wings: true, levels: b.levels,
+      party: (x, z) => neighbourAt(x, z, i), wings: true, levels: b.levels, facade: b.facade,
     });
   });
   for (const l of town.landmarks) placed.push(l.ring);
@@ -670,8 +855,15 @@ export function buildTown(town, track, terrain, quality, seed, anisotropy, fogFa
   // Stěny bez oken, střechy a ploty mají všude stejné UV (0, 0), tedy bílý roh textury oken:
   // s okny se proto kreslí jedním voláním. Konstantní UV nemá derivace, takže se vždy
   // čte nejostřejší mipmapa a barva zůstane přesně barvou vrcholů.
-  const wallMat = new THREE.MeshLambertMaterial({ map: windowTexture(rng, anisotropy), vertexColors: true });
-  const shopMat = new THREE.MeshLambertMaterial({ map: shopTexture(anisotropy), vertexColors: true });
+  // v noci svítí část oken (vlastní náhoda, ať se denní město nezmění), výlohy všechny
+  const litRng = new RNG(seed + 77);
+  const rects = { wall: [], ribbon: [], panel: [] };
+  const glow = (map, lit) => (night ? { map, vertexColors: true, emissive: 0xffffff, emissiveMap: lit, emissiveIntensity: 1.25 } : { map, vertexColors: true });
+  const wallTex = windowTexture(rng, anisotropy, rects.wall), ribbonTex = ribbonTexture(anisotropy, rects.ribbon), panelTex = panelTexture(rng, anisotropy, rects.panel);
+  const wallMat = new THREE.MeshLambertMaterial(glow(wallTex, night && litTexture(rects.wall, litRng, 0.3)));
+  const shopMat = new THREE.MeshLambertMaterial(glow(shopTexture(anisotropy), night && litTexture([[14, 36, 66, 80], [86, 36, 28, 84], [6, 8, 116, 18]], litRng, 1, 128, false)));
+  const ribbonMat = new THREE.MeshLambertMaterial(glow(ribbonTex, night && litTexture(rects.ribbon, litRng, 0.2)));
+  const panelMat = new THREE.MeshLambertMaterial(glow(panelTex, night && litTexture(rects.panel, litRng, 0.35)));
   const blocks = new Map();
   for (const t of tiles.values()) {
     if (!blocks.has(t.block)) blocks.set(t.block, new THREE.Group());
@@ -679,6 +871,8 @@ export function buildTown(town, track, terrain, quality, seed, anisotropy, fogFa
     const solid = joinParts(t.walls, t.plain);
     if (solid.pos.length) b.add(toMesh(solid, wallMat, t.near));
     if (t.shops.pos.length) b.add(toMesh(t.shops, shopMat, t.near));
+    if (t.ribbon.pos.length) b.add(toMesh(t.ribbon, ribbonMat, t.near));
+    if (t.panel.pos.length) b.add(toMesh(t.panel, panelMat, t.near));
   }
   // blok za mlhou se nekreslí; hranice od středu bloku, proto + polovina úhlopříčky
   for (const [key, b] of blocks) {
@@ -689,8 +883,10 @@ export function buildTown(town, track, terrain, quality, seed, anisotropy, fogFa
   }
   group.add(buildWater(town));
   group.add(buildGreenery(town, track, terrain, placed, density, shadows, rng, view));
-  group.add(buildLamps(town, track, terrain, rng, view));
-  group.add(buildCars(town, track, terrain, shadows, view));
+  group.add(buildLamps(town, track, terrain, rng, view, night));
+  const blocked = (x, z) => neighbourAt(x, z, -1);
+  group.add(buildCars(town, track, terrain, shadows, view, waitingCars(town, track, terrain, { seed: seed + 31, blocked }), night));
+  group.add(buildLife(town, track, terrain, { view, night, seed: seed + 41, blocked }));
   if (track.def.islands?.length) group.add(buildIslands(track, terrain));
   group.add(buildBuses(town, track, terrain, shadows, view));
   group.add(buildRoadSigns(town, track, terrain, anisotropy, (x, z) => neighbourAt(x, z, -1)));

@@ -147,6 +147,24 @@ export function snowBiome(b) {
   };
 }
 
+// noc ve městě: měsíc místo slunce, tmavá modrá obloha a mlha; světlo dají lampy, okna a reflektory (town.js, car.js)
+export function nightBiome(b) {
+  return {
+    ...b,
+    night: true,
+    sky: { top: '#050913', horizon: '#1d2a47', bottom: '#0a0d16', glow: 0.22 },
+    sunDir: [-0.35, 0.62, -0.5],
+    sun: { color: '#9fb2ff', intensity: 0.45 },
+    hemi: { sky: '#34436d', ground: '#17161a', intensity: 0.7 },
+    fog: { color: '#0d1426', near: 120, far: Math.min(b.fog.far, 900) },
+    exposure: 1.15,
+    clouds: '#1b2234',
+    cloudCover: 0.3,
+    bloom: { strength: 0.75, threshold: 1.1 },
+    track: { ...b.track, shoulderA: '#9a978f', shoulderB: '#94918a' },
+  };
+}
+
 export function wetBiome(b) {
   // v noci míříme k tmavým šedým, aby se obloha nerozsvítila
   const grey = b.night

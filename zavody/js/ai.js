@@ -2,6 +2,7 @@
 // tam, kde je místo, brání pozici, vyprošťuje se ode zdi a občas udělá chybu.
 import { clamp, angleDiff, RNG } from './rng.js';
 import { smoothCircular } from './trackmath.js';
+import { settGrip } from './track.js';
 import { CAR } from './car.js';
 import { DRIVERS, nameSeed } from './drivers.js';
 
@@ -213,7 +214,7 @@ export class AIDriver {
     const k2 = tr.indexAt(s + look + speed * 0.5);
     vt = Math.min(vt, this.profile[k2] * corner * 1.08 * this.rubber);
     // ani nejlepší AI nejede rychleji, než dovolí přilnavost
-    const grip = this.maxLat * this.feel * this.grip * (car.biome.roadGrip ?? 1);
+    const grip = this.maxLat * this.feel * this.grip * (car.biome.roadGrip ?? 1) * (tr.onSett(s) || tr.onSett(s + look) ? settGrip(car.biome.wet) : 1);
     vt = Math.min(vt, Math.sqrt(grip / Math.max(Math.abs(tr.kappaS[k]), 1e-4)), 1.08 * Math.sqrt(grip / Math.max(Math.abs(tr.kappaS[k2]), 1e-4)));
     // a ne rychleji, než projede skutečnou stopu: v úzké ulici je ostrá zatáčka ostrá i po stopě,
     // profil stopy navíc nese brzdné body před ní

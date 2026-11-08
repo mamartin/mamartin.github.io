@@ -6,6 +6,8 @@ import { clamp, angleDiff, RNG } from './rng.js';
 import { BIOMES, WET_GRIP, SNOW_GRIP } from './biomes.js';
 
 export const SURF_ROAD = 0, SURF_CURB = 1, SURF_OFF = 2;
+// žulové kostky drží méně než asfalt, na mokru výrazně méně
+export const settGrip = (wet) => (wet ? 0.86 : 0.94);
 
 export class Track {
   constructor(def) {
@@ -34,6 +36,9 @@ export class Track {
     // podélné stání za chodníkem (bez zábradlí na té straně) a ostrůvky kruhových objezdů (bez zábradlí i sloupků)
     this.parking = (def.parking || []).map(([a, b, p]) => ({ ...this.spanOf([a, b]), side: Math.sign(this.project(p[0], p[1], -1, {}).lat) }));
     this.islands = def.islands || [];
+    // druh okraje po stranách (def.edges): 'rail' zábradlí, 'grass' travnatý pás; jinde chodník bez zábradlí.
+    // Trať bez def.edges má zábradlí v celém městě mimo sloupky (dřívější chování)
+    this.edges = def.edges ? def.edges.map(([a, b, p, type]) => ({ ...this.spanOf([a, b]), side: Math.sign(this.project(p[0], p[1], -1, {}).lat), type })) : null;
     // vodorovné značení podle OSM: úseky s jiným počtem pruhů než 2 (0 = bez čar); čáry jsou pak geometrie, ne textura
     this.markings = def.markings ? def.markings.map(([a, b, n]) => ({ ...this.spanOf([a, b]), n })) : null;
     // přechody pro chodce jako body ve světě
@@ -79,6 +84,11 @@ export class Track {
     return this.tunnels.some((t) => ((s - t.s0 + this.L) % this.L) < t.len);
   }
 
+  // přejízdný střed malého objezdu (kostky v úrovni vozovky)
+  onIsland(x, z) {
+    return this.islands.some(([cx, cz, r, flat]) => flat && Math.hypot(x - cx, z - cz) < r);
+  }
+
   onSett(s) {
     return this.setts.some((t) => ((s - t.s0 + this.L) % this.L) < t.len);
   }
@@ -95,10 +105,16 @@ export class Track {
   // okraj chodníku bez zábradlí a sloupků: za ním stojí auta, nebo je to ostrůvek kruhového objezdu
   openEdge(s, side, p) {
     if (this.parking.some((t) => t.side === side && ((s - t.s0 + this.L) % this.L) < t.len)) return true;
-    return this.islands.some(([x, z, r]) => Math.hypot(p[0] - x, p[2] - z) < r + 4);
+    return this.islands.some(([x, z, r, flat]) => !flat && Math.hypot(p[0] - x, p[2] - z) < r + 4);
   }
 
   // okraj chodníku: sloupky (true), nebo zábradlí (false); jen v centru
+  edgeKind(s, side) {
+    if (!this.edges) return 'rail';
+    for (const t of this.edges) if (t.side === side && ((s - t.s0 + this.L) % this.L) < t.len) return t.type;
+    return 'walk';
+  }
+
   onBollards(s) {
     if (!this.bollardSpans) return true;
     return this.bollardSpans.some((t) => ((s - t.s0 + this.L) % this.L) < t.len);
@@ -348,9 +364,11 @@ export class Track {
     const sh = new StripBuilder();
     const shA = new THREE.Color(style.shoulderA), shB = new THREE.Color(style.shoulderB);
     const skirt = new THREE.Color(style.shoulderA).multiplyScalar(0.6);
+    const grA = new THREE.Color('#6d9548'), grB = new THREE.Color('#678f44');
     for (let k = 0; k < N; k++) {
       const n = (k + 1) % N;
-      const col = Math.floor(this.s[k] / 5) % 2 ? shA : shB;
+      const stripe = Math.floor(this.s[k] / 5) % 2;
+      const col = stripe ? shA : shB;
       const ha = this.hwAt(k), hb = this.hwAt(n);
       const curbed = this.curbMask[k] && this.curbMask[n];
       // v centru je krajnice chodník ve výšce obrubníku
@@ -358,8 +376,10 @@ export class Track {
       for (const side of [-1, 1]) {
         const a0 = side * (ha + inset), a1 = side * (hb + inset);
         const b0 = side * this.edgeAt(k), b1 = side * this.edgeAt(n);
-        if (side > 0) sh.quad(this.point(k, a0, y), this.point(k, b0, y), this.point(n, b1, y), this.point(n, a1, y), col);
-        else sh.quad(this.point(k, b0, y), this.point(k, a0, y), this.point(n, a1, y), this.point(n, b1, y), col);
+        // travnatý pás místo chodníku (def.edges 'grass')
+        const c = urban[k] && this.edges && this.edgeKind(this.s[k], side) === 'grass' ? (stripe ? grA : grB) : col;
+        if (side > 0) sh.quad(this.point(k, a0, y), this.point(k, b0, y), this.point(n, b1, y), this.point(n, a1, y), c);
+        else sh.quad(this.point(k, b0, y), this.point(k, a0, y), this.point(n, a1, y), this.point(n, b1, y), c);
         // zástěra na vnějším okraji, aby nebyla vidět mezera k terénu
         if (side > 0) sh.quad(this.point(k, b0, y), this.point(k, b0, -3), this.point(n, b1, -3), this.point(n, b1, y), skirt);
         else sh.quad(this.point(k, b0, -3), this.point(k, b0, y), this.point(n, b1, y), this.point(n, b1, -3), skirt);
@@ -548,6 +568,7 @@ export class Track {
       const n = (k + 1) % this.N;
       if (!on[k] || !on[n]) continue;
       for (const side of [-1, 1]) {
+        if (this.edgeKind(this.s[k], side) !== 'rail') continue;
         if (this.cutAt(this.s[k], side) || this.openEdge(this.s[k], side, this.point(k, side * this.edgeAt(k)))) continue;
         const la = side * (this.edgeAt(k) + 0.12), lb = side * (this.edgeAt(n) + 0.12);
         // dvě madla: horní a střední, každé jako úzký pásek ze dvou stran

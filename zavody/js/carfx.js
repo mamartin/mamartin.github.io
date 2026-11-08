@@ -1,7 +1,7 @@
 // Efekty u aut: stopy a kouř pneumatik, prach, sprška na mokru, plameny nitra, jiskry o svodidla.
 import { SURF_OFF } from './track.js';
 import { clamp } from './rng.js';
-import { G, audio, view, buzz } from './state.js';
+import { G, audio, view, buzz, padRumble } from './state.js';
 import { addDamage } from './damage.js';
 
 const wl = [0, 0, 0], wr = [0, 0, 0];
@@ -79,6 +79,16 @@ export function emitEffects(dt) {
       const rx = -c, rz = s;
       fx.nitroFlame(bx + rx * 0.4, car.y + 0.42, bz + rz * 0.4, -s, -c, car.vx, car.vz);
       fx.nitroFlame(bx - rx * 0.4, car.y + 0.42, bz - rz * 0.4, -s, -c, car.vx, car.vz);
+    }
+    // kostky: drobné chvění kamery a slabé vibrace ovladače podle rychlosti (telefon ne, ten by bzučel pořád)
+    if (car.isPlayer && car.onSett && car.speed > 4) {
+      const v = clamp(car.speed / 40, 0, 1);
+      view.rigs[car.humanIndex].addShake(dt * (0.25 + 0.9 * v));
+      car.settBuzz = (car.settBuzz ?? 0) - dt;
+      if (car.settBuzz <= 0) {
+        car.settBuzz = 0.12;
+        padRumble(car, 140, 0.05 + 0.12 * v, 0.15 + 0.3 * v);
+      }
     }
     if (car.impact > 2.5) {
       const side = Math.sign(car.proj.lat);

@@ -39,6 +39,15 @@ export function buzz(pattern, car = null) {
   }
 }
 
+// jen ovladač, s danou silou (trvalé chvění, např. kostky)
+export function padRumble(car, ms, strong, weak) {
+  if (S.haptics === false) return;
+  const humans = G.race?.players.length ?? 1;
+  const i = car?.humanIndex ?? 0;
+  const act = input.padFor(humans < 2 ? 'solo' : i === 0 ? 'p1' : 'p2')?.vibrationActuator;
+  act?.playEffect?.('dual-rumble', { duration: ms, strongMagnitude: strong, weakMagnitude: weak }).catch(() => {});
+}
+
 function rumble(pattern, car) {
   const humans = G.race?.players.length ?? 1;
   const i = car?.humanIndex ?? 0;

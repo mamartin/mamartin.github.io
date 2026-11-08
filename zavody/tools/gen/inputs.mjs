@@ -3,6 +3,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { loadRuian } from '../lib/ruian.mjs';
 import { loadDmp } from '../lib/dmp.mjs';
+import { loadOrtho } from './ortho.mjs';
 import { loadRoadParcels } from '../lib/parcels.mjs';
 import { loadDem } from '../lib/dem.mjs';
 import { GAME } from '../lib/city.mjs';
@@ -36,6 +37,7 @@ export async function loadInputs(ctx) {
     ruian: loadRuian(join(DATA, 'ruian')),
     dmp,
     roofPoints: dmp?.roofs,
+    ortho: loadOrtho(join(DATA, 'orto')), // barvy střech z ortofota ČÚZK, bez něj palety podle typu domu
     roads: read('osm_roads.json').filter((e) => e.type === 'way'),
     area: read('osm_area.json'),
     extra: read('osm_extra.json'),

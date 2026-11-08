@@ -1,9 +1,9 @@
 // Stáhne surová data pro trať města do tools/data/<město>/ (necommituje se).
-// Použití: node fetch-data.mjs [město] [osm] [dmr] [dmp] [ruian] [osm_shops …]   (bez města Dobříš, bez dalších argumentů vše)
+// Použití: node fetch-data.mjs [město] [osm] [dmr] [dmp] [ruian] [orto] [osm_shops …]   (bez města Dobříš, bez dalších argumentů vše)
 //          node fetch-data.mjs [město] listy   vypíše listy DMR 5G / DMP 1G, které zasahují do výřezu města
 //
 // OSM přes Overpass API (ODbL), výškopis DMR 5G z ATOM služby ČÚZK po listech LAZ,
-// počty podlaží z RÚIAN (výměnný formát VFR obce, otevřená data ČÚZK). Výřez, listy a obec jsou v cities/<město>.mjs.
+// počty podlaží z RÚIAN (výměnný formát VFR obce, otevřená data ČÚZK), ortofoto ČÚZK přes WMS. Výřez, listy a obec jsou v cities/<město>.mjs.
 // Bodové getSamples na ImageServeru ČÚZK vrací 403, proto listy.
 
 import { writeFileSync, mkdirSync, existsSync, createWriteStream, readFileSync } from 'node:fs';
@@ -12,6 +12,7 @@ import { execFileSync } from 'node:child_process';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { loadCity, TOOLS } from './lib/city.mjs';
+import { wgsToKrovak } from './lib/geo.mjs';
 
 const { city, args, data: DATA } = await loadCity();
 const UA = 'mamartin-zavody-track-tool/0.2';
@@ -126,6 +127,40 @@ async function listSheets() {
   if (missing.length) console.log(`v cities/${city.id}.mjs chybí: ${missing.join(', ')} (stačí ty pod tratí a 560 m kolem ní, chybějící osm2track ohlásí)`);
 }
 
+// ortofoto ČÚZK (WMS, CC BY 4.0) v S-JTSK po dlaždicích 500 × 500 m, 1 m na pixel, jen dlaždice s budovami z OSM;
+// generátor z něj bere barvy střech (gen/ortho.mjs)
+const ORTO_TILE = 500, ORTO_PX = 500;
+async function orto() {
+  const dir = join(DATA, 'orto');
+  mkdirSync(dir, { recursive: true });
+  const [la0, lo0, la1, lo1] = BBOX.split(',').map(Number);
+  const corners = [[la0, lo0], [la0, lo1], [la1, lo0], [la1, lo1]].map(([la, lo]) => wgsToKrovak(la, lo));
+  const e0 = Math.floor(Math.min(...corners.map((c) => c[0])) / ORTO_TILE), e1 = Math.floor(Math.max(...corners.map((c) => c[0])) / ORTO_TILE);
+  const n0 = Math.floor(Math.min(...corners.map((c) => c[1])) / ORTO_TILE), n1 = Math.floor(Math.max(...corners.map((c) => c[1])) / ORTO_TILE);
+  const used = new Set();
+  const area = JSON.parse(readFileSync(join(DATA, 'osm_area.json'), 'utf8')).elements;
+  for (const b of area) {
+    if (!b.tags?.building || !b.geometry?.length) continue;
+    const [e, n] = wgsToKrovak(b.geometry[0].lat, b.geometry[0].lon);
+    used.add(`${Math.floor(e / ORTO_TILE)}_${Math.floor(n / ORTO_TILE)}`);
+  }
+  let got = 0;
+  for (let i = e0; i <= e1; i++) for (let j = n0; j <= n1; j++) {
+    const key = `${i}_${j}`;
+    const file = join(dir, `${key}.png`);
+    if (!used.has(key) || existsSync(file)) continue;
+    const bbox = [i * ORTO_TILE, j * ORTO_TILE, (i + 1) * ORTO_TILE, (j + 1) * ORTO_TILE].join(',');
+    const url = `https://ags.cuzk.gov.cz/arcgis1/services/ORTOFOTO/MapServer/WMSServer?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=0&STYLES=&CRS=EPSG:5514&BBOX=${bbox}&WIDTH=${ORTO_PX}&HEIGHT=${ORTO_PX}&FORMAT=image/png`;
+    const res = await fetch(url, { headers: { 'User-Agent': UA } });
+    if (!res.ok || !res.headers.get('content-type')?.includes('png')) throw new Error(`ortofoto ${key}: ${res.status}`);
+    writeFileSync(file, Buffer.from(await res.arrayBuffer()));
+    got++;
+    await sleep(0.3);
+  }
+  writeFileSync(join(dir, 'index.json'), JSON.stringify({ tile: ORTO_TILE, px: ORTO_PX, tiles: [...used].filter((k) => existsSync(join(dir, `${k}.png`))) }));
+  console.log(`ortofoto: staženo ${got} dlaždic, celkem ${used.size} s budovami`);
+}
+
 const want = args;
 if (want.includes('listy')) {
   await listSheets();
@@ -141,3 +176,4 @@ if (all || want.includes('dmr')) {
 }
 if (all || want.includes('dmp')) for (const id of SHEETS) await sheet(id, 'DMP1G');
 if (all || want.includes('ruian')) await ruian();
+if (all || want.includes('orto')) await orto();

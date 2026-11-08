@@ -1,7 +1,7 @@
 // Turbo Okruh – vstupní bod: renderer, menu, závod a herní smyčka.
 import * as THREE from 'three';
 import { TRACKS } from './tracks.js';
-import { BIOMES, wetBiome, snowBiome } from './biomes.js';
+import { BIOMES, wetBiome, snowBiome, nightBiome } from './biomes.js';
 import { Track, SURF_OFF } from './track.js';
 import { Terrain } from './terrain.js';
 import { buildScenery, buildSky, buildLights, buildRain } from './scenery.js';
@@ -13,7 +13,7 @@ import { Race, OPPONENTS } from './race.js';
 import { Garage, playerNumbers as numbersOf, partColor, kindName, hexCss } from './garage.js';
 import { $, S, G, store, isTouch, input, audio, music, view, buzz } from './state.js';
 import {
-  currentCup, cupTracks, raceMode, currentTrackId, wantsRain, wantsSnow, wantsMix, cupRecord, REV, baseId, trackDef, randomDef, dailyDef,
+  currentCup, cupTracks, raceMode, currentTrackId, wantsRain, wantsSnow, wantsMix, wantsNight, cupRecord, REV, baseId, trackDef, randomDef, dailyDef,
   raceLaps, raceDifficulty, raceWeapons, currentEvent
 } from './trackdefs.js';
 import {
@@ -272,8 +272,9 @@ async function loadWorld(id) {
   const snowy = wantsSnow(baseDef);
   const def = wet ? { ...baseDef, wet: true } : snowy ? { ...baseDef, snowy: true } : baseDef;
   const mix = wantsMix(baseDef);
+  const night = wantsNight(baseDef);
   // proměnlivé počasí mění biom za jízdy, proto vlastní kopie
-  const biome = wet ? wetBiome(BIOMES[def.biome]) : snowy ? snowBiome(BIOMES[def.biome]) : mix ? { ...BIOMES[def.biome] } : BIOMES[def.biome];
+  const biome = wet ? wetBiome(BIOMES[def.biome]) : snowy ? snowBiome(BIOMES[def.biome]) : night ? nightBiome(BIOMES[def.biome]) : mix ? { ...BIOMES[def.biome] } : BIOMES[def.biome];
   const track = new Track(def);
   // reliéf z DMR má mřížku 12 m, jemnější terén by nic nepřidal
   const cell = S.quality === 'low' ? (town ? 14 : 11) : town ? 10 : 8;
@@ -289,7 +290,7 @@ async function loadWorld(id) {
   group.add(splitLarge(mergeSimilar(track.buildMeshes(biome.track, renderer.capabilities.getMaxAnisotropy(), S.quality)), 500, 8000));
   const scenery = buildScenery(track, terrain, def.biome, biome, S.quality, def.seed + 3);
   group.add(scenery.group);
-  if (town) group.add(buildTown(town, track, terrain, S.quality, def.seed + 5, renderer.capabilities.getMaxAnisotropy(), biome.fog.far));
+  if (town) group.add(buildTown(town, track, terrain, S.quality, def.seed + 5, renderer.capabilities.getMaxAnisotropy(), biome.fog.far, !!biome.night));
   // ozvěna ulic podle domů kolem trati, jednou při stavbě (až po tribuně, kvůli domům, které jí ustoupí)
   const streets = town ? streetProfile(town, track, terrain) : null;
   audio.setStreets(streets);
@@ -323,7 +324,7 @@ async function loadWorld(id) {
   const rain = wet ? buildRain(S.quality === 'low' ? 1500 : S.quality === 'medium' ? 2600 : 4000) : null;
   if (rain) group.add(rain.points);
   G.world = {
-    def, biome, track, terrain, group, sky, lights, effects, envRT, streets, showcase: [], stand: scenery.extra.stand, snowmen: scenery.extra.snowmen, snow: scenery.extra.snow, rain, wet, snowy,
+    def, biome, track, terrain, group, sky, lights, effects, envRT, streets, showcase: [], stand: scenery.extra.stand, snowmen: scenery.extra.snowmen, snow: scenery.extra.snow, rain, wet, snowy, night,
     pools: collectPools(group),
   };
   if (mix) {
@@ -532,9 +533,11 @@ function refreshMenu() {
   for (const b of $('weather-seg').children) b.setAttribute('aria-checked', String(b.dataset.weather === (S.weather || 'dry')));
   // na zimní trati se volí mezi jasnem a sněžením
   const winter = trackDef(currentTrackId()).biome === 'winter';
-  const [dry, bad] = $('weather-seg').children;
+  const [dry, bad, , night] = $('weather-seg').children;
   dry.textContent = winter ? 'Jasno' : 'Sucho';
   bad.textContent = winter ? 'Sněžení' : 'Déšť';
+  // noc jen na tratích ze skutečných měst
+  night.hidden = !trackDef(currentTrackId()).scene;
   const hint = $('weather-hint');
   hint.textContent = S.weather === 'mix'
     ? (winter ? 'Startuje se za jasna, během prvního kola začne sněžit a silnice bude klouzat.' : 'Startuje se za sucha, během prvního kola se rozprší a silnice bude klouzat.')
@@ -1010,7 +1013,7 @@ async function startRaceInner() {
   // proměnlivé počasí začíná každý závod znovu za sucha
   G.world?.shift?.reset();
   const want = trackDef(trackId);
-  if (!G.world || G.forceReload || G.world.def.id !== want.id || G.world.wet !== wantsRain(want) || !!G.world.snowy !== wantsSnow(want) || !!G.world.mix !== wantsMix(want)) {
+  if (!G.world || G.forceReload || G.world.def.id !== want.id || G.world.wet !== wantsRain(want) || !!G.world.snowy !== wantsSnow(want) || !!G.world.mix !== wantsMix(want) || !!G.world.night !== wantsNight(want)) {
     G.forceReload = false;
     await loadWorld(trackId);
   }
@@ -1603,7 +1606,7 @@ function frame(now) {
         rivals,
         kind: p.kind,
         streetS: w.streets ? p.proj.s : null,
-        sett: !!w.streets && humans.some((c) => c.surface !== SURF_OFF && !c.cut && w.track.onSett(c.proj.s)),
+        sett: !!w.streets && humans.some((c) => c.onSett),
       });
 
       humans.forEach((c, i) => {

@@ -113,13 +113,16 @@ export function buildTrack(g) {
     const w = roadWidth(loop.edges[seg].way.tags, corridorOf(pts));
     if (w) segWidth.set(seg, w);
   }
+  // šířka ve hře: skutečná krát scale v mezích; city.widths může dát skutečnější rovinky a rozšíření v zatáčkách
+  const W = { scale: WIDTH_SCALE, min: WIDTH_MIN, max: WIDTH_MAX, corner: 0, ...city.widths };
   const widths = axis.map((p) => {
-    const w = (segWidth.get(p.seg) ?? realWidth(loop.edges[p.seg].way.tags)) * WIDTH_SCALE;
-    return Math.max(WIDTH_MIN, Math.min(WIDTH_MAX, w));
+    const w = (segWidth.get(p.seg) ?? realWidth(loop.edges[p.seg].way.tags)) * W.scale;
+    return Math.max(W.min, Math.min(W.max, w));
   });
   g.stats.trackWidthMeasured = `${segWidth.size}/${new Set(axis.map((p) => p.seg)).size} úseků`;
 
-  const widest = Math.max(...widths);
+  // s rozšířením v zatáčkách se trať ověřuje s největší možnou šířkou
+  const widest = W.corner ? W.max : Math.max(...widths);
   const points = fitTrack(relAxis, { width: widest, runoff: RUNOFF, startFlat: true, maxLen: 45 });
   const def = {
     id: city.id,
@@ -143,6 +146,21 @@ export function buildTrack(g) {
   const clAxis = matchAxis(cl, axis);
   const clWidth = new Float32Array(cl.N);
   for (let k = 0; k < cl.N; k++) clWidth[k] = smoothWidth(widths, clAxis[k]);
+  if (W.corner) {
+    // rozšíření podle nejostřejšího místa ±25 m (začne před zatáčkou), pak vyhlazené, nejvýš do W.max
+    const win = Math.round(25 / cl.step), sm = Math.round(10 / cl.step);
+    const peak = Float32Array.from({ length: cl.N }, (_, k) => {
+      let m = 0;
+      for (let o = -win; o <= win; o++) m = Math.max(m, Math.abs(cl.kappa[(k + o + cl.N) % cl.N]));
+      return Math.min(W.cornerMax ?? 3.5, W.corner * m);
+    });
+    const base = Float32Array.from(clWidth);
+    for (let k = 0; k < cl.N; k++) {
+      let s = 0;
+      for (let o = -sm; o <= sm; o++) s += peak[(k + o + cl.N) % cl.N];
+      clWidth[k] = Math.min(W.max, base[k] + s / (2 * sm + 1));
+    }
+  }
   def.widths = [];
   for (let k = 0; k < cl.N; k += 10) {
     const w = Math.round(clWidth[k] * 2) / 2;
@@ -176,6 +194,70 @@ export function trackSpans(g) {
   if (bridges.length) def.bridges = bridges;
 }
 
+// Okraj chodníku po stranách ([od, do, bod na té straně, druh]); jinde chodník bez zábradlí:
+//   'rail'  zábradlí na mostě a tam, kde terén za chodníkem padá (DMR o víc než 1,5 m pod vozovkou),
+//   'grass' travnatý pás místo chodníku, kde do 30 m od okraje nestojí žádný dům (okraj města, parky).
+// skip: vzorky se svodidlem nebo v centru (sloupky), tam se nic nemění
+const EDGE_MIN = 30; // nejkratší úsek jednoho druhu (m)
+function edgeKinds(g, skip) {
+  const { cl, clWidth, dem, proj, base, out, tagsAt } = g;
+  // domy v mřížce po 20 m podle bodů obrysu
+  const CELL = 20, cells = new Map();
+  for (const b of [...out.buildings, ...out.landmarks.map((l) => [0, 0, 0, 0, 0, ...l.p])]) {
+    for (let i = 5; i + 1 < b.length; i += 2) {
+      const key = `${Math.floor(b[i] / 10 / CELL)},${Math.floor(b[i + 1] / 10 / CELL)}`;
+      if (!cells.has(key)) cells.set(key, []);
+      cells.get(key).push(b[i] / 10, b[i + 1] / 10);
+    }
+  }
+  const houseNear = (x, z, r) => {
+    for (let i = Math.floor((x - r) / CELL); i <= Math.floor((x + r) / CELL); i++) {
+      for (let j = Math.floor((z - r) / CELL); j <= Math.floor((z + r) / CELL); j++) {
+        const pts = cells.get(`${i},${j}`);
+        if (pts) for (let q = 0; q < pts.length; q += 2) if (Math.hypot(pts[q] - x, pts[q + 1] - z) < r) return true;
+      }
+    }
+    return false;
+  };
+  const ground = (x, z) => dem.height(...proj.inverse(x, -z)) - base;
+  const edges = [];
+  for (const side of [-1, 1]) {
+    const kind = new Array(cl.N).fill(null);
+    for (let k = 0; k < cl.N; k++) {
+      if (skip(k)) continue;
+      const e = clWidth[k] / 2 + RUNOFF;
+      const px = (lat) => cl.px[k] + cl.rx[k] * side * lat, pz = (lat) => cl.pz[k] + cl.rz[k] * side * lat;
+      if (tagsAt(k).bridge === 'yes') { kind[k] = 'rail'; continue; }
+      const drop = cl.py[k] - Math.max(ground(px(e + 3), pz(e + 3)), ground(px(e + 6), pz(e + 6)));
+      if (drop > 1.5) kind[k] = 'rail';
+      else if (!houseNear(px(e + 15), pz(e + 15), 16)) kind[k] = 'grass';
+    }
+    // vyhlazení: krátké úseky zmizí, krátké mezery mezi stejnými se zacelí
+    const minN = Math.round(EDGE_MIN / cl.step);
+    for (const fill of [true, false]) {
+      for (let k = 0; k < cl.N;) {
+        let n = k;
+        while (n < cl.N && kind[n] === kind[k]) n++;
+        const short = n - k < minN;
+        if (fill && short && kind[k] === null && k > 0 && n < cl.N && kind[k - 1] === kind[n] && kind[n] !== 'rail') kind.fill(kind[n], k, n);
+        else if (!fill && short && kind[k] !== null) kind.fill(null, k, n);
+        k = n;
+      }
+    }
+    for (const type of ['rail', 'grass']) {
+      for (const [a, b] of spansOf(cl, (k) => kind[k] === type, EDGE_MIN - 1, (k) => [+cl.px[k].toFixed(1), +cl.pz[k].toFixed(1)])) {
+        const ka = cl.px.findIndex((x, i) => +x.toFixed(1) === a[0] && +cl.pz[i].toFixed(1) === a[1]);
+        const kb = cl.px.findIndex((x, i) => +x.toFixed(1) === b[0] && +cl.pz[i].toFixed(1) === b[1]);
+        const km = kb >= ka ? (ka + kb) >> 1 : ((ka + kb + cl.N) >> 1) % cl.N;
+        const lat = side * (clWidth[km] / 2 + RUNOFF + 2);
+        edges.push([a, b, [+(cl.px[km] + cl.rx[km] * lat).toFixed(1), +(cl.pz[km] + cl.rz[km] * lat).toFixed(1)], type]);
+      }
+    }
+  }
+  g.stats.edges = edges.reduce((o, e) => ({ ...o, [e[3]]: (o[e[3]] ?? 0) + 1 }), {});
+  return edges;
+}
+
 // Okraje: centrum (náměstí a okolí startu) má místo svodidel obrubník a sloupky, jízda se nemění.
 // urban.all: obrubník a chodník po celé trati (ve městě nejsou svodidla), sloupky jen v centru, jinde zábradlí;
 // kde OSM zná svodidlo (barrier=guard_rail) podél trati, zůstane svodidlo
@@ -199,6 +281,7 @@ export function edgeSpans(g) {
     }
     def.urban = spansWhere((k) => !railNear[k]);
     def.bollards = spansWhere(inCentre);
+    def.edges = edgeKinds(g, (k) => railNear[k] || inCentre(k));
     g.stats.guardRails = `${rails.length} v OSM, u trati ${railNear.reduce((a, b) => a + b, 0)} vzorků`;
   } else def.urban = spansWhere(inCentre);
   // vzdálená místa pro terén hry: mřížka je pokryje a nepřidá kolem nich umělé kopce z okraje

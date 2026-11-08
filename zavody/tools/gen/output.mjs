@@ -7,7 +7,7 @@ import { countCorners } from '../lib/axis.mjs';
 import { dm } from './util.mjs';
 import { matchAxis } from './track.mjs';
 
-export const CREDIT = 'Mapová data © přispěvatelé OpenStreetMap, licence ODbL 1.0. Výškopis DMR 5G © ČÚZK, CC BY 4.0, převzorkováno a vyhlazeno. Výšky budov a stromy z DMP 1G, počty podlaží a silniční pozemky z RÚIAN © ČÚZK, CC BY 4.0.';
+export const CREDIT = 'Mapová data © přispěvatelé OpenStreetMap, licence ODbL 1.0. Výškopis DMR 5G © ČÚZK, CC BY 4.0, převzorkováno a vyhlazeno. Výšky budov a stromy z DMP 1G, počty podlaží a silniční pozemky z RÚIAN, barvy střech z ortofota © ČÚZK, CC BY 4.0.';
 
 export function sceneOf(g) {
   const o = g.out;
@@ -18,7 +18,7 @@ export function sceneOf(g) {
     origin: { lat: +g.lat0.toFixed(6), lon: +g.lon0.toFixed(6), base: +g.base.toFixed(2) },
     dem: o.dem,
     palette: g.palette,
-    buildings: o.buildings, ...(o.levels.length ? { levels: o.levels } : {}), landmarks: o.landmarks,
+    buildings: o.buildings, ...(o.levels.length ? { levels: o.levels } : {}), ...(o.facades?.length ? { facades: o.facades } : {}), landmarks: o.landmarks,
     areas: o.areas, water: o.water, paved: o.paved, streets: o.streets, paths: o.paths, streams: o.streams, barriers: o.barriers,
     lamps: o.lamps, trees: o.trees, treeRows: o.treeRows, canopy: o.canopy, statues: o.statues, chimneys: o.chimneys,
     cars: o.cars, shops: o.shops, signs: o.signs, signNames: o.signNames,

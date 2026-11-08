@@ -83,6 +83,8 @@ export const wantsRain = (def) => def.biome !== 'winter' && badWeather(def);
 export const wantsSnow = (def) => def.biome === 'winter' && badWeather(def);
 // proměnlivé počasí: start za sucha, během závodu se rozprší (na zimní trati rozsněží)
 export const wantsMix = (def) => S.weather === 'mix' && S.mode !== 'season' && !badWeather(def);
+// noční závod: jen na tratích ze skutečných měst (lampy a okna jsou z kulis města), za sucha
+export const wantsNight = (def) => S.weather === 'night' && S.mode !== 'season' && !!def.scene && !badWeather(def);
 
 // nejlepší umístění v šampionátu (klasický má kvůli starším uložením vlastní místo)
 export function cupRecord(id) {

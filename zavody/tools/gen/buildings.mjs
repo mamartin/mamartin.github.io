@@ -6,6 +6,7 @@ import { roofOf, peakOf } from '../lib/dmp.mjs';
 import { cleanRing, signedArea, simplifyRing, minRect, joinOuter, pointInRing } from '../lib/poly.mjs';
 import { dm, flat, pick, affineFrom } from './util.mjs';
 import { clearRoad, shiftClear } from './space.mjs';
+import { roofColour, quantize, hexOf, vivid } from './ortho.mjs';
 
 export const ROOF = { gabled: 0, hipped: 1, flat: 2, pyramidal: 3, skillion: 4, mansard: 1, half_hipped: 1, 'half-hipped': 1, gambrel: 0, round: 0, dome: 3 };
 // tvar podle bodů DMP 1G; 5 = sedlová s hřebenem napříč delší strany (SHAPE.CROSS ve hře)
@@ -22,6 +23,17 @@ const ROOFS = {
   grey: ['#565a60', '#6e7176', '#4d4a49'],
   flat: ['#77797c', '#6b6d70', '#85878a'],
 };
+const ORTHO_COLOURS = 24;
+// styl fasády (řada facades: [index budovy, styl, …], ostatní domy mají obyčejná okna)
+export const FACADE = { ribbon: 1, panel: 2, old: 3 };
+const RIBBON_KINDS = new Set(['school', 'office', 'commercial', 'retail', 'university', 'college', 'hospital', 'kindergarten', 'public', 'civic', 'government', 'supermarket']);
+// pásová okna u škol a úřadů s plochou střechou, lodžie u paneláků, římsa a vyšší přízemí u starých domů v centru
+export function facadeOf(t, shape, wall, oldTown) {
+  if (shape === ROOF.flat && wall >= 5 && RIBBON_KINDS.has(t.building)) return FACADE.ribbon;
+  if ((shape === ROOF.flat ? wall >= 11 : wall >= 17) && !RIBBON_KINDS.has(t.building) && !['industrial', 'warehouse', 'garage', 'garages', 'service'].includes(t.building)) return FACADE.panel;
+  if (shape !== ROOF.flat && oldTown && wall >= 5.5 && wall <= 20) return FACADE.old;
+  return 0;
+}
 const NAMED = { sand: '#d9c08e', burlywood: '#deb887', black: '#2a2a2c', white: '#f2f0ea', red: '#a33a2c', grey: '#808080', gray: '#808080', brown: '#6b4a3a' };
 
 // Hmota domu. levels: počet podlaží z RÚIAN, jinak z OSM (import z RÚIAN bývá starší);
@@ -58,7 +70,8 @@ export function massing(t, areaM2, short, levels = parseFloat(t['building:levels
 }
 
 export function buildBuildings(g) {
-  const { city, area, ruian, roofPoints, dem, toGame, axisDist, inFar, alongCentre, REACH, bump } = g;
+  const { city, area, ruian, roofPoints, ortho, dem, toGame, axisDist, inFar, alongCentre, REACH, bump } = g;
+  const fromOrtho = []; // [index budovy, [r, g, b]]
   const LANDMARKS = city.landmarks ?? {};
   // vlastní palety města (podle panoramat), které platí v zónách podle city.facadeZone
   const WALLS = { ...BASE_WALLS, ...city.walls };
@@ -97,6 +110,7 @@ export function buildBuildings(g) {
 
   const buildings = [];
   const levels = []; // [index budovy, podlaží, …] jen kde se liší od výšky stěny
+  const facades = []; // [index budovy, styl FACADE, …]
   const landmarks = [];
   const landmarkRings = [];
   const pushback = [];
@@ -128,6 +142,13 @@ export function buildBuildings(g) {
         peak = [dm(x + dx), dm(z + dz), dm(pk.top), dm(pk.body), dm(pk.size), pk.nave ? dm(pk.nave.eave) : 0, pk.nave ? dm(pk.nave.ridge) : 0];
         console.log(`dominanta ${id}: věž ${pk.top.toFixed(1)} m (hranol ${pk.body.toFixed(1)} m)${pk.nave ? `, loď ${pk.nave.eave.toFixed(1)}–${pk.nave.ridge.toFixed(1)} m` : ', loď bez bodů'}`);
       }
+    }
+    // mimo stažené DMP: výšky věže z nastavení města (city.landmarkPeaks), věž uprostřed půdorysu
+    const fixed = city.landmarkPeaks?.[id];
+    if (!peak && fixed) {
+      const c = r.reduce((s, p) => [s[0] + p[0] / r.length, s[1] + p[1] / r.length], [0, 0]);
+      peak = [dm(c[0]), dm(c[1]), dm(fixed.top), dm(fixed.body), dm(minRect(r)[0]), 0, 0];
+      console.log(`dominanta ${id}: věž ${fixed.top} m podle nastavení (mimo DMP)`);
     }
     landmarks.push({
       ...(peak ? { peak } : {}),
@@ -174,13 +195,29 @@ export function buildBuildings(g) {
       // city.parcels: počet podlaží z RÚIAN/OSM pro řady oken, když se liší od výšky stěny po 3 m
       const lv = so?.levels ?? (parseFloat(t['building:levels']) || null);
       if (city.parcels && lv && lv >= 1 && lv <= 30 && Math.round(m.wall / 3) !== Math.round(lv)) levels.push(buildings.length, Math.round(lv));
+      // barva střechy z ortofota, pokud ji neurčuje OSM (roof:colour)
+      if (ortho && !t['roof:colour']) {
+        const c = roofColour(ortho, latlon.map(([la, lo]) => wgsToKrovak(la, lo)));
+        if (c) fromOrtho.push([buildings.length, c]);
+      }
+      const fs = facadeOf(t, m.shape, m.wall, !!zoneOf(cx, cz) || nearCentre(cx, cz));
+      if (fs) facades.push(buildings.length, fs);
       buildings.push([dm(m.wall), dm(m.roof), m.shape, st.wall, st.roof, ...flat(r)]);
     }
+  }
+  // barvy z ortofota seskupené do ORTHO_COLOURS odstínů na konci palety střech
+  if (fromOrtho.length) {
+    const { centres, label } = quantize(fromOrtho.map(([, c]) => c), ORTHO_COLOURS);
+    const base = roofPalette.length;
+    roofPalette.push(...centres.map((c) => hexOf(vivid(c))));
+    fromOrtho.forEach(([i], k) => { buildings[i][4] = base + label[k]; });
+    bump('roofFromOrtho', fromOrtho.length);
   }
   g.stats.buildings = buildings.length;
   g.stats.landmarks = landmarks.length;
   g.stats.buildingsTrimmed = pushback.length;
   g.stats.maxTrim = +Math.max(0, ...pushback).toFixed(1);
-  Object.assign(g.out, { buildings, levels, landmarks });
+  Object.assign(g.out, { buildings, levels, facades, landmarks });
+  g.stats.facades = Object.fromEntries(Object.entries(FACADE).map(([k, v]) => [k, facades.filter((x, i) => i % 2 && x === v).length]));
   g.palette = { wall: wallPalette, roof: roofPalette, plain: WALLS.plain.map((c) => wallPalette.indexOf(c)) };
 }

@@ -28,13 +28,17 @@ export default {
   markings: true, // značení, kostky, semafory na přechodech a ostrůvky kruhových objezdů podle OSM
   parcels: true, // zpevněné dvory a ploty zahrad k ulici podle katastru (RÚIAN)
   measureLandmarks: true, // věže kostelů a šachty změřené v DMP 1G
+  // šířka trati blíž skutečné ulici (×1,2, nejméně 8,5 m), v zatáčkách rozšířená podle křivosti (60 × 1/R, nejvýš o 3,5 m)
+  widths: { scale: 1.2, min: 8.5, max: 13, corner: 60 },
 
   // --- dominanty: OSM id budovy -> id ručního modelu v js/landmarks.js ---
   landmarks: {
     20255512: 'sh-ambit', 192151269: 'sh-bazilika',
-    72137666: 'kostel-jakub', 527025317: 'kostel-vojtech', 201432628: 'dul-vojtech',
+    72137666: 'kostel-jakub', 527025317: 'kostel-vojtech', 201432628: 'dul-vojtech', 201432635: 'dul-sevcin',
     1246102801: 'sh-kaple-plzenska', 1246102802: 'sh-kaple-breznicka', 1246102803: 'sh-kaple-prazska', 1246102804: 'sh-kaple-mnisecka',
   },
+  // Ševčinský důl je za okrajem stažených bodů DMP: zděná těžní věž (hranol a stanová střecha) podle fotografií
+  landmarkPeaks: { 'dul-sevcin': { top: 21, body: 15 } },
   requiredLandmarks: ['sh-ambit', 'sh-bazilika'],
   // Svatá Hora je 650 m od trati, za dosahem kulis: areál s okolím je ve scéně navíc, aby byl vidět v dálce
   far: [{ name: 'Svatá Hora', at: [49.685, 14.0176], r: 200 }],
