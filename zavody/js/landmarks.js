@@ -1,4 +1,4 @@
-// Dominanty Dobříše: ruční nízkopolygonové modely usazené na půdorysy z OSM.
+// Dominanty měst: ruční nízkopolygonové modely usazené na půdorysy z OSM (zatím Dobříš).
 // Předlohou jsou volně licencované fotky z Wikimedia Commons (kategorie Dobříš).
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
@@ -439,22 +439,27 @@ export function buildLandmarks(town, track, terrain, tileOf, shadows, anisotropy
   const group = new THREE.Group();
   group.name = 'landmarks';
   const facade = part(), church = part();
-  const byId = Object.fromEntries(town.landmarks.map((l) => [l.id, l]));
   const tile = (l) => tileOf(l.ring[0][0], l.ring[0][1]);
-  buildCastle(byId.zamek, terrain, facade, tileOf);
-  buildTrinity(terrain, church, tileOf);
-  buildCemeteryChurch(terrain, church, tileOf);
-  buildTownHall(byId.radnice, terrain, tile(byId.radnice));
-  buildSynagogue(byId.synagoga, terrain, church, tile(byId.synagoga), track);
-  buildVargac(byId.vargac, terrain, tile(byId.vargac));
-  buildOrangery(byId.oranzerie, terrain, church, tile(byId.oranzerie));
+  // ruční model podle id půdorysu; město, které dominantu nemá, ji nestaví (id určuje tools/cities/<město>.mjs)
+  const BUILD = {
+    zamek: (l) => buildCastle(l, terrain, facade, tileOf),
+    trojice: () => buildTrinity(terrain, church, tileOf),
+    kriz: () => buildCemeteryChurch(terrain, church, tileOf),
+    radnice: (l) => buildTownHall(l, terrain, tile(l)),
+    synagoga: (l) => buildSynagogue(l, terrain, church, tile(l), track),
+    vargac: (l) => buildVargac(l, terrain, tile(l)),
+    oranzerie: (l) => buildOrangery(l, terrain, church, tile(l)),
+  };
+  const byId = Object.fromEntries(town.landmarks.map((l) => [l.id, l]));
+  for (const [id, build] of Object.entries(BUILD)) if (byId[id]) build(byId[id]);
+  for (const l of town.landmarks) if (!BUILD[l.id]) console.warn(`dominanta ${l.id} nemá model`);
   for (const c of town.chimneys) {
     const y = terrain.heightAt(c.x, c.z) - 0.5, r = Math.max(1, c.height / 24);
     lathe(tileOf(c.x, c.z).plain, c.x, c.z, 10, [[r * 1.5, y], [r * 0.8, y + c.height * 0.92], [r * 0.8, y + c.height, SOOT]],
       color(c.height > 60 ? '#b3b0a8' : '#a4664a'));
   }
-  group.add(toMesh(facade, new THREE.MeshLambertMaterial({ map: castleTexture(anisotropy), vertexColors: true }), shadows));
-  group.add(toMesh(church, new THREE.MeshLambertMaterial({ map: churchTexture(anisotropy), vertexColors: true }), shadows));
+  if (facade.pos.length) group.add(toMesh(facade, new THREE.MeshLambertMaterial({ map: castleTexture(anisotropy), vertexColors: true }), shadows));
+  if (church.pos.length) group.add(toMesh(church, new THREE.MeshLambertMaterial({ map: churchTexture(anisotropy), vertexColors: true }), shadows));
   const garden = buildGarden(town, terrain, tileOf);
   if (garden) group.add(garden);
   group.add(statueGroup(town, terrain));

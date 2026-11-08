@@ -1,14 +1,17 @@
-// Pohled shora na vygenerovanou scénu, čte jen js/tracks-dobris.js a data/dobris.json.
-// Použití: node preview-scene.mjs   (píše data/loops/scena-*.svg)
-import { readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { DOBRIS } from '../js/tracks-dobris.js';
+// Pohled shora na vygenerovanou scénu, čte jen js/tracks-<město>.js a data/<město>.json.
+// Použití: node preview-scene.mjs [město]   (píše data/<město>/loops/scena-*.svg)
+import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { join } from 'node:path';
 import { buildCenterline } from '../js/trackmath.js';
+import { loadCity, loadTrack } from './lib/city.mjs';
 
-const ROOT = dirname(fileURLToPath(import.meta.url));
-const scene = JSON.parse(readFileSync(join(ROOT, '../data/dobris.json'), 'utf8'));
-const cl = buildCenterline(DOBRIS);
+const ctx = await loadCity();
+const TRACK = await loadTrack(ctx);
+if (!TRACK) throw new Error(`Trať ${ctx.city.name} ještě není vygenerovaná (node osm2track.mjs ${ctx.city.id})`);
+const scene = JSON.parse(readFileSync(ctx.scene, 'utf8'));
+const cl = buildCenterline(TRACK);
+const OUT = join(ctx.data, 'loops');
+mkdirSync(OUT, { recursive: true });
 const AREA = { forest: '#b9d6a2', park: '#cfe6b8', grass: '#dcebc6', field: '#eee7c4', cemetery: '#c9dcb8', allotments: '#d9e4b4', pitch: '#bfe0b0' };
 
 function render(name, x0, x1, z0, z1, px) {
@@ -29,13 +32,13 @@ function render(name, x0, x1, z0, z1, px) {
   for (const l of scene.barriers) out.push(`<polyline points="${list(l.slice(1))}" fill="none" stroke="${['#7d6a58', '#7d6a58', '#99938a', '#5e8a4e'][l[0]]}" stroke-width="${Math.max(0.8, S * 0.5)}"/>`);
   // silnice podle profilu šířek
   const widthAt = (s) => {
-    let w = DOBRIS.widths[0][1];
-    for (const [from, v] of DOBRIS.widths) if (s >= from) w = v;
+    let w = TRACK.widths[0][1];
+    for (const [from, v] of TRACK.widths) if (s >= from) w = v;
     return w;
   };
   const left = [], right = [];
   for (let k = 0; k < cl.N; k += 2) {
-    const hw = (widthAt(cl.s[k]) + 2 * DOBRIS.runoff * 0) / 2;
+    const hw = (widthAt(cl.s[k]) + 2 * TRACK.runoff * 0) / 2;
     left.push(`${X((cl.px[k] + cl.rx[k] * hw) * 10)},${Y((cl.pz[k] + cl.rz[k] * hw) * 10)}`);
     right.push(`${X((cl.px[k] - cl.rx[k] * hw) * 10)},${Y((cl.pz[k] - cl.rz[k] * hw) * 10)}`);
   }
@@ -50,8 +53,10 @@ function render(name, x0, x1, z0, z1, px) {
   for (let i = 0; i < scene.trees.length; i += 2) out.push(`<circle cx="${X(scene.trees[i])}" cy="${Y(scene.trees[i + 1])}" r="${Math.max(1.6, S * 2)}" fill="#3f7a35"/>`);
   out.push(`<circle cx="${X(0)}" cy="${Y(0)}" r="9" fill="#111" stroke="#fff" stroke-width="3"/>`);
   out.push('</svg>');
-  writeFileSync(join(ROOT, `data/loops/scena-${name}.svg`), out.join(''));
+  writeFileSync(join(OUT, `scena-${name}.svg`), out.join(''));
 }
 
-render('celek', -1050, 1300, -1250, 580, 1600);
-render('centrum', -420, 640, -300, 260, 1600);
+// výřezy z nastavení města, jinak celá výšková mřížka
+const d = scene.dem;
+const views = ctx.city.sceneViews ?? [{ name: 'celek', x0: d.x0, x1: d.x0 + (d.nx - 1) * d.cell, z0: d.z0, z1: d.z0 + (d.nz - 1) * d.cell }];
+for (const v of views) render(v.name, v.x0, v.x1, v.z0, v.z1, 1600);

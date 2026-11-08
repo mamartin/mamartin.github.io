@@ -1,15 +1,15 @@
-// Náhledy kandidátních okruhů a jejich okolí. Čte data/loops/loops.json z loops.mjs,
-// píše data/loops/okruh-*.svg a metrics.json.
+// Náhledy kandidátních okruhů a jejich okolí. Čte data/<město>/loops/loops.json z loops.mjs,
+// píše data/<město>/loops/okruh-*.svg a metrics.json. Použití: node preview.mjs [město]
 
 import { readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 import { localProjection } from './lib/geo.mjs';
 import { douglasPeucker } from './lib/roads.mjs';
 
-const ROOT = dirname(fileURLToPath(import.meta.url));
-const DATA = join(ROOT, 'data');
-const proj = localProjection(49.7815, 14.1745);
+import { loadCity } from './lib/city.mjs';
+
+const { city, data: DATA } = await loadCity();
+const proj = localProjection(...city.survey);
 const area = JSON.parse(readFileSync(join(DATA, 'osm_area.json'), 'utf8')).elements;
 const roads = JSON.parse(readFileSync(join(DATA, 'osm_roads.json'), 'utf8')).elements.filter((e) => e.type === 'way');
 const loops = JSON.parse(readFileSync(join(DATA, 'loops/loops.json'), 'utf8'));
@@ -24,21 +24,12 @@ const buildings = area.filter((e) => e.tags?.building && e.type === 'way').map((
 const parks = area.filter((e) => e.tags?.leisure === 'park' || e.tags?.leisure === 'garden' || e.tags?.landuse === 'forest' || e.tags?.natural === 'wood' || e.tags?.landuse === 'cemetery');
 const water = area.filter((e) => e.tags?.natural === 'water');
 
-const townhall = buildings.find((b) => b.e.tags.amenity === 'townhall' && b.e.tags['addr:street'] === 'Mírové náměstí');
-
-const LANDMARKS = [
-  { name: 'Zámek', at: proj.forward(49.7815667, 14.1789113), dy: 22, dx: 10 },
-  { name: 'Radnice', at: center(townhall.r), dy: -12, dx: -30 },
-  { name: 'Nejsv. Trojice', at: proj.forward(49.7821357, 14.1778341), dy: -14, dx: -60 },
-  { name: 'Sv. Kříž', at: proj.forward(49.7832485, 14.1810164), dy: -8, dx: 10 },
-  { name: 'Bývalá synagoga', at: proj.forward(49.781337, 14.167355), dy: -14, dx: -96 },
-  { name: 'Francouzský park', at: proj.forward(49.7802809, 14.179386), dy: 4, dx: 12 },
-  { name: 'Anglický park', at: proj.forward(49.7770822, 14.1799325), dy: 4, dx: 10 },
-  { name: 'Zimní stadion', at: proj.forward(49.777002, 14.1743546), dy: 4, dx: 10 },
-  { name: 'Koryto', at: proj.forward(49.7846616, 14.1775276), dy: 4, dx: 10 },
-  { name: 'Huťský rybník', at: proj.forward(49.7811944, 14.1882824), dy: 4, dx: -40 },
-  { name: 'Papež', at: proj.forward(49.7890954, 14.170825), dy: 4, dx: 10 },
-];
+// popisky míst: souřadnice, nebo budova podle značek (střed půdorysu)
+const LANDMARKS = (city.preview?.labels ?? []).flatMap((m) => {
+  const b = m.building && buildings.find((x) => m.building(x.e.tags));
+  if (m.building && !b) return [];
+  return [{ ...m, at: b ? center(b.r) : proj.forward(...m.at) }];
+});
 
 const nearest = (axis, p) => axis.reduce((m, a) => Math.min(m, Math.hypot(a[0] - p[0], a[1] - p[1])), Infinity);
 
@@ -73,7 +64,7 @@ function jsonSize(list) {
   return size;
 }
 
-const W = 1400, MAP_TOP = 96, MAP_H = 1040, S = 0.6, CX = -325, CY = 40;
+const W = 1400, MAP_TOP = 96, MAP_H = 1040, S = 0.6, [CX, CY] = city.preview?.center ?? [0, 0];
 const X = (x) => +(W / 2 + (x - CX) * S).toFixed(1);
 const Y = (y) => +(MAP_TOP + MAP_H / 2 - (y - CY) * S).toFixed(1);
 const pts = (r) => r.map((p) => `${X(p[0])},${Y(p[1])}`).join(' ');
@@ -131,7 +122,7 @@ for (const L of loops) {
   const PT = MAP_TOP + MAP_H, PH = W - PT;
   svg.push(`<rect y="${PT}" width="${W}" height="${PH}" fill="#fff"/>`);
   const px0 = 84, px1 = W - 30, py0 = PT + 32, py1 = W - 44;
-  const lo = Math.floor(hlow / 10) * 10 - 10, hi = lo + 80;
+  const lo = Math.floor(hlow / 10) * 10 - 10, hi = Math.max(lo + 80, Math.ceil(hmax / 20) * 20 + 10);
   const py = (h) => py1 - ((h - lo) / (hi - lo)) * (py1 - py0);
   const prof = L.profile.map((h, i) => [px0 + (i / (L.profile.length - 1)) * (px1 - px0), py(L.hmin + h)]);
   for (let h = lo; h <= hi; h += 20) {
@@ -143,7 +134,7 @@ for (const L of loops) {
     const x = px0 + ((km * 1000) / L.length) * (px1 - px0);
     svg.push(`<text x="${x}" y="${py1 + 24}" font-size="15" text-anchor="middle" fill="#6a7482">${km} km</text>`);
   }
-  svg.push(`<text x="${px0}" y="${PT + 22}" font-size="16" font-weight="600" fill="#46515f">Výškový profil (DMR 5G, nad mořem) od západního konce Mírového náměstí</text>`);
+  svg.push(`<text x="${px0}" y="${PT + 22}" font-size="16" font-weight="600" fill="#46515f">Výškový profil (DMR 5G, nad mořem) ${esc(city.preview?.profileFrom ?? 'od startu průzkumu')}</text>`);
   svg.push(`<text x="${W - 28}" y="${MAP_TOP - 14}" font-size="13" text-anchor="end" fill="#6a7482">Mapová data © přispěvatelé OpenStreetMap (ODbL), výšky © ČÚZK (CC BY 4.0)</text>`);
   svg.push('</svg>');
   writeFileSync(join(DATA, `loops/okruh-${L.id}.svg`), svg.join(''));

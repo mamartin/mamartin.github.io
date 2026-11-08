@@ -1,22 +1,23 @@
-// Stáhne surová data pro trať Dobříš do tools/data/ (necommituje se).
-// Použití: node fetch-data.mjs [osm] [dmr] [dmp] [ruian] [osm_shops …]     (bez argumentu stáhne vše)
+// Stáhne surová data pro trať města do tools/data/<město>/ (necommituje se).
+// Použití: node fetch-data.mjs [město] [osm] [dmr] [dmp] [ruian] [osm_shops …]   (bez města Dobříš, bez dalších argumentů vše)
+//          node fetch-data.mjs [město] listy   vypíše listy DMR 5G / DMP 1G, které zasahují do výřezu města
 //
 // OSM přes Overpass API (ODbL), výškopis DMR 5G z ATOM služby ČÚZK po listech LAZ,
-// počty podlaží z RÚIAN (výměnný formát VFR obce Dobříš, otevřená data ČÚZK).
+// počty podlaží z RÚIAN (výměnný formát VFR obce, otevřená data ČÚZK). Výřez, listy a obec jsou v cities/<město>.mjs.
 // Bodové getSamples na ImageServeru ČÚZK vrací 403, proto listy.
 
-import { writeFileSync, mkdirSync, existsSync, createWriteStream } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { writeFileSync, mkdirSync, existsSync, createWriteStream, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
+import { loadCity, TOOLS } from './lib/city.mjs';
 
-const DATA = join(dirname(fileURLToPath(import.meta.url)), 'data');
+const { city, args, data: DATA } = await loadCity();
 const UA = 'mamartin-zavody-track-tool/0.2';
-const BBOX = '49.760,14.135,49.800,14.205';
-const SHEETS = ['DOBR66', 'DOBR67', 'DOBR56', 'DOBR57'];
-const OBEC = 540111; // Dobříš
+const BBOX = city.bbox;
+const SHEETS = city.sheets ?? [];
+const OBEC = city.obec;
 
 const QUERIES = {
   osm_roads: `[out:json][timeout:120][bbox:${BBOX}];
@@ -31,7 +32,7 @@ out tags center;`,
 (way["building"];relation["building"];way["building:part"];nwr["landuse"];
 nwr["natural"~"^(water|wood|tree_row|scrub|wetland)$"];node["natural"="tree"];nwr["leisure"];way["waterway"];
 way["barrier"~"^(wall|fence|hedge|retaining_wall)$"];node["highway"="street_lamp"];nwr["office"="government"];
-nwr["name"~"radnice|Radnice|[Mm]ěstský úřad|[Mm]ěsto Dobříš"];way["highway"~"^(footway|path|steps|cycleway)$"];);
+nwr["name"~"${city.townHallNames ?? 'radnice|Radnice|[Mm]ěstský úřad'}"];way["highway"~"^(footway|path|steps|cycleway)$"];);
 out body geom;`,
   osm_shops: `[out:json][timeout:120][bbox:${BBOX}];
 (nwr["shop"];nwr["amenity"~"^(restaurant|cafe|pub|bar|fast_food|bank|pharmacy|post_office|ice_cream)$"];node["highway"="crossing"];);
@@ -103,14 +104,40 @@ async function ruian() {
   throw new Error('RÚIAN: výměnný soubor obce není k dispozici');
 }
 
-const want = process.argv.slice(2);
+// listy SM5, které zasahují do výřezu: z přehledu ATOM služby (celá republika, stáhne se jednou)
+async function listSheets() {
+  const feed = join(TOOLS, 'data', 'dmr_atom_feed.xml');
+  if (!existsSync(feed)) {
+    mkdirSync(join(TOOLS, 'data'), { recursive: true });
+    const res = await fetch('https://atom.cuzk.gov.cz/DMR5G-SJTSK/DMR5G-SJTSK.xml', { headers: { 'User-Agent': UA } });
+    if (!res.ok) throw new Error(`přehled listů: ${res.status}`);
+    writeFileSync(feed, await res.text());
+  }
+  const [la0, lo0, la1, lo1] = BBOX.split(',').map(Number);
+  const xml = readFileSync(feed, 'utf8');
+  const out = [];
+  for (const m of xml.matchAll(/SJTSK_([A-Z]{4}\d\d)\.xml<\/id>[\s\S]*?mapový list: ([^<]+)<\/title>[\s\S]*?<georss:polygon>([^<]+)<\/georss:polygon>/g)) {
+    const v = m[3].trim().split(/\s+/).map(Number);
+    const lats = v.filter((_, i) => i % 2 === 0), lons = v.filter((_, i) => i % 2 === 1);
+    if (Math.min(...lats) < la1 && Math.max(...lats) > la0 && Math.min(...lons) < lo1 && Math.max(...lons) > lo0) out.push(`${m[1]} (${m[2]})`);
+  }
+  console.log(`listy pro ${city.name} (${BBOX}): ${out.sort().join(', ')}`);
+  const missing = out.map((s) => s.slice(0, 6)).filter((id) => !SHEETS.includes(id));
+  if (missing.length) console.log(`v cities/${city.id}.mjs chybí: ${missing.join(', ')} (stačí ty pod tratí a 560 m kolem ní, chybějící osm2track ohlásí)`);
+}
+
+const want = args;
+if (want.includes('listy')) {
+  await listSheets();
+  process.exit(0);
+}
 const all = !want.length;
 mkdirSync(DATA, { recursive: true });
 for (const name of Object.keys(QUERIES)) if (all || want.includes('osm') || want.includes(name)) await overpass(name);
 if (all || want.includes('dmr')) {
   const files = [];
   for (const id of SHEETS) files.push(await sheet(id));
-  execFileSync('node', [join(DATA, '..', 'laz2grid.mjs'), join(DATA, 'dmr/grid.bin'), ...files], { stdio: 'inherit' });
+  execFileSync('node', [join(TOOLS, 'laz2grid.mjs'), join(DATA, 'dmr/grid.bin'), ...files], { stdio: 'inherit' });
 }
 if (all || want.includes('dmp')) for (const id of SHEETS) await sheet(id, 'DMP1G');
 if (all || want.includes('ruian')) await ruian();

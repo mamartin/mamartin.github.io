@@ -1,31 +1,48 @@
-# Nástroje pro trať Dobříš
+# Nástroje pro tratě ze skutečných měst
 
-Převádí skutečnou Dobříš na trať hry. Hra tyhle skripty nepotřebuje, slouží jen k přegenerování dat.
+Převádí skutečné město (zatím Dobříš) na trať hry. Hra tyhle skripty nepotřebuje, slouží jen k přegenerování dat.
 Spouští se v této složce, potřebují Node 20+ a příkaz `unzip`.
 
 ```bash
-npm install                # laz-perf na čtení výškopisu
-node fetch-data.mjs        # OSM, DMR 5G, DMP 1G a RÚIAN do data/ (necommituje se)
-node osm2track.mjs         # vygeneruje ../js/tracks-dobris.js a ../data/dobris.json
-node check-scene.mjs       # ověří vygenerované soubory
+npm install                       # laz-perf na čtení výškopisu
+node fetch-data.mjs [město]       # OSM, DMR 5G, DMP 1G a RÚIAN do data/<město>/ (necommituje se)
+node osm2track.mjs [město]        # vygeneruje ../js/tracks-<město>.js a ../data/<město>.json
+node check-scene.mjs [město|vse]  # ověří vygenerované soubory
 ```
 
-`node fetch-data.mjs osm`, `dmr`, `dmp` nebo `ruian` stáhne jen část dat, jméno dotazu (třeba `osm_shops` nebo `osm_signs`) jen ten dotaz. Průzkum okruhů je v `loops.mjs` a `preview.mjs`
-(průjezdní body v `loops.json`), pohled shora na hotovou scénu dá `preview-scene.mjs`.
+Město je první argument a odpovídá souboru `cities/<město>.mjs`, bez něj se bere Dobříš. Za město jde případně, co se má stáhnout:
+`node fetch-data.mjs dobris osm`, `dmr`, `dmp` nebo `ruian` stáhne jen část dat, jméno dotazu (třeba `osm_shops` nebo `osm_signs`) jen ten dotaz
+a `listy` vypíše mapové listy DMR 5G / DMP 1G, které zasahují do výřezu města. Průzkum okruhů je v `loops.mjs` a `preview.mjs`
+(průjezdní body v `cities/<město>-loops.json`, výsledky a náhledy v `data/<město>/loops/`), pohled shora na hotovou scénu dá `preview-scene.mjs`.
 
-Test celé hry (tahle kontrola, závody autopilotem v headless prohlížeči a měření výkonu) je `npm test` ve složce `zavody`, viz `../test/README.md`.
+Test celé hry (kontrola všech vygenerovaných měst, závody autopilotem v headless prohlížeči a měření výkonu) je `npm test` ve složce `zavody`, viz `../test/README.md`.
+
+## Nové město
+
+Všechno, co je u města ruční volba nebo oprava dat, je v `cities/<město>.mjs`; převod sám (`osm2track.mjs`) je pro všechna města stejný.
+
+1. `cities/<město>.mjs` podle `cities/dobris.mjs`: jméno, výřez `bbox` pro OSM, kód obce v RÚIAN (`obec`), střed průzkumu `survey`.
+   Listy DMR doplní `node fetch-data.mjs <město> listy`, stačí ty pod tratí a 560 m kolem ní.
+2. `node fetch-data.mjs <město>` stáhne data.
+3. Kandidátní okruhy jako průjezdní body (souřadnice v metrech od `survey`, x na východ, y na sever, u bodu jméno ulice pro kontrolu)
+   do `cities/<město>-loops.json`, pak `node loops.mjs <město>` a `node preview.mjs <město>` je změří a nakreslí.
+4. Vybraný okruh (`loop`), start na rovném kusu (`start`) a místo tribuny (`stand`) do nastavení, pak `node osm2track.mjs <město>`
+   a `node check-scene.mjs <město>`.
+5. Trať do hry: import `js/tracks-<město>.js` v `js/tracks.js`, závod do `test/limits.mjs`.
+6. Dominanty: OSM id budov do `landmarks`, ruční modely do `js/landmarks.js` (bez modelu zůstane jen půdorys a hra ji vynechá s varováním).
+   Zóny fasád (`centre`, `walls`, `facadeZone`), obrubníky v centru (`urban`) a ruční doplňky (`lawns`, `gardens`, `squareStreet`, `extraTrees`) jsou volitelné.
 
 ## Zdroje dat
 
-- **OpenStreetMap** přes Overpass API, licence ODbL 1.0. `data/dobris.json` je odvozená databáze, proto je označená ODbL.
+- **OpenStreetMap** přes Overpass API, licence ODbL 1.0. `data/<město>.json` je odvozená databáze, proto je označená ODbL.
   Ve hře musí být uvedeno „Mapová data © přispěvatelé OpenStreetMap“.
 - **DMR 5G © ČÚZK**, CC BY 4.0, stahování po listech LAZ přes ATOM službu (`atom.cuzk.gov.cz`).
   Bodové čtení z ImageServeru ČÚZK vrací 403, proto listy. Data jsou převzorkovaná a vyhlazená.
 - **DMP 1G © ČÚZK**, CC BY 4.0, listy LAZ z `openzu.cuzk.gov.cz` (stejné listy jako DMR). Body třídy budova dávají výšku okapu, hřebene a tvar střechy, body vysoké vegetace polohy a výšky stromů.
-- **RÚIAN © ČÚZK**, CC BY 4.0: výměnný formát VFR obce Dobříš (kód 540111) z `vdp.cuzk.gov.cz`, bere se z něj počet podlaží stavebních objektů a hranice silničních pozemků (způsob využití 16 silnice a 17 ostatní komunikace), podle nichž se měří šířka ulic.
+- **RÚIAN © ČÚZK**, CC BY 4.0: výměnný formát VFR obce (Dobříš má kód 540111) z `vdp.cuzk.gov.cz`, bere se z něj počet podlaží stavebních objektů a hranice silničních pozemků (způsob využití 16 silnice a 17 ostatní komunikace), podle nichž se měří šířka ulic.
 - Ortofoto a panoramata jsou jen vizuální předloha, nic z nich se do hry nekopíruje.
 
-## Formát `data/dobris.json`
+## Formát `data/<město>.json`
 
 Souřadnice jsou herní (x na východ, z na jih, počátek na startu) v decimetrech jako celá čísla, výšky v dm nad nejnižším bodem trati.
 
@@ -42,9 +59,9 @@ Souřadnice jsou herní (x na východ, z na jih, počátek na startu) v decimetr
 - `shops`: indexy budov z `buildings`, ve kterých je podle OSM obchod, restaurace, banka a podobně (dostanou výlohy)
 - `signs`: pětice druh, hodnota, x, z, natočení v setinách radiánu; druh 0 dej přednost, 1 stop, 2 nejvyšší rychlost (hodnota km/h), 3 obec, 4 zastávka (hodnota je index do `signNames`), 5 semafor (hodnota 1 na trati, 0 na vedlejší ulici), 6 radar
 
-V `js/tracks-dobris.js` jsou navíc `stand` (bod ve světě, u kterého stojí tribuna) a úseky `sett` (kostky podle `surface=sett`) a `urban` (centrum s obrubníkem a chodníkem místo svodidla), oba od a do jako body ve světě. `crossings` jsou body přechodů pro chodce. Body místo metrů od startu sedí i na obrácené trati.
+V `js/tracks-<město>.js` jsou navíc `stand` (bod ve světě, u kterého stojí tribuna) a úseky `sett` (kostky podle `surface=sett`) a `urban` (centrum s obrubníkem a chodníkem místo svodidla), oba od a do jako body ve světě. `crossings` jsou body přechodů pro chodce. Body místo metrů od startu sedí i na obrácené trati.
 
-## Odchylky od skutečnosti
+## Odchylky od skutečnosti: Dobříš
 
 Co ve hře neodpovídá skutečné Dobříši a proč. Ostatní (osa ulic, půdorysy, reliéf) je z dat.
 

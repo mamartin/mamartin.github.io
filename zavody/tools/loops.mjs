@@ -1,25 +1,26 @@
 // Fáze průzkumu: projde kandidátní okruhy po skutečných ulicích, změří je a ověří herní validací.
-// Použití: node loops.mjs   (čte data/osm_roads.json a data/dmr/grid.bin, píše data/loops/)
+// Použití: node loops.mjs [město]   (čte cities/<město>-loops.json, data/<město>/osm_roads.json
+// a data/<město>/dmr/grid.bin, píše data/<město>/loops/)
 
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 import { localProjection } from './lib/geo.mjs';
 import { buildGraph, routeLoop } from './lib/roads.mjs';
 import { sampleAxis, fitTrack, countCorners } from './lib/axis.mjs';
 import { loadDem } from './lib/dem.mjs';
 import { buildCenterline, validateCenterline } from '../js/trackmath.js';
+import { loadCity } from './lib/city.mjs';
 
-const ROOT = dirname(fileURLToPath(import.meta.url));
-const DATA = join(ROOT, 'data');
+const ctx = await loadCity();
+const DATA = ctx.data;
 const WIDTH = 11, RUNOFF = 3;
 
-const proj = localProjection(49.7815, 14.1745);
+const proj = localProjection(...ctx.city.survey);
 const ways = JSON.parse(readFileSync(join(DATA, 'osm_roads.json'), 'utf8')).elements.filter((e) => e.type === 'way');
 const nodes = buildGraph(ways, proj.forward);
 const dem = loadDem(join(DATA, 'dmr/grid.bin'));
 
-const CANDIDATES = JSON.parse(readFileSync(join(ROOT, 'loops.json'), 'utf8'));
+const CANDIDATES = JSON.parse(readFileSync(ctx.loops, 'utf8'));
 
 mkdirSync(join(DATA, 'loops'), { recursive: true });
 const results = [];

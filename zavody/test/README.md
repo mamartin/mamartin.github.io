@@ -11,7 +11,7 @@ npm test
 
 Co se děje:
 
-1. `tools/check-scene.mjs` zkontroluje data trati Dobříš (bez surového DMR v `tools/data/` část přeskočí).
+1. `tools/check-scene.mjs vse` zkontroluje data všech vygenerovaných tratí ze skutečných měst (bez surového DMR v `tools/data/<město>/` část přeskočí).
 2. Hra se spustí v headless Chromiu (WebGL přes SwiftShader) ze statického serveru s `Cache-Control: no-store`, service worker je zablokovaný.
    three.js z CDN se podstrčí z `node_modules/three`, písma z Google Fonts se vynechají, jiné vnější požadavky se zablokují.
 3. **Výkon:** na 20 bodech podél Dobříše stojí kamera za autem (7 m za ním, 2,7 m nad ním, poměr stran 16:9, kvalita Vysoká)

@@ -1,12 +1,11 @@
-// Převod skutečné Dobříše na trať: definice trati (js/tracks-dobris.js) a kulisy (data/dobris.json).
-// Použití: node osm2track.mjs   (data stáhne fetch-data.mjs)
+// Převod skutečného města na trať: definice trati (js/tracks-<město>.js) a kulisy (data/<město>.json).
+// Použití: node osm2track.mjs [město]   (bez města Dobříš; data stáhne fetch-data.mjs, nastavení je v cities/)
 //
 // Souřadnice výstupu jsou herní: x na východ, z na jih, počátek na startu.
 // Kulisy jsou v JSON zaokrouhlené na decimetry (celá čísla), výšky v dm nad nejnižším bodem trati.
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { dirname, join, relative } from 'node:path';
 import { localProjection, wgsToKrovak } from './lib/geo.mjs';
 import { loadRuian, ruianAt } from './lib/ruian.mjs';
 import { loadDmp, roofOf, treesOf } from './lib/dmp.mjs';
@@ -16,16 +15,17 @@ import { sampleAxis, rotateAxis, fitTrack, countCorners } from './lib/axis.mjs';
 import { loadDem } from './lib/dem.mjs';
 import { cleanRing, signedArea, simplifyRing, subdivideRing, minRect, minRectFrame, clipRing, joinOuter, pointInRing } from './lib/poly.mjs';
 import { buildCenterline, validateCenterline } from '../js/trackmath.js';
+import { loadCity, GAME } from './lib/city.mjs';
 
-const ROOT = dirname(fileURLToPath(import.meta.url));
-const DATA = join(ROOT, 'data');
-const GAME = join(ROOT, '..');
+const ctx = await loadCity();
+const { city } = ctx;
+const DATA = ctx.data;
 
-const LOOP = 'A';
-const START = [-140, -8];     // v souřadnicích loops.json: rovný kus Pražské za radnicí, jede se na východ
+const LOOP = city.loop;
+const START = city.start;     // v souřadnicích loops.json
 const WIDTH_MIN = 10, WIDTH_MAX = 13, WIDTH_SCALE = 1.5;
 const RUNOFF = 3;
-const STAND_S = 1020;         // tribuna na louce u Pražské, kde nic nezakryje (na startu by schovala obchody)
+const STAND_S = city.stand;   // metr od startu, kde stojí tribuna
 const REACH = 400;            // budovy a další kulisy do této vzdálenosti od osy
 const MARGIN = 560;           // výšková mřížka a plochy kolem obdélníku trati
 const DEM_CELL = 12;
@@ -33,11 +33,11 @@ const FACADE_GAP = 1.2;       // kolik volného místa zůstane mezi výběhem a
 
 // Šířka vozovky: OSM ji u těchto ulic nemá. Měří se šířka silničního pozemku v katastru (RÚIAN)
 // a vozovka je její podíl ROAD_SHARE, nastavený tak, aby silnice II. třídy měly v průměru 8 m
-// (medián jejich pozemků v Dobříši je 15,5 m). Bez měření zůstane odhad podle kategorie.
+// (medián jejich pozemků v Dobříši je 15,5 m, stejný podíl platí pro všechna města). Bez měření zůstane odhad podle kategorie.
 const ROAD_SHARE = 0.52;
 const MEASURED = new Set(['secondary', 'tertiary', 'unclassified', 'residential', 'living_street']); // service vede často přes parkoviště
 function realWidth(tags) {
-  if (tags.surface === 'sett' && tags.highway === 'secondary') return 8.5; // Mírové náměstí
+  if (tags.surface === 'sett' && tags.highway === 'secondary') return 8.5; // dlážděné náměstí (Mírové náměstí v Dobříši)
   if (tags.highway === 'secondary') return (+tags.lanes || 2) >= 3 ? 10 : 8;
   if (tags.highway === 'tertiary') return 7;
   if (tags.highway === 'unclassified') return 6;
@@ -54,12 +54,13 @@ const roofPoints = dmp?.roofs;
 const roads = read('osm_roads.json').filter((e) => e.type === 'way');
 const area = read('osm_area.json');
 const extra = read('osm_extra.json');
-const candidate = JSON.parse(readFileSync(join(ROOT, 'loops.json'), 'utf8')).find((c) => c.id === LOOP);
+const candidate = JSON.parse(readFileSync(ctx.loops, 'utf8')).find((c) => c.id === LOOP);
+if (!candidate) throw new Error(`Okruh ${LOOP} není v ${relative(GAME, ctx.loops)}`);
 
 // --- osa trati ---------------------------------------------------------------
 
 // počátek je start, proto se trasa hledá dvakrát: poprvé kvůli poloze startu
-const survey = localProjection(49.7815, 14.1745);
+const survey = localProjection(...city.survey);
 const first = routeLoop(buildGraph(roads, survey.forward), candidate.via);
 const startAt = rotateAxis(sampleAxis(first.nodes, dem, survey), ...START)[0];
 const [lat0, lon0] = survey.inverse(startAt.x, startAt.y);
@@ -113,16 +114,16 @@ const nominal = 12;
 const widest = Math.max(...widths);
 const points = fitTrack(relAxis, { width: widest, runoff: RUNOFF, startFlat: true, maxLen: 45 });
 const def = {
-  id: 'dobris',
-  name: 'Dobříš',
-  subtitle: 'Mírové náměstí, zámek a Pražská, skutečné ulice',
+  id: city.id,
+  name: city.name,
+  subtitle: city.subtitle,
   biome: 'town',
   width: nominal,
   runoff: RUNOFF,
   maxBank: 0.015,
-  seed: 2263,
+  seed: city.seed,
   smooth: 2,
-  scene: 'data/dobris.json',
+  scene: `data/${city.id}.json`,
   credit: 'Mapová data © přispěvatelé OpenStreetMap (ODbL), výškopis, DMP a RÚIAN © ČÚZK (CC BY 4.0)',
   points,
 };
@@ -225,10 +226,8 @@ const bounds = { minX: minX - MARGIN, maxX: maxX + MARGIN, minZ: minZ - MARGIN, 
 
 // --- budovy --------------------------------------------------------------------
 
-// ručně modelované dominanty, ve fázi 4 nahradí generický dům
-const LANDMARKS = {
-  49589320: 'zamek', 49589317: 'trojice', 49589363: 'kriz', 30103766: 'radnice', 48876694: 'synagoga', 30103752: 'vargac', 49589359: 'oranzerie',
-};
+// ručně modelované dominanty (js/landmarks.js) místo generického domu
+const LANDMARKS = city.landmarks ?? {};
 const ROOF = { gabled: 0, hipped: 1, flat: 2, pyramidal: 3, skillion: 4, mansard: 1, half_hipped: 1, 'half-hipped': 1, gambrel: 0, round: 0, dome: 3 };
 // tvar podle bodů DMP 1G; 5 = sedlová s hřebenem napříč delší strany (SHAPE.CROSS ve hře)
 const ROOF_CROSS = 5;
@@ -238,9 +237,8 @@ const WALLS = {
   centre: ['#e9c46a', '#e8b79a', '#f1e3c6', '#cfdcc0', '#f0d9a8', '#d9a98c', '#efece3', '#c7d3dc'],
   block: ['#d8d8d2', '#e6e2d6', '#c8d0d4', '#e3d3b5', '#cfd6c4'],
   plain: ['#b9b6ae', '#a9a79f', '#c4c0b6'],
-  // podle panoramat: u startu bílé a krémové domy, východ náměstí světle modrý, krémový a žlutý
-  start: ['#f3efe6', '#efe7d6', '#f1e3c6', '#ece6d8'],
-  squareEast: ['#c7d3dc', '#bccfdd', '#f1e3c6', '#efe0b0', '#e9c46a', '#f0d9a8'],
+  // vlastní palety města (podle panoramat), které platí v zónách podle city.facadeZone
+  ...city.walls,
 };
 const ROOFS = {
   tile: ['#9c4a32', '#8a3f2e', '#a85a3c', '#7d3a2c', '#6b5147'],
@@ -267,17 +265,17 @@ function ruianOf(t, latlon) {
 }
 const pick = (list, id) => list[(Math.imul(id, 2654435761) >>> 16) % list.length];
 
-const centreLine = [toGame(49.7811, 14.1672), toGame(49.7813, 14.1717)];
-// poloha vůči ose Mírového náměstí: t od západu (0) na východ (1), d kolmo
+const centreLine = city.centre?.map(([la, lo]) => toGame(la, lo));
+// poloha vůči ose centra (náměstí): t od začátku (0) na konec (1), d kolmo; bez centra nekonečno
 function alongCentre(x, z) {
+  if (!centreLine) return { t: 0, d: Infinity };
   const [a, b] = centreLine;
   const dx = b[0] - a[0], dz = b[1] - a[1];
   const t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (z - a[1]) * dz) / (dx * dx + dz * dz)));
   return { t, d: Math.hypot(x - a[0] - dx * t, z - a[1] - dz * t) };
 }
 const nearCentre = (x, z) => alongCentre(x, z).d < 120;
-const START_ZONE = 75;            // domy kolem startu (počátek souřadnic)
-const onSquareEast = (x, z) => { const c = alongCentre(x, z); return c.t > 0.55 && c.d < 45; };
+const zoneOf = (x, z) => city.facadeZone?.(x, z, alongCentre(x, z)) ?? null;
 
 // levels: počet podlaží z RÚIAN, jinak z OSM (import z RÚIAN bývá starší);
 // measured: okap, střecha a plochost změřené v DMP 1G mají přednost před vším ostatním
@@ -316,8 +314,8 @@ function styleOf(e, t, x, z, shape, wall) {
   const id = e.id;
   const blocks = wall >= 12;
   const plain = ['garage', 'garages', 'shed', 'industrial', 'warehouse', 'service'].includes(t.building);
-  const wallSet = plain ? WALLS.plain : blocks ? WALLS.block : Math.hypot(x, z) < START_ZONE ? WALLS.start
-    : onSquareEast(x, z) ? WALLS.squareEast : nearCentre(x, z) ? WALLS.centre : WALLS.house;
+  const zone = plain || blocks ? null : zoneOf(x, z);
+  const wallSet = plain ? WALLS.plain : blocks ? WALLS.block : zone ? WALLS[zone] : nearCentre(x, z) ? WALLS.centre : WALLS.house;
   const roofSet = shape === ROOF.flat ? ROOFS.flat : (id % 7 === 0 ? ROOFS.grey : ROOFS.tile);
   const w = t['building:colour'] ? colourIndex(wallPalette, t['building:colour']) : null;
   const r = t['roof:colour'] ? colourIndex(roofPalette, t['roof:colour']) : null;
@@ -454,13 +452,14 @@ stats.maxTrim = +Math.max(0, ...pushback).toFixed(1);
 
 // --- zeleň, voda, zpevněné plochy ----------------------------------------------
 
-// trávníky před radnicí: stromy v OSM nejsou, na fotkách náměstí ano
-const TOWN_HALL_LAWNS = new Set([1314555286, 1314555287]);
+// trávníky se stromy (u radnice v Dobříši): stromy v OSM nejsou, na fotkách ano
+const TOWN_HALL_LAWNS = new Set(city.lawns ?? []);
+const GARDENS = new Set(city.gardens ?? []);
 
 const AREA_KIND = (t) => {
   if (t.landuse === 'forest' || t.natural === 'wood') return 'forest';
   if (t.natural === 'scrub') return 'forest';
-  if (t.name === 'Francouzský park') return 'garden';
+  if (GARDENS.has(t.name)) return 'garden';
   if (t.leisure === 'park' || t.leisure === 'garden') return 'park';
   if (t.landuse === 'cemetery') return 'cemetery';
   if (t.landuse === 'meadow' || t.landuse === 'grass') return 'grass';
@@ -512,11 +511,11 @@ for (const e of area) {
 }
 
 const paved = [];
-// Mírové náměstí nemá v OSM plochu: obrys dá obal jeho ulic včetně pruhů kolem;
+// Náměstí bez plochy v OSM (Mírové náměstí v Dobříši): obrys dá obal jeho ulic včetně pruhů kolem;
 // musí zůstat první plochou 'square', podle toho hra pozná, kam patří historické lampy
-{
+if (city.squareStreet) {
   const pts = [];
-  for (const w of roads) if (w.tags.name === 'Mírové náměstí') for (const p of w.geometry) pts.push(toGame(p.lat, p.lon));
+  for (const w of roads) if (w.tags.name === city.squareStreet) for (const p of w.geometry) pts.push(toGame(p.lat, p.lon));
   pts.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
   const half = (list) => {
     const h = [];
@@ -829,7 +828,7 @@ for (const e of area) {
 const pointsOf = (filter) => area.filter(filter).map((e) => toGame(e.lat, e.lon)).filter(near).flatMap((p) => [dm(p[0]), dm(p[1])]);
 const lamps = pointsOf((e) => e.type === 'node' && e.tags?.highway === 'street_lamp');
 const trees = pointsOf((e) => e.type === 'node' && e.tags?.natural === 'tree');
-trees.push(-930, -80, -820, -90); // před průčelím radnice: v OSM nejsou, na fotkách ano
+trees.push(...(city.extraTrees ?? [])); // ruční doplňky: v OSM nejsou, na fotkách ano
 const poi = read('osm_poi.json');
 const statues = poi.filter((e) => e.type === 'node' && (e.tags?.artwork_type === 'statue' || e.tags?.memorial === 'statue'))
   .map((e) => toGame(e.lat, e.lon)).filter(near).flatMap((p) => [dm(p[0]), dm(p[1])]);
@@ -911,20 +910,20 @@ const scene = {
   buses: buses.flatMap(([x, z, hd]) => [dm(x), dm(z), Math.round(hd * 100)]),
 };
 
-// centrum (Mírové náměstí a Pražská u startu): místo svodidel obrubník a sloupky, jízda se nemění
-const URBAN_START = 140;
-def.urban = spansWhere((k) => alongCentre(cl.px[k], cl.pz[k]).d < 50 || Math.hypot(cl.px[k], cl.pz[k]) < URBAN_START);
+// centrum (náměstí a okolí startu): místo svodidel obrubník a sloupky, jízda se nemění
+const URBAN = city.urban ?? { start: 0, centre: 0 };
+def.urban = spansWhere((k) => alongCentre(cl.px[k], cl.pz[k]).d < URBAN.centre || Math.hypot(cl.px[k], cl.pz[k]) < URBAN.start);
 
-mkdirSync(join(GAME, 'data'), { recursive: true });
+mkdirSync(dirname(ctx.scene), { recursive: true });
 const json = JSON.stringify(scene);
-writeFileSync(join(GAME, 'data/dobris.json'), json);
+writeFileSync(ctx.scene, json);
 
 const lines = def.points.map((p) => `    [${p.join(', ')}],`).join('\n');
 const { points: _p, widths: _w, ...head } = def;
 const fields = Object.entries(head).map(([k, v]) => `  ${k}: ${JSON.stringify(v).replace(/"/g, "'")},`).join('\n');
-writeFileSync(join(GAME, 'js/tracks-dobris.js'), `// Vygenerováno nástrojem tools/osm2track.mjs, ručně neupravovat.
+writeFileSync(ctx.track, `// Vygenerováno nástrojem tools/osm2track.mjs, ručně neupravovat.
 // Osa podle OpenStreetMap (ODbL), výšky z DMR 5G © ČÚZK (CC BY 4.0).
-export const DOBRIS = {
+export const ${city.exportName} = {
 ${fields}
   // poměr šířek mezi úseky: [metr od startu, šířka silnice]
   widths: ${JSON.stringify(def.widths)},
