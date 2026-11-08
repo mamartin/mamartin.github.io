@@ -109,8 +109,13 @@ function tab(points) {
   };
 }
 
+// jemnost modelu: 1 = dálka (původní síť), FINE_HI = auto blízko kamery (hustší řezy, kola i profil)
+const FINE_HI = 1.8;
+let FINE = 1;
+const seg = (n) => Math.round(n * FINE);
+
 const range = (z0, z1, step) => {
-  const n = Math.max(1, Math.round((z1 - z0) / step));
+  const n = Math.max(1, Math.round(((z1 - z0) * FINE) / step));
   return Array.from({ length: n + 1 }, (_, i) => z0 + ((z1 - z0) * i) / n);
 };
 
@@ -122,9 +127,10 @@ function rising(pts) {
 
 // těleso z příčných řezů: half(z) vrací pravou polovinu řezu (x ≥ 0) od spodního středu
 // k hornímu; levá polovina se zrcadlí, konce se zavřou víčky. Hladké normály.
-function loft(zs, half, caps = true) {
+// smooth: od kterého bodu poloviny řezu se profil v jemném modelu vyhladí (Catmull-Rom, boky a střecha)
+function loft(zs, half, caps = true, smooth = -1) {
   const rings = zs.map((z) => {
-    const h = half(z);
+    const h = smooth >= 0 && FINE > 1 ? smoothHalf(half(z), smooth) : half(z);
     return [...h, ...h.slice(1, -1).reverse().map(([x, y]) => [-x, y])].map(([x, y]) => [x, y, z]);
   });
   const n = rings[0].length;
@@ -161,6 +167,22 @@ function loft(zs, half, caps = true) {
   g.setIndex(idx);
   g.computeVertexNormals();
   return ni(g);
+}
+
+// mezi body poloviny řezu od indexu `from` vloží body na křivce Catmull-Rom (zaoblené hrany boků a střechy)
+function smoothHalf(pts, from) {
+  const out = pts.slice(0, from + 1);
+  const at = (i) => pts[Math.max(0, Math.min(pts.length - 1, i))];
+  for (let i = from; i < pts.length - 1; i++) {
+    const p0 = at(i - 1), p1 = at(i), p2 = at(i + 1), p3 = at(i + 2);
+    for (const t of [1 / 3, 2 / 3]) {
+      const t2 = t * t, t3 = t2 * t;
+      const f = (k) => 0.5 * (2 * p1[k] + (p2[k] - p0[k]) * t + (2 * p0[k] - 5 * p1[k] + 4 * p2[k] - p3[k]) * t2 + (3 * p1[k] - p0[k] - 3 * p2[k] + p3[k]) * t3);
+      out.push([f(0), f(1)]);
+    }
+    out.push(p2);
+  }
+  return rising(out);
 }
 
 // tenký pás po povrchu (pruhy): mezi |x0| a |x1| na obou stranách, ve výšce yOf(z), lícem nahoru
@@ -208,32 +230,38 @@ function wheelParts(r, w, { sideRing = false } = {}) {
     [r * 0.68, -w / 2], [r * 0.9, -w / 2], [r * 0.98, -w / 2 + 0.03], [r, -w / 2 + 0.07],
     [r, w / 2 - 0.07], [r * 0.98, w / 2 - 0.03], [r * 0.9, w / 2], [r * 0.68, w / 2],
   ].map(([x, y]) => new THREE.Vector2(x, y));
-  const lathe = ni(new THREE.LatheGeometry(prof, 20).rotateZ(Math.PI / 2));
+  const lathe = ni(new THREE.LatheGeometry(prof, seg(20)).rotateZ(Math.PI / 2));
   lathe.deleteAttribute('uv');
   lathe.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(lathe.attributes.position.count * 2), 2));
   const tire = mergeGeometries([
     lathe,
-    ni(new THREE.CylinderGeometry(r * 0.66, r * 0.66, 0.02, 16).rotateZ(Math.PI / 2)),
-    ni(new THREE.CylinderGeometry(r * 0.5, r * 0.5, w * 0.55, 14).rotateZ(Math.PI / 2)),
+    ni(new THREE.CylinderGeometry(r * 0.66, r * 0.66, 0.02, seg(16)).rotateZ(Math.PI / 2)),
+    ni(new THREE.CylinderGeometry(r * 0.5, r * 0.5, w * 0.55, seg(14)).rotateZ(Math.PI / 2)),
   ]);
   const face = (sx) => {
     const x = sx * (w / 2 - 0.035);
     const out = [];
+    // jemný model: dvojité paprsky (V), matice kolem středu a vrtaný brzdový kotouč za diskem
+    const spokes = FINE > 1 ? [-0.11, 0.11] : [0];
     for (let k = 0; k < 5; k++) {
-      const g = new THREE.BoxGeometry(0.035, 0.07, r * 0.52).translate(0, 0, r * 0.36);
-      g.rotateX((k * Math.PI * 2) / 5).translate(x, 0, 0);
-      out.push(ni(g));
+      for (const da of spokes) {
+        const g = new THREE.BoxGeometry(0.035, FINE > 1 ? 0.045 : 0.07, r * 0.52).translate(0, 0, r * 0.36);
+        g.rotateX((k * Math.PI * 2) / 5 + da * (1 - 0.3)).translate(x, 0, 0);
+        out.push(ni(g));
+      }
+      if (FINE > 1) out.push(ni(new THREE.CylinderGeometry(0.014, 0.014, 0.03, 6).rotateZ(Math.PI / 2).translate(x + sx * 0.01, 0, r * 0.11).rotateX((k * Math.PI * 2) / 5 + 0.6)));
     }
-    out.push(ni(new THREE.TorusGeometry(r * 0.645, 0.02, 3, 16).rotateY(Math.PI / 2).translate(sx * (w / 2 - 0.02), 0, 0)));
+    out.push(ni(new THREE.TorusGeometry(r * 0.645, 0.02, seg(3), seg(16)).rotateY(Math.PI / 2).translate(sx * (w / 2 - 0.02), 0, 0)));
     return out;
   };
   const rim = mergeGeometries([
     ...face(1), ...face(-1),
-    ni(new THREE.CylinderGeometry(r * 0.14, r * 0.14, w - 0.04, 8).rotateZ(Math.PI / 2)),
+    ni(new THREE.CylinderGeometry(r * 0.14, r * 0.14, w - 0.04, seg(8)).rotateZ(Math.PI / 2)),
+    ...(FINE > 1 ? [ni(new THREE.CylinderGeometry(r * 0.56, r * 0.56, 0.03, seg(16)).rotateZ(Math.PI / 2))] : []),
   ]);
   const accent = mergeGeometries([
     ...mirrorX((sx) => box(0.07, r * 0.3, r * 0.24, sx * (w / 2 - 0.09), r * 0.33, -r * 0.2)),
-    ...(sideRing ? mirrorX((sx) => ni(new THREE.TorusGeometry(r * 0.82, 0.013, 3, 22).rotateY(Math.PI / 2).translate(sx * (w / 2 + 0.002), 0, 0))) : []),
+    ...(sideRing ? mirrorX((sx) => ni(new THREE.TorusGeometry(r * 0.82, 0.013, 3, seg(22)).rotateY(Math.PI / 2).translate(sx * (w / 2 + 0.002), 0, 0))) : []),
   ]);
   return { tire, rim, accent, r };
 }
@@ -269,14 +297,25 @@ function carBodyHalf(z) {
   ]);
 }
 
-let shared = null;
-function sharedParts() {
-  if (shared) return shared;
+let shared = null, sharedFine = null;
+// fine: hustší geometrie pro auto blízko kamery (materiály se berou z běžné sady)
+function sharedParts(fine = false) {
+  if (fine) {
+    if (!sharedFine) {
+      FINE = FINE_HI;
+      try { sharedFine = buildShared(); } finally { FINE = 1; }
+    }
+    return sharedFine;
+  }
+  if (!shared) shared = buildShared();
+  return shared;
+}
+function buildShared() {
   // kolem kol husté řezy (oblouk podběhu), jinde řidší
   const nearWheel = (z) => CAR_WHEELS.some((zw) => Math.abs(z - zw) < 0.5);
   const zs = [...range(-2.28, 2.32, 0.08).filter((z) => !nearWheel(z)), ...CAR_WHEELS.flatMap((zw) => range(zw - 0.48, zw + 0.48, 0.045))]
     .sort((p, q) => p - q);
-  const bodyGeo = loft(zs, carBodyHalf);
+  const bodyGeo = loft(zs, carBodyHalf, true, 3);
   // prosklená kabina se zužuje nahoru, střecha a sloupky jsou v barvě karoserie
   const WB = 0.78, WT = 0.6;
   const cabinGeo = loft(range(-1.5, 0.95, 0.07), (z) => {
@@ -376,7 +415,7 @@ function sharedParts() {
     return t;
   })();
 
-  shared = {
+  return {
     paintGeo, wingGeo, cabinGeo, darkGeo, panelGeo, chromeGeo, rallyBarGeo, rallyLampGeo, headGeo, tailGeo, wheel, stripeGeo,
     plate: { y: CAR_ROOF(-0.36) + 0.032, z: -0.36, rx: 0, scale: 1 },
     numberGeo: new THREE.PlaneGeometry(0.62, 0.62).rotateX(-Math.PI / 2),
@@ -396,7 +435,6 @@ function sharedParts() {
     }),
     numberMats: new Map(),
   };
-  return shared;
 }
 
 // formule: monokok s bočnicemi zúženými dozadu, tvarovaný nos, vícedílná křídla,
@@ -410,9 +448,19 @@ const F_NOSE_W = tab([[0.75, 0.27], [1.5, 0.2], [2.2, 0.13], [2.32, 0.06]]);
 const F_NOSE_H = tab([[0.75, 0.19], [1.5, 0.13], [2.2, 0.09], [2.32, 0.04]]);
 const noseTop = (z) => F_NOSE_Y(z) + F_NOSE_H(z);
 
-let formula = null;
-function formulaParts() {
-  if (formula) return formula;
+let formula = null, formulaFine = null;
+function formulaParts(fine = false) {
+  if (fine) {
+    if (!formulaFine) {
+      FINE = FINE_HI;
+      try { formulaFine = buildFormula(); } finally { FINE = 1; }
+    }
+    return formulaFine;
+  }
+  if (!formula) formula = buildFormula();
+  return formula;
+}
+function buildFormula() {
   const yb = 0.16;
   const body = loft(range(-2.05, 0.8, 0.06), (z) => {
     const sw = F_SIDE_W(z), st = F_SIDE_TOP(z), cw = F_SPINE_W(z), ct = F_SPINE_TOP(z);
@@ -485,18 +533,39 @@ function formulaParts() {
       beam([sx * 0.15, 0.3, -1.62], [sx * 0.7, 0.3, -1.45], 0.04, 0.03),
     ]).flat(),
   ]);
-  const helmetGeo = new THREE.SphereGeometry(0.17, 18, 12);
+  const helmetGeo = new THREE.SphereGeometry(0.17, seg(18), seg(12));
   helmetGeo.translate(0, 0.78, -0.32);
   const visorGeo = box(0.26, 0.07, 0.1, 0, 0.8, -0.18);
   const headGeo = mergeGeometries(mirrorX((sx) => box(0.05, 0.025, 0.1, sx * 0.115, F_NOSE_Y(2.1), 2.1)));
   const tailGeo = box(0.14, 0.1, 0.04, 0, 0.34, -2.08);
-  formula = {
+  return {
     paintGeo, wingGeo, accentGeo, darkGeo, helmetGeo, visorGeo, headGeo, tailGeo,
     front: wheelParts(0.36, 0.34, { sideRing: true }), rear: wheelParts(0.42, 0.46, { sideRing: true }),
     plate: { y: noseTop(1.25) + 0.012, z: 1.25, rx: Math.atan2(noseTop(0.75) - noseTop(2.0), 1.25), scale: 0.45 },
     helmetMat: new THREE.MeshStandardMaterial({ color: 0xf4f1e8, roughness: 0.25, metalness: 0.3 }),
   };
-  return formula;
+}
+
+// geometrie běžného modelu -> stejný díl jemného modelu (podle jmen vlastností, i v kolech)
+function fineMap(lo, hi, map = new Map()) {
+  for (const k of Object.keys(lo)) {
+    const a = lo[k], b = hi[k];
+    if (a?.isBufferGeometry && b?.isBufferGeometry) map.set(a, b);
+    else if (a && b && typeof a === 'object' && !a.isMaterial && !a.isTexture && !(a instanceof Map)) fineMap(a, b, map);
+  }
+  return map;
+}
+
+// auta, která přepínají jemnost podle vzdálenosti kamery (updateCarDetail volá scene.onBeforeRender)
+const detailed = new Set();
+const FINE_DIST = 26; // m
+const _camPos = new THREE.Vector3(), _carPos = new THREE.Vector3();
+export function updateCarDetail(cam) {
+  cam.getWorldPosition(_camPos);
+  for (const m of detailed) {
+    m.root.getWorldPosition(_carPos);
+    m.setDetail(_carPos.distanceToSquared(_camPos) < FINE_DIST * FINE_DIST);
+  }
 }
 
 const luminance = (hex) => {
@@ -670,7 +739,22 @@ export function createCarMesh(color, {
     lightBeam.position.set(0, 0.06, 15);
     root.add(lightBeam);
   }
-  return { root, tilt, wheels, syncWheels, mats, beam: lightBeam };
+  // jemný model blízko kamery: stejné díly, hustší síť (geometrie se jen vymění)
+  const lo2hi = fineMap(F || P, F ? formulaParts(true) : sharedParts(true));
+  const hi2lo = new Map([...lo2hi].map(([a, b]) => [b, a]));
+  let fine = false;
+  const mesh = { root, tilt, wheels, syncWheels, mats, beam: lightBeam };
+  mesh.setDetail = (on) => {
+    if (on === fine) return;
+    fine = on;
+    const swap = on ? lo2hi : hi2lo;
+    tilt.traverse((o) => {
+      const g = o.isMesh && swap.get(o.geometry);
+      if (g) o.geometry = g;
+    });
+  };
+  if (!ghost) detailed.add(mesh);
+  return mesh;
 }
 
 // mastný flek od bábiny buchty (druhý kus je nahoře, aby byl vidět i z kamery za autem)
@@ -733,6 +817,7 @@ export function disposeCarMesh(mesh) {
   ]);
   if (formula) sharedMats.add(formula.helmetMat);
   if (stain) sharedMats.add(stain.mat);
+  detailed.delete(mesh);
   mesh.root.traverse((o) => {
     if (o.material && !sharedMats.has(o.material)) o.material.dispose();
     if (o.isInstancedMesh) o.dispose();

@@ -13,6 +13,9 @@ import { buildRoadSigns } from './roadsigns.js';
 import { lodAt, instancedLevels } from './lod.js';
 import { readScene } from './scenecodec.js';
 import { buildLife, waitingCars } from './townlife.js';
+import { skyline, bakeAO, aoMaterial } from './ao.js';
+import { facadeMaterial, maskTexture } from './facade.js';
+import { buildStreetDetail } from './streetdetail.js';
 
 // jak daleko od osy trati ještě něco vrhá stín
 const SHADOW_REACH = 70;
@@ -167,7 +170,7 @@ export function paintGround(town, track, terrain, quality, anisotropy) {
 }
 
 function paintRect(town, track, rect, size, anisotropy) {
-  const { c, ctx } = worldCanvas(rect, size);
+  const { c, ctx, sx } = worldCanvas(rect, size);
   const rng = new RNG(4711);
   const W = rect.w, H = rect.h;
   ctx.fillStyle = '#6f9849';
@@ -203,6 +206,19 @@ function paintRect(town, track, rect, size, anisotropy) {
   for (const s of town.streets) strokeLines(ctx, [s.line], s.width + 3.4, '#a9a69e');
   for (const s of town.streets) strokeLines(ctx, [s.line], s.width, '#58595c');
   trackBand(ctx, track, 3.6, '#adaaa2');
+  // stín oblohy kolem domů: rozmazaný tmavý lem, jedna cesta pro všechny obrysy (jedno rozmazání)
+  ctx.save();
+  ctx.globalCompositeOperation = 'multiply';
+  ctx.shadowColor = 'rgba(0,0,0,0.5)';
+  ctx.shadowBlur = 3.5 * sx;
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  for (const r of [...town.buildings.map((b) => b.ring), ...town.landmarks.map((l) => l.ring)]) {
+    r.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])));
+    ctx.closePath();
+  }
+  ctx.fill('nonzero');
+  ctx.restore();
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalCompositeOperation = 'multiply';
   ctx.fillStyle = ctx.createPattern(grain(rng), 'repeat');
@@ -215,11 +231,12 @@ function paintRect(town, track, rect, size, anisotropy) {
 }
 
 // bílá stěna s okny, barvu fasády dodají vrcholy; rohy buněk zůstávají čisté pro plné plochy
-function windowTexture(rng, anisotropy, rects = []) {
+function windowTexture(rng, anisotropy, rects = [], holes = []) {
   const S = 64;
   const c = document.createElement('canvas');
-  c.width = c.height = S * 4;
+  c.width = c.height = S * 8;
   const ctx = c.getContext('2d');
+  ctx.scale(2, 2); // ostřejší zblízka; souřadnice zůstávají v 256 px (masky a svítící okna)
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, S * 4, S * 4);
   for (let j = 0; j < 4; j++) {
@@ -232,6 +249,7 @@ function windowTexture(rng, anisotropy, rects = []) {
       ctx.fillStyle = ['#46586a', '#3c4c5e', '#55697a', '#40505c'][rng.int(0, 3)];
       ctx.fillRect(x, y, w, h);
       rects.push([x, y, w, h]);
+      holes.push([x - 1.5, y - 1.5, w + 3, h + 3, 1, true]);
       ctx.fillStyle = 'rgba(255,255,255,0.16)';
       ctx.fillRect(x, y, w, h * 0.34);
       ctx.fillStyle = '#f7f6f2';
@@ -247,11 +265,12 @@ function windowTexture(rng, anisotropy, rects = []) {
 }
 
 // pásová okna (školy, úřady): v každém patře souvislý pás skla s úzkými sloupky, pod ním parapet
-function ribbonTexture(anisotropy, rects = []) {
+function ribbonTexture(anisotropy, rects = [], holes = []) {
   const S = 64;
   const c = document.createElement('canvas');
-  c.width = c.height = S * 4;
+  c.width = c.height = S * 8;
   const ctx = c.getContext('2d');
+  ctx.scale(2, 2); // ostřejší zblízka; souřadnice zůstávají v 256 px (masky a svítící okna)
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, S * 4, S * 4);
   for (let j = 0; j < 4; j++) {
@@ -261,6 +280,7 @@ function ribbonTexture(anisotropy, rects = []) {
     ctx.fillStyle = ['#4a5d6e', '#42566a', '#506476', '#46596b'][j];
     ctx.fillRect(0, y, S * 4, h);
     for (let x = 0; x < S * 4; x += S / 2) rects.push([x + 2, y, S / 2 - 2, h]);
+    holes.push([0, y, S * 4, h, 1, true]);
     ctx.fillStyle = 'rgba(255,255,255,0.14)';
     ctx.fillRect(0, y, S * 4, h * 0.35);
     ctx.fillStyle = '#e8e6e0';
@@ -274,11 +294,12 @@ function ribbonTexture(anisotropy, rects = []) {
 }
 
 // panelák: sloupce oken a lodžií (tmavé zapuštění, světlý parapet přes spodní část, balkonové dveře vzadu)
-function panelTexture(rng, anisotropy, rects = []) {
+function panelTexture(rng, anisotropy, rects = [], holes = []) {
   const S = 64;
   const c = document.createElement('canvas');
-  c.width = c.height = S * 4;
+  c.width = c.height = S * 8;
   const ctx = c.getContext('2d');
+  ctx.scale(2, 2); // ostřejší zblízka; souřadnice zůstávají v 256 px (masky a svítící okna)
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, S * 4, S * 4);
   for (let j = 0; j < 4; j++) {
@@ -290,6 +311,8 @@ function panelTexture(rng, anisotropy, rects = []) {
         const l = i === 1 ? 4 : 0, r = i === 2 ? 4 : 0;
         ctx.fillStyle = '#5a5853';
         ctx.fillRect(x0 + l, y0, S - l - r, S);
+        holes.push([x0 + l, y0, S - l - r, 36, 1, false]);
+        holes.push(i === 1 ? [x0 + 18, y0 + 6, 20, 30, 1, true] : [x0 + 6, y0 + 6, 34, 24, 1, true]);
         ctx.fillStyle = ['#2f3b47', '#36424f', '#2b3640'][rng.int(0, 2)];
         if (i === 1) { ctx.fillRect(x0 + 18, y0 + 6, 20, 40); rects.push([x0 + 18, y0 + 6, 20, 30]); } // dveře
         else { ctx.fillRect(x0 + 6, y0 + 6, 34, 24); rects.push([x0 + 6, y0 + 6, 34, 24]); } // okno
@@ -306,6 +329,7 @@ function panelTexture(rng, anisotropy, rects = []) {
         ctx.fillStyle = ['#46586a', '#3c4c5e', '#55697a'][rng.int(0, 2)];
         ctx.fillRect(x, y, w, h);
         rects.push([x, y, w, h]);
+        holes.push([x, y, w, h, 0.15, true]);
         ctx.fillStyle = '#f7f6f2';
         ctx.fillRect(x + w / 2 - 1, y, 2, h);
       }
@@ -784,7 +808,7 @@ function buildBuses(town, track, terrain, shadows, view) {
 function joinParts(a, b) {
   if (!b.pos.length) return a;
   if (!a.pos.length) return b;
-  return { pos: a.pos.concat(b.pos), nor: a.nor.concat(b.nor), col: a.col.concat(b.col), uv: a.uv.concat(b.uv) };
+  return { pos: a.pos.concat(b.pos), nor: a.nor.concat(b.nor), col: a.col.concat(b.col), uv: a.uv.concat(b.uv), ao: a.ao && b.ao ? a.ao.concat(b.ao) : undefined };
 }
 
 // (x, z, self) → leží bod v jiném obrysu než self? Mřížka po 16 m, ať se nehledá ve všech domech.
@@ -828,15 +852,23 @@ export function buildTown(town, track, terrain, quality, seed, anisotropy, fogFa
   const shopFront = (x, z) => terrain.distAt(x, z) < track.edge + 6 || squares.some((r) => pointInRing(x, z, r));
   const standing = town.buildings.map((b, i) => ({ ...b, shop: town.shops.has(i), levels: town.levels.get(i), facade: town.facades?.get(i) ?? 0 })).filter((b) => !b.ring.some((p) => terrain.keepOut(p[0], p[1])));
   const neighbourAt = ringIndex([...standing.map((b) => b.ring), ...town.landmarks.map((l) => l.ring)]);
+  // stínění od okolních domů (ao.js): rastr výšek kolem trati, vrcholy každého domu hned po jeho stavbě
+  const sky = skyline(standing, track, terrain);
+  const PARTS = ['walls', 'plain', 'shops', 'ribbon', 'panel'];
   standing.forEach((b, i) => {
     const c = b.ring[0];
     placed.push(b.ring);
-    addBuilding(tileOf(c[0], c[1]), terrain, b.ring, {
+    const tile = tileOf(c[0], c[1]);
+    const from = PARTS.map((k) => tile[k].pos.length / 3);
+    addBuilding(tile, terrain, b.ring, {
       wall: b.wall, roof: b.roof, shape: b.shape,
       face: color(town.palette.wall[b.face]), top: color(town.palette.roof[b.top]), plain: plainWalls.has(b.face),
       shopFront: b.shop ? shopFront : null,
       party: (x, z) => neighbourAt(x, z, i), wings: true, levels: b.levels, facade: b.facade,
+      // parapety jen u domů do 30 m od okraje trati, dál jsou menší než pixel
+      detail: tile.near && b.ring.some((p) => terrain.distAt(p[0], p[1]) < track.edge + 30),
     });
+    PARTS.forEach((k, j) => bakeAO(tile[k], sky, terrain, from[j], i));
   });
   for (const l of town.landmarks) placed.push(l.ring);
   // hrubá mřížka stačí daleko od trati, u ní rozhoduje přesná vzdálenost
@@ -857,13 +889,22 @@ export function buildTown(town, track, terrain, quality, seed, anisotropy, fogFa
   // čte nejostřejší mipmapa a barva zůstane přesně barvou vrcholů.
   // v noci svítí část oken (vlastní náhoda, ať se denní město nezmění), výlohy všechny
   const litRng = new RNG(seed + 77);
-  const rects = { wall: [], ribbon: [], panel: [] };
+  const rects = { wall: [], ribbon: [], panel: [] }, holes = { wall: [], ribbon: [], panel: [] };
   const glow = (map, lit) => (night ? { map, vertexColors: true, emissive: 0xffffff, emissiveMap: lit, emissiveIntensity: 1.25 } : { map, vertexColors: true });
-  const wallTex = windowTexture(rng, anisotropy, rects.wall), ribbonTex = ribbonTexture(anisotropy, rects.ribbon), panelTex = panelTexture(rng, anisotropy, rects.panel);
+  const wallTex = windowTexture(rng, anisotropy, rects.wall, holes.wall), ribbonTex = ribbonTexture(anisotropy, rects.ribbon, holes.ribbon);
+  const panelTex = panelTexture(rng, anisotropy, rects.panel, holes.panel);
   const wallMat = new THREE.MeshLambertMaterial(glow(wallTex, night && litTexture(rects.wall, litRng, 0.3)));
   const shopMat = new THREE.MeshLambertMaterial(glow(shopTexture(anisotropy), night && litTexture([[14, 36, 66, 80], [86, 36, 28, 84], [6, 8, 116, 18]], litRng, 1, 128, false)));
   const ribbonMat = new THREE.MeshLambertMaterial(glow(ribbonTex, night && litTexture(rects.ribbon, litRng, 0.2)));
   const panelMat = new THREE.MeshLambertMaterial(glow(panelTex, night && litTexture(rects.panel, litRng, 0.35)));
+  // ploty, zdi a díly památek: stínění bez vlastního domu
+  for (const t of tiles.values()) for (const k of PARTS) bakeAO(t[k], sky, terrain, (t[k].ao?.length ?? 0) / 2);
+  // zapuštěná okna (facade.js): hloubka v UV = metry × UV na metr (buňka oken 0,25 UV na ~3 m, výloha 1 UV na 4,5 m)
+  facadeMaterial(wallMat, maskTexture(holes.wall), 0.22 * 0.25 / 3);
+  facadeMaterial(ribbonMat, maskTexture(holes.ribbon), 0.15 * 0.25 / 3);
+  facadeMaterial(panelMat, maskTexture(holes.panel), 1.2 * 0.25 / 3.8);
+  facadeMaterial(shopMat, maskTexture([[14, 36, 66, 80, 1, true], [86, 36, 28, 84, 1, true]], 128, false), 0.3 / 4.5);
+  for (const m of [wallMat, shopMat, ribbonMat, panelMat]) aoMaterial(m);
   const blocks = new Map();
   for (const t of tiles.values()) {
     if (!blocks.has(t.block)) blocks.set(t.block, new THREE.Group());
@@ -881,12 +922,14 @@ export function buildTown(town, track, terrain, quality, seed, anisotropy, fogFa
     lod.name = 'blok';
     group.add(lod);
   }
+  group.userData.skyline = sky;
   group.add(buildWater(town));
   group.add(buildGreenery(town, track, terrain, placed, density, shadows, rng, view));
   group.add(buildLamps(town, track, terrain, rng, view, night));
   const blocked = (x, z) => neighbourAt(x, z, -1);
   group.add(buildCars(town, track, terrain, shadows, view, waitingCars(town, track, terrain, { seed: seed + 31, blocked }), night));
   group.add(buildLife(town, track, terrain, { view, night, seed: seed + 41, blocked }));
+  group.add(buildStreetDetail(track, terrain, seed + 53, view));
   if (track.def.islands?.length) group.add(buildIslands(track, terrain));
   group.add(buildBuses(town, track, terrain, shadows, view));
   group.add(buildRoadSigns(town, track, terrain, anisotropy, (x, z) => neighbourAt(x, z, -1)));

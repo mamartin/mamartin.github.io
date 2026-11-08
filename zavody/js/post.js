@@ -1,5 +1,6 @@
-// Efekty přes obraz. Vysoká kvalita: bloom kolem světel, neonů, nitra a slunce, rozmazání rychlostí
-// a ztmavení rohů. Ultra navíc: stínění ve škvírách, odrazy na mokré silnici a hloubka ostrosti v záznamu.
+// Efekty přes obraz. Vysoká kvalita: bloom kolem světel, neonů, nitra a slunce, rozmazání rychlostí,
+// ztmavení rohů a levné stínění ve škvírách (čtvrtinové rozlišení). Ultra: stínění v polovičním rozlišení
+// s více vzorky, odrazy na mokré silnici a hloubka ostrosti v záznamu.
 // Všechno se skládá v jediném průchodu rovnou na obrazovku: každý další celoobrazovkový průchod přes
 // velký buffer je na 4K a retině dražší než celá scéna.
 import * as THREE from 'three';
@@ -31,7 +32,10 @@ const AO_FRAG = /* glsl */ `
   uniform float aspect;
   ${VIEW_POS}
   ${NOISE}
-  const int SAMPLES = 10;
+  #ifndef AO_SAMPLES
+  #define AO_SAMPLES 10
+  #endif
+  const int SAMPLES = AO_SAMPLES;
   const float RADIUS = 1.7;
   void main() {
     float z = texture2D(tDepth, vUv).r;
@@ -109,10 +113,12 @@ const FINAL_FRAG = /* glsl */ `
   uniform sampler2D tBloom;
   uniform float bloom;
   ${NOISE}
-  #if HEAVY
+  #if HEAVY || LITE_AO
   uniform sampler2D tAO;
-  uniform sampler2D tSSR;
   uniform float useAO;
+  #endif
+  #if HEAVY
+  uniform sampler2D tSSR;
   uniform float useSSR;
   uniform float focusDist;
   ${VIEW_POS}
@@ -155,6 +161,8 @@ const FINAL_FRAG = /* glsl */ `
       r /= 5.0;
       if (r.a > 0.001) col = mix(col, r.rgb / r.a, min(r.a, 0.62));
     }
+    #endif
+    #if HEAVY || LITE_AO
     if (useAO > 0.5) {
       float ao = texture2D(tAO, vUv + texel * vec2(-1.0, -1.0)).r + texture2D(tAO, vUv + texel * vec2(1.0, -1.0)).r
         + texture2D(tAO, vUv + texel * vec2(-1.0, 1.0)).r + texture2D(tAO, vUv + texel * vec2(1.0, 1.0)).r;
@@ -210,18 +218,20 @@ const screenMaterial = (fragmentShader, uniforms, defines = {}) => new THREE.Sha
 const probe = new THREE.Vector3();
 
 export class Post {
-  constructor(renderer, scene, camera, ultra = false) {
+  // lite: vysoká kvalita má levnější stínění ve škvírách (čtvrtinové rozlišení, 6 vzorků místo 10)
+  constructor(renderer, scene, camera, ultra = false, lite = false) {
     this.renderer = renderer;
     this.scene = scene;
     this.camera = camera;
     this.ultra = ultra;
-    this.heavy = ultra;
+    this.lite = !ultra && lite;
+    this.heavy = ultra || this.lite;
     this.wet = false;
     this.motion = 0;
     this.compact = renderer.extensions.has('EXT_color_buffer_float');
     this.quad = new FullScreenQuad();
     this.rt = this.hdrTarget({ samples: 4, depthBuffer: true });
-    if (ultra) this.rt.depthTexture = new THREE.DepthTexture(4, 4, THREE.UnsignedIntType);
+    if (ultra || this.lite) this.rt.depthTexture = new THREE.DepthTexture(4, 4, THREE.UnsignedIntType);
     this.down = Array.from({ length: BLOOM_LEVELS }, () => this.hdrTarget());
     this.up = Array.from({ length: BLOOM_LEVELS - 1 }, () => this.hdrTarget());
     const blurUniforms = () => ({ tex: { value: null }, px: { value: new THREE.Vector2() }, threshold: { value: 1 } });
@@ -244,13 +254,15 @@ export class Post {
       useAO: { value: 0 },
       useSSR: { value: 0 },
       focusDist: { value: 0 },
-    }, { HEAVY: ultra ? 1 : 0 });
-    if (ultra) {
+    }, { HEAVY: ultra ? 1 : 0, LITE_AO: this.lite ? 1 : 0 });
+    if (ultra || this.lite) {
       this.aoRT = new THREE.WebGLRenderTarget(4, 4, { format: THREE.RedFormat, depthBuffer: false });
-      this.ssrRT = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, depthBuffer: false });
-      this.ao = screenMaterial(AO_FRAG, { ...this.shared, texel: { value: new THREE.Vector2() }, focal: { value: 1 } });
-      this.ssr = screenMaterial(SSR_FRAG, { ...this.shared, tScene: { value: null }, proj: { value: new THREE.Matrix4() }, up: { value: new THREE.Vector3() } });
+      this.ao = screenMaterial(AO_FRAG, { ...this.shared, texel: { value: new THREE.Vector2() }, focal: { value: 1 } }, { AO_SAMPLES: this.lite ? 6 : 10 });
       this.final.uniforms.tAO.value = this.aoRT.texture;
+    }
+    if (ultra) {
+      this.ssrRT = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, depthBuffer: false });
+      this.ssr = screenMaterial(SSR_FRAG, { ...this.shared, tScene: { value: null }, proj: { value: new THREE.Matrix4() }, up: { value: new THREE.Vector3() } });
       this.final.uniforms.tSSR.value = this.ssrRT.texture;
     }
     this.setSize();
@@ -283,10 +295,10 @@ export class Post {
     this.down.forEach((rt, i) => rt.setSize(...level(i)));
     this.up.forEach((rt, i) => rt.setSize(...level(i)));
     this.final.uniforms.texel.value.set(2 / w, 2 / h);
-    if (!this.ultra) return;
-    const [hw, hh] = level(0);
+    if (!this.aoRT) return;
+    const [hw, hh] = level(this.lite ? 1 : 0);
     this.aoRT.setSize(hw, hh);
-    this.ssrRT.setSize(hw, hh);
+    this.ssrRT?.setSize(hw, hh);
     this.ao.uniforms.texel.value.set(1 / hw, 1 / hh);
   }
 
@@ -350,13 +362,18 @@ export class Post {
     }
   }
 
-  renderHeavy() {
-    const f = this.final.uniforms, cam = this.camera;
+  renderAO() {
+    const cam = this.camera;
     this.shared.tDepth.value = this.rt.depthTexture;
     this.shared.invProj.value.copy(cam.projectionMatrixInverse);
     this.ao.uniforms.focal.value = cam.projectionMatrix.elements[5];
     this.draw(this.ao, this.aoRT);
-    f.useAO.value = 1;
+    this.final.uniforms.useAO.value = 1;
+  }
+
+  renderHeavy() {
+    const f = this.final.uniforms, cam = this.camera;
+    this.renderAO();
     if (!this.wet) return;
     const s = this.ssr.uniforms;
     s.tScene.value = this.rt.texture;
@@ -385,12 +402,14 @@ export class Post {
   present(effects = false) {
     const f = this.final.uniforms;
     f.aspect.value = this.camera.aspect;
-    f.useAO.value = f.useSSR.value = 0;
+    f.useAO.value = 0;
+    if (f.useSSR) f.useSSR.value = 0;
     if (!effects) {
       f.blur.value = f.focusDist.value = 0;
       this.rt.viewport.set(0, 0, this.rt.width, this.rt.height);
       this.rt.scissorTest = false;
     } else if (this.ultra && this.heavy) this.renderHeavy();
+    else if (this.lite && this.heavy) this.renderAO();
     this.renderBloom();
     this.draw(this.final, null);
   }

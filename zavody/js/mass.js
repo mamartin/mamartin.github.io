@@ -256,7 +256,33 @@ function partyRuns(p, q, n, len, party) {
 
 // shopFront(x, z): bod 6 m před stěnou leží na ulici, kam patří výloha (jen u domů s obchodem)
 // party(x, z): bod leží v sousedním domě, stěna k němu je společná a nemá okna; wings: dům do L, T a U dostane střechu po křídlech
-export function addBuilding(tile, terrain, ringIn, { wall, roof, shape, face, top, plain, uvOf, shopFront, party, wings, levels, facade = 0 }) {
+// parapety pod okny jednoho kusu stěny p→q (okna obyčejné textury: sklo uprostřed buňky na 48 % šířky,
+// spodní hrana 0,77 řady pod horní hranou řady); řady se počítají od římsy `top` dolů k `bottom`
+function sills(o, p, q, n, edge, cellsAll, top, bottom, rowH, col) {
+  const len = Math.hypot(q[0] - p[0], q[1] - p[1]);
+  const cellLen = edge.L / cellsAll, hw = cellLen * 0.27, out = 0.13, th = 0.07;
+  const lo = col.clone().multiplyScalar(0.7);
+  const ux = (q[0] - p[0]) / len, uz = (q[1] - p[1]) / len;
+  for (let c = 0; c < cellsAll; c++) {
+    const t = (c + 0.5) / cellsAll;
+    if (t < edge.t0 || t > edge.t1) continue;
+    const at = ((t - edge.t0) / (edge.t1 - edge.t0)) * len;
+    if (at - hw < 0.1 || at + hw > len - 0.1) continue;
+    const cx = p[0] + ux * at, cz = p[1] + uz * at;
+    for (let k = 0; ; k++) {
+      const y = top - k * rowH - 0.77 * rowH;
+      if (y < bottom + 0.5) break;
+      const A = (s, d, yy) => [cx + ux * s + n[0] * d, yy, cz + uz * s + n[2] * d];
+      panel(o, A(-hw, out, y - th), A(-hw, out, y), A(hw, out, y), A(hw, out, y - th), n, lo, col); // líc
+      panel(o, A(hw, 0, y), A(hw, out, y), A(-hw, out, y), A(-hw, 0, y), [0, 1, 0], col, col); // vrch
+      panel(o, A(-hw, 0, y - th), A(-hw, out, y - th), A(hw, out, y - th), A(hw, 0, y - th), [0, -1, 0], lo, lo); // spodek
+      // boční plošky (7 × 13 cm) se vynechávají: zdálky nejsou vidět a stály by 40 % trojúhelníků
+    }
+  }
+}
+
+// detail: dům u trati dostane parapety jako geometrii (vidět jsou jen zblízka)
+export function addBuilding(tile, terrain, ringIn, { wall, roof, shape, face, top, plain, uvOf, shopFront, party, wings, levels, facade = 0, detail = false }) {
   const ring = areaOf(ringIn) > 0 ? ringIn : [...ringIn].reverse();
   const box = orientedBox(ring);
   const sloped = shape === SHAPE.GABLE || shape === SHAPE.HIP || shape === SHAPE.CROSS;
@@ -310,6 +336,7 @@ export function addBuilding(tile, terrain, ringIn, { wall, roof, shape, face, to
     return null;
   };
   const vLow = (low - eave) / (rowH * 4);
+  const sillColor = face.clone().lerp(WHITE, 0.45);
   rim.forEach((p, i) => {
     const q = rim[(i + 1) % rim.length];
     const dx = q[0] - p[0], dz = q[1] - p[1], len = Math.hypot(dx, dz);
@@ -346,6 +373,12 @@ export function addBuilding(tile, terrain, ringIn, { wall, roof, shape, face, to
       panel(out, [p[0], low, p[1]], [p[0], gy, p[1]], [q[0], gy, q[1]], [q[0], low, q[1]], n, shade, face, [u0, u1, -0.25, 0]);
       panel(out, [p[0], gy, p[1]], [p[0], eave, p[1]], [q[0], eave, q[1]], [q[0], gy, q[1]], n, face, face, [u0, u1, (gy - eave) / (rowH * 4), 0]);
     } else wallPanel(p, q, n, uv);
+    if (detail && cells && !end && !styled && !uvOf && !(runs && (runs.length > 1 || runs[0].blank))) {
+      // parapety: u obchodu až nad výlohou, u starého domu nad vyšším přízemím
+      const shop = shopFront && len >= 3 && eave - shopY >= 2.4 && shopFront(mx, mz);
+      const bottom = shop ? shopY : old ? eave - wall + GROUND_H : eave - wall;
+      sills(tile.plain, p, q, n, edge, cellsAll, eave, bottom, shop ? FLOOR : rowH, sillColor);
+    }
     const own = ownerOf([(p[0] + q[0]) / 2 - n[0] * 0.05, (p[1] + q[1]) / 2 - n[2] * 0.05]);
     const yp = heightOf(own, p), yq = heightOf(own, q);
     if (yp > eave + 0.02 || yq > eave + 0.02) panel(out, [p[0], eave, p[1]], [p[0], yp, p[1]], [q[0], yq, q[1]], [q[0], eave, q[1]], n, face, face);
@@ -396,6 +429,7 @@ export function toMesh(o, mat, castShadow) {
   g.setAttribute('normal', new THREE.Float32BufferAttribute(o.nor, 3));
   g.setAttribute('color', new THREE.Float32BufferAttribute(o.col, 3));
   g.setAttribute('uv', new THREE.Float32BufferAttribute(o.uv, 2));
+  if (o.ao && o.ao.length === (o.pos.length / 3) * 2) g.setAttribute('ao', new THREE.Float32BufferAttribute(o.ao, 2));
   g.computeBoundingSphere();
   const m = new THREE.Mesh(g, mat);
   m.castShadow = castShadow;

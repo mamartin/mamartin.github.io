@@ -3,6 +3,10 @@
 // Stav 8. 11. 2026 tímto měřením po instancích přes celou trať (stromy, auta, lampy, kola aut) a sloučení
 // sítí trati se stejným materiálem: průměr 136 volání / 213 tis. trojúhelníků, maximum 249 / 347 tis.
 // (volání v 3,8 km, centrum u startu); limity jsou asi o 15 % výš.
+// 8. 11. 2026 po předpočítaném stínění, parapetech (domy do 30 m od trati), jemném modelu auta blízko kamery
+// a drobnostech ulic: průměr 145 / 243 tis., maximum 263 / 398 tis. (trojúhelníky v 1,46 km, stínová mapa je počítá
+// podruhé). Na trojúhelníky už rezerva skoro není; čas snímku na GPU vzrostl asi o 1,3 ms (M4, 1600 × 900).
+// Odraz okolí v laku auta (envprobe.js) se do měření nepočítá: jedna stěna krychle za snímek stojí asi 0,6 ms a 80–105 volání.
 export const PERF = {
   avgCalls: 160,
   avgTriangles: 250_000,

@@ -6,7 +6,9 @@ import { Track, SURF_OFF } from './track.js';
 import { Terrain } from './terrain.js';
 import { buildScenery, buildSky, buildLights, buildRain } from './scenery.js';
 import { loadTown, paintGround, buildTown } from './town.js';
-import { Car, createCarMesh, disposeCarMesh, addBunStain } from './car.js';
+import { shadeGround } from './ao.js';
+import { setFacadeSky } from './facade.js';
+import { Car, createCarMesh, disposeCarMesh, addBunStain, updateCarDetail } from './car.js';
 import { medalFor, hasReference, referenceLap } from './medals.js';
 import { ReplayRecorder } from './replay.js';
 import { Race, OPPONENTS } from './race.js';
@@ -41,6 +43,7 @@ import { addDamage, disposeDamage } from './damage.js';
 import { encodeGhost, decodeGhost, sharedGhost, saveSharedGhost } from './ghostshare.js';
 import { bindKeysUI, refreshKeysUI, keyPanelHtml, itemKeyLabel, keyPlayer, keysSignature, playerColor, pauseHint, esc } from './keysui.js';
 import { Post } from './post.js';
+import { EnvProbe } from './envprobe.js';
 import { splitLarge, mergeSimilar, setViewScale, collectPools, updatePools } from './lod.js';
 import { TrackEditor, customToDef, decodeTrack, checkDef } from './editor.js';
 
@@ -86,7 +89,10 @@ applyPixelRatio();
 const scene = new THREE.Scene();
 // instance stromů, aut a lamp: viditelné se vyberou podle kamery před každým vykreslením (viz lod.js)
 scene.onBeforeRender = (r, s, cam) => {
+  // odraz okolí do laku (envprobe.js) si výběr kulis a jemnost aut nepřepočítává
+  if (G.probing) return;
   if (G.world?.pools.length && cam.isPerspectiveCamera) updatePools(G.world.pools, cam);
+  if (cam.isPerspectiveCamera) updateCarDetail(cam);
 };
 const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 4200);
 const camera2 = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 4200);
@@ -153,7 +159,7 @@ function setupPost() {
     G.post.dispose();
     G.post = null;
   }
-  if (want && !G.post) G.post = new Post(renderer, scene, camera, ultra);
+  if (want && !G.post) G.post = new Post(renderer, scene, camera, ultra, S.quality === 'high');
   if (G.world) {
     if (G.post) {
       G.post.setBloom(G.world.biome.bloom);
@@ -287,10 +293,17 @@ async function loadWorld(id) {
   // dlouhé pásy a svodidla trati po čtvercích, ať se kreslí jen to, co je v záběru (jen velké sítě,
   // malé by přidaly víc volání kreslení, než ušetří)
   // sítě se stejným materiálem (obrubník, krajnice, svodidla…) napřed dohromady, ať čtverců není víc, než je třeba
-  group.add(splitLarge(mergeSimilar(track.buildMeshes(biome.track, renderer.capabilities.getMaxAnisotropy(), S.quality)), 500, 8000));
+  const trackGroup = splitLarge(mergeSimilar(track.buildMeshes(biome.track, renderer.capabilities.getMaxAnisotropy(), S.quality)), 500, 8000);
+  group.add(trackGroup);
   const scenery = buildScenery(track, terrain, def.biome, biome, S.quality, def.seed + 3);
   group.add(scenery.group);
-  if (town) group.add(buildTown(town, track, terrain, S.quality, def.seed + 5, renderer.capabilities.getMaxAnisotropy(), biome.fog.far, !!biome.night));
+  if (town) {
+    setFacadeSky(biome);
+    const townGroup = buildTown(town, track, terrain, S.quality, def.seed + 5, renderer.capabilities.getMaxAnisotropy(), biome.fog.far, !!biome.night);
+    group.add(townGroup);
+    // chodník a obrubník u domů ztmavne podle toho, kolik oblohy domy zakrývají (ao.js)
+    shadeGround(trackGroup, townGroup.userData.skyline);
+  }
   // ozvěna ulic podle domů kolem trati, jednou při stavbě (až po tribuně, kvůli domům, které jí ustoupí)
   const streets = town ? streetProfile(town, track, terrain) : null;
   audio.setStreets(streets);
@@ -1722,6 +1735,23 @@ function renderViews(w) {
   }
 }
 
+// odraz okolí v laku sledovaného auta (envprobe.js): jen vysoká kvalita a jeden hráč
+function updateProbe(focus) {
+  const want = focus && !focus.ghost && (S.quality === 'high' || S.quality === 'ultra');
+  if (!want) {
+    if (G.probeCar) G.probe.detach();
+    G.probeCar = null;
+    return;
+  }
+  if (!G.probe) G.probe = new EnvProbe(renderer);
+  if (G.probeCar !== focus) {
+    const m = focus.mesh.mats;
+    G.probe.attach([m.paint, m.wing, m.glass, m.rim]);
+    G.probeCar = focus;
+  }
+  G.probe.update(scene, focus, focus.mesh.root, G);
+}
+
 function drawViews(w) {
   const race = G.screen === 'race' ? G.race : null;
   w.sky.userData.time.value = performance.now() / 1000;
@@ -1741,6 +1771,7 @@ function drawViews(w) {
     w.effects.setView(camera, renderer.domElement.height, scene.fog);
     if (w.snow) w.snow.setView(camera, renderer.domElement.height);
     if (w.rain) w.rain.setView(camera);
+    updateProbe(focus);
     if (G.post) {
       // při obletu v cíli kamera auto nesleduje zezadu, rozmazání od středu by ho rozdvojilo
       G.post.setMotion(rig.showing ? null : focus, rig.mode === 'hood');
