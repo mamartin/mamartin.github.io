@@ -1,11 +1,11 @@
-// Nezávislá kontrola vygenerovaných souborů: čte jen js/tracks-<město>.js a data/<město>.json.
+// Nezávislá kontrola vygenerovaných souborů: čte jen js/tracks-<město>.js a data/<město>.bin.
 // Použití: node check-scene.mjs [město | vse]   (bez města Dobříš, „vse“ všechna vygenerovaná města)
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { buildCenterline, validateCenterline } from '../js/trackmath.js';
 import { localProjection } from './lib/geo.mjs';
 import { loadDem } from './lib/dem.mjs';
-import { loadCity, loadTrack, cityIds } from './lib/city.mjs';
+import { loadCity, loadTrack, loadScene, cityIds } from './lib/city.mjs';
 
 const fails = [];
 const ok = (cond, msg) => { console.log(`${cond ? 'OK  ' : 'CHYBA'} ${msg}`); if (!cond) fails.push(msg); };
@@ -29,7 +29,7 @@ process.exit(fails.length ? 1 : 0);
 
 function check(ctx, TRACK) {
   const { city } = ctx;
-  const scene = JSON.parse(readFileSync(ctx.scene, 'utf8'));
+  const scene = loadScene(ctx);
   const cl = buildCenterline(TRACK);
 
   // 1) tvar: stejné podmínky jako hra, při nominální i největší šířce
@@ -155,8 +155,9 @@ function check(ctx, TRACK) {
   ok(badBus === 0, `autobusy stojí mimo silnici a výběh (${buses.length / 3} ks)`);
 
   // 6) povinné náležitosti
+  // limit je na zabalený soubor, tolik se stáhne
   const size = readFileSync(ctx.scene).length;
-  const maxKb = city.maxSceneKb ?? 500;
+  const maxKb = city.maxSceneKb ?? 160;
   ok(size < maxKb * 1024, `velikost souboru ${(size / 1024).toFixed(0)} kB (limit ${maxKb} kB)`);
   ok(scene.license === 'ODbL-1.0' && /OpenStreetMap/.test(scene.credit) && /ČÚZK/.test(scene.credit), 'data jsou označená ODbL a uvádějí zdroje');
   const need = city.requiredLandmarks ?? [];

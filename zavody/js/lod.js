@@ -1,7 +1,8 @@
-// Levnější kreslení velkých scén: dlouhé sítě se dělí na čtverce (mimo záběr se nekreslí)
-// a vzdálené kusy se zjednoduší nebo schovají. Úrovně podrobnosti přepíná sám three.js
-// (THREE.LOD) při každém vykreslení podle vzdálenosti kamery.
+// Levnější kreslení velkých scén: sítě se stejným materiálem se sloučí, dlouhé sítě se dělí na čtverce
+// (mimo záběr se nekreslí) a vzdálené kusy se zjednoduší nebo schovají. Úrovně podrobnosti bloků přepíná
+// sám three.js (THREE.LOD), instance (stromy, auta, lampy) vybírá updatePools před každým vykreslením.
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 // Síť rozdělená po trojúhelnících do čtverců size × size podle těžiště. Vrací pole sítí se
 // stejným materiálem a stíny, nebo null, když se dělit nevyplatí.
@@ -81,6 +82,48 @@ function splitInstanced(mesh, size) {
   });
 }
 
+// Sloučí statické sítě ve stromu objektů, které se kreslí stejně (stejný druh a nastavení materiálu,
+// stíny, pořadí a atributy geometrie), do jedné sítě na kořeni: obrubník, chodník, svodidla a zábradlí
+// trati mají každý vlastní materiál se stejným nastavením. Sítě s vlastním onBeforeRender zůstanou.
+export function mergeSimilar(root) {
+  root.updateMatrixWorld(true);
+  const inv = root.matrixWorld.clone().invert();
+  const groups = new Map();
+  const noop = THREE.Object3D.prototype.onBeforeRender;
+  root.traverse((o) => {
+    if (!o.isMesh || o.isInstancedMesh || o.isSkinnedMesh || Array.isArray(o.material) || o.onBeforeRender !== noop) return;
+    const g = o.geometry, m = o.material;
+    if (g.groups.length > 1 || g.morphAttributes.position) return;
+    const key = [
+      m.type, m.vertexColors, m.side, m.transparent, m.opacity, m.alphaTest, m.flatShading, m.depthWrite, m.polygonOffset,
+      m.color?.getHex(), m.emissive?.getHex(), m.map?.uuid, m.roughness, m.metalness, m.toneMapped, m.fog,
+      o.castShadow, o.receiveShadow, o.renderOrder, !!g.index, Object.keys(g.attributes).sort().join(),
+    ].join('|');
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(o);
+  });
+  for (const list of groups.values()) {
+    if (list.length < 2) continue;
+    const geos = list.map((o) => o.geometry.clone().applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld)));
+    const merged = mergeGeometries(geos);
+    if (!merged) continue;
+    const first = list[0];
+    const mesh = new THREE.Mesh(merged, first.material);
+    mesh.castShadow = first.castShadow;
+    mesh.receiveShadow = first.receiveShadow;
+    mesh.renderOrder = first.renderOrder;
+    mesh.name = first.name;
+    for (const o of list) {
+      o.removeFromParent();
+      o.geometry.dispose();
+      if (o.material !== first.material) o.material.dispose();
+    }
+    for (const g of geos) g.dispose();
+    root.add(mesh);
+  }
+  return root;
+}
+
 // Ve stromu objektů nahradí velké statické sítě (obal širší než size, víc než minTris
 // trojúhelníků) jejich čtverci; malé sítě by jen přidaly volání kreslení.
 export function splitLarge(root, size, minTris = 2000) {
@@ -132,6 +175,7 @@ export function lodAt(center, levels) {
 // dohled: násobí vzdálenosti všech úrovní (automatická kvalita ho zkracuje spolu s mlhou)
 export function setViewScale(root, scale) {
   root.traverse((o) => {
+    if (o.userData.pool) o.userData.pool.scale = scale;
     if (!o.isLOD || !o.userData.base) return;
     o.levels.forEach((l, i) => (l.distance = o.userData.base[i] * scale));
   });
@@ -155,76 +199,106 @@ export function hideBeyond(obj, dist) {
   return lod;
 }
 
-// Instance (stromy, auta, lampy) po čtvercích s úrovněmi podrobnosti:
+// Instance (stromy, auta, lampy) s úrovněmi podrobnosti:
 // levels = [[od vzdálenosti, [[geometrie, položky, vrhá stín], ...]], ...], za cull nic.
 // Každá úroveň může kreslit jiné položky jinými tvary (zblízka třeba stromy u trati plně
-// a se stínem, ostatní siluetou; dál všechny jednou siluetou, tedy menším počtem volání).
-// Sítě se stejnými položkami sdílejí matice i barvy instancí.
-export function instancedLevels(levels, mat, { chunk = 160, cull = Infinity } = {}) {
-  const keyOf = (it) => Math.floor(it.x / chunk) + ':' + Math.floor(it.z / chunk);
-  const split = new Map();
-  const bucketsOf = (items) => {
-    if (!split.has(items)) {
-      const m = new Map();
-      for (const it of items) {
-        const k = keyOf(it);
-        if (!m.has(k)) m.set(k, []);
-        m.get(k).push(it);
-      }
-      split.set(items, m);
-    }
-    return split.get(items);
-  };
-  const chunks = new Map();
-  levels.forEach(([, parts], li) => {
-    for (const [geo, items, castShadow] of parts) {
-      for (const [k, list] of bucketsOf(items)) {
-        if (!chunks.has(k)) chunks.set(k, { parts: levels.map(() => []), items: new Set() });
-        const c = chunks.get(k);
-        c.parts[li].push([geo, list, castShadow]);
-        for (const it of list) c.items.add(it);
-      }
-    }
-  });
+// a se stínem, ostatní siluetou; dál všechny jednou siluetou).
+// Každý tvar každé úrovně je jedna InstancedMesh přes celou trať (jedno volání kreslení). Které položky
+// kreslí, vybere před každým vykreslením updatePools: vzdálenost od kamery a záběr. Tvary se stínem
+// záběr nehlídají, stín stromu za kamerou může padat do obrazu.
+export function instancedLevels(levels, mat, { cull = Infinity } = {}) {
   const m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), p = new THREE.Vector3();
   const e = new THREE.Euler(), col = new THREE.Color();
-  const shared = new Map();
-  const instanced = (geo, list, castShadow) => {
-    const mesh = new THREE.InstancedMesh(geo, mat, list.length);
-    if (shared.has(list)) {
-      const a = shared.get(list);
-      mesh.instanceMatrix = a.instanceMatrix;
-      mesh.instanceColor = a.instanceColor;
-    } else {
-      list.forEach((it, i) => {
+  const group = new THREE.Group();
+  const parts = [];
+  levels.forEach(([from, list], li) => {
+    const to = li + 1 < levels.length ? levels[li + 1][0] : cull;
+    for (const [geo, items, castShadow] of list) {
+      if (!items.length) continue;
+      if (!geo.boundingSphere) geo.computeBoundingSphere();
+      const gs = geo.boundingSphere;
+      const n = items.length;
+      // všechny matice, barvy a obalové koule položek; do sítě se kopírují jen viditelné
+      const mats = new Float32Array(n * 16), cols = items.some((it) => it.color !== undefined) ? new Float32Array(n * 3) : null;
+      const spheres = new Float32Array(n * 4);
+      items.forEach((it, i) => {
         e.set(it.rx ?? 0, it.ry ?? 0, it.rz ?? 0);
         q.setFromEuler(e);
         s.set(it.sx ?? it.s ?? 1, it.sy ?? it.s ?? 1, it.sz ?? it.s ?? 1);
         p.set(it.x, it.y, it.z);
         m.compose(p, q, s);
-        mesh.setMatrixAt(i, m);
-        if (it.color !== undefined) mesh.setColorAt(i, col.set(it.color));
+        m.toArray(mats, i * 16);
+        if (cols) col.set(it.color ?? 0xffffff).toArray(cols, i * 3);
+        const c = gs.center.clone().applyMatrix4(m);
+        spheres.set([c.x, c.y, c.z, gs.radius * Math.max(s.x, s.y, s.z)], i * 4);
       });
-      shared.set(list, mesh);
+      const mesh = new THREE.InstancedMesh(geo, mat, n);
+      mesh.count = 0;
+      mesh.frustumCulled = false; // výběr dělá updatePools
+      mesh.castShadow = !!castShadow;
+      mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      if (cols) {
+        mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(n * 3), 3);
+        mesh.instanceColor.setUsage(THREE.DynamicDrawUsage);
+      }
+      group.add(mesh);
+      parts.push({ mesh, mats, cols, spheres, n, from, to, shadow: !!castShadow });
     }
-    mesh.castShadow = !!castShadow;
-    mesh.computeBoundingSphere();
-    return mesh;
-  };
-  const group = new THREE.Group();
-  for (const c of chunks.values()) {
-    let cx = 0, cy = 0, cz = 0;
-    for (const it of c.items) {
-      cx += it.x; cy += it.y; cz += it.z;
-    }
-    const n = c.items.size;
-    const lv = levels.map(([dist], li) => {
-      const g = new THREE.Group();
-      for (const [geo, list, castShadow] of c.parts[li]) g.add(instanced(geo, list, castShadow));
-      return [g, dist];
-    });
-    if (cull < Infinity) lv.push([null, cull]);
-    group.add(lodAt({ x: cx / n, y: cy / n, z: cz / n }, lv));
-  }
+  });
+  group.userData.pool = { parts, scale: 1, key: '' };
   return group;
+}
+
+// pole instancí ve stromu objektů (jednou po postavení světa)
+export function collectPools(root) {
+  const out = [];
+  root.traverse((o) => { if (o.userData.pool) out.push(o.userData.pool); });
+  return out;
+}
+
+const frustum = new THREE.Frustum(), viewProj = new THREE.Matrix4();
+// Výběr instancí pro kameru: volá se před vykreslením scény (scene.onBeforeRender), kamera má aktuální matice.
+// Bez pohybu kamery se nic nepočítá ani nenahrává.
+export function updatePools(pools, camera) {
+  const me = camera.matrixWorld.elements, pe = camera.projectionMatrix.elements;
+  const key = `${me.join()}|${pe[0]},${pe[5]}`;
+  viewProj.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+  frustum.setFromProjectionMatrix(viewProj);
+  const planes = frustum.planes.map((pl) => [pl.normal.x, pl.normal.y, pl.normal.z, pl.constant]);
+  const cx = me[12], cy = me[13], cz = me[14];
+  for (const pool of pools) {
+    const k = `${key}|${pool.scale}`;
+    if (pool.key === k) continue;
+    pool.key = k;
+    for (const part of pool.parts) {
+      const { mesh, mats, cols, spheres, n, shadow } = part;
+      const lo = part.from * pool.scale, hi = part.to * pool.scale;
+      const lo2 = lo * lo, hi2 = hi * hi;
+      const dst = mesh.instanceMatrix.array, dcol = cols && mesh.instanceColor.array;
+      let count = 0;
+      for (let i = 0; i < n; i++) {
+        const x = spheres[i * 4], y = spheres[i * 4 + 1], z = spheres[i * 4 + 2], r = spheres[i * 4 + 3];
+        const d2 = (x - cx) ** 2 + (y - cy) ** 2 + (z - cz) ** 2;
+        if (d2 < lo2 || d2 >= hi2) continue;
+        if (!shadow) {
+          let out = false;
+          for (const pl of planes) if (pl[0] * x + pl[1] * y + pl[2] * z + pl[3] < -r) { out = true; break; }
+          if (out) continue;
+        }
+        dst.set(mats.subarray(i * 16, i * 16 + 16), count * 16);
+        if (dcol) dcol.set(cols.subarray(i * 3, i * 3 + 3), count * 3);
+        count++;
+      }
+      if (count === 0 && mesh.count === 0) continue;
+      mesh.count = count;
+      mesh.instanceMatrix.clearUpdateRanges();
+      mesh.instanceMatrix.addUpdateRange(0, count * 16);
+      mesh.instanceMatrix.needsUpdate = true;
+      if (dcol) {
+        mesh.instanceColor.clearUpdateRanges();
+        mesh.instanceColor.addUpdateRange(0, count * 3);
+        mesh.instanceColor.needsUpdate = true;
+      }
+    }
+  }
 }

@@ -1,7 +1,7 @@
 // Kulisy trati podle skutečného města: data z OSM a DMR (viz tools/README.md) se načtou
 // až při výběru trati. Pozemek je jedna namalovaná textura terénu, budovy jsou sloučené
 // po blocích 300 m (na nízké kvalitě 400 m): blok mimo záběr se nekreslí a za mlhou zmizí celý. Stromy, auta a lampy
-// mají po čtvercích stupně podrobnosti podle vzdálenosti kamery (viz lod.js).
+// jsou instance přes celou trať se stupni podrobnosti podle vzdálenosti kamery, viditelné vybírá lod.js.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { RNG, clamp } from './rng.js';
@@ -11,19 +11,19 @@ import { part, vertex, addBuilding, areaOf, color, fenceLine, mix, panel, toMesh
 import { buildLandmarks, CASTLE_GRAVEL } from './landmarks.js';
 import { buildRoadSigns } from './roadsigns.js';
 import { lodAt, instancedLevels } from './lod.js';
+import { readScene } from './scenecodec.js';
 
 // jak daleko od osy trati ještě něco vrhá stín
 const SHADOW_REACH = 70;
 // pás lesa podél trati, kde stojí hustý listnatý porost
 const FOREST_EDGE = 60;
-// Strana bloku domů a čtverce stromů, aut a lamp (m): menší se lépe ořezávají, větší stojí
-// méně volání kreslení. Na nízké kvalitě (slabý procesor) větší. Dohled na drobnosti násobí
-// vzdálenosti, kde se zjednoduší nebo zmizí.
+// Strana bloku domů (m): menší se lépe ořezává, větší stojí méně volání kreslení. Na nízké kvalitě
+// (slabý procesor) větší. Dohled na drobnosti násobí vzdálenosti, kde se zjednoduší nebo zmizí.
 const VIEW = {
-  low: { block: 400, chunk: 360, reach: 0.6 },
-  medium: { block: 300, chunk: 240, reach: 0.8 },
-  high: { block: 300, chunk: 240, reach: 1 },
-  ultra: { block: 300, chunk: 240, reach: 1.25 },
+  low: { block: 400, reach: 0.6 },
+  medium: { block: 300, reach: 0.8 },
+  high: { block: 300, reach: 1 },
+  ultra: { block: 300, reach: 1.25 },
 };
 
 const pairs = (a, from = 0) => {
@@ -65,8 +65,8 @@ export function loadTown(url) {
   if (!loaded.has(url)) {
     loaded.set(url, fetch(url).then((r) => {
       if (!r.ok) throw new Error(`${url}: ${r.status}`);
-      return r.json();
-    }).then(decode).catch((e) => {
+      return r.arrayBuffer();
+    }).then(readScene).then(decode).catch((e) => {
       loaded.delete(url);
       throw e;
     }));
@@ -441,8 +441,8 @@ function buildGreenery(town, track, terrain, buildings, density, shadows, rng, v
   // Dál stačí silueta, ještě dál jednoduchý tvar a za mlhou nic.
   const close = (t) => shadows && terrain.distAt(t.x, t.z) < SHADOW_REACH;
   const far = (t) => !close(t);
-  const { reach, cull, half } = view;
-  const d1 = 140 * reach + half, d2 = 360 * reach + half;
+  const { reach, cull } = view;
+  const d1 = 140 * reach, d2 = 360 * reach;
   const [fullS, farS] = [spruceGeometry(), farSpruceGeometry()];
   const [fullB, farB] = [broadleafGeometry(), farBroadleafGeometry()];
   // nejdál oba druhy jedním tvarem a voláním, barvu druhu nese barva instance
@@ -452,7 +452,7 @@ function buildGreenery(town, track, terrain, buildings, density, shadows, rng, v
     [0, [[fullS, spruce.filter(close), true], [fullB, broad.filter(close), true], [farS, spruce.filter(far)], [farB, broad.filter(far)]]],
     [d1, [[farS, spruce], [farB, broad]]],
     [d2, [[tinyTreeGeometry(), tiny]]],
-  ], mat, { chunk: view.chunk, cull }));
+  ], mat, { cull }));
   return group;
 }
 
@@ -501,7 +501,7 @@ function buildLamps(town, track, terrain, rng, view) {
     ...[-0.6, 0.6].map((x) => colored(new THREE.ConeGeometry(0.1, 0.16, 6).translate(x, 4.86, 0).toNonIndexed(), iron)),
   ]);
   // tenký sloup je dál než pár set metrů menší než pixel
-  const opts = { chunk: view.chunk, cull: Math.min(view.cull, 320 * view.reach + view.half) };
+  const opts = { cull: Math.min(view.cull, 320 * view.reach) };
   const group = new THREE.Group();
   group.add(instancedLevels([[0, [[geo, items], [old, historic]]]], mat, opts));
   return group;
@@ -560,7 +560,7 @@ function buildCars(town, track, terrain, shadows, view) {
   const close = (t) => shadows && terrain.distAt(t.x, t.z) < SHADOW_REACH;
   const group = new THREE.Group();
   group.name = 'cars';
-  const opts = { chunk: view.chunk, cull: Math.min(view.cull, 380 * view.reach + view.half) };
+  const opts = { cull: Math.min(view.cull, 380 * view.reach) };
   group.add(instancedLevels([[0, [[geo, items.filter(close), true], [geo, items.filter((t) => !close(t))]]]], mat, opts));
   return group;
 }
@@ -591,7 +591,7 @@ function buildBuses(town, track, terrain, shadows, view) {
     ...[3.6, -2.7].map((z) => colored(new THREE.BoxGeometry(2.56, 0.9, 1.0).translate(0, 0.45, z), '#1d1e20')),
   ]);
   const mat = new THREE.MeshLambertMaterial({ vertexColors: true });
-  const opts = { chunk: view.chunk, cull: Math.min(view.cull, 500 * view.reach + view.half) };
+  const opts = { cull: Math.min(view.cull, 500 * view.reach) };
   group.add(instancedLevels([[0, [[geo, items, shadows]]]], mat, opts));
   return group;
 }
@@ -624,8 +624,8 @@ export function buildTown(town, track, terrain, quality, seed, anisotropy, fogFa
   const shadows = quality !== 'low';
   const density = quality === 'low' ? 0.5 : quality === 'medium' ? 0.75 : 1;
   const v = VIEW[quality] ?? VIEW.high, BLOCK = v.block;
-  // hranice úrovní se měří od středu čtverce, proto + polovina jeho úhlopříčky
-  const view = { ...v, half: v.chunk * 0.71, cull: fogFar + v.chunk * 0.71 };
+  // hranice úrovní se měří od každé instance; za mlhou (s rezervou na korunu stromu) nic
+  const view = { ...v, cull: fogFar + 10 };
   const group = new THREE.Group();
   group.name = 'town';
   const tiles = new Map();

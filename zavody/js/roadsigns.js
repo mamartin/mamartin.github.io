@@ -198,21 +198,37 @@ function buildSignals(items, track, terrain) {
     loc.forEach((list, k) => list.forEach((g) => lenses[main][k].push(g.applyMatrix4(m))));
   }
   group.add(new THREE.Mesh(mergeGeometries(body), new THREE.MeshLambertMaterial({ vertexColors: true })));
-  // světla nesvítí podle osvětlení scény; barvy se přepnou při vykreslení, ať nepotřebují vlastní smyčku
-  const mats = [0, 1].map(() => LENS.map(([on]) => new THREE.MeshBasicMaterial({ color: on })));
+  // Všechna světla jsou jedna síť (jedno volání kreslení), nesvítí podle osvětlení scény. Fáze se mění
+  // jen párkrát za cyklus, pak se přebarví vrcholy; přepíná se při vykreslení, ať světla nepotřebují vlastní smyčku.
+  const parts = [], slots = [];
+  lenses.forEach((row, gi) => row.forEach((list, k) => {
+    for (const g of list) {
+      const geo = g.index ? g.toNonIndexed() : g;
+      parts.push(geo);
+      slots.push([gi, k, geo.attributes.position.count]);
+    }
+  }));
+  if (!parts.length) return group;
+  const geo = mergeGeometries(parts);
+  const colors = new Float32Array(geo.attributes.position.count * 3);
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ vertexColors: true }));
+  const tint = LENS.map((pair) => pair.map((c) => new THREE.Color(c)));
   let last = -1;
   const update = () => {
     const t = Math.floor(((performance.now() / 1000) % CYCLE) * 4) / 4;
     if (t === last) return;
     last = t;
-    mats.forEach((row, gi) => lit(gi === 0, t).forEach((on, k) => row[k].color.set(LENS[k][on ? 0 : 1])));
+    const on = [lit(true, t), lit(false, t)];
+    let v = 0;
+    for (const [gi, k, n] of slots) {
+      const c = tint[k][on[gi][k] ? 0 : 1];
+      for (let i = 0; i < n; i++, v++) c.toArray(colors, v * 3);
+    }
+    geo.attributes.color.needsUpdate = true;
   };
-  lenses.forEach((row, gi) => row.forEach((list, k) => {
-    if (!list.length) return;
-    const mesh = new THREE.Mesh(mergeGeometries(list), mats[gi][k]);
-    mesh.onBeforeRender = update;
-    group.add(mesh);
-  }));
+  mesh.onBeforeRender = update;
+  group.add(mesh);
   update();
   return group;
 }

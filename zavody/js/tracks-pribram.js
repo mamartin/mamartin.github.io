@@ -10,7 +10,7 @@ export const PRIBRAM = {
   maxBank: 0.015,
   seed: 2611,
   smooth: 2,
-  scene: 'data/pribram.json',
+  scene: 'data/pribram.bin',
   credit: 'Mapová data © přispěvatelé OpenStreetMap (ODbL), výškopis, DMP a RÚIAN © ČÚZK (CC BY 4.0)',
   stand: [-236.2,221.6],
   sett: [[[-587.9,893.1],[-377.6,881.3]]],

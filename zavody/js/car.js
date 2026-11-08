@@ -603,22 +603,50 @@ export function createCarMesh(color, {
     tilt.add(new THREE.Mesh(P.rallyBarGeo, mats.dark), new THREE.Mesh(P.rallyLampGeo, mats.head));
   }
 
+  // Kola: pivot (natočení předních) a spin (odvalování) jsou jen polohy; pneumatiky, disky a ozdoby
+  // všech kol stejného tvaru kreslí po jedné instanci (3 volání místo 12), matice počítá syncWheels.
   const wheels = [];
   const wheelPos = F
     ? [[0.88, 1.55, true], [-0.88, 1.55, true], [0.9, -1.45, false], [-0.9, -1.45, false]]
     : [[0.86, 1.35, true], [-0.86, 1.35, true], [0.86, -1.3, false], [-0.86, -1.3, false]];
+  const sets = new Map();
   for (const [x, z, front] of wheelPos) {
     const geo = F ? (front ? F.front : F.rear) : P.wheel;
     const pivot = new THREE.Group();
     pivot.position.set(x, geo.r, z);
     const spin = new THREE.Group();
-    const tireMesh = new THREE.Mesh(geo.tire, mats.tire);
-    spin.add(tireMesh, new THREE.Mesh(geo.rim, mats.rim));
-    pivot.add(spin, new THREE.Mesh(geo.accent, stripeMat));
-    tilt.add(pivot);
-    wheels.push({ pivot, spin, front });
-    if (!ghost) tireMesh.castShadow = true;
+    pivot.add(spin);
+    const w = { pivot, spin, front };
+    wheels.push(w);
+    if (!sets.has(geo)) sets.set(geo, []);
+    sets.get(geo).push(w);
   }
+  const wheelSets = [...sets].map(([geo, list]) => {
+    const inst = (g, mat) => {
+      const m = new THREE.InstancedMesh(g, mat, list.length);
+      tilt.add(m);
+      return m;
+    };
+    const set = { list, tire: inst(geo.tire, mats.tire), rim: inst(geo.rim, mats.rim), accent: inst(geo.accent, stripeMat) };
+    if (!ghost) set.tire.castShadow = true;
+    return set;
+  });
+  const wheelM = new THREE.Matrix4();
+  const syncWheels = () => {
+    for (const set of wheelSets) {
+      set.list.forEach((w, i) => {
+        w.pivot.updateMatrix();
+        w.spin.updateMatrix();
+        set.accent.setMatrixAt(i, w.pivot.matrix);
+        wheelM.multiplyMatrices(w.pivot.matrix, w.spin.matrix);
+        set.tire.setMatrixAt(i, wheelM);
+        set.rim.setMatrixAt(i, wheelM);
+      });
+      for (const m of [set.tire, set.rim, set.accent]) m.instanceMatrix.needsUpdate = true;
+    }
+  };
+  syncWheels();
+  for (const set of wheelSets) for (const m of [set.tire, set.rim, set.accent]) m.computeBoundingSphere();
 
   if (!ghost) {
     if (!F) tilt.add(new THREE.Mesh(P.stripeGeo, stripeMat));
@@ -642,7 +670,7 @@ export function createCarMesh(color, {
     lightBeam.position.set(0, 0.06, 15);
     root.add(lightBeam);
   }
-  return { root, tilt, wheels, mats, beam: lightBeam };
+  return { root, tilt, wheels, syncWheels, mats, beam: lightBeam };
 }
 
 // mastný flek od bábiny buchty (druhý kus je nahoře, aby byl vidět i z kamery za autem)
@@ -707,6 +735,7 @@ export function disposeCarMesh(mesh) {
   if (stain) sharedMats.add(stain.mat);
   mesh.root.traverse((o) => {
     if (o.material && !sharedMats.has(o.material)) o.material.dispose();
+    if (o.isInstancedMesh) o.dispose();
   });
   mesh.root.removeFromParent();
 }
@@ -1074,6 +1103,7 @@ export class Car {
       w.spin.rotation.x = this.wheelRot;
       if (w.front) w.pivot.rotation.y = -steerVis;
     }
+    m.syncWheels();
     const braking = this.controls.brake > 0.1 && this.vLong > 0.5;
     if (braking !== this.wasBraking) {
       this.wasBraking = braking;

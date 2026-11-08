@@ -1,14 +1,14 @@
-// Pohled shora na vygenerovanou scénu, čte jen js/tracks-<město>.js a data/<město>.json.
+// Pohled shora na vygenerovanou scénu, čte jen js/tracks-<město>.js a data/<město>.bin.
 // Použití: node preview-scene.mjs [město]   (píše data/<město>/loops/scena-*.svg)
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { buildCenterline } from '../js/trackmath.js';
-import { loadCity, loadTrack } from './lib/city.mjs';
+import { loadCity, loadTrack, loadScene } from './lib/city.mjs';
 
 const ctx = await loadCity();
 const TRACK = await loadTrack(ctx);
 if (!TRACK) throw new Error(`Trať ${ctx.city.name} ještě není vygenerovaná (node osm2track.mjs ${ctx.city.id})`);
-const scene = JSON.parse(readFileSync(ctx.scene, 'utf8'));
+const scene = loadScene(ctx);
 const cl = buildCenterline(TRACK);
 const OUT = join(ctx.data, 'loops');
 mkdirSync(OUT, { recursive: true });

@@ -11,13 +11,14 @@ npm test
 
 Co se děje:
 
-1. `tools/check-scene.mjs vse` zkontroluje data všech vygenerovaných tratí ze skutečných měst (bez surového DMR v `tools/data/<město>/` část přeskočí).
+1. `node --test "tools/test/*.test.mjs"` vyzkouší kroky generátoru tratí a binární formát scény na malých umělých datech.
+   `tools/check-scene.mjs vse` pak zkontroluje data všech vygenerovaných tratí ze skutečných měst (bez surového DMR v `tools/data/<město>/` část přeskočí).
 2. Hra se spustí v headless Chromiu (WebGL přes SwiftShader) ze statického serveru s `Cache-Control: no-store`, service worker je zablokovaný.
    three.js z CDN se podstrčí z `node_modules/three`, písma z Google Fonts se vynechají, jiné vnější požadavky se zablokují.
 3. **Výkon:** na 20 bodech podél Dobříše stojí kamera za autem (7 m za ním, 2,7 m nad ním, poměr stran 16:9, kvalita Vysoká)
    a po `renderer.info.reset()` se scéna jednou vykreslí i se stíny. Vypíše se průměr a maximum volání (draw calls)
    a trojúhelníků. Nad limitem test selže.
-4. **Závody:** Dobříš po směru, Dobříš obráceně a Šumavský okruh, 2 kola bez zbraní, hráče řídí autopilot, čas běží 100× rychleji.
+4. **Závody:** Dobříš po směru, Dobříš obráceně, Příbram a Šumavský okruh, 2 kola bez zbraní, hráče řídí autopilot, čas běží 100× rychleji.
    Ověří se, že dojela všechna auta, že nejlepší kolo hráče odpovídá průměrné rychlosti 45–200 km/h
    a že v konzoli nebyla žádná chyba.
 

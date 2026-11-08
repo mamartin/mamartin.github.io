@@ -38,7 +38,7 @@ export default {
   requiredLandmarks: ['sh-ambit', 'sh-bazilika'],
   // Svatá Hora je 650 m od trati, za dosahem kulis: areál s okolím je ve scéně navíc, aby byl vidět v dálce
   far: [{ name: 'Svatá Hora', at: [49.685, 14.0176], r: 200 }],
-  maxSceneKb: 760, // hustá zástavba podél 4,2 km, areál Svaté Hory a zpevněné plochy z katastru (gzip zhruba 290 kB)
+  maxSceneKb: 200, // hustá zástavba podél 4,2 km, areál Svaté Hory a zpevněné plochy z katastru
 
   // --- náhledy ---
   preview: {

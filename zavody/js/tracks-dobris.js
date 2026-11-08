@@ -10,7 +10,7 @@ export const DOBRIS = {
   maxBank: 0.015,
   seed: 2263,
   smooth: 2,
-  scene: 'data/dobris.json',
+  scene: 'data/dobris.bin',
   credit: 'Mapová data © přispěvatelé OpenStreetMap (ODbL), výškopis, DMP a RÚIAN © ČÚZK (CC BY 4.0)',
   stand: [718.9,-479.8],
   sett: [[[-382.2,24],[-285.6,27.2]]],

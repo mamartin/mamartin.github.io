@@ -9,7 +9,7 @@ const CELL = 8;   // mřížka pro hledání bodů v půdorysu
 const ROOF = 6;   // třída LAS „budova“
 const TREE = 5;   // třída LAS „vysoká vegetace“
 
-function indexPoints(e, n, z) {
+export function indexPoints(e, n, z) {
   const grid = new Map();
   for (let i = 0; i < e.length; i++) {
     const key = `${Math.floor(e[i] / CELL)},${Math.floor(n[i] / CELL)}`;

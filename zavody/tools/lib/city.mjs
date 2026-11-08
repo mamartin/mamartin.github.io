@@ -1,9 +1,11 @@
 // Výběr města pro nástroje trati. Nastavení každého města je v tools/cities/<id>.mjs,
-// surová data v tools/data/<id>/, výstup do hry v js/tracks-<id>.js a data/<id>.json.
+// surová data v tools/data/<id>/, výstup do hry v js/tracks-<id>.js a data/<id>.bin (js/scenecodec.js).
 // Město je první argument příkazu, bez něj Dobříš.
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { gunzipSync } from 'node:zlib';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { decodeScene } from '../../js/scenecodec.js';
 
 export const TOOLS = join(dirname(fileURLToPath(import.meta.url)), '..');
 export const GAME = join(TOOLS, '..');
@@ -24,8 +26,13 @@ export async function loadCity(argv = process.argv.slice(2)) {
     data: join(TOOLS, 'data', id),
     loops: join(CITIES, `${id}-loops.json`),
     track: join(GAME, 'js', `tracks-${id}.js`),
-    scene: join(GAME, 'data', `${id}.json`),
+    scene: join(GAME, 'data', `${id}.bin`),
   };
+}
+
+// vygenerovaná scéna města (data/<id>.bin), rozbalená do stejného tvaru jako dřív JSON
+export function loadScene(ctx) {
+  return decodeScene(gunzipSync(readFileSync(ctx.scene)));
 }
 
 // vygenerovaná definice trati města (js/tracks-<id>.js), null když ještě není

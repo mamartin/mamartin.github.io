@@ -41,7 +41,7 @@ import { addDamage, disposeDamage } from './damage.js';
 import { encodeGhost, decodeGhost, sharedGhost, saveSharedGhost } from './ghostshare.js';
 import { bindKeysUI, refreshKeysUI, keyPanelHtml, itemKeyLabel, keyPlayer, keysSignature, playerColor, pauseHint, esc } from './keysui.js';
 import { Post } from './post.js';
-import { splitLarge, setViewScale } from './lod.js';
+import { splitLarge, mergeSimilar, setViewScale, collectPools, updatePools } from './lod.js';
 import { TrackEditor, customToDef, decodeTrack, checkDef } from './editor.js';
 
 const STEP = 1 / 120;
@@ -84,6 +84,10 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 applyPixelRatio();
 
 const scene = new THREE.Scene();
+// instance stromů, aut a lamp: viditelné se vyberou podle kamery před každým vykreslením (viz lod.js)
+scene.onBeforeRender = (r, s, cam) => {
+  if (G.world?.pools.length && cam.isPerspectiveCamera) updatePools(G.world.pools, cam);
+};
 const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 4200);
 const camera2 = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 4200);
 const rig = new CameraRig(camera);
@@ -281,7 +285,8 @@ async function loadWorld(id) {
   group.add(terrain.buildMesh(biome.terrain, low ? 840 : 560));
   // dlouhé pásy a svodidla trati po čtvercích, ať se kreslí jen to, co je v záběru (jen velké sítě,
   // malé by přidaly víc volání kreslení, než ušetří)
-  group.add(splitLarge(track.buildMeshes(biome.track, renderer.capabilities.getMaxAnisotropy(), S.quality), 500, 8000));
+  // sítě se stejným materiálem (obrubník, krajnice, svodidla…) napřed dohromady, ať čtverců není víc, než je třeba
+  group.add(splitLarge(mergeSimilar(track.buildMeshes(biome.track, renderer.capabilities.getMaxAnisotropy(), S.quality)), 500, 8000));
   const scenery = buildScenery(track, terrain, def.biome, biome, S.quality, def.seed + 3);
   group.add(scenery.group);
   if (town) group.add(buildTown(town, track, terrain, S.quality, def.seed + 5, renderer.capabilities.getMaxAnisotropy(), biome.fog.far));
@@ -319,6 +324,7 @@ async function loadWorld(id) {
   if (rain) group.add(rain.points);
   G.world = {
     def, biome, track, terrain, group, sky, lights, effects, envRT, streets, showcase: [], stand: scenery.extra.stand, snowmen: scenery.extra.snowmen, snow: scenery.extra.snow, rain, wet, snowy,
+    pools: collectPools(group),
   };
   if (mix) {
     G.world.mix = true;

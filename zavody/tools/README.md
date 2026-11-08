@@ -6,7 +6,7 @@ Spouští se v této složce, potřebují Node 20+ a příkaz `unzip`.
 ```bash
 npm install                       # laz-perf na čtení výškopisu
 node fetch-data.mjs [město]       # OSM, DMR 5G, DMP 1G a RÚIAN do data/<město>/ (necommituje se)
-node osm2track.mjs [město]        # vygeneruje ../js/tracks-<město>.js a ../data/<město>.json
+node osm2track.mjs [město]        # vygeneruje ../js/tracks-<město>.js a ../data/<město>.bin
 node check-scene.mjs [město|vse]  # ověří vygenerované soubory
 ```
 
@@ -15,7 +15,29 @@ Město je první argument a odpovídá souboru `cities/<město>.mjs`, bez něj s
 a `listy` vypíše mapové listy DMR 5G / DMP 1G, které zasahují do výřezu města. Průzkum okruhů je v `loops.mjs` a `preview.mjs`
 (průjezdní body v `cities/<město>-loops.json`, výsledky a náhledy v `data/<město>/loops/`), pohled shora na hotovou scénu dá `preview-scene.mjs`.
 
-Test celé hry (kontrola všech vygenerovaných měst, závody autopilotem v headless prohlížeči a měření výkonu) je `npm test` ve složce `zavody`, viz `../test/README.md`.
+Test celé hry (testy kroků generátoru, kontrola všech vygenerovaných měst, závody autopilotem v headless prohlížeči a měření výkonu) je `npm test` ve složce `zavody`, viz `../test/README.md`.
+
+## Generátor
+
+`osm2track.mjs` jen volá kroky v `gen/` v pevném pořadí (pořadí kroků je i pořadí ve výstupu). Kroky sdílejí jeden stav
+(`gen/inputs.mjs`: vstupy, osa trati, dotazy na prostor, `out` s kulisami, `def` s definicí trati):
+
+| Modul | Co dělá |
+|---|---|
+| `gen/inputs.mjs` | načte stažená data města, konstanty (šířky, výběh, mřížka) |
+| `gen/track.mjs` | trasa po ulicích, šířky z katastru, definice trati, úseky (kostky, značení, mosty, obrubníky a zábradlí) |
+| `gen/space.mjs` | převod do souřadnic hry, vzdálenost od osy, rozsah scény, ústup fasád a dominant za výběh |
+| `gen/buildings.mjs` | domy (výšky z DMP, podlaží z RÚIAN, barvy podle zón) a dominanty |
+| `gen/surfaces.mjs` | zeleň, voda s hladinou, náměstí a parkoviště |
+| `gen/traffic.mjs` | výlohy, přechody, zaparkovaná auta, značky, semafory, ostrůvky, autobusy |
+| `gen/lines.mjs` | ulice mimo trať, pěšiny, potoky, zdi a ploty |
+| `gen/cadastre.mjs` | zpevněné dvory a ploty zahrad z katastru (`parcels`) |
+| `gen/nature.mjs` | lampy, stromy, sochy, komíny, koruny stromů z DMP |
+| `gen/terrain.mjs` | výšková mřížka |
+| `gen/output.mjs` | zápis scény a trati, souhrn do konzole |
+
+Testy kroků na malých umělých vstupech (bez stažených dat) jsou v `test/`: `node --test "tools/test/*.test.mjs"` ze složky `zavody`.
+Při úpravě, která výstup měnit nemá, stačí porovnat `data/<město>.bin` a `js/tracks-<město>.js` před a po: generátor je deterministický.
 
 ## Nové město
 
@@ -35,11 +57,11 @@ Všechno, co je u města ruční volba nebo oprava dat, je v `cities/<město>.mj
    `markings` čte z OSM pruhy, kostky, parkování v ulici, semafory na přechodech a kruhové objezdy; `parcels` bere z katastru zpevněné dvory a ploty zahrad k ulici;
    `measureLandmarks` změří věž dominanty v DMP 1G (výška, poloha, šířka, výška lodi) pro ruční model.
 7. Dominanta daleko od trati (za dosahem kulis 400 m): `far` se středem a poloměrem vezme stavby a stromy kolem ní do scény,
-   výšková mřížka hry ji pokryje bez umělých kopců z okraje a její model v `js/landmarks.js` má slabší mlhu. Hustá zástavba může potřebovat vyšší `maxSceneKb`.
+   výšková mřížka hry ji pokryje bez umělých kopců z okraje a její model v `js/landmarks.js` má slabší mlhu. Hustá zástavba může potřebovat vyšší `maxSceneKb` (výchozí 160 kB).
 
 ## Zdroje dat
 
-- **OpenStreetMap** přes Overpass API, licence ODbL 1.0. `data/<město>.json` je odvozená databáze, proto je označená ODbL.
+- **OpenStreetMap** přes Overpass API, licence ODbL 1.0. `data/<město>.bin` je odvozená databáze, proto je označená ODbL.
   Ve hře musí být uvedeno „Mapová data © přispěvatelé OpenStreetMap“.
 - **DMR 5G © ČÚZK**, CC BY 4.0, stahování po listech LAZ přes ATOM službu (`atom.cuzk.gov.cz`).
   Bodové čtení z ImageServeru ČÚZK vrací 403, proto listy. Data jsou převzorkovaná a vyhlazená.
@@ -47,7 +69,12 @@ Všechno, co je u města ruční volba nebo oprava dat, je v `cities/<město>.mj
 - **RÚIAN © ČÚZK**, CC BY 4.0: výměnný formát VFR obce (Dobříš má kód 540111) z `vdp.cuzk.gov.cz`, bere se z něj počet podlaží stavebních objektů a hranice silničních pozemků (způsob využití 16 silnice a 17 ostatní komunikace), podle nichž se měří šířka ulic. S `parcels` navíc všechny parcely: zastavěná plocha a nádvoří, dvory, komunikace a manipulační plochy jsou zpevněné, zahrady sousedící s ulicí mají plot.
 - Ortofoto a panoramata jsou jen vizuální předloha, nic z nich se do hry nekopíruje.
 
-## Formát `data/<město>.json`
+## Formát `data/<město>.bin`
+
+Soubor zapisuje a čte `js/scenecodec.js` (společný pro hru i nástroje; v nástrojích `loadScene` z `lib/city.mjs`). Je to gzip,
+uvnitř `TOSC`, verze, JSON kostra scény a za ní proudy celých čísel (zigzag varinty rozdílů: výšková mřížka od roviny sousedů,
+obrysy od předchozího bodu, řady n-tic od předchozí n-tice). Rozbalená scéna je objekt s poli níže. Proti dřívějšímu JSON je
+soubor Příbrami 173 kB místo 744 kB a přenáší se o 40 % méně dat než JSON zabalený serverem; limit `maxSceneKb` platí pro soubor.
 
 Souřadnice jsou herní (x na východ, z na jih, počátek na startu) v decimetrech jako celá čísla, výšky v dm nad nejnižším bodem trati.
 
@@ -128,7 +155,7 @@ Okruh B (4,2 km): Husova k Březovým Horám, Mariánská a Milínská na námě
 - Most Husovy přes železnici je v OSM most a reliéf pod ním DMR nemá, kontrola výšky osy ho vynechává.
 - Svatá Hora je 650 m od trati, za dosahem kulis. Areál s okolím (200 m) je ve scéně navíc a terén hry sahá až za něj. Ambity, čtyři osmiboké kaple a bazilika jsou ruční modely podle půdorysů z OSM a popisu (kaple s lucernami, Pražský portál uprostřed východního křídla); barvy střech a kopulí jsou odhad, výšky také. Ambity jsou zjednodušené na obdélník křídel 10 m kolem nádvoří.
 - Modely Svaté Hory mají slabší mlhu než okolí, aby byly z trati vidět jako silueta (na úsecích, kde trať míří na východ, ve vzdálenosti 750–1300 m).
-- 100 domů u trati je oříznutých, nejvýš o 6,5 m; scéna je kvůli hustší zástavbě a zpevněným plochám z katastru větší (744 kB, gzip asi 290 kB, limit 760 kB).
+- 100 domů u trati je oříznutých, nejvýš o 6,5 m; scéna je kvůli hustší zástavbě a zpevněným plochám z katastru větší (173 kB, limit 200 kB).
 - OSM u trati nezná žádné svodidlo, proto je po celé trati obrubník, chodník a zábradlí (sloupky jen kolem náměstí). Skutečné okraje se liší: místy je jen tráva, zídka nebo plot.
 - Auta v Mariánské stojí podle `parking:*` z OSM, obsazenost (asi 65 %) je náhodná a stojí za obrubníkem, ne v jízdním pruhu, aby nepřekážela.
 - Kostel sv. Jakuba: výška a poloha věže jsou změřené v DMP, výška lodi je odhad (DMP ji pod stromy nezachytil); barvy fasády a měděné střechy věže jsou podle fotek odhadem. Kostel sv. Vojtěcha a Vojtěšský důl (šachetní budova s věží) mají výšky z DMP, tvar střechy věže je zjednodušený jehlan. Ševčinský důl u trati v DMP nevyčnívá, proto má jen obecný dům.
