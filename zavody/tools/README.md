@@ -31,6 +31,9 @@ Všechno, co je u města ruční volba nebo oprava dat, je v `cities/<město>.mj
 5. Trať do hry: import `js/tracks-<město>.js` v `js/tracks.js`, závod do `test/limits.mjs`.
 6. Dominanty: OSM id budov do `landmarks`, ruční modely do `js/landmarks.js` (bez modelu zůstane jen půdorys a hra ji vynechá s varováním).
    Zóny fasád (`centre`, `walls`, `facadeZone`), obrubníky v centru (`urban`) a ruční doplňky (`lawns`, `gardens`, `squareStreet`, `extraTrees`) jsou volitelné.
+   Pro město bez svodidel: `urban.all` dá obrubník a chodník na celou trať (svodidlo jen kde OSM má `barrier=guard_rail`), sloupky kolem centra a jinde zábradlí;
+   `markings` čte z OSM pruhy, kostky, parkování v ulici, semafory na přechodech a kruhové objezdy; `parcels` bere z katastru zpevněné dvory a ploty zahrad k ulici;
+   `measureLandmarks` změří věž dominanty v DMP 1G (výška, poloha, šířka, výška lodi) pro ruční model.
 7. Dominanta daleko od trati (za dosahem kulis 400 m): `far` se středem a poloměrem vezme stavby a stromy kolem ní do scény,
    výšková mřížka hry ji pokryje bez umělých kopců z okraje a její model v `js/landmarks.js` má slabší mlhu. Hustá zástavba může potřebovat vyšší `maxSceneKb`.
 
@@ -41,7 +44,7 @@ Všechno, co je u města ruční volba nebo oprava dat, je v `cities/<město>.mj
 - **DMR 5G © ČÚZK**, CC BY 4.0, stahování po listech LAZ přes ATOM službu (`atom.cuzk.gov.cz`).
   Bodové čtení z ImageServeru ČÚZK vrací 403, proto listy. Data jsou převzorkovaná a vyhlazená.
 - **DMP 1G © ČÚZK**, CC BY 4.0, listy LAZ z `openzu.cuzk.gov.cz` (stejné listy jako DMR). Body třídy budova dávají výšku okapu, hřebene a tvar střechy, body vysoké vegetace polohy a výšky stromů.
-- **RÚIAN © ČÚZK**, CC BY 4.0: výměnný formát VFR obce (Dobříš má kód 540111) z `vdp.cuzk.gov.cz`, bere se z něj počet podlaží stavebních objektů a hranice silničních pozemků (způsob využití 16 silnice a 17 ostatní komunikace), podle nichž se měří šířka ulic.
+- **RÚIAN © ČÚZK**, CC BY 4.0: výměnný formát VFR obce (Dobříš má kód 540111) z `vdp.cuzk.gov.cz`, bere se z něj počet podlaží stavebních objektů a hranice silničních pozemků (způsob využití 16 silnice a 17 ostatní komunikace), podle nichž se měří šířka ulic. S `parcels` navíc všechny parcely: zastavěná plocha a nádvoří, dvory, komunikace a manipulační plochy jsou zpevněné, zahrady sousedící s ulicí mají plot.
 - Ortofoto a panoramata jsou jen vizuální předloha, nic z nich se do hry nekopíruje.
 
 ## Formát `data/<město>.json`
@@ -51,7 +54,8 @@ Souřadnice jsou herní (x na východ, z na jih, počátek na startu) v decimetr
 - `dem`: výšková mřížka, `h[j * nx + i]`
 - `buildings`: `[stěny, střecha, tvar, barva fasády, barva střechy, x, z, x, z, …]`; tvar 0 sedlová, 1 valbová, 2 plochá, 3 stanová, 4 pultová, 5 sedlová s hřebenem napříč delší strany
 - `landmarks`: půdorysy ručně modelovaných dominant, `moved` říká, o kolik metrů se odsunuly od silnice; modely jsou v `js/landmarks.js`, předlohou jsou fotky z Wikimedia Commons, nic se z nich nekopíruje
-- `areas`, `paved`: `[druh, x, z, …]`, druh `lawn` je trávník se stromy u radnice; `water`: `{ name, level, p }`
+- `levels`: dvojice index budovy, počet podlaží (jen kde se liší od výšky stěny / 3 m), podle nich jsou řady oken
+- `areas`, `paved`: `[druh, x, z, …]`, druh `lawn` je trávník se stromy u radnice, `yard` zpevněný dvůr nebo plocha z katastru; `water`: `{ name, level, p }`
 - `streets`: `[šířka, x, z, …]`; `barriers`: `[typ, x, z, …]`; typ 0 zeď, 1 opěrná zeď, 2 plot, 3 živý plot
 - `paths`, `streams`, `treeRows`: čáry; `lamps`, `trees`: dvojice x, z, stejně `statues` (sochy z OSM)
 - `canopy`: čtveřice x, z, výška, poloměr koruny (stromy z DMP 1G)
@@ -61,7 +65,7 @@ Souřadnice jsou herní (x na východ, z na jih, počátek na startu) v decimetr
 - `shops`: indexy budov z `buildings`, ve kterých je podle OSM obchod, restaurace, banka a podobně (dostanou výlohy)
 - `signs`: pětice druh, hodnota, x, z, natočení v setinách radiánu; druh 0 dej přednost, 1 stop, 2 nejvyšší rychlost (hodnota km/h), 3 obec, 4 zastávka (hodnota je index do `signNames`), 5 semafor (hodnota 1 na trati, 0 na vedlejší ulici), 6 radar
 
-V `js/tracks-<město>.js` jsou navíc `stand` (bod ve světě, u kterého stojí tribuna), `far` (vzdálená místa `[x, z, poloměr]`, terén hry je pokryje), `bridges` (mosty, kde osa nesleduje DMR) a úseky `sett` (kostky podle `surface=sett`) a `urban` (centrum s obrubníkem a chodníkem místo svodidla), oba od a do jako body ve světě. `crossings` jsou body přechodů pro chodce. Body místo metrů od startu sedí i na obrácené trati.
+V `js/tracks-<město>.js` jsou navíc `stand` (bod ve světě, u kterého stojí tribuna), `far` (vzdálená místa `[x, z, poloměr]`, terén hry je pokryje), `bridges` (mosty, kde osa nesleduje DMR) a úseky `sett` (kostky podle `surface=sett`) a `urban` (centrum s obrubníkem a chodníkem místo svodidla), oba od a do jako body ve světě. S `markings` a `urban.all` k nim přibudou úseky `bollards` (sloupky místo zábradlí), `markings` (`[od, do, pruhů]`: 0 bez čar, 1 jednopruhová, 3–4 čáry mezi pruhy, jinde středová čára), `parking` (`[od, do, bod na straně]`: tam auta stojí u chodníku a zábradlí chybí) a `islands` (`[x, z, poloměr]` ostrůvků kruhových objezdů). Úseky delší než třetina kola jsou rozdělené, protože hra úsek měří kratším směrem. `crossings` jsou body přechodů pro chodce. Body místo metrů od startu sedí i na obrácené trati.
 
 ## Odchylky od skutečnosti: Dobříš
 
@@ -118,10 +122,15 @@ Co ve hře neodpovídá skutečné Dobříši a proč. Ostatní (osa ulic, půdo
 
 ## Odchylky od skutečnosti: Příbram
 
-Okruh B (4,2 km): Husova k Březovým Horám, Mariánská a Milínská na náměstí T. G. Masaryka a Plzeňskou zpět. Platí totéž co u Dobříše (vyhlazená osa, odhad šířek, svodidlo a výběh, obecná okna a palety); navíc:
+Okruh B (4,2 km): Husova k Březovým Horám, Mariánská a Milínská na náměstí T. G. Masaryka a Plzeňskou zpět. Platí totéž co u Dobříše (vyhlazená osa, odhad šířek, výběh, obecná okna a palety); navíc:
 
 - Start je na rovném kusu Husovy mezi Plzeňskou a Březovými Horami, na náměstí by nebyla rovina pro start. Tribuna stojí na volném místě vpravo 320 m za startem.
 - Most Husovy přes železnici je v OSM most a reliéf pod ním DMR nemá, kontrola výšky osy ho vynechává.
 - Svatá Hora je 650 m od trati, za dosahem kulis. Areál s okolím (200 m) je ve scéně navíc a terén hry sahá až za něj. Ambity, čtyři osmiboké kaple a bazilika jsou ruční modely podle půdorysů z OSM a popisu (kaple s lucernami, Pražský portál uprostřed východního křídla); barvy střech a kopulí jsou odhad, výšky také. Ambity jsou zjednodušené na obdélník křídel 10 m kolem nádvoří.
 - Modely Svaté Hory mají slabší mlhu než okolí, aby byly z trati vidět jako silueta (na úsecích, kde trať míří na východ, ve vzdálenosti 750–1300 m).
-- 100 domů u trati je oříznutých, nejvýš o 6,5 m; scéna je kvůli hustší zástavbě větší (604 kB, limit 650 kB).
+- 100 domů u trati je oříznutých, nejvýš o 6,5 m; scéna je kvůli hustší zástavbě a zpevněným plochám z katastru větší (744 kB, gzip asi 290 kB, limit 760 kB).
+- OSM u trati nezná žádné svodidlo, proto je po celé trati obrubník, chodník a zábradlí (sloupky jen kolem náměstí). Skutečné okraje se liší: místy je jen tráva, zídka nebo plot.
+- Auta v Mariánské stojí podle `parking:*` z OSM, obsazenost (asi 65 %) je náhodná a stojí za obrubníkem, ne v jízdním pruhu, aby nepřekážela.
+- Kostel sv. Jakuba: výška a poloha věže jsou změřené v DMP, výška lodi je odhad (DMP ji pod stromy nezachytil); barvy fasády a měděné střechy věže jsou podle fotek odhadem. Kostel sv. Vojtěcha a Vojtěšský důl (šachetní budova s věží) mají výšky z DMP, tvar střechy věže je zjednodušený jehlan. Ševčinský důl u trati v DMP nevyčnívá, proto má jen obecný dům.
+- Semafory stojí na přechodech, které jsou v OSM `crossing=traffic_signals`; malý kruhový objezd na konci náměstí nemá ostrůvek, protože by se do široké trati nevešel.
+- Řady oken mají počet podlaží z RÚIAN, nebo z OSM `building:levels`, jinak odhad z výšky stěny.

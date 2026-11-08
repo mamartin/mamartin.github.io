@@ -140,6 +140,7 @@ export function buildRoadPoles(track, spacing = 16) {
   const p = [0, 0, 0];
   let i = 0;
   for (let k = 0; k < N; k += every) {
+    if (track.onUrban(track.s[k])) continue; // ve městě tyče u silnice nestojí
     for (const side of [-1, 1]) {
       if (track.cutAt(track.s[k], side)) continue;
       track.point(k, side * (track.edge + BOARD_LAT), 0, p);

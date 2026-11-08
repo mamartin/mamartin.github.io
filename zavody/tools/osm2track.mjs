@@ -8,8 +8,8 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { localProjection, wgsToKrovak } from './lib/geo.mjs';
 import { loadRuian, ruianAt } from './lib/ruian.mjs';
-import { loadDmp, roofOf, treesOf } from './lib/dmp.mjs';
-import { loadRoadParcels, corridorWidth } from './lib/parcels.mjs';
+import { loadDmp, roofOf, treesOf, peakOf } from './lib/dmp.mjs';
+import { loadRoadParcels, corridorWidth, loadParcels } from './lib/parcels.mjs';
 import { buildGraph, routeLoop, edgeKey, douglasPeucker } from './lib/roads.mjs';
 import { sampleAxis, rotateAxis, fitTrack, countCorners } from './lib/axis.mjs';
 import { loadDem } from './lib/dem.mjs';
@@ -162,19 +162,41 @@ const at = (k, lat = 0) => [+(cl.px[k] + cl.rx[k] * lat).toFixed(1), +(cl.pz[k] 
   const k = Math.round(STAND_S / cl.step);
   def.stand = at(k, widest / 2 + RUNOFF + 13);
 }
-// souvislé úseky osy, kde platí test, delší než minLen metrů
+// souvislé úseky osy, kde platí test, delší než minLen metrů; hra úsek měří kratším směrem,
+// proto se dlouhé dělí na třetiny kola, a úsek až do cíle končí na startu (bez mezery na švu)
 function spansWhere(test, minLen = 20) {
   const out = [];
+  const piece = Math.floor(cl.N / 3);
   for (let k = 0, run = -1; k <= cl.N; k++) {
     const on = k < cl.N && test(k);
     if (on && run < 0) run = k;
     if (on || run < 0) continue;
-    if (cl.s[k - 1] - cl.s[run] > minLen) out.push([at(run), at(k - 1)]);
+    if (cl.s[k - 1] - cl.s[run] > minLen) {
+      const end = k === cl.N && test(0) ? 0 : k - 1;
+      let a = run;
+      for (; (end || cl.N) - a > piece; a += piece) out.push([at(a), at(a + piece)]);
+      out.push([at(a), at(end)]);
+    }
     run = -1;
   }
   return out;
 }
-def.sett = spansWhere((k) => loop.edges[axis[clAxis[k]].seg].way.tags.surface === 'sett');
+const tagsAt = (k) => loop.edges[axis[clAxis[k]].seg].way.tags;
+// city.markings: dlažba i z dalších druhů kostek a vodorovné značení podle OSM
+const SETT = city.markings ? new Set(['sett', 'cobblestone', 'cobbles', 'unhewn_cobblestone']) : new Set(['sett']);
+def.sett = spansWhere((k) => SETT.has(tagsAt(k).surface));
+// počet pruhů pro čáry: 0 = bez čar (lane_markings=no, obytné ulice bez pruhů), 1 = jednopruhová (kruhový objezd),
+// 2 = středová čára (výchozí), 3+ = čáry mezi pruhy
+function lanesOf(t) {
+  if (t.lane_markings === 'no') return 0;
+  const n = parseInt(t.lanes, 10);
+  if (!n) return ['residential', 'living_street', 'service', 'unclassified'].includes(t.highway) ? 0 : 2;
+  return Math.min(4, n);
+}
+if (city.markings) {
+  def.markings = [];
+  for (const n of [0, 1, 3, 4]) for (const span of spansWhere((k) => lanesOf(tagsAt(k)) === n, 15)) def.markings.push([...span, n]);
+}
 // mosty: DMR je holý terén, pod mostem má údolí nebo zářez, kontrola scény je proto vynechá
 {
   const bridges = spansWhere((k) => loop.edges[axis[clAxis[k]].seg].way.tags.bridge === 'yes', 0);
@@ -400,7 +422,22 @@ function shiftAway(ring) {
   return { ring: r, moved: Math.hypot(sx, sz) };
 }
 
+// afinní převod nejmenšími čtverci (body src -> dst), pro přenesení bodu z S-JTSK do souřadnic hry
+function affineFrom(src, dst) {
+  const n = src.length, cx = src.reduce((a, p) => a + p[0], 0) / n, cy = src.reduce((a, p) => a + p[1], 0) / n;
+  const dx = dst.reduce((a, p) => a + p[0], 0) / n, dy = dst.reduce((a, p) => a + p[1], 0) / n;
+  let sxx = 0, sxy = 0, syy = 0, ax = 0, bx = 0, ay = 0, by = 0;
+  src.forEach((p, i) => {
+    const u = p[0] - cx, v = p[1] - cy, X = dst[i][0] - dx, Y = dst[i][1] - dy;
+    sxx += u * u; sxy += u * v; syy += v * v; ax += u * X; bx += v * X; ay += u * Y; by += v * Y;
+  });
+  const det = sxx * syy - sxy * sxy;
+  const m = [(ax * syy - bx * sxy) / det, (bx * sxx - ax * sxy) / det, (ay * syy - by * sxy) / det, (by * sxx - ay * sxy) / det];
+  return (e, nn) => [dx + m[0] * (e - cx) + m[1] * (nn - cy), dy + m[2] * (e - cx) + m[3] * (nn - cy)];
+}
+
 const buildings = [];
+const levels = []; // [index budovy, podlaží, …] jen kde se liší od výšky stěny
 const landmarks = [];
 const landmarkRings = [];
 const pushback = [];
@@ -420,7 +457,22 @@ for (const e of area) {
   const m = massing(t, Math.abs(signedArea(r)), minRect(r)[0]);
   if (moved > 0) console.log(`dominanta ${id}: odsunuta o ${moved.toFixed(1)} m`);
   landmarkRings.push(r);
+  // city.measureLandmarks: věž a loď změřené v DMP 1G ([x, z, vrchol, hranol věže, šířka věže, okap a hřeben lodi] v dm, výšky nad terénem);
+  // poloha věže se z S-JTSK převede stejným posunem a natočením jako půdorys
+  let peak;
+  if (city.measureLandmarks && roofPoints) {
+    const kr = outer.map(([la, lo]) => wgsToKrovak(la, lo));
+    const m = peakOf(roofPoints, kr, dem.krovak);
+    if (m) {
+      const g = outer.map(([la, lo]) => toGame(la, lo));
+      const [x, z] = affineFrom(kr, g)(m.e, m.n);
+      const [dx, dz] = [r[0][0] - r0[0][0], r[0][1] - r0[0][1]]; // odsunutí od trati
+      peak = [dm(x + dx), dm(z + dz), dm(m.top), dm(m.body), dm(m.size), m.nave ? dm(m.nave.eave) : 0, m.nave ? dm(m.nave.ridge) : 0];
+      console.log(`dominanta ${id}: věž ${m.top.toFixed(1)} m (hranol ${m.body.toFixed(1)} m)${m.nave ? `, loď ${m.nave.eave.toFixed(1)}–${m.nave.ridge.toFixed(1)} m` : ', loď bez bodů'}`);
+    }
+  }
   landmarks.push({
+    ...(peak ? { peak } : {}),
     id, name: t.name ?? null, wall: dm(m.wall), levels: parseFloat(t['building:levels']) || null,
     height: parseFloat(t.height) || null, facade: t['building:colour'] ?? null, roofColour: t['roof:colour'] ?? null, roofShape: t['roof:shape'] ?? null,
     moved: +moved.toFixed(1), p: flat(simplifyRing(r, 0.3)),
@@ -461,6 +513,9 @@ for (const e of area) {
     const m = massing(t, areaM2, short, so?.levels, measured);
     const cx = r.reduce((s, p) => s + p[0], 0) / r.length, cz = r.reduce((s, p) => s + p[1], 0) / r.length;
     const st = styleOf(e, t, cx, cz, m.shape, m.wall);
+    // city.parcels: počet podlaží z RÚIAN/OSM pro řady oken, když se liší od výšky stěny po 3 m
+    const lv = so?.levels ?? (parseFloat(t['building:levels']) || null);
+    if (city.parcels && lv && lv >= 1 && lv <= 30 && Math.round(m.wall / 3) !== Math.round(lv)) levels.push(buildings.length, Math.round(lv));
     buildings.push([dm(m.wall), dm(m.roof), m.shape, st.wall, st.roof, ...flat(r)]);
   }
 }
@@ -663,6 +718,43 @@ for (const e of extra) {
   }
 }
 
+// city.markings: podélné stání podél trati podle parking:left/right/both (lane, street_side, on_kerb …);
+// trať je širší než ulice, auta proto stojí hned za chodníkem a zábradlí na té straně chybí (def.parking)
+if (city.markings) {
+  const PARKED = new Set(['lane', 'street_side', 'on_kerb', 'half_on_kerb', 'shoulder', 'parallel']);
+  const sideOf = (t, side) => {
+    const v = t[`parking:${side}`] ?? t['parking:both'] ?? t[`parking:lane:${side}`] ?? t['parking:lane:both'];
+    return PARKED.has(v);
+  };
+  const crossS = crossings.map((c) => c.s);
+  def.parking = [];
+  for (const side of ['left', 'right']) {
+    // směr cesty v OSM vůči trati: OSM vlevo je vlevo, jen když cesta vede stejným směrem jako trať
+    const test = (k) => {
+      const seg = axis[clAxis[k]].seg, nodes = loop.edges[seg].way.nodes;
+      const fwd = nodes.indexOf(loop.nodes[seg].id) < nodes.indexOf(loop.nodes[(seg + 1) % loop.nodes.length].id);
+      return sideOf(tagsAt(k), fwd ? side : side === 'left' ? 'right' : 'left');
+    };
+    for (const [a, b] of spansWhere(test, 20)) {
+      const ka = nearAxis(...a).k, kb = nearAxis(...b).k;
+      const sgn = side === 'right' ? 1 : -1;
+      def.parking.push([a, b, at((ka + Math.round(((kb - ka + cl.N) % cl.N) / 2)) % cl.N, sgn * 30)]);
+      const len = (cl.s[kb] - cl.s[ka] + cl.L) % cl.L;
+      for (let d = CAR_GAP / 2; d < len - CAR_GAP / 2; d += CAR_GAP) {
+        const k = (ka + Math.round(d / cl.step)) % cl.N, sk = cl.s[k];
+        if (crossS.some((c) => Math.abs(c - sk) < 8) || hash01(k, 3) > OCCUPIED) continue;
+        const lat = sgn * (clWidth[k] / 2 + RUNOFF + 1.3);
+        const x = cl.px[k] + cl.rx[k] * lat, z = cl.pz[k] + cl.rz[k] * lat;
+        if (inHouse(x, z)) continue;
+        const flip = hash01(k, 5) < 0.85 ? 0 : Math.PI; // většinou po směru jízdy v pruhu
+        const hd = Math.atan2(cl.rz[k], -cl.rx[k]) + (sgn > 0 ? 0 : Math.PI) + flip; // po směru trati, vlevo proti
+        cars.push(dm(x), dm(z), Math.round(hd * 100));
+        bump('streetCars');
+      }
+    }
+  }
+}
+
 // --- čáry a body -----------------------------------------------------------------
 
 const near = (p) => axisDist(p[0], p[1]) < REACH;
@@ -769,6 +861,53 @@ if (existsSync(join(DATA, 'osm_signs.json'))) {
     signs.push(kind, value, dm(x), dm(z), Math.round(face * 100));
   }
 }
+// city.markings: přechody se semafory (crossing=traffic_signals) na trati, kde OSM samotný semafor nemá;
+// stožár s výložníkem 3 m před přechodem vpravo pro oba směry jízdy
+if (city.markings) {
+  const onTrackSignals = [];
+  for (let i = 0; i < signs.length; i += 5) if (signs[i] === SIGN.traffic_signals && signs[i + 1] === 1) onTrackSignals.push([signs[i + 2] / 10, signs[i + 3] / 10]);
+  const placed = [];
+  for (const e of poiShops) {
+    if (e.type !== 'node' || e.tags?.highway !== 'crossing' || e.tags.crossing !== 'traffic_signals') continue;
+    const [x, z] = toGame(e.lat, e.lon);
+    const n = nearAxis(x, z);
+    if (!n || n.d > 8) continue;
+    // u křižovatky se semaforem už stojí; přechody téhož místa (obě ramena) jen jednou
+    if (onTrackSignals.some(([sx, sz]) => Math.hypot(sx - x, sz - z) < 30) || placed.some((s) => Math.abs(s - cl.s[n.k]) < 25)) continue;
+    placed.push(cl.s[n.k]);
+    const half = clWidth[n.k] / 2 + RUNOFF + 0.6;
+    for (const dirSign of [1, -1]) {
+      const k = (n.k - dirSign * Math.round(3 / cl.step) + cl.N) % cl.N;
+      const fx = cl.rz[k] * dirSign, fz = -cl.rx[k] * dirSign;
+      const px = cl.px[k] - fz * half, pz = cl.pz[k] + fx * half;
+      signs.push(SIGN.traffic_signals, 1, dm(px), dm(pz), Math.round(Math.atan2(-fx, -fz) * 100));
+    }
+  }
+  stats.crossingSignals = placed.length;
+}
+
+// city.markings: středové ostrůvky kruhových objezdů, kterými trať projíždí ([x, z, poloměr] ve hře);
+// ostrůvek začíná za okrajem chodníku na vnitřní straně, širší trať než skutečná ho proto zmenší
+if (city.markings) {
+  const rings = roads.filter((w) => w.tags.junction === 'roundabout' && w.geometry).map((w) => w.geometry.map((g) => toGame(g.lat, g.lon)));
+  const groups = [];
+  for (const pts of rings) {
+    const near = groups.find((gr) => gr.some((q) => pts.some((p) => Math.hypot(p[0] - q[0], p[1] - q[1]) < 1)));
+    if (near) near.push(...pts);
+    else groups.push([...pts]);
+  }
+  def.islands = [];
+  for (const pts of groups) {
+    const cx = pts.reduce((a, p) => a + p[0], 0) / pts.length, cz = pts.reduce((a, p) => a + p[1], 0) / pts.length;
+    const R = pts.reduce((a, p) => a + Math.hypot(p[0] - cx, p[1] - cz), 0) / pts.length;
+    if (!pts.some((p) => nearAxis(p[0], p[1])?.d < 6)) continue;
+    let room = Infinity;
+    for (let k = 0; k < cl.N; k++) room = Math.min(room, Math.hypot(cl.px[k] - cx, cl.pz[k] - cz) - clWidth[k] / 2 - RUNOFF - 0.2);
+    const r = Math.min(R - 4.5, room);
+    if (r >= 1) def.islands.push([+cx.toFixed(1), +cz.toFixed(1), +r.toFixed(1)]);
+  }
+  stats.islands = def.islands.length;
+}
 
 // Autobusy na nádraží: skupina aspoň čtyř nástupišť stejného jména je stanoviště (na Dobříši
 // Mírové náměstí 1–9). U části z nich stojí autobus na nejbližší silnici, nástupiště má po pravé ruce.
@@ -842,6 +981,85 @@ for (const e of area) {
     else run.push(p);
   }
   flush();
+}
+
+// city.parcels: povrch a ploty podle katastru (RÚIAN). Nádvoří, dvory, komunikace a manipulační plochy jsou
+// zpevněné ('yard', jinak by tam byl trávník), zahrady mají k ulici plot. Do 250 m od trati, dál není poznat.
+const PAVED_USE = new Set([12, 16, 17, 18, 23]);
+if (city.parcels) {
+  const all = loadParcels(join(DATA, 'ruian')) ?? [];
+  // S-JTSK -> hra: afinní převod z mřížky bodů kolem trati
+  const samples = [];
+  for (let i = -3; i <= 3; i++) for (let j = -3; j <= 3; j++) samples.push(proj.inverse(i * 600, j * 600));
+  const toG = affineFrom(samples.map(([la, lo]) => wgsToKrovak(la, lo)), samples.map(([la, lo]) => toGame(la, lo)));
+  const inReach = (r, d) => r.some((p) => axisDist(p[0], p[1]) < d);
+  const roadsP = [];
+  let yards = 0;
+  for (const pc of all) {
+    const hard = pc.druh === 13 || PAVED_USE.has(pc.use);
+    if (!hard && pc.druh !== 5) continue;
+    const r = cleanRing(pc.ring.map((p) => toG(p[0], p[1])));
+    if (r.length < 3 || !inReach(r, 300)) continue;
+    if (pc.use === 16 || pc.use === 17) roadsP.push(r);
+    if (hard) {
+      const a = Math.abs(signedArea(r));
+      if (a < 40 || !inReach(r, 250)) continue;
+      // parcela, kterou skoro celou zabírá dům, nádvoří nemá (a dům ji překryje)
+      if (pc.druh === 13 && !PAVED_USE.has(pc.use)) {
+        const xs = r.map((q) => q[0]), zs = r.map((q) => q[1]);
+        let inside = 0, built = 0;
+        for (let x = Math.min(...xs) + 1.5; x < Math.max(...xs); x += 3) {
+          for (let z = Math.min(...zs) + 1.5; z < Math.max(...zs); z += 3) {
+            if (!pointInRing(x, z, r)) continue;
+            inside++;
+            if (inHouse(x, z)) built++;
+          }
+        }
+        if (!inside || built / inside > 0.6 || (inside - built) * 9 < 40) continue;
+      }
+      paved.push(['yard', ...flat(simplifyRing(r, (pc.use === 16 || pc.use === 17) && !inReach(r, 120) ? 2.5 : 1.2))]);
+      yards++;
+    } else pc.game = r;
+  }
+  // plot zahrady: hrana, za kterou (1,5 m ven) leží silniční pozemek; ne v pásu trati
+  const CELLP = 30, grid = new Map();
+  roadsP.forEach((r, i) => {
+    const xs = r.map((p) => p[0]), zs = r.map((p) => p[1]);
+    for (let gx = Math.floor(Math.min(...xs) / CELLP); gx <= Math.floor(Math.max(...xs) / CELLP); gx++) {
+      for (let gz = Math.floor(Math.min(...zs) / CELLP); gz <= Math.floor(Math.max(...zs) / CELLP); gz++) {
+        const key = `${gx},${gz}`;
+        if (!grid.has(key)) grid.set(key, []);
+        grid.get(key).push(i);
+      }
+    }
+  });
+  const onRoadP = (x, z) => (grid.get(`${Math.floor(x / CELLP)},${Math.floor(z / CELLP)}`) ?? []).some((i) => pointInRing(x, z, roadsP[i]));
+  let fences = 0;
+  for (const pc of all) {
+    if (!pc.game || !inReach(pc.game, 250)) continue;
+    const r = signedArea(pc.game) > 0 ? pc.game : [...pc.game].reverse();
+    let run = [];
+    const flush = () => {
+      if (run.length > 1) { barriers.push([BARRIER.fence, ...lineOf(run, 0.4)]); fences++; }
+      run = [];
+    };
+    for (let i = 0; i < r.length; i++) {
+      const a = r[i], b = r[(i + 1) % r.length];
+      const l = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      if (l < 0.5) continue;
+      // vnější normála: strana, kde střed hrany posunutý o kus neleží v zahradě
+      const mx = (a[0] + b[0]) / 2, mz = (a[1] + b[1]) / 2, nx = (b[1] - a[1]) / l, nz = -(b[0] - a[0]) / l;
+      const outside = pointInRing(mx + nx * 0.5, mz + nz * 0.5, r) ? -1 : 1;
+      const street = onRoadP(mx + nx * outside * 1.5, mz + nz * outside * 1.5);
+      const n = nearAxis(mx, mz);
+      if (street && !(n && n.d < clearance(n.k) + 0.5)) {
+        if (!run.length) run.push(a);
+        run.push(b);
+      } else flush();
+    }
+    flush();
+  }
+  stats.parcels = `${yards} zpevněných, ${fences} plotů zahrad`;
 }
 
 const pointsOf = (filter) => area.filter(filter).map((e) => toGame(e.lat, e.lon)).filter(near).flatMap((p) => [dm(p[0]), dm(p[1])]);
@@ -925,13 +1143,33 @@ const scene = {
   origin: { lat: +lat0.toFixed(6), lon: +lon0.toFixed(6), base: +base.toFixed(2) },
   dem: { x0: Math.round(bounds.minX), z0: Math.round(bounds.minZ), cell: DEM_CELL, nx, nz, h: heights },
   palette: { wall: wallPalette, roof: roofPalette, plain: WALLS.plain.map((c) => wallPalette.indexOf(c)) },
-  buildings, landmarks, areas, water, paved, streets, paths, streams, barriers, lamps, trees, treeRows, canopy, statues, chimneys, cars, shops, signs, signNames,
+  buildings, ...(levels.length ? { levels } : {}), landmarks, areas, water, paved, streets, paths, streams, barriers, lamps, trees, treeRows, canopy, statues, chimneys, cars, shops, signs, signNames,
   buses: buses.flatMap(([x, z, hd]) => [dm(x), dm(z), Math.round(hd * 100)]),
 };
 
 // centrum (náměstí a okolí startu): místo svodidel obrubník a sloupky, jízda se nemění
 const URBAN = city.urban ?? { start: 0, centre: 0 };
-def.urban = spansWhere((k) => alongCentre(cl.px[k], cl.pz[k]).d < URBAN.centre || Math.hypot(cl.px[k], cl.pz[k]) < URBAN.start);
+const inCentre = (k) => alongCentre(cl.px[k], cl.pz[k]).d < URBAN.centre || Math.hypot(cl.px[k], cl.pz[k]) < URBAN.start;
+// urban.all: obrubník a chodník po celé trati (ve městě nejsou svodidla), sloupky jen v centru, jinde zábradlí;
+// kde OSM zná svodidlo (barrier=guard_rail) podél trati, zůstane svodidlo
+if (URBAN.all) {
+  const rails = extra.filter((e) => e.tags?.barrier === 'guard_rail' && e.geometry).map((e) => e.geometry.map((p) => toGame(p.lat, p.lon)));
+  const railNear = new Uint8Array(cl.N);
+  for (const line of rails) {
+    // čára, ne obrys: každá hrana zvlášť po 2 m
+    const pts = line.slice(1).flatMap((b, i) => {
+      const a = line[i], n = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 2);
+      return Array.from({ length: n }, (_, j) => [a[0] + ((b[0] - a[0]) * j) / n, a[1] + ((b[1] - a[1]) * j) / n]);
+    });
+    for (const p of pts) {
+      const n = nearAxis(p[0], p[1]);
+      if (n && n.d < clWidth[n.k] / 2 + RUNOFF + 4) railNear[n.k] = 1;
+    }
+  }
+  def.urban = spansWhere((k) => !railNear[k]);
+  def.bollards = spansWhere(inCentre);
+  stats.guardRails = `${rails.length} v OSM, u trati ${railNear.reduce((a, b) => a + b, 0)} vzorků`;
+} else def.urban = spansWhere(inCentre);
 // vzdálená místa pro terén hry: mřížka je pokryje a nepřidá kolem nich umělé kopce z okraje
 if (FAR.length) def.far = FAR.map((f) => [Math.round(f.xz[0]), Math.round(f.xz[1]), f.r]);
 

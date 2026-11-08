@@ -253,7 +253,7 @@ function partyRuns(p, q, n, len, party) {
 
 // shopFront(x, z): bod 6 m před stěnou leží na ulici, kam patří výloha (jen u domů s obchodem)
 // party(x, z): bod leží v sousedním domě, stěna k němu je společná a nemá okna; wings: dům do L, T a U dostane střechu po křídlech
-export function addBuilding(tile, terrain, ringIn, { wall, roof, shape, face, top, plain, uvOf, shopFront, party, wings }) {
+export function addBuilding(tile, terrain, ringIn, { wall, roof, shape, face, top, plain, uvOf, shopFront, party, wings, levels }) {
   const ring = areaOf(ringIn) > 0 ? ringIn : [...ringIn].reverse();
   const box = orientedBox(ring);
   const sloped = shape === SHAPE.GABLE || shape === SHAPE.HIP || shape === SHAPE.CROSS;
@@ -287,7 +287,9 @@ export function addBuilding(tile, terrain, ringIn, { wall, roof, shape, face, to
   const pitch = wall >= 12 ? BLOCK_PITCH : FLOOR;
   const blankEnds = wall >= 7 && shape === SHAPE.FLAT && box.hl > box.hw * 1.4;
   const wallPanel = (a, b, n, uv) => panel(out, [a[0], low, a[1]], [a[0], eave, a[1]], [b[0], eave, b[1]], [b[0], low, b[1]], n, shade, face, uv);
-  const windows = (len) => [0, Math.max(1, Math.round(len / pitch)) / 4, (low - eave) / (FLOOR * 4), 0];
+  // výška řady oken: s počtem podlaží z katastru stěna na patra, jinak po 3 m
+  const rowH = levels ? Math.min(4.5, Math.max(2.6, wall / levels)) : FLOOR;
+  const windows = (len) => [0, Math.max(1, Math.round(len / pitch)) / 4, (low - eave) / (rowH * 4), 0];
   rim.forEach((p, i) => {
     const q = rim[(i + 1) % rim.length];
     const dx = q[0] - p[0], dz = q[1] - p[1], len = Math.hypot(dx, dz);

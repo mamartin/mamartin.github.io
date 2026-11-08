@@ -51,3 +51,25 @@ export function corridorWidth(P, e, n, ue, un, max = 30) {
   const a = side(1), b = side(-1);
   return a >= max || b >= max ? null : a + b;
 }
+
+// Všechny parcely s druhem pozemku a způsobem využití (kódy číselníků ČÚZK), obrys v S-JTSK.
+// druh: 2 orná, 5 zahrada, 6 sad, 7 trvalý travní porost, 10 les, 11 voda, 13 zastavěná plocha a nádvoří, 14 ostatní plocha;
+// use (u ostatních ploch): 12 společný dvůr, 16 silnice, 17 ostatní komunikace, 18 ostatní dopravní plocha, 19 zeleň, 23 manipulační plocha …
+export function loadParcels(dir) {
+  if (!existsSync(dir)) return null;
+  const file = readdirSync(dir).find((f) => f.endsWith('.xml'));
+  if (!file) return null;
+  const xml = readFileSync(join(dir, file), 'utf8');
+  const out = [];
+  for (const m of xml.matchAll(/<vf:Parcela [\s\S]*?<\/vf:Parcela>/g)) {
+    const druh = /<pai:DruhPozemkuKod>(\d+)</.exec(m[0]);
+    const use = /<pai:ZpusobyVyuzitiPozemku>(\d+)</.exec(m[0]);
+    const outer = /<pai:OriginalniHranice>[\s\S]*?<gml:exterior>[\s\S]*?<gml:posList[^>]*>([^<]+)</.exec(m[0]);
+    if (!druh || !outer) continue;
+    const v = outer[1].trim().split(/\s+/).map(Number);
+    const ring = [];
+    for (let i = 0; i + 1 < v.length; i += 2) ring.push([v[i], v[i + 1]]);
+    out.push({ druh: +druh[1], use: use ? +use[1] : 0, ring });
+  }
+  return out;
+}

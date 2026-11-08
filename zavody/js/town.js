@@ -7,7 +7,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { RNG, clamp } from './rng.js';
 import { colored, spruceGeometry, broadleafGeometry, farSpruceGeometry, farBroadleafGeometry } from './scenery.js';
 import { pointInRing } from './terrain.js';
-import { part, vertex, addBuilding, areaOf, color, fenceLine, mix, toMesh, triangulate } from './mass.js';
+import { part, vertex, addBuilding, areaOf, color, fenceLine, mix, panel, toMesh, tri, triangulate } from './mass.js';
 import { buildLandmarks, CASTLE_GRAVEL } from './landmarks.js';
 import { buildRoadSigns } from './roadsigns.js';
 import { lodAt, instancedLevels } from './lod.js';
@@ -38,6 +38,7 @@ function decode(raw) {
     palette: raw.palette,
     water: raw.water.map((w) => ({ ring: pairs(w.p), level: w.level / 10 })),
     buildings: raw.buildings.map((b) => ({ wall: b[0] / 10, roof: b[1] / 10, shape: b[2], face: b[3], top: b[4], ring: pairs(b, 5) })),
+    levels: new Map(Array.from({ length: Math.floor((raw.levels?.length ?? 0) / 2) }, (_, i) => [raw.levels[i * 2], raw.levels[i * 2 + 1]])),
     landmarks: raw.landmarks.map((l) => ({ ...l, ring: pairs(l.p) })),
     areas: raw.areas.map((a) => ({ kind: a[0], ring: pairs(a, 1) })),
     paved: raw.paved.map((a) => ({ kind: a[0], ring: pairs(a, 1) })),
@@ -179,6 +180,8 @@ function paintRect(town, track, rect, size, anisotropy) {
   ctx.globalAlpha = 1;
   // zeleň na náměstí je v datech: plocha je jen obal jeho ulic, proto až pod ní
   fillRings(ctx, town.paved.filter((a) => a.kind === 'square').map((a) => a.ring), '#aaa69c');
+  // dvory, nádvoří a komunikace podle katastru: pod zelení z OSM, ta je přesnější
+  fillRings(ctx, town.paved.filter((a) => a.kind === 'yard').map((a) => a.ring), '#a3a097');
   if (town.landmarks.some((l) => l.id === 'zamek')) fillRings(ctx, CASTLE_GRAVEL, '#cdc2a6');
   for (const kind of ['field', 'grass', 'lawn', 'allotments', 'forest', 'park', 'garden', 'cemetery', 'pitch']) {
     fillRings(ctx, town.areas.filter((a) => a.kind === kind).map((a) => a.ring), AREA_COLORS[kind]);
@@ -504,12 +507,46 @@ function buildLamps(town, track, terrain, rng, view) {
   return group;
 }
 
+// středové ostrůvky kruhových objezdů (track.def.islands): kamenný obrubník po terénu a tráva
+function buildIslands(track, terrain) {
+  const o = part();
+  const kerb = color('#b6b2a9'), grass = color('#6a9446');
+  for (const [cx, cz, r] of track.def.islands ?? []) {
+    const n = Math.max(16, Math.round(r * 2.2));
+    const ring = Array.from({ length: n }, (_, i) => {
+      const a = (i / n) * Math.PI * 2;
+      const x = cx + Math.cos(a) * r, z = cz + Math.sin(a) * r;
+      return [x, terrain.heightAt(x, z), z];
+    });
+    const top = (p, d = 0) => [cx + (p[0] - cx) * (1 - d / r), p[1] + 0.16, cz + (p[2] - cz) * (1 - d / r)];
+    const mid = [cx, terrain.heightAt(cx, cz) + 0.2, cz];
+    ring.forEach((p, i) => {
+      const q = ring[(i + 1) % n];
+      // líc obrubníku ven a jeho vrch (pruh 0,3 m), uvnitř tráva
+      panel(o, [p[0], p[1] - 0.3, p[2]], [p[0], p[1] + 0.16, p[2]], [q[0], q[1] + 0.16, q[2]], [q[0], q[1] - 0.3, q[2]],
+        [Math.cos(((i + 0.5) / n) * Math.PI * 2), 0, Math.sin(((i + 0.5) / n) * Math.PI * 2)], kerb, kerb);
+      tri(o, top(p), top(p, 0.3), top(q, 0.3), kerb);
+      tri(o, top(p), top(q, 0.3), top(q), kerb);
+      tri(o, top(p, 0.3), mid, top(q, 0.3), grass);
+    });
+  }
+  const mesh = toMesh(o, new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide }), false);
+  mesh.name = 'islands';
+  return mesh;
+}
+
 // zaparkovaná auta z ploch parkovišť (rozvrh stání dělá tools/osm2track.mjs)
 const CAR_COLORS = ['#e8e8e6', '#e8e8e6', '#b9bcc0', '#b9bcc0', '#7c8086', '#2a2c30', '#2a2c30', '#2f4a6e', '#9c2a26', '#4f5f4a', '#d9d4c5', '#6d2f3a'];
 
 function buildCars(town, track, terrain, shadows, view) {
   const rng = new RNG(91);
-  const items = town.cars.filter((c) => terrain.distAt(c.x, c.z) > track.edge + 1.5 && !terrain.keepOut(c.x, c.z)).map((c) => ({
+  // u trati rozhoduje místní šířka (podélné stání hned za chodníkem), jinde stačí hrubá vzdálenost
+  const free = (c) => {
+    if (terrain.distAt(c.x, c.z) > track.edge + 1.5) return true;
+    const o = nearTrack(track, terrain, c.x, c.z);
+    return Math.abs(o.lat) > o.edge + 1.1;
+  };
+  const items = town.cars.filter((c) => free(c) && !terrain.keepOut(c.x, c.z)).map((c) => ({
     x: c.x, y: terrain.heightAt(c.x, c.z), z: c.z, ry: c.hd, color: rng.pick(CAR_COLORS),
   }));
   // bílá karoserie dostane barvu instance, okna a kola zůstanou tmavá
@@ -604,7 +641,7 @@ export function buildTown(town, track, terrain, quality, seed, anisotropy, fogFa
   // výloha patří na stěnu do trati nebo na náměstí
   const squares = town.paved.filter((a) => a.kind === 'square').map((a) => a.ring);
   const shopFront = (x, z) => terrain.distAt(x, z) < track.edge + 6 || squares.some((r) => pointInRing(x, z, r));
-  const standing = town.buildings.map((b, i) => ({ ...b, shop: town.shops.has(i) })).filter((b) => !b.ring.some((p) => terrain.keepOut(p[0], p[1])));
+  const standing = town.buildings.map((b, i) => ({ ...b, shop: town.shops.has(i), levels: town.levels.get(i) })).filter((b) => !b.ring.some((p) => terrain.keepOut(p[0], p[1])));
   const neighbourAt = ringIndex([...standing.map((b) => b.ring), ...town.landmarks.map((l) => l.ring)]);
   standing.forEach((b, i) => {
     const c = b.ring[0];
@@ -613,7 +650,7 @@ export function buildTown(town, track, terrain, quality, seed, anisotropy, fogFa
       wall: b.wall, roof: b.roof, shape: b.shape,
       face: color(town.palette.wall[b.face]), top: color(town.palette.roof[b.top]), plain: plainWalls.has(b.face),
       shopFront: b.shop ? shopFront : null,
-      party: (x, z) => neighbourAt(x, z, i), wings: true,
+      party: (x, z) => neighbourAt(x, z, i), wings: true, levels: b.levels,
     });
   });
   for (const l of town.landmarks) placed.push(l.ring);
@@ -654,6 +691,7 @@ export function buildTown(town, track, terrain, quality, seed, anisotropy, fogFa
   group.add(buildGreenery(town, track, terrain, placed, density, shadows, rng, view));
   group.add(buildLamps(town, track, terrain, rng, view));
   group.add(buildCars(town, track, terrain, shadows, view));
+  if (track.def.islands?.length) group.add(buildIslands(track, terrain));
   group.add(buildBuses(town, track, terrain, shadows, view));
   group.add(buildRoadSigns(town, track, terrain, anisotropy, (x, z) => neighbourAt(x, z, -1)));
   return group;

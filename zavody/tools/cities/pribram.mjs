@@ -23,17 +23,22 @@ export default {
 
   // --- centrum: osa náměstí T. G. Masaryka od jihu na sever; okolní domy mají pestřejší fasády, na náměstí je obrubník ---
   centre: [[49.68735, 14.00905], [49.68863, 14.00887]],
-  urban: { start: 0, centre: 60 },
+  // obrubník a chodník po celé trati (svodidla OSM u trati nezná), sloupky jen kolem náměstí, jinde zábradlí
+  urban: { all: true, start: 0, centre: 60 },
+  markings: true, // značení, kostky, semafory na přechodech a ostrůvky kruhových objezdů podle OSM
+  parcels: true, // zpevněné dvory a ploty zahrad k ulici podle katastru (RÚIAN)
+  measureLandmarks: true, // věže kostelů a šachty změřené v DMP 1G
 
   // --- dominanty: OSM id budovy -> id ručního modelu v js/landmarks.js ---
   landmarks: {
     20255512: 'sh-ambit', 192151269: 'sh-bazilika',
+    72137666: 'kostel-jakub', 527025317: 'kostel-vojtech', 201432628: 'dul-vojtech',
     1246102801: 'sh-kaple-plzenska', 1246102802: 'sh-kaple-breznicka', 1246102803: 'sh-kaple-prazska', 1246102804: 'sh-kaple-mnisecka',
   },
   requiredLandmarks: ['sh-ambit', 'sh-bazilika'],
   // Svatá Hora je 650 m od trati, za dosahem kulis: areál s okolím je ve scéně navíc, aby byl vidět v dálce
   far: [{ name: 'Svatá Hora', at: [49.685, 14.0176], r: 200 }],
-  maxSceneKb: 650, // hustá zástavba podél 4,2 km a areál Svaté Hory navíc (gzip zhruba čtvrtina)
+  maxSceneKb: 760, // hustá zástavba podél 4,2 km, areál Svaté Hory a zpevněné plochy z katastru (gzip zhruba 290 kB)
 
   // --- náhledy ---
   preview: {

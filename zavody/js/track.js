@@ -29,6 +29,13 @@ export class Track {
     this.setts = (def.sett || []).map((span) => this.spanOf(span));
     // centrum města: místo svodidel a červenobílých obrubníků kamenný obrubník a sloupky (jen vzhled)
     this.urbans = (def.urban || []).map((span) => this.spanOf(span));
+    // sloupky na okraji chodníku: bez def.bollards v celém centru, jinak jen v nich (mimo ně je zábradlí)
+    this.bollardSpans = def.bollards ? def.bollards.map((span) => this.spanOf(span)) : null;
+    // podélné stání za chodníkem (bez zábradlí na té straně) a ostrůvky kruhových objezdů (bez zábradlí i sloupků)
+    this.parking = (def.parking || []).map(([a, b, p]) => ({ ...this.spanOf([a, b]), side: Math.sign(this.project(p[0], p[1], -1, {}).lat) }));
+    this.islands = def.islands || [];
+    // vodorovné značení podle OSM: úseky s jiným počtem pruhů než 2 (0 = bez čar); čáry jsou pak geometrie, ne textura
+    this.markings = def.markings ? def.markings.map(([a, b, n]) => ({ ...this.spanOf([a, b]), n })) : null;
     // přechody pro chodce jako body ve světě
     this.crossings = (def.crossings || []).map(([x, z]) => this.project(x, z, -1, {}).s);
   }
@@ -76,8 +83,25 @@ export class Track {
     return this.setts.some((t) => ((s - t.s0 + this.L) % this.L) < t.len);
   }
 
+  lanesAt(s) {
+    for (const t of this.markings ?? []) if (((s - t.s0 + this.L) % this.L) < t.len) return t.n;
+    return 2;
+  }
+
   onUrban(s) {
     return this.urbans.some((t) => ((s - t.s0 + this.L) % this.L) < t.len);
+  }
+
+  // okraj chodníku bez zábradlí a sloupků: za ním stojí auta, nebo je to ostrůvek kruhového objezdu
+  openEdge(s, side, p) {
+    if (this.parking.some((t) => t.side === side && ((s - t.s0 + this.L) % this.L) < t.len)) return true;
+    return this.islands.some(([x, z, r]) => Math.hypot(p[0] - x, p[2] - z) < r + 4);
+  }
+
+  // okraj chodníku: sloupky (true), nebo zábradlí (false); jen v centru
+  onBollards(s) {
+    if (!this.bollardSpans) return true;
+    return this.bollardSpans.some((t) => ((s - t.s0 + this.L) % this.L) < t.len);
   }
 
   // rychlostní profil pro jiný typ vozu: přilnavost a maximálka poměrem k autu
@@ -252,7 +276,7 @@ export class Track {
     const cw = this.curbW;
 
     // Silnice
-    const { map: roadTex, surface } = makeRoadTextures(style, quality);
+    const { map: roadTex, surface } = makeRoadTextures(this.markings ? { ...style, centerLine: null } : style, quality);
     roadTex.anisotropy = anisotropy;
     const road = new StripBuilder();
     const sett = new StripBuilder();
@@ -285,6 +309,7 @@ export class Track {
       group.add(settMesh);
     }
     if (this.crossings.length) group.add(this.buildCrossings());
+    if (this.markings && style.centerLine) group.add(this.buildLaneLines(style));
 
     // Obrubníky (jen v zatáčkách) – červenobílé pruhy
     const curb = new StripBuilder();
@@ -450,6 +475,7 @@ export class Track {
       group.add(posts);
     }
     if (this.urbans.length) group.add(this.buildBollards());
+    if (this.bollardSpans) group.add(this.buildRailing());
     return group;
   }
 
@@ -469,6 +495,26 @@ export class Track {
     return mesh;
   }
 
+  // přerušované čáry mezi pruhy (místo středové čáry z textury), na kostkách a přes přechody ne
+  buildLaneLines(style) {
+    const b = new StripBuilder();
+    const col = new THREE.Color(style.centerLine);
+    const period = 8, dash = period * (style.centerDash ?? 0.9), w = 0.075;
+    for (let s0 = 0; s0 + dash < this.L; s0 += period) {
+      const sm = s0 + dash / 2;
+      const n = this.lanesAt(sm);
+      if (n < 2 || this.onSett(sm) || this.crossings.some((c) => Math.abs(c - sm) < dash / 2 + 2)) continue;
+      const hw = this.hwAt(this.indexAt(sm));
+      for (let i = 1; i < n; i++) {
+        const lat = -hw + (2 * hw * i) / n;
+        b.quad(this.pointS(s0, lat - w, 0.03), this.pointS(s0, lat + w, 0.03), this.pointS(s0 + dash, lat + w, 0.03), this.pointS(s0 + dash, lat - w, 0.03), col);
+      }
+    }
+    const mesh = new THREE.Mesh(b.build(), new THREE.MeshLambertMaterial({ vertexColors: true }));
+    mesh.receiveShadow = true;
+    return mesh;
+  }
+
   // sloupky na okraji chodníku v centru, kde nestojí svodidlo
   buildBollards() {
     const geo = mergeGeometries([
@@ -478,14 +524,52 @@ export class Track {
     const every = Math.max(1, Math.round(3.6 / this.step));
     const items = [];
     for (let k = 0; k < this.N; k += every) {
-      if (!this.onUrban(this.s[k])) continue;
-      for (const side of [-1, 1]) if (!this.cutAt(this.s[k], side)) items.push(this.point(k, side * (this.edgeAt(k) + 0.15)));
+      if (!this.onUrban(this.s[k]) || !this.onBollards(this.s[k])) continue;
+      for (const side of [-1, 1]) {
+        const p = this.point(k, side * (this.edgeAt(k) + 0.15));
+        if (!this.cutAt(this.s[k], side) && !this.openEdge(this.s[k], side, p)) items.push(p);
+      }
     }
     const mesh = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial({ color: 0x3a3e44 }), items.length);
     const m = new THREE.Matrix4();
     items.forEach((p, i) => mesh.setMatrixAt(i, m.makeTranslation(p[0], p[1], p[2])));
     mesh.computeBoundingSphere();
     return mesh;
+  }
+
+  // nízké zábradlí z trubek na okraji chodníku (ve městě mimo centrum, kde nestojí svodidlo)
+  buildRailing() {
+    const b = new StripBuilder();
+    const col = new THREE.Color('#5d636b'), dark = new THREE.Color('#4a4f56');
+    const on = Uint8Array.from(this.s, (s) => this.onUrban(s) && !this.onBollards(s));
+    const posts = [];
+    const every = Math.max(1, Math.round(2.4 / this.step));
+    for (let k = 0; k < this.N; k++) {
+      const n = (k + 1) % this.N;
+      if (!on[k] || !on[n]) continue;
+      for (const side of [-1, 1]) {
+        if (this.cutAt(this.s[k], side) || this.openEdge(this.s[k], side, this.point(k, side * this.edgeAt(k)))) continue;
+        const la = side * (this.edgeAt(k) + 0.12), lb = side * (this.edgeAt(n) + 0.12);
+        // dvě madla: horní a střední, každé jako úzký pásek ze dvou stran
+        for (const [y, t] of [[0.95, 0.06], [0.5, 0.04]]) {
+          const q = [this.point(k, la, y - t), this.point(k, la, y + t), this.point(n, lb, y + t), this.point(n, lb, y - t)];
+          b.quad(q[0], q[1], q[2], q[3], y > 0.7 ? col : dark);
+          b.quad(q[3], q[2], q[1], q[0], y > 0.7 ? col : dark);
+        }
+        if (k % every === 0) posts.push({ p: this.point(k, la), hd: this.hd[k] });
+      }
+    }
+    const group = new THREE.Group();
+    const mesh = new THREE.Mesh(b.build(), new THREE.MeshLambertMaterial({ vertexColors: true }));
+    mesh.receiveShadow = true;
+    group.add(mesh);
+    const geo = new THREE.BoxGeometry(0.06, 1.0, 0.06).translate(0, 0.5, 0);
+    const inst = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial({ color: 0x4a4f56 }), posts.length);
+    const m = new THREE.Matrix4();
+    posts.forEach(({ p, hd }, i) => inst.setMatrixAt(i, m.makeRotationY(hd).setPosition(p[0], p[1], p[2])));
+    inst.computeBoundingSphere();
+    group.add(inst);
+    return group;
   }
 
   buildGantry(style) {

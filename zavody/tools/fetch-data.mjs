@@ -42,7 +42,7 @@ out tags center;`,
 node["public_transport"="platform"];way["traffic_sign"];);
 out body geom;`,
   osm_extra: `[out:json][timeout:120][bbox:${BBOX}];
-(nwr["place"="square"];nwr["amenity"="parking"];way["area:highway"];way["highway"]["area"="yes"];way["man_made"="bridge"];);
+(nwr["place"="square"];nwr["amenity"="parking"];way["area:highway"];way["highway"]["area"="yes"];way["man_made"="bridge"];way["barrier"="guard_rail"];);
 out body geom;`,
 };
 

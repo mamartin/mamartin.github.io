@@ -171,3 +171,34 @@ function roofShape(ring, pts, ground, e0, e1, n0, n1) {
   for (const k of ['cross', 'hip']) if (score[k] > score[best] + 0.08) best = k;
   return best;
 }
+
+// Dominanta s věží: kde je nejvyšší místo půdorysu (poloha a výška vrcholu, rozměr nejvyšší části)
+// a okap s hřebenem zbytku stavby dál než towerR od věže. ring v S-JTSK, vrací null při málo bodech.
+export function peakOf(pts, ring, ground, towerR = 7) {
+  const es = ring.map((p) => p[0]), ns = ring.map((p) => p[1]);
+  const e0 = Math.min(...es), e1 = Math.max(...es), n0 = Math.min(...ns), n1 = Math.max(...ns);
+  const all = [];
+  for (let gx = Math.floor(e0 / CELL); gx <= Math.floor(e1 / CELL); gx++) {
+    for (let gy = Math.floor(n0 / CELL); gy <= Math.floor(n1 / CELL); gy++) {
+      for (const i of pts.grid.get(`${gx},${gy}`) ?? []) {
+        const x = pts.e[i], y = pts.n[i];
+        if (x < e0 || x > e1 || y < n0 || y > n1 || !pointInRing(x, y, ring)) continue;
+        const h = pts.z[i] - ground(x, y);
+        if (h > 1.5 && h < 90) all.push([x, y, h]);
+      }
+    }
+  }
+  if (all.length < 8) return null;
+  const hs = all.map((p) => p[2]).sort((a, b) => a - b);
+  // vrchol věže: nejvyšší bod, pokud ho podpírá aspoň jeden bod do 8 m pod ním (osamělý odraz se nepočítá)
+  const top = hs.length > 1 && hs[hs.length - 1] - hs[hs.length - 2] < 8 ? hs[hs.length - 1] : hs[hs.length - 2];
+  const hi = all.filter((p) => p[2] > top - 6);
+  const e = hi.reduce((s, p) => s + p[0], 0) / hi.length, n = hi.reduce((s, p) => s + p[1], 0) / hi.length;
+  const size = Math.max(...hi.map((p) => Math.hypot(p[0] - e, p[1] - n))) * 2;
+  // hranol věže: spodní pětina bodů věže nad polovinou výšky (vrchol je jehlan nebo helmice)
+  const body = all.filter((p) => Math.hypot(p[0] - e, p[1] - n) < towerR && p[2] > top * 0.55).map((p) => p[2]).sort((a, b) => a - b);
+  const rest = all.filter((p) => Math.hypot(p[0] - e, p[1] - n) > towerR).map((p) => p[2]).sort((a, b) => a - b);
+  // loď: bez dost bodů (střecha mimo třídu budov) null, model pak výšku odhadne
+  const nave = rest.length >= 12 ? { eave: quantile(rest, 0.4), ridge: quantile(rest, 0.95) } : null;
+  return { e, n, top, body: quantile(body, 0.2) ?? top * 0.75, size, nave, points: all.length };
+}

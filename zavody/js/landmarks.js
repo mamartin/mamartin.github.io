@@ -1,4 +1,5 @@
-// Dominanty měst: ruční nízkopolygonové modely usazené na půdorysy z OSM (Dobříš, Svatá Hora v Příbrami).
+// Dominanty měst: ruční nízkopolygonové modely usazené na půdorysy z OSM (Dobříš; v Příbrami Svatá Hora,
+// kostely sv. Jakuba a sv. Vojtěcha a šachta dolu Vojtěch).
 // Předlohou jsou volně licencované fotky z Wikimedia Commons (kategorie Dobříš).
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
@@ -470,6 +471,77 @@ function buildBasilica(l, terrain, church, plain) {
   cross(plain, cx, cz, y + 9.9, 1.1);
 }
 
+// --- Příbram: kostely u trati a šachta dolu Vojtěch -----------------------------------
+// Půdorys z OSM, poloha a výška věže z DMP 1G (l.peak: [x, z, vrchol, hranol věže, šířka, okap a hřeben lodi] v dm),
+// barvy střech podle ortofota ČÚZK; barvy omítek a tvar vrcholu věže sv. Vojtěcha jsou odhad.
+const PB_SLATE = color('#4a4d52'), PB_GREY = color('#6d7074'), PB_COPPER = color('#5f8f7b'), PB_PALE = color('#b8bcbf');
+
+function towerChurch(l, terrain, church, plain, o) {
+  const ring = ccw(l.ring);
+  const [tx, tz, top, body, size, eave0, ridge0] = l.peak.map((v) => v / 10);
+  const bx = orientedBox(ring);
+  const { ground, low } = groundOf(terrain, ring);
+  // loď: změřená, kde DMP body má (sv. Vojtěch), jinak odhad (střecha sv. Jakuba v DMP chybí)
+  const eave = eave0 ? Math.min(14, Math.max(7, eave0)) : o.eave;
+  const ridge = ridge0 > eave + 3 ? ridge0 : eave + o.roofH;
+  const face = color(o.wall), shade = face.clone().multiplyScalar(0.84);
+  addBuilding({ walls: church, plain }, terrain, ring, {
+    wall: eave, roof: ridge - eave, shape: SHAPE.GABLE, face, top: o.roof, plain: false,
+    uvOf: (len) => (len > 6 ? [0, Math.round(len / 6.5), 0, 1] : SOLID),
+  });
+  // hranolová věž natočená podle lodi
+  const w = Math.min(7.5, Math.max(5.5, size)), h = w / 2;
+  const yb = ground + body, yt = ground + top;
+  wallRing(church, rectRing(tx, tz, bx.ux, bx.uz, h, h), low, yb, shade, face, () => [0, 1, 0, Math.max(1, Math.round(body / 9))]);
+  box(plain, tx, tz, bx.ux, bx.uz, h + 0.3, h + 0.3, yb, yb + 0.5, STUCCO);
+  box(plain, tx, tz, bx.ux, bx.uz, h + 0.2, h + 0.2, ground + eave - 0.3, ground + eave + 0.1, STUCCO);
+  const turn = Math.PI / 4 + Math.atan2(bx.uz, bx.ux);
+  if (o.clock) {
+    // ciferníky pod římsou na všech čtyřech stranách
+    for (const [nx, nz] of [[bx.ux, bx.uz], [-bx.ux, -bx.uz], [-bx.uz, bx.ux], [bx.uz, -bx.ux]]) {
+      facePanel(plain, tx + nx * (h + 0.03), tz + nz * (h + 0.03), nx, nz, 2.1, yb - 3.4, yb - 1.3, DARK);
+      facePanel(plain, tx + nx * (h + 0.06), tz + nz * (h + 0.06), nx, nz, 1.8, yb - 3.25, yb - 1.45, WHITE);
+    }
+  }
+  // jehlan věže; sv. Jakub má na nárožích čtyři osmiboké věžičky
+  lathe(plain, tx, tz, 4, [[(h + 0.3) * Math.SQRT2, yb + 0.5], [0.12, yt - 1.4]], o.spire, turn);
+  if (o.turrets) {
+    for (const [a, b] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+      const cx = tx + (bx.ux * a - bx.uz * b) * (h - 0.5), cz = tz + (bx.uz * a + bx.ux * b) * (h - 0.5);
+      lathe(plain, cx, cz, 8, [[0.65, yb + 0.5], [0.65, yb + 2.6, o.spire], [0.75, yb + 2.7], [0.08, yb + 2.7 + (top - body) * 0.42]], o.spire);
+    }
+  }
+  cross(plain, tx, tz, yt - 1.5, 1.1);
+}
+
+function buildJakub(l, terrain, church, plain) {
+  towerChurch(l, terrain, church, plain, { wall: '#eee5d2', roof: PB_SLATE, spire: PB_COPPER, turrets: true, eave: 11, roofH: 10 });
+}
+
+function buildVojtech(l, terrain, church, plain) {
+  towerChurch(l, terrain, church, plain, { wall: '#e8dcc2', roof: PB_GREY, spire: PB_PALE, clock: true, eave: 10, roofH: 5 });
+}
+
+// šachetní budova dolu Vojtěch: hranolová věž s nízkým jehlanem, nárožními věžičkami a lucernou (ortofoto),
+// výška z DMP 1G, okna obloukovitá; barva omítky je odhad
+function buildDulVojtech(l, terrain, church, plain) {
+  const ring = ccw(l.ring);
+  const [, , top, body] = l.peak.map((v) => v / 10);
+  const m = addBuilding({ walls: church, plain }, terrain, ring, {
+    wall: body - 0.6, roof: Math.max(1.5, top - body + 0.6), shape: SHAPE.TENT, face: color('#dcc89c'), top: PB_SLATE, plain: false,
+    uvOf: (len) => (len > 4 ? [0, Math.round(len / 4.2), 0, Math.max(1, Math.round((body - 0.6) / 6))] : SOLID),
+  });
+  const { cx, cz, ux, uz, hl, hw } = m.box;
+  wallRing(plain, offsetRing(ring, 0.3), m.eave - 0.6, m.eave, STUCCO, STUCCO);
+  for (const [a, b] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+    const x = cx + ux * a * (hl - 0.6) - uz * b * (hw - 0.6), z = cz + uz * a * (hl - 0.6) + ux * b * (hw - 0.6);
+    lathe(plain, x, z, 8, [[0.5, m.eave], [0.5, m.eave + 1.2, STUCCO], [0.6, m.eave + 1.3], [0.06, m.eave + 2.6]], PB_SLATE);
+  }
+  const y = m.eave + Math.max(1.5, top - body + 0.6) - 0.3;
+  box(plain, cx, cz, ux, uz, 1.1, 1.1, y, y + 1.6, STUCCO);
+  lathe(plain, cx, cz, 4, [[1.6, y + 1.6], [0.1, y + 3]], PB_SLATE, Math.PI / 4 + Math.atan2(uz, ux));
+}
+
 // francouzský park: zámecká osa, záhony z živých plůtků, lemované bazény a tvarované tisy
 function buildGarden(town, terrain, tileOf) {
   const area = town.areas.find((a) => a.kind === 'garden');
@@ -552,6 +624,9 @@ export function buildLandmarks(town, track, terrain, tileOf, shadows, anisotropy
     synagoga: (l) => buildSynagogue(l, terrain, church, tile(l), track),
     vargac: (l) => buildVargac(l, terrain, tile(l)),
     oranzerie: (l) => buildOrangery(l, terrain, church, tile(l)),
+    'kostel-jakub': (l) => l.peak && buildJakub(l, terrain, church, tile(l).plain),
+    'kostel-vojtech': (l) => l.peak && buildVojtech(l, terrain, church, tile(l).plain),
+    'dul-vojtech': (l) => l.peak && buildDulVojtech(l, terrain, church, tile(l).plain),
     'sh-ambit': (l) => buildAmbit(l, terrain, far.walls, far.plain),
     'sh-bazilika': (l) => buildBasilica(l, terrain, far.walls, far.plain),
     ...Object.fromEntries(['plzenska', 'breznicka', 'prazska', 'mnisecka'].map((k) => [`sh-kaple-${k}`, (l) => buildCornerChapel(l, terrain, far.walls, far.plain)])),
