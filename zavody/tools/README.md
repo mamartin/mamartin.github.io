@@ -1,6 +1,6 @@
 # Nástroje pro tratě ze skutečných měst
 
-Převádí skutečné město (zatím Dobříš) na trať hry. Hra tyhle skripty nepotřebuje, slouží jen k přegenerování dat.
+Převádí skutečné město (Dobříš, Příbram) na trať hry. Hra tyhle skripty nepotřebuje, slouží jen k přegenerování dat.
 Spouští se v této složce, potřebují Node 20+ a příkaz `unzip`.
 
 ```bash
@@ -31,6 +31,8 @@ Všechno, co je u města ruční volba nebo oprava dat, je v `cities/<město>.mj
 5. Trať do hry: import `js/tracks-<město>.js` v `js/tracks.js`, závod do `test/limits.mjs`.
 6. Dominanty: OSM id budov do `landmarks`, ruční modely do `js/landmarks.js` (bez modelu zůstane jen půdorys a hra ji vynechá s varováním).
    Zóny fasád (`centre`, `walls`, `facadeZone`), obrubníky v centru (`urban`) a ruční doplňky (`lawns`, `gardens`, `squareStreet`, `extraTrees`) jsou volitelné.
+7. Dominanta daleko od trati (za dosahem kulis 400 m): `far` se středem a poloměrem vezme stavby a stromy kolem ní do scény,
+   výšková mřížka hry ji pokryje bez umělých kopců z okraje a její model v `js/landmarks.js` má slabší mlhu. Hustá zástavba může potřebovat vyšší `maxSceneKb`.
 
 ## Zdroje dat
 
@@ -59,7 +61,7 @@ Souřadnice jsou herní (x na východ, z na jih, počátek na startu) v decimetr
 - `shops`: indexy budov z `buildings`, ve kterých je podle OSM obchod, restaurace, banka a podobně (dostanou výlohy)
 - `signs`: pětice druh, hodnota, x, z, natočení v setinách radiánu; druh 0 dej přednost, 1 stop, 2 nejvyšší rychlost (hodnota km/h), 3 obec, 4 zastávka (hodnota je index do `signNames`), 5 semafor (hodnota 1 na trati, 0 na vedlejší ulici), 6 radar
 
-V `js/tracks-<město>.js` jsou navíc `stand` (bod ve světě, u kterého stojí tribuna) a úseky `sett` (kostky podle `surface=sett`) a `urban` (centrum s obrubníkem a chodníkem místo svodidla), oba od a do jako body ve světě. `crossings` jsou body přechodů pro chodce. Body místo metrů od startu sedí i na obrácené trati.
+V `js/tracks-<město>.js` jsou navíc `stand` (bod ve světě, u kterého stojí tribuna), `far` (vzdálená místa `[x, z, poloměr]`, terén hry je pokryje), `bridges` (mosty, kde osa nesleduje DMR) a úseky `sett` (kostky podle `surface=sett`) a `urban` (centrum s obrubníkem a chodníkem místo svodidla), oba od a do jako body ve světě. `crossings` jsou body přechodů pro chodce. Body místo metrů od startu sedí i na obrácené trati.
 
 ## Odchylky od skutečnosti: Dobříš
 
@@ -113,3 +115,13 @@ Co ve hře neodpovídá skutečné Dobříši a proč. Ostatní (osa ulic, půdo
 - Kresba značek je zjednodušená. Deska zastávky je obecná, jen se jménem zastávky z OSM.
 - Semafory jsou jen na jediné světelné křižovatce Pražská × Mírové náměstí (4 návěstidla z OSM). Tvar podle panoramat: na trati pozinkovaný stožár se šikmým výložníkem nad pruhem a opakovačem na sloupu, na vedlejších ramenech k náměstí sloupek. Světla se střídají v obecném 40s cyklu (hlavní proti vedlejší), skutečný signální plán neznáme a na jízdu nemají vliv.
 - Autobusy jsou kulisa: OSM ví, kde jsou nástupiště, ne kdy tam co stojí. Autobus (obecný 12m, barvy bez označení dopravce) stojí u zhruba 60 % nástupišť na Mírovém náměstí a u železniční stanice; kde by zasáhl do výběhu trati nebo do jiného autobusu, chybí.
+
+## Odchylky od skutečnosti: Příbram
+
+Okruh B (4,2 km): Husova k Březovým Horám, Mariánská a Milínská na náměstí T. G. Masaryka a Plzeňskou zpět. Platí totéž co u Dobříše (vyhlazená osa, odhad šířek, svodidlo a výběh, obecná okna a palety); navíc:
+
+- Start je na rovném kusu Husovy mezi Plzeňskou a Březovými Horami, na náměstí by nebyla rovina pro start. Tribuna stojí na volném místě vpravo 320 m za startem.
+- Most Husovy přes železnici je v OSM most a reliéf pod ním DMR nemá, kontrola výšky osy ho vynechává.
+- Svatá Hora je 650 m od trati, za dosahem kulis. Areál s okolím (200 m) je ve scéně navíc a terén hry sahá až za něj. Ambity, čtyři osmiboké kaple a bazilika jsou ruční modely podle půdorysů z OSM a popisu (kaple s lucernami, Pražský portál uprostřed východního křídla); barvy střech a kopulí jsou odhad, výšky také. Ambity jsou zjednodušené na obdélník křídel 10 m kolem nádvoří.
+- Modely Svaté Hory mají slabší mlhu než okolí, aby byly z trati vidět jako silueta (na úsecích, kde trať míří na východ, ve vzdálenosti 750–1300 m).
+- 100 domů u trati je oříznutých, nejvýš o 6,5 m; scéna je kvůli hustší zástavbě větší (604 kB, limit 650 kB).

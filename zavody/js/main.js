@@ -273,7 +273,7 @@ async function loadWorld(id) {
   const track = new Track(def);
   // reliéf z DMR má mřížku 12 m, jemnější terén by nic nepřidal
   const cell = S.quality === 'low' ? (town ? 14 : 11) : town ? 10 : 8;
-  const terrain = new Terrain(track, def.biome, { seed: def.seed, lake: def.lake, cell, dem: town?.dem, water: town?.water });
+  const terrain = new Terrain(track, def.biome, { seed: def.seed, lake: def.lake, cell, dem: town?.dem, water: town?.water, far: def.far });
   if (town) terrain.groundMap = paintGround(town, track, terrain, S.quality, renderer.capabilities.getMaxAnisotropy());
   const group = new THREE.Group();
   // na nízké kvalitě (slabý procesor) větší čtverce terénu: méně volání kreslení

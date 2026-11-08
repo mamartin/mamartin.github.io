@@ -64,26 +64,34 @@ function jsonSize(list) {
   return size;
 }
 
-const W = 1400, MAP_TOP = 96, MAP_H = 1040, S = 0.6, [CX, CY] = city.preview?.center ?? [0, 0];
+// střed mapy z nastavení města, „auto“ (nebo bez nastavení) podle každého okruhu zvlášť
+const W = 1400, MAP_TOP = 96, MAP_H = 1040, S = 0.6;
+let [CX, CY] = Array.isArray(city.preview?.center) ? city.preview.center : [0, 0];
 const X = (x) => +(W / 2 + (x - CX) * S).toFixed(1);
 const Y = (y) => +(MAP_TOP + MAP_H / 2 - (y - CY) * S).toFixed(1);
 const pts = (r) => r.map((p) => `${X(p[0])},${Y(p[1])}`).join(' ');
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
 
-const base = [];
-for (const e of parks) for (const r of rings(e)) if (r.length > 2) base.push(`<polygon points="${pts(r)}" fill="#d6e8c4"/>`);
-for (const e of water) for (const r of rings(e)) if (r.length > 2) base.push(`<polygon points="${pts(r)}" fill="#a3cfea"/>`);
-for (const w of roads) {
-  if (['track', 'motorway', 'motorway_link'].includes(w.tags.highway)) continue;
-  const main = ['secondary', 'tertiary'].includes(w.tags.highway);
-  base.push(`<polyline fill="none" stroke="${main ? '#b3ada3' : '#d3cec6'}" stroke-width="${main ? 3 : 1.4}" points="${pts(w.geometry.map((p) => proj.forward(p.lat, p.lon)))}"/>`);
+function baseMap() {
+  const base = [];
+  for (const e of parks) for (const r of rings(e)) if (r.length > 2) base.push(`<polygon points="${pts(r)}" fill="#d6e8c4"/>`);
+  for (const e of water) for (const r of rings(e)) if (r.length > 2) base.push(`<polygon points="${pts(r)}" fill="#a3cfea"/>`);
+  for (const w of roads) {
+    if (['track', 'motorway', 'motorway_link'].includes(w.tags.highway)) continue;
+    const main = ['secondary', 'tertiary'].includes(w.tags.highway);
+    base.push(`<polyline fill="none" stroke="${main ? '#b3ada3' : '#d3cec6'}" stroke-width="${main ? 3 : 1.4}" points="${pts(w.geometry.map((p) => proj.forward(p.lat, p.lon)))}"/>`);
+  }
+  for (const b of buildings) base.push(`<polygon points="${pts(b.r)}" fill="#c4bcb0"/>`);
+  return base.join('');
 }
-for (const b of buildings) base.push(`<polygon points="${pts(b.r)}" fill="#c4bcb0"/>`);
-const baseMap = base.join('');
 
 const metrics = [];
 for (const L of loops) {
   const axis = L.axis;
+  if (!Array.isArray(city.preview?.center)) {
+    const xs = axis.map((p) => p[0]), ys = axis.map((p) => p[1]);
+    [CX, CY] = [(Math.min(...xs) + Math.max(...xs)) / 2, (Math.min(...ys) + Math.max(...ys)) / 2];
+  }
   const near = buildings.filter((b) => b.r.some((p) => nearest(axis, p) < 400));
   const edge = 11 / 2 + 3;
   const clash = near.filter((b) => b.r.some((p) => nearest(axis, p) < edge)).length;
@@ -98,7 +106,7 @@ for (const L of loops) {
   });
 
   const svg = [`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${W}" width="${W}" height="${W}" font-family="Helvetica,Arial,sans-serif"><rect width="${W}" height="${W}" fill="#faf8f4"/>`];
-  svg.push(baseMap);
+  svg.push(baseMap());
   svg.push(`<polygon points="${pts(axis)}" fill="none" stroke="#fff" stroke-width="11" stroke-linejoin="round"/>`);
   svg.push(`<polygon points="${pts(axis)}" fill="none" stroke="#d3124f" stroke-width="6" stroke-linejoin="round"/>`);
   for (let i = 40; i < axis.length; i += 70) {

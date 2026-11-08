@@ -19,10 +19,11 @@ export const RACE = {
   slowestKmh: 15,
 };
 
-// Tratě, které se jedou: Dobříš po směru i obráceně a jedna vymyšlená trať.
+// Tratě, které se jedou: Dobříš po směru i obráceně, Příbram a jedna vymyšlená trať.
 export const RACES = [
   { track: 'dobris', reverse: false },
   { track: 'dobris', reverse: true },
+  { track: 'pribram', reverse: false },
   { track: 'sumava', reverse: false },
 ];
 

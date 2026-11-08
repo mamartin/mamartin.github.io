@@ -118,8 +118,8 @@ export function clipRing(r, b) {
 }
 
 // vnější cesty multipolygonu pospojuje do uzavřených prstenců
-export function joinOuter(members) {
-  const open = members.filter((m) => m.type === 'way' && m.role !== 'inner' && m.geometry).map((m) => m.geometry.map((p) => [p.lat, p.lon]));
+export function joinOuter(members, inner = false) {
+  const open = members.filter((m) => m.type === 'way' && (m.role === 'inner') === inner && m.geometry).map((m) => m.geometry.map((p) => [p.lat, p.lon]));
   const same = (a, b) => a[0] === b[0] && a[1] === b[1];
   const rings = [];
   while (open.length) {

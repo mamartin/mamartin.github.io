@@ -63,15 +63,20 @@ function check(ctx, TRACK) {
   ok(d.h.length === d.nx * d.nz && d.h.every(Number.isFinite), `mřížka ${d.nx}×${d.nz} po ${d.cell} m je úplná`);
   // trať proti plnému DMR; mřížka může být na úzkých náspech dál od trati, hra tam terén dorovná k silnici
   const rawDem = existsSync(join(ctx.data, 'dmr/grid.bin')) ? loadDem(join(ctx.data, 'dmr/grid.bin')) : null;
+  // úseky na mostech (a 10 m kolem): terén pod nimi je níž než silnice
+  const near = (x, z) => { let b = 0, bd = Infinity; for (let k = 0; k < cl.N; k++) { const d = (cl.px[k] - x) ** 2 + (cl.pz[k] - z) ** 2; if (d < bd) { bd = d; b = k; } } return cl.s[b]; };
+  const bridgeSpans = (TRACK.bridges ?? []).map(([a, b]) => [near(...a) - 10, near(...b) + 10]);
+  const onBridge = (s) => bridgeSpans.some(([a, b]) => (a <= b ? s >= a && s <= b : s >= a || s <= b));
   let maxD = 0, sumD = 0, maxRaw = 0;
   for (let k = 0; k < cl.N; k++) {
+    if (onBridge(cl.s[k])) continue;
     const e = Math.abs(demAt(cl.px[k], cl.pz[k]) - cl.py[k]);
     maxD = Math.max(maxD, e);
     sumD += e;
     if (rawDem) maxRaw = Math.max(maxRaw, Math.abs(rawDem.height(...proj.inverse(cl.px[k], -cl.pz[k])) - scene.origin.base - cl.py[k]));
   }
   // DMR je holý terén bez mostů, proto na propustcích a potocích pod silnicí klesne o pár metrů
-  if (rawDem) ok(maxRaw < 2.5, `trať drží DMR: největší rozdíl ${maxRaw.toFixed(2)} m`);
+  if (rawDem) ok(maxRaw < 2.5, `trať drží DMR: největší rozdíl ${maxRaw.toFixed(2)} m${bridgeSpans.length ? ` (mimo ${bridgeSpans.length} most${bridgeSpans.length > 1 ? 'y' : ''})` : ''}`);
   ok(sumD / cl.N < 0.5 && maxD < 3, `mřížka pod osou trati: průměrný rozdíl ${(sumD / cl.N).toFixed(2)} m, největší ${maxD.toFixed(2)} m`);
 
   // 5) domy nesmí stát v silnici ani ve výběhu
@@ -151,7 +156,8 @@ function check(ctx, TRACK) {
 
   // 6) povinné náležitosti
   const size = readFileSync(ctx.scene).length;
-  ok(size < 500 * 1024, `velikost souboru ${(size / 1024).toFixed(0)} kB`);
+  const maxKb = city.maxSceneKb ?? 500;
+  ok(size < maxKb * 1024, `velikost souboru ${(size / 1024).toFixed(0)} kB (limit ${maxKb} kB)`);
   ok(scene.license === 'ODbL-1.0' && /OpenStreetMap/.test(scene.credit) && /ČÚZK/.test(scene.credit), 'data jsou označená ODbL a uvádějí zdroje');
   const need = city.requiredLandmarks ?? [];
   if (need.length) ok(need.every((id) => scene.landmarks.some((l) => l.id === id)), `všech ${need.length} dominant má půdorys`);

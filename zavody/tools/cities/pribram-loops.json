@@ -1,0 +1,57 @@
+[
+  {
+    "id": "A",
+    "name": "Náměstí a Svatá Hora",
+    "note": "Olesinského, Balbínova a pod Svatou Horou zpět Mixovou a Milínskou",
+    "via": [
+      [160, 75, "Hailova"],
+      [600, 172, "třída Kpt. Olesinského"],
+      [870, 0, "Balbínova"],
+      [740, -70, "Hrabákova"],
+      [450, -100, "Mariánské údolí"],
+      [330, -450, "Smetanova"],
+      [150, -730, "Mixova"],
+      [-20, -450, "Milínská"],
+      [0, -60, "náměstí T. G. Masaryka"]
+    ]
+  },
+  {
+    "id": "A2",
+    "name": "Dlouhá a Smetanova",
+    "note": "Krátký okruh kolem úpatí Svaté Hory",
+    "via": [
+      [150, -50, "Dlouhá"],
+      [330, -450, "Smetanova"],
+      [150, -730, "Mixova"],
+      [-20, -450, "Milínská"],
+      [0, -60, "náměstí T. G. Masaryka"]
+    ]
+  },
+  {
+    "id": "B",
+    "name": "Březové Hory",
+    "note": "Plzeňská a Husova k dolům, zpět Mariánskou a Milínskou",
+    "via": [
+      [-150, 200, "Plzeňská"],
+      [-700, 380, "Husova"],
+      [-1200, -250, "Husova"],
+      [-1100, -580, "Mariánská"],
+      [-600, -520, "Mariánská"],
+      [0, -60, "náměstí T. G. Masaryka"]
+    ]
+  },
+  {
+    "id": "C",
+    "name": "Evropská",
+    "note": "Olesinského, Jinecká, Evropská a Plzeňská zpět na náměstí",
+    "via": [
+      [160, 75, "Hailova"],
+      [350, 135, "třída Kapitána Olesinského"],
+      [560, 700, "Jinecká"],
+      [300, 950, "Evropská"],
+      [-150, 690, "Evropská"],
+      [-200, 250, "Plzeňská"],
+      [-60, 100, "Plzeňská"]
+    ]
+  }
+]

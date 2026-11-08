@@ -26,7 +26,7 @@ const START = city.start;     // v souřadnicích loops.json
 const WIDTH_MIN = 10, WIDTH_MAX = 13, WIDTH_SCALE = 1.5;
 const RUNOFF = 3;
 const STAND_S = city.stand;   // metr od startu, kde stojí tribuna
-const REACH = 400;            // budovy a další kulisy do této vzdálenosti od osy
+const REACH = city.reach ?? 400; // budovy a další kulisy do této vzdálenosti od osy
 const MARGIN = 560;           // výšková mřížka a plochy kolem obdélníku trati
 const DEM_CELL = 12;
 const FACADE_GAP = 1.2;       // kolik volného místa zůstane mezi výběhem a fasádou
@@ -175,6 +175,11 @@ function spansWhere(test, minLen = 20) {
   return out;
 }
 def.sett = spansWhere((k) => loop.edges[axis[clAxis[k]].seg].way.tags.surface === 'sett');
+// mosty: DMR je holý terén, pod mostem má údolí nebo zářez, kontrola scény je proto vynechá
+{
+  const bridges = spansWhere((k) => loop.edges[axis[clAxis[k]].seg].way.tags.bridge === 'yes', 0);
+  if (bridges.length) def.bridges = bridges;
+}
 
 // --- pomocné dotazy na osu ----------------------------------------------------
 
@@ -223,6 +228,16 @@ for (let k = 0; k < cl.N; k++) {
   minZ = Math.min(minZ, cl.pz[k]); maxZ = Math.max(maxZ, cl.pz[k]);
 }
 const bounds = { minX: minX - MARGIN, maxX: maxX + MARGIN, minZ: minZ - MARGIN, maxZ: maxZ + MARGIN };
+
+// Vzdálená místa (city.far): stavby a stromy kolem nich jsou ve scéně i za dosahem kulis
+// a výšková mřížka je pokryje i s okolím, aby byly vidět v dálce (Svatá Hora v Příbrami).
+const FAR = (city.far ?? []).map((f) => ({ ...f, xz: toGame(...f.at) }));
+for (const f of FAR) {
+  const m = f.r + 250;
+  bounds.minX = Math.min(bounds.minX, f.xz[0] - m); bounds.maxX = Math.max(bounds.maxX, f.xz[0] + m);
+  bounds.minZ = Math.min(bounds.minZ, f.xz[1] - m); bounds.maxZ = Math.max(bounds.maxZ, f.xz[1] + m);
+}
+const inFar = (x, z) => FAR.some((f) => Math.hypot(x - f.xz[0], z - f.xz[1]) < f.r);
 
 // --- budovy --------------------------------------------------------------------
 
@@ -397,7 +412,10 @@ for (const e of area) {
   const id = LANDMARKS[e.id];
   if (!id || !e.tags?.building) continue;
   const t = e.tags;
-  const r0 = cleanRing(e.geometry.map((p) => toGame(p.lat, p.lon)));
+  // relace (budova s nádvořím): vnější obrys a nádvoří zvlášť
+  const outer = e.type === 'relation' ? joinOuter(e.members ?? [])[0] : e.geometry.map((p) => [p.lat, p.lon]);
+  const holes = e.type === 'relation' ? joinOuter(e.members ?? [], true).map((h) => cleanRing(h.map(([la, lo]) => toGame(la, lo)))) : [];
+  const r0 = cleanRing(outer.map(([la, lo]) => toGame(la, lo)));
   const { ring: r, moved } = shiftClear(r0);
   const m = massing(t, Math.abs(signedArea(r)), minRect(r)[0]);
   if (moved > 0) console.log(`dominanta ${id}: odsunuta o ${moved.toFixed(1)} m`);
@@ -406,6 +424,7 @@ for (const e of area) {
     id, name: t.name ?? null, wall: dm(m.wall), levels: parseFloat(t['building:levels']) || null,
     height: parseFloat(t.height) || null, facade: t['building:colour'] ?? null, roofColour: t['roof:colour'] ?? null, roofShape: t['roof:shape'] ?? null,
     moved: +moved.toFixed(1), p: flat(simplifyRing(r, 0.3)),
+    ...(holes.length ? { holes: holes.map((h) => flat(simplifyRing(h, 0.3))) } : {}),
   });
 }
 
@@ -417,7 +436,7 @@ for (const e of area) {
     let r = cleanRing(latlon.map(([la, lo]) => toGame(la, lo)));
     if (r.length < 3) continue;
     const d = r.reduce((m, p) => Math.min(m, axisDist(p[0], p[1])), Infinity);
-    if (d > REACH) continue;
+    if (d > REACH && !r.some((p) => inFar(p[0], p[1]))) continue;
     const a0 = Math.abs(signedArea(r));
     if (LANDMARKS[e.id]) continue;
     if (a0 < 12) { bump('tinySkipped'); continue; }
@@ -871,7 +890,7 @@ if (dmp) {
   for (const t of treesOf(dmp.trees, dem.krovak, [Math.min(...es), Math.min(...ns), Math.max(...es), Math.max(...ns)])) {
     const x = gx(t.e, t.n), z = gz(t.e, t.n);
     const d = axisDist(x, z);
-    if (d > REACH || (d > FOREST_EDGE && forests.some((r) => pointInRing(x, z, r)))) continue;
+    if ((d > REACH && !inFar(x, z)) || (d > FOREST_EDGE && forests.some((r) => pointInRing(x, z, r)))) continue;
     canopy.push(dm(x), dm(z), dm(t.h), dm(t.r));
   }
   stats.treesFromDmp = canopy.length / 4;
@@ -913,6 +932,8 @@ const scene = {
 // centrum (náměstí a okolí startu): místo svodidel obrubník a sloupky, jízda se nemění
 const URBAN = city.urban ?? { start: 0, centre: 0 };
 def.urban = spansWhere((k) => alongCentre(cl.px[k], cl.pz[k]).d < URBAN.centre || Math.hypot(cl.px[k], cl.pz[k]) < URBAN.start);
+// vzdálená místa pro terén hry: mřížka je pokryje a nepřidá kolem nich umělé kopce z okraje
+if (FAR.length) def.far = FAR.map((f) => [Math.round(f.xz[0]), Math.round(f.xz[1]), f.r]);
 
 mkdirSync(dirname(ctx.scene), { recursive: true });
 const json = JSON.stringify(scene);

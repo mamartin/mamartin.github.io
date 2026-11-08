@@ -3,6 +3,8 @@
 import * as THREE from 'three';
 import { Noise2D, smoothstep, lerp, clamp } from './rng.js';
 
+const FAR_MARGIN = 260; // m terénu za okrajem vzdáleného místa
+
 export class Terrain {
   constructor(track, biome, opts = {}) {
     this.track = track;
@@ -17,10 +19,17 @@ export class Terrain {
       maxZ = Math.max(maxZ, track.pz[k]);
     }
     this.trackBounds = { minX, maxX, minZ, maxZ };
-    this.x0 = Math.floor((minX - margin) / cell) * cell;
-    this.z0 = Math.floor((minZ - margin) / cell) * cell;
-    this.nx = Math.ceil((maxX + margin - this.x0) / cell) + 1;
-    this.nz = Math.ceil((maxZ + margin - this.z0) / cell) + 1;
+    // vzdálená místa [x, z, r] (Svatá Hora v Příbrami): mřížka sahá i za ně, aby stála na terénu
+    this.far = opts.far ?? [];
+    let gx0 = minX - margin, gx1 = maxX + margin, gz0 = minZ - margin, gz1 = maxZ + margin;
+    for (const [x, z, r] of this.far) {
+      gx0 = Math.min(gx0, x - r - FAR_MARGIN); gx1 = Math.max(gx1, x + r + FAR_MARGIN);
+      gz0 = Math.min(gz0, z - r - FAR_MARGIN); gz1 = Math.max(gz1, z + r + FAR_MARGIN);
+    }
+    this.x0 = Math.floor(gx0 / cell) * cell;
+    this.z0 = Math.floor(gz0 / cell) * cell;
+    this.nx = Math.ceil((gx1 - this.x0) / cell) + 1;
+    this.nz = Math.ceil((gz1 - this.z0) / cell) + 1;
     this.lake = opts.lake;
     this.dem = opts.dem ?? null; // skutečná výšková mřížka (jen tratě podle reálné krajiny)
     this.noise = new Noise2D(opts.seed ?? 7);
@@ -117,7 +126,9 @@ export class Terrain {
         const dBox = Math.hypot(bx, bz);
         if (this.dem) {
           // na okraji mřížky se krajina zvedne do kopců, ať není vidět její konec
-          const hills = smoothstep(330, 520, dBox) * (16 + 14 * (this.noise.fbm(x / 240, z / 240, 3) * 0.5 + 0.5));
+          let hills = smoothstep(330, 520, dBox) * (16 + 14 * (this.noise.fbm(x / 240, z / 240, 3) * 0.5 + 0.5));
+          // u vzdáleného místa skutečný terén, kopce až za ním na okraji mřížky
+          for (const [fx, fz, fr] of this.far) hills *= smoothstep(fr + 60, fr + FAR_MARGIN, Math.hypot(x - fx, z - fz));
           h[v] = lerp(low, this.demAt(x, z) + hills, smoothstep(edge + 2, edge + 26, d));
           continue;
         }

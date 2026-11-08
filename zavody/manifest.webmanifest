@@ -1,7 +1,7 @@
 {
   "name": "Turbo Okruh",
   "short_name": "Turbo Okruh",
-  "description": "Arkádové 3D závody v prohlížeči: pět tratí včetně skutečné Dobříše, náhodné tratě a editor, AI soupeři, drift a nitro.",
+  "description": "Arkádové 3D závody v prohlížeči: šest tratí včetně skutečné Dobříše a Příbrami, náhodné tratě a editor, AI soupeři, drift a nitro.",
   "lang": "cs",
   "start_url": "./",
   "scope": "./",

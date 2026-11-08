@@ -1,4 +1,4 @@
-// Dominanty měst: ruční nízkopolygonové modely usazené na půdorysy z OSM (zatím Dobříš).
+// Dominanty měst: ruční nízkopolygonové modely usazené na půdorysy z OSM (Dobříš, Svatá Hora v Příbrami).
 // Předlohou jsou volně licencované fotky z Wikimedia Commons (kategorie Dobříš).
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
@@ -368,6 +368,108 @@ function buildOrangery(l, terrain, church, tile) {
   });
 }
 
+// --- Svatá Hora (Příbram): bílé ambity kolem nádvoří, v rozích osmiboké kaple s lucernami, uprostřed bazilika ---
+// Je přes 600 m od trati, takže stačí siluetu: tmavé střechy, kopule a věžička nad bazilikou.
+const SH_WALL = color('#f2ecdc'), SH_SHADE = color('#d9d1bd'), SH_ROOF = color('#3f4448'), SH_DOME = color('#4c5a56');
+const SH_UV = (len) => (len > 5 ? [0, Math.round(len / 5.5), 0, 1] : SOLID);
+const ccw = (r) => (areaOf(r) > 0 ? r : [...r].reverse());
+const centreOf = (r) => r.reduce((a, p) => [a[0] + p[0] / r.length, a[1] + p[1] / r.length], [0, 0]);
+const groundOf = (terrain, r) => {
+  const hs = r.map((p) => terrain.heightAt(p[0], p[1]));
+  return { ground: hs.reduce((a, b) => a + b) / hs.length, low: Math.min(...hs) - 1 };
+};
+
+// slabší mlha pro vzdálenou dominantu: vystoupí z oparu jako silueta (vzdušná perspektiva by ji jinak smazala)
+const FAR_FOG = 0.55;
+function thinFog(mat) {
+  mat.onBeforeCompile = (sh) => {
+    sh.fragmentShader = sh.fragmentShader.replace('#include <fog_fragment>', `
+      #ifdef USE_FOG
+        #ifdef FOG_EXP2
+          float fogFactor = 1.0 - exp(-fogDensity * fogDensity * vFogDepth * vFogDepth);
+        #else
+          float fogFactor = smoothstep(fogNear, fogFar, vFogDepth);
+        #endif
+        gl_FragColor.rgb = mix(gl_FragColor.rgb, fogColor, fogFactor * ${FAR_FOG.toFixed(2)});
+      #endif
+    `);
+  };
+  mat.customProgramCacheKey = () => 'thinFog';
+  return mat;
+}
+
+// pás střechy mezi dvěma stejně dlouhými obrysy ve dvou výškách
+function roofBand(o, a, ya, b, yb, col) {
+  a.forEach((p, i) => {
+    const n = (i + 1) % a.length;
+    roofTriangle(o, [p[0], ya, p[1]], [a[n][0], ya, a[n][1]], [b[n][0], yb, b[n][1]], col);
+    roofTriangle(o, [p[0], ya, p[1]], [b[n][0], yb, b[n][1]], [b[i][0], yb, b[i][1]], col);
+  });
+}
+
+// ambity: obdélník křídel kolem nádvoří (to je v OSM díra v multipolygonu), uprostřed východního křídla Pražský portál
+function buildAmbit(l, terrain, church, plain) {
+  if (!l.holes?.length) return;
+  // nádvoří: vynechá skoro rovné body, ať se obrysy střechy neprotínají
+  const raw = ccw(l.holes[0].reduce((o, v, i, a) => (i % 2 ? o : [...o, [v / 10, a[i + 1] / 10]]), []));
+  const court = raw.filter((p, i) => {
+    const a = raw[(i - 1 + raw.length) % raw.length], b = raw[(i + 1) % raw.length];
+    const cr = (p[0] - a[0]) * (b[1] - p[1]) - (p[1] - a[1]) * (b[0] - p[0]);
+    return Math.abs(cr) / (Math.hypot(p[0] - a[0], p[1] - a[1]) * Math.hypot(b[0] - p[0], b[1] - p[1]) || 1) > 0.15;
+  });
+  const W = 10; // hloubka křídla
+  const outer = offsetRing(court, W), ridgeRing = offsetRing(court, W / 2);
+  const { ground, low } = groundOf(terrain, outer);
+  const eave = ground + 7.5, ridge = eave + 4.2;
+  wallRing(church, outer, low, eave, SH_SHADE, SH_WALL, SH_UV);
+  wallRing(church, [...court].reverse(), low, eave, SH_SHADE, SH_WALL, SH_UV);
+  roofBand(plain, outer, eave, ridgeRing, ridge, SH_ROOF);
+  roofBand(plain, [...court].reverse(), eave, [...ridgeRing].reverse(), ridge, SH_ROOF);
+
+  // Pražský portál: vyšší štít uprostřed hrany obrácené nejvíc na východ (+x)
+  let best = null;
+  outer.forEach((p, i) => {
+    const q = outer[(i + 1) % outer.length], len = Math.hypot(q[0] - p[0], q[1] - p[1]);
+    const nx = (q[1] - p[1]) / len, nz = -(q[0] - p[0]) / len;
+    if (!best || nx > best.nx) best = { x: (p[0] + q[0]) / 2, z: (p[1] + q[1]) / 2, nx, nz };
+  });
+  const { x, z, nx, nz } = best;
+  const top = ridge + 1.5;
+  box(church, x - nx * 4, z - nz * 4, -nz, nx, 6, 4.6, low, top, SH_WALL, SH_SHADE);
+  pediment(plain, x + nx * 0.7, z + nz * 0.7, nx, nz, 12, top, 3.4, 9.5, SH_ROOF, SH_WALL);
+  lathe(plain, x + nx * 0.4, z + nz * 0.4, 6, [[1.1, top], [1.1, top + 3.6, SH_WALL], [0.6, top + 4.4], [0.15, top + 5.4]], SH_WALL);
+}
+
+// osmiboká kaple v rohu ambitů: vyšší zdi, kopule a lucerna s křížem
+function buildCornerChapel(l, terrain, church, plain) {
+  const ring = ccw(l.ring);
+  const [cx, cz] = centreOf(ring);
+  const r = ring.reduce((s, p) => s + Math.hypot(p[0] - cx, p[1] - cz), 0) / ring.length;
+  const { ground, low } = groundOf(terrain, ring);
+  const eave = ground + 10.5;
+  wallRing(church, ring, low, eave, SH_SHADE, SH_WALL, () => [0, 1, 0, 1]);
+  wallRing(plain, offsetRing(ring, 0.3), eave - 0.5, eave, SH_WALL, SH_WALL);
+  const turn = Math.atan2(ring[0][1] - cz, ring[0][0] - cx);
+  lathe(plain, cx, cz, ring.length, [
+    [r + 0.3, eave], [r * 0.98, eave + 1.2], [r * 0.82, eave + 3.4], [r * 0.55, eave + 5], [r * 0.24, eave + 5.6],
+    [0.95, eave + 5.6, SH_WALL], [0.95, eave + 7.4, SH_WALL], [1.2, eave + 7.5], [0.6, eave + 8.6], [0.1, eave + 9.6],
+  ], SH_DOME, turn);
+  cross(plain, cx, cz, eave + 9.5, 0.9);
+}
+
+// bazilika: vysoká loď s valbovou střechou a věžičkou s cibulí uprostřed hřebene
+function buildBasilica(l, terrain, church, plain) {
+  const roof = 9;
+  const m = addBuilding({ walls: church, plain }, terrain, l.ring, {
+    wall: 15, roof, shape: SHAPE.HIP, face: SH_WALL, top: SH_ROOF, plain: false, uvOf: (len) => (len > 6 ? [0, Math.round(len / 6.5), 0, 2] : SOLID),
+  });
+  wallRing(plain, offsetRing(ccw(l.ring), 0.3), m.eave - 0.5, m.eave, SH_WALL, SH_WALL);
+  const { cx, cz } = m.box, y = m.eave + roof - 0.6;
+  lathe(plain, cx, cz, 8, [[1.7, y], [1.7, y + 3.6, SH_WALL], [2, y + 3.8], [1.9, y + 4.6], [1.2, y + 5.6], [0.7, y + 6.2],
+    [0.75, y + 7.6, SH_WALL], [1, y + 7.8], [0.55, y + 8.8], [0.12, y + 10]], SH_DOME, Math.PI / 8);
+  cross(plain, cx, cz, y + 9.9, 1.1);
+}
+
 // francouzský park: zámecká osa, záhony z živých plůtků, lemované bazény a tvarované tisy
 function buildGarden(town, terrain, tileOf) {
   const area = town.areas.find((a) => a.kind === 'garden');
@@ -439,6 +541,7 @@ export function buildLandmarks(town, track, terrain, tileOf, shadows, anisotropy
   const group = new THREE.Group();
   group.name = 'landmarks';
   const facade = part(), church = part();
+  const far = { walls: part(), plain: part() }; // dominanty daleko od trati: méně mlhy, ať jsou vidět
   const tile = (l) => tileOf(l.ring[0][0], l.ring[0][1]);
   // ruční model podle id půdorysu; město, které dominantu nemá, ji nestaví (id určuje tools/cities/<město>.mjs)
   const BUILD = {
@@ -449,6 +552,9 @@ export function buildLandmarks(town, track, terrain, tileOf, shadows, anisotropy
     synagoga: (l) => buildSynagogue(l, terrain, church, tile(l), track),
     vargac: (l) => buildVargac(l, terrain, tile(l)),
     oranzerie: (l) => buildOrangery(l, terrain, church, tile(l)),
+    'sh-ambit': (l) => buildAmbit(l, terrain, far.walls, far.plain),
+    'sh-bazilika': (l) => buildBasilica(l, terrain, far.walls, far.plain),
+    ...Object.fromEntries(['plzenska', 'breznicka', 'prazska', 'mnisecka'].map((k) => [`sh-kaple-${k}`, (l) => buildCornerChapel(l, terrain, far.walls, far.plain)])),
   };
   const byId = Object.fromEntries(town.landmarks.map((l) => [l.id, l]));
   for (const [id, build] of Object.entries(BUILD)) if (byId[id]) build(byId[id]);
@@ -460,6 +566,8 @@ export function buildLandmarks(town, track, terrain, tileOf, shadows, anisotropy
   }
   if (facade.pos.length) group.add(toMesh(facade, new THREE.MeshLambertMaterial({ map: castleTexture(anisotropy), vertexColors: true }), shadows));
   if (church.pos.length) group.add(toMesh(church, new THREE.MeshLambertMaterial({ map: churchTexture(anisotropy), vertexColors: true }), shadows));
+  if (far.walls.pos.length) group.add(toMesh(far.walls, thinFog(new THREE.MeshLambertMaterial({ map: churchTexture(anisotropy), vertexColors: true })), false));
+  if (far.plain.pos.length) group.add(toMesh(far.plain, thinFog(new THREE.MeshLambertMaterial({ vertexColors: true })), false));
   const garden = buildGarden(town, terrain, tileOf);
   if (garden) group.add(garden);
   group.add(statueGroup(town, terrain));
