@@ -16,6 +16,7 @@ import { buildLife, waitingCars } from './townlife.js';
 import { skyline, bakeAO, aoMaterial } from './ao.js';
 import { facadeMaterial, maskTexture } from './facade.js';
 import { buildStreetDetail } from './streetdetail.js';
+import { treeMaterial } from './foliage.js';
 
 // jak daleko od osy trati ještě něco vrhá stín
 const SHADOW_REACH = 70;
@@ -554,7 +555,7 @@ function buildGreenery(town, track, terrain, buildings, density, shadows, rng, v
     const x = c[0] + rng.range(-11, 11), z = c[1] + rng.range(-11, 11);
     if (free(x, z)) leaf(x, z);
   }
-  const mat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
+  const mat = treeMaterial();
   const group = new THREE.Group();
   group.name = 'greenery';
   // Stín padá jen kolem auta, takže plný model a stín má jen to, co je u trati, a jen zblízka.

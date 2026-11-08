@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { RNG, smoothstep } from './rng.js';
+import { treeMaterial } from './foliage.js';
 import { buildCornerSigns, buildRoadPoles, buildReflectors } from './signs.js';
 import { buildCuts, buildTunnels } from './features.js';
 import { Stand, SnowmanHeads, standArea } from './stand.js';
@@ -856,7 +857,7 @@ export function buildScenery(track, terrain, biomeKey, biome, quality, seed) {
         broad.push(item);
       }
     }
-    const treeMat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
+    const treeMat = treeMaterial();
     group.add(instancedChunks(spruceGeometry(), treeMat, spruce, { castShadow: quality !== 'low' }));
     group.add(instancedChunks(broadleafGeometry(), treeMat, broad, { castShadow: quality !== 'low' }));
     const rocks = scatter(rng, terrain, Math.round(160 * density), { minD: edge + 3, maxD: 250 }).map((r) => ({
