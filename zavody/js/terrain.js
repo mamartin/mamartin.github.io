@@ -2,6 +2,7 @@
 // a dál od ní přechází v kopce / kaňon / rovinu města.
 import * as THREE from 'three';
 import { Noise2D, smoothstep, lerp, clamp } from './rng.js';
+import { groundMaterial } from './grounddetail.js';
 
 const FAR_MARGIN = 260; // m terénu za okrajem vzdáleného místa
 
@@ -335,6 +336,7 @@ export class Terrain {
       : new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: palette.flat ?? true });
     const detail = this.groundMap?.userData.detail;
     if (detail) withDetailMap(mat, detail);
+    groundMaterial(mat);
     const group = new THREE.Group();
     group.name = 'terrain';
     const CHUNK = Math.max(8, Math.round(chunk / cell));

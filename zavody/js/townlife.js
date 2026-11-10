@@ -3,7 +3,7 @@
 // Všichni stojí za okrajem trati (track.edgeAt), auta závodu se jich nedotknou.
 import * as THREE from 'three';
 import { RNG } from './rng.js';
-import { personGeometry, personMaterial, tickPeople } from './people.js';
+import { personGeometry, personMaterial, tickPeople, blobGeometry, blobMaterial } from './people.js';
 import { instancedLevels } from './lod.js';
 
 const CLOTHES = ['#2f4a6e', '#9c2a26', '#e8e6df', '#3b3f45', '#5d7a4a', '#c79a3a', '#6d2f3a', '#8a8f96', '#2a2c30', '#d26a3c', '#4b6fa8', '#efe2c4'];
@@ -26,7 +26,10 @@ export function buildLife(town, track, terrain, { view, night, seed, blocked }) 
     if (track.openEdge(s, side, [p.x, 0, p.z]) || track.cutAt(s, side)) return;
     // k trati: směr -strana * pravá ruka
     const ry = facing === 'track' ? p.hd + (side > 0 ? Math.PI / 2 : -Math.PI / 2) + rng.range(-0.5, 0.5) : p.hd + (rng.next() < 0.5 ? 0 : Math.PI);
-    people.push({ x: p.x, y: terrain.heightAt(p.x, p.z), z: p.z, ry, s: rng.range(0.92, 1.08), color: rng.pick(CLOTHES), fan });
+    // terén těsně za okrajem je kvůli krajnici 0,7 m pod silnicí (terrain.js): postava stojí aspoň v úrovni
+    // chodníku, jinak by jí obrubník schoval nohy i stín
+    const top = track.sampleAt(s, side * track.edgeAt(k)).y + (track.onUrban(s) ? 0.13 : 0);
+    people.push({ x: p.x, y: Math.max(terrain.heightAt(p.x, p.z), top), z: p.z, ry, s: rng.range(0.92, 1.08), color: rng.pick(CLOTHES), fan });
   };
   const urban = (s) => track.onUrban(s);
   const L = track.L;
@@ -73,6 +76,10 @@ export function buildLife(town, track, terrain, { view, night, seed, blocked }) 
       pool.traverse((o) => { if (o.isMesh) o.onBeforeRender = tickPeople; });
       group.add(pool);
     }
+    // měkký stín pod každým, jen zblízka (dál není vidět)
+    const blob = instancedLevels([[0, [[blobGeometry(1.1, 0.9), people.map(({ color, ...t }) => t)]]]], blobMaterial(), { cull: Math.min(opts.cull, 90) });
+    blob.traverse((o) => { if (o.isMesh) o.renderOrder = 1; });
+    group.add(blob);
   }
   group.userData.people = people.length;
   return group;

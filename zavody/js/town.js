@@ -16,7 +16,8 @@ import { buildLife, waitingCars } from './townlife.js';
 import { skyline, bakeAO, aoMaterial } from './ao.js';
 import { facadeMaterial, maskTexture } from './facade.js';
 import { buildStreetDetail } from './streetdetail.js';
-import { treeMaterial } from './foliage.js';
+import { treeMaterial, leafCardGeometry, leafCardMaterial } from './foliage.js';
+import { buildingDetail } from './buildingdetail.js';
 
 // jak daleko od osy trati ještě něco vrhá stín
 const SHADOW_REACH = 70;
@@ -574,6 +575,8 @@ function buildGreenery(town, track, terrain, buildings, density, shadows, rng, v
     [d1, [[farS, spruce], [farB, broad]]],
     [d2, [[tinyTreeGeometry(), tiny]]],
   ], mat, { cull }));
+  // zblízka roztřepený obrys listnatých korun (foliage.js), bez stínu; jedno volání kreslení
+  group.add(instancedLevels([[0, [[leafCardGeometry(0.15, 4.85, 0.1, 6, 5.4, '#72a242'), broad]]]], leafCardMaterial(), { cull: Math.min(cull, 75 * reach) }));
   return group;
 }
 
@@ -905,7 +908,7 @@ export function buildTown(town, track, terrain, quality, seed, anisotropy, fogFa
   facadeMaterial(ribbonMat, maskTexture(holes.ribbon), 0.15 * 0.25 / 3);
   facadeMaterial(panelMat, maskTexture(holes.panel), 1.2 * 0.25 / 3.8);
   facadeMaterial(shopMat, maskTexture([[14, 36, 66, 80, 1, true], [86, 36, 28, 84, 1, true]], 128, false), 0.3 / 4.5);
-  for (const m of [wallMat, shopMat, ribbonMat, panelMat]) aoMaterial(m);
+  for (const m of [wallMat, shopMat, ribbonMat, panelMat]) buildingDetail(aoMaterial(m));
   const blocks = new Map();
   for (const t of tiles.values()) {
     if (!blocks.has(t.block)) blocks.set(t.block, new THREE.Group());
@@ -924,6 +927,7 @@ export function buildTown(town, track, terrain, quality, seed, anisotropy, fogFa
     group.add(lod);
   }
   group.userData.skyline = sky;
+  group.userData.wallMats = new Set([wallMat, shopMat, ribbonMat, panelMat]); // střechy bez předpočítaného stínu (sunshadow.js)
   group.add(buildWater(town));
   group.add(buildGreenery(town, track, terrain, placed, density, shadows, rng, view));
   group.add(buildLamps(town, track, terrain, rng, view, night));

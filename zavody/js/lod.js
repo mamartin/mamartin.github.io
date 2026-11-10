@@ -98,6 +98,7 @@ export function mergeSimilar(root) {
       m.type, m.vertexColors, m.side, m.transparent, m.opacity, m.alphaTest, m.flatShading, m.depthWrite, m.polygonOffset,
       m.color?.getHex(), m.emissive?.getHex(), m.map?.uuid, m.roughness, m.metalness, m.toneMapped, m.fog,
       o.castShadow, o.receiveShadow, o.renderOrder, !!g.index, Object.keys(g.attributes).sort().join(),
+      m.onBeforeCompile === THREE.Material.prototype.onBeforeCompile ? '' : m.customProgramCacheKey(), // upravený shader se nesmí slít s obyčejným
     ].join('|');
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(o);

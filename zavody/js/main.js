@@ -44,6 +44,7 @@ import { encodeGhost, decodeGhost, sharedGhost, saveSharedGhost } from './ghosts
 import { bindKeysUI, refreshKeysUI, keyPanelHtml, itemKeyLabel, keyPlayer, keysSignature, playerColor, pauseHint, esc } from './keysui.js';
 import { Post } from './post.js';
 import { EnvProbe } from './envprobe.js';
+import { bakeSunShadow, applySunShadow, SUN_SHADOW } from './sunshadow.js';
 import { splitLarge, mergeSimilar, setViewScale, collectPools, updatePools } from './lod.js';
 import { TrackEditor, customToDef, decodeTrack, checkDef } from './editor.js';
 
@@ -297,9 +298,10 @@ async function loadWorld(id) {
   group.add(trackGroup);
   const scenery = buildScenery(track, terrain, def.biome, biome, S.quality, def.seed + 3);
   group.add(scenery.group);
+  let townGroup = null;
   if (town) {
     setFacadeSky(biome);
-    const townGroup = buildTown(town, track, terrain, S.quality, def.seed + 5, renderer.capabilities.getMaxAnisotropy(), biome.fog.far, !!biome.night);
+    townGroup = buildTown(town, track, terrain, S.quality, def.seed + 5, renderer.capabilities.getMaxAnisotropy(), biome.fog.far, !!biome.night);
     group.add(townGroup);
     // chodník a obrubník u domů ztmavne podle toho, kolik oblohy domy zakrývají (ao.js)
     shadeGround(trackGroup, townGroup.userData.skyline);
@@ -309,6 +311,18 @@ async function loadWorld(id) {
   audio.setStreets(streets);
   const lights = buildLights(biome, S.quality, shadowLevel());
   group.add(lights.group);
+  // stíny domů i mimo dosah stínové mapy (sunshadow.js); v noci ne
+  SUN_SHADOW.map.value?.dispose();
+  SUN_SHADOW.map.value = null;
+  if (townGroup && !biome.night) {
+    const baked = bakeSunShadow(townGroup.userData.skyline, lights.sun.userData.dir, terrain);
+    if (baked) {
+      SUN_SHADOW.map.value = baked.tex;
+      SUN_SHADOW.rect.value.copy(baked.rect);
+      SUN_SHADOW.radius.value = lights.sun.castShadow ? lights.sun.shadow.camera.right : 0;
+      applySunShadow(group, townGroup.userData.wallMats);
+    }
+  }
   const sky = buildSky(biome, S.quality);
   scene.add(group, sky);
   scene.fog = new THREE.Fog(biome.fog.color, biome.fog.near, biome.fog.far);
@@ -1706,6 +1720,7 @@ function aimSun(w, x, y, z) {
     }
   }
   sun.target.position.copy(sunAim);
+  SUN_SHADOW.center.value.set(sunAim.x, sunAim.z);
   sun.position.copy(sunAim).addScaledVector(sun.userData.dir, 260);
 }
 

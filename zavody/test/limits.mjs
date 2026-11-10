@@ -6,6 +6,7 @@
 // 8. 11. 2026 po předpočítaném stínění, parapetech (domy do 30 m od trati), jemném modelu auta blízko kamery
 // a drobnostech ulic: průměr 145 / 243 tis., maximum 263 / 398 tis. (trojúhelníky v 1,46 km, stínová mapa je počítá
 // podruhé). Na trojúhelníky už rezerva skoro není; čas snímku na GPU vzrostl asi o 1,3 ms (M4, 1600 × 900).
+// 11. 11. 2026 po stínech pod lidmi a drobnostmi a ploškách korun: průměr 146 / 246 tis., maximum 267 / 398 tis.
 // Odraz okolí v laku auta (envprobe.js) se do měření nepočítá: jedna stěna krychle za snímek stojí asi 0,6 ms a 80–105 volání.
 export const PERF = {
   avgCalls: 160,

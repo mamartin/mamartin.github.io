@@ -4,6 +4,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { buildCenterline, smoothCircular, Cut } from './trackmath.js';
 import { clamp, angleDiff, RNG } from './rng.js';
 import { BIOMES, WET_GRIP, SNOW_GRIP } from './biomes.js';
+import { vergeMaterial, vergeUv } from './grounddetail.js';
 
 export const SURF_ROAD = 0, SURF_CURB = 1, SURF_OFF = 2;
 // žulové kostky drží méně než asfalt, na mokru výrazně méně
@@ -377,15 +378,19 @@ export class Track {
         const a0 = side * (ha + inset), a1 = side * (hb + inset);
         const b0 = side * this.edgeAt(k), b1 = side * this.edgeAt(n);
         // travnatý pás místo chodníku (def.edges 'grass')
-        const c = urban[k] && this.edges && this.edgeKind(this.s[k], side) === 'grass' ? (stripe ? grA : grB) : col;
-        if (side > 0) sh.quad(this.point(k, a0, y), this.point(k, b0, y), this.point(n, b1, y), this.point(n, a1, y), c);
-        else sh.quad(this.point(k, b0, y), this.point(k, a0, y), this.point(n, a1, y), this.point(n, b1, y), c);
+        const grassy = urban[k] && this.edges && this.edgeKind(this.s[k], side) === 'grass';
+        const c = grassy ? (stripe ? grA : grB) : col;
+        // struktura povrchu (grounddetail.js): dlaždice chodníku, tráva, jinak zrno; metry podél a od vnitřního okraje
+        const kind = urban[k] && !grassy ? 1 : grassy || c.g > c.r + 0.05 ? 2 : 3;
+        const sa = this.s[k], sb = n ? this.s[n] : this.L, wa = Math.abs(b0 - a0), wb = Math.abs(b1 - a1);
+        if (side > 0) sh.quad(this.point(k, a0, y), this.point(k, b0, y), this.point(n, b1, y), this.point(n, a1, y), c, vergeUv(kind, sa, 0, sa, wa, sb, wb, sb, 0));
+        else sh.quad(this.point(k, b0, y), this.point(k, a0, y), this.point(n, a1, y), this.point(n, b1, y), c, vergeUv(kind, sa, wa, sa, 0, sb, 0, sb, wb));
         // zástěra na vnějším okraji, aby nebyla vidět mezera k terénu
         if (side > 0) sh.quad(this.point(k, b0, y), this.point(k, b0, -3), this.point(n, b1, -3), this.point(n, b1, y), skirt);
         else sh.quad(this.point(k, b0, -3), this.point(k, b0, y), this.point(n, b1, y), this.point(n, b1, -3), skirt);
       }
     }
-    const shMesh = new THREE.Mesh(sh.build(), new THREE.MeshLambertMaterial({ vertexColors: true }));
+    const shMesh = new THREE.Mesh(sh.build(), vergeMaterial(new THREE.MeshLambertMaterial({ vertexColors: true })));
     shMesh.receiveShadow = true;
     group.add(shMesh);
 

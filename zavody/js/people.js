@@ -207,3 +207,27 @@ export function personMaterial(fans) {
 export const tickPeople = () => {
   time.value = (performance.now() / 1000) % 10000;
 };
+
+// Měkký stín pod postavou nebo drobností (lavička, koš): průhledná skvrna na zemi místo stínové mapy,
+// do které by stovky drobných tvarů přidaly víc práce, než přinesou. Jedno volání kreslení na skupinu.
+let blobTex = null;
+export function blobMaterial() {
+  if (!blobTex) {
+    const c = document.createElement('canvas');
+    c.width = c.height = 64;
+    const g = c.getContext('2d');
+    const grd = g.createRadialGradient(32, 32, 2, 32, 32, 32);
+    grd.addColorStop(0, 'rgba(0,0,0,0.72)');
+    grd.addColorStop(0.4, 'rgba(0,0,0,0.5)');
+    grd.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = grd;
+    g.fillRect(0, 0, 64, 64);
+    blobTex = new THREE.CanvasTexture(c);
+  }
+  return new THREE.MeshBasicMaterial({
+    map: blobTex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4, fog: true,
+  });
+}
+
+// vodorovná skvrna w × d (m) těsně nad zemí
+export const blobGeometry = (w, d, y = 0.03) => new THREE.PlaneGeometry(w, d).rotateX(-Math.PI / 2).translate(0, y, 0);

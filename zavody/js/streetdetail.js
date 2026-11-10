@@ -7,6 +7,7 @@ import { RNG } from './rng.js';
 import { StripBuilder } from './track.js';
 import { colored } from './scenery.js';
 import { instancedLevels } from './lod.js';
+import { blobGeometry, blobMaterial } from './people.js';
 
 const CELL = 128; // buňka atlasu: 0 poklop, 1 vpusť, 2 záplata, 3 praskliny
 const START_GAP = 18; // u startu a cíle nic (šachovnice, rošt)
@@ -148,7 +149,13 @@ export function buildStreetDetail(track, terrain, seed, view) {
     ...[-0.72, 0.72].map((x) => colored(new THREE.BoxGeometry(0.06, 0.45, 0.4).translate(x, 0.22, -0.02).toNonIndexed(), '#2d3033')),
   ]);
   const opts = { cull: Math.min(view.cull, 220 * view.reach) };
-  if (bins.length || benches.length) group.add(instancedLevels([[0, [[bin, bins], [bench, benches]]]], mat, opts));
+  if (bins.length || benches.length) {
+    group.add(instancedLevels([[0, [[bin, bins], [bench, benches]]]], mat, opts));
+    // měkký stín pod nimi (people.js), jen zblízka
+    const blob = instancedLevels([[0, [[blobGeometry(0.85, 0.85, 0.01), bins], [blobGeometry(2.1, 0.8, 0.01), benches]]]], blobMaterial(), { cull: Math.min(opts.cull, 90) });
+    blob.traverse((o) => { if (o.isMesh) o.renderOrder = 1; });
+    group.add(blob);
+  }
   group.userData.count = { decals: decals.count, bins: bins.length, benches: benches.length };
   return group;
 }
