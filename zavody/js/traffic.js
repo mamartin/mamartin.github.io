@@ -28,6 +28,9 @@ export function townCarGeometry() {
   ]);
 }
 
+// lak aut ve zkušebním realistickém vzhledu: lesklý, odráží oblohu
+export const carPaint = () => new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.38, metalness: 0.2, envMapIntensity: 0.8 });
+
 // přední a koncová světla (v noci)
 export function townCarLights() {
   return {
@@ -37,7 +40,8 @@ export function townCarLights() {
 }
 
 // colors = barvy karoserií (stejné jako u stojících aut)
-export function buildTraffic(town, track, terrain, { view, night, seed, shadows, colors }) {
+// shape = podrobný tvar auta zblízka (zkušební realistický vzhled), jinak všude krabice
+export function buildTraffic(town, track, terrain, { view, night, seed, shadows, colors, shape = null }) {
   const group = new THREE.Group();
   group.name = 'traffic';
   const allowed = (x, z) => {
@@ -91,7 +95,11 @@ export function buildTraffic(town, track, terrain, { view, night, seed, shadows,
     group.add(pool);
     pools.push(pool.userData.pool);
   };
-  add(townCarGeometry(), items, new THREE.MeshLambertMaterial({ vertexColors: true }), !!shadows);
+  if (shape) {
+    const pool = instancedLevels([[0, [[shape, items, !!shadows]]], [70 * view.reach, [[townCarGeometry(), items]]]], carPaint(), opts);
+    group.add(pool);
+    pools.push(pool.userData.pool);
+  } else add(townCarGeometry(), items, new THREE.MeshLambertMaterial({ vertexColors: true }), !!shadows);
   // měkký stín pod autem (stínová mapa sahá jen kolem závodního auta)
   add(blobGeometry(2.7, 5.4, 0.04), items.map(({ color, ...t }) => t), blobMaterial(), false);
   group.children[group.children.length - 1].traverse((m) => { if (m.isMesh) m.renderOrder = 1; });

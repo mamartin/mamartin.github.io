@@ -228,3 +228,19 @@ export function leafCardMaterial() {
   mat.customProgramCacheKey = () => 'leafCard';
   return mat;
 }
+
+// vítr pro cizí materiál stromu (větve a listy z realtrees.js): stejné kývání jako koruny tady
+export function windMaterial(mat, key) {
+  const prev = mat.onBeforeCompile;
+  mat.onBeforeCompile = (sh, r) => {
+    prev?.call(mat, sh, r);
+    sh.uniforms.treeTime = TREE_TIME;
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\nuniform float treeTime;')
+      .replace('#include <begin_vertex>', `#include <begin_vertex>
+        float vBark = 0.0;
+        ${WIND}`);
+  };
+  mat.customProgramCacheKey = () => key;
+  return mat;
+}

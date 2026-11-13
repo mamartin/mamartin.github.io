@@ -45,6 +45,8 @@ import { bindKeysUI, refreshKeysUI, keyPanelHtml, itemKeyLabel, keyPlayer, keysS
 import { Post } from './post.js';
 import { EnvProbe } from './envprobe.js';
 import { bakeSunShadow, applySunShadow, SUN_SHADOW } from './sunshadow.js';
+import { real, loadRealSky } from './real.js';
+import { loadRealTrees } from './realtrees.js';
 import { splitLarge, mergeSimilar, setViewScale, collectPools, updatePools } from './lod.js';
 import { TrackEditor, customToDef, decodeTrack, checkDef } from './editor.js';
 
@@ -273,6 +275,8 @@ async function loadWorld(id) {
   // tratě podle skutečné krajiny si data dotáhnou až teď, ostatním nic nepřibude
   const town = baseDef.scene ? await loadTown(baseDef.scene).catch((e) => (console.warn(e), null)) : null;
   if (token !== loadToken) return G.world;
+  // zkušební realistický vzhled: tvary stromů se vypěstují jednou, než se začne stavět svět
+  if (S.real && S.quality !== 'low') await loadRealTrees().catch((e) => console.warn(e));
   disposeWorld();
   // déšť (na zimní trati místo něj padá sníh)
   const wet = wantsRain(baseDef);
@@ -282,11 +286,14 @@ async function loadWorld(id) {
   const night = wantsNight(baseDef);
   // proměnlivé počasí mění biom za jízdy, proto vlastní kopie
   const biome = wet ? wetBiome(BIOMES[def.biome]) : snowy ? snowBiome(BIOMES[def.biome]) : night ? nightBiome(BIOMES[def.biome]) : mix ? { ...BIOMES[def.biome] } : BIOMES[def.biome];
+  // zkušební realistický vzhled: materiály, zem z ortofota, stromy a auta se staví jinak (real.js)
+  real.on = !!S.real && S.quality !== 'low';
   const track = new Track(def);
   // reliéf z DMR má mřížku 12 m, jemnější terén by nic nepřidal
   const cell = S.quality === 'low' ? (town ? 14 : 11) : town ? 10 : 8;
   const terrain = new Terrain(track, def.biome, { seed: def.seed, lake: def.lake, cell, dem: town?.dem, water: town?.water, far: def.far });
   if (town) terrain.groundMap = paintGround(town, track, terrain, S.quality, renderer.capabilities.getMaxAnisotropy());
+  if (town && real.on) terrain.ortho = baseDef.scene.match(/([^/]+)\.bin$/)?.[1] ?? null;
   const group = new THREE.Group();
   // na nízké kvalitě (slabý procesor) větší čtverce terénu: méně volání kreslení
   const low = S.quality === 'low';
@@ -327,6 +334,9 @@ async function loadWorld(id) {
   scene.add(group, sky);
   scene.fog = new THREE.Fog(biome.fog.color, biome.fog.near, biome.fog.far);
   scene.background = new THREE.Color(biome.fog.color);
+  scene.backgroundRotation.set(0, 0, 0);
+  scene.environmentRotation.set(0, 0, 0);
+  scene.backgroundIntensity = 1;
   renderer.toneMappingExposure = biome.exposure;
   renderer.shadowMap.enabled = shadowLevel() !== 'off';
   if (auto.view < 1) setViewScale(group, auto.view);
@@ -360,6 +370,26 @@ async function loadWorld(id) {
   }
   setupPost();
   buildShowcase();
+  // zkušební realistický vzhled: nebe z HDR snímku místo kresleného (jen za jasného dne), načte se na pozadí
+  if (real.on && !night && !wet && !snowy && !mix) {
+    const world = G.world;
+    loadRealSky().then((sky) => {
+      if (G.world !== world) return;
+      // slunce ve snímku se natočí tam, odkud svítí slunce hry
+      const turn = sky.sunAz - Math.atan2(biome.sunDir[2], biome.sunDir[0]);
+      scene.backgroundRotation.set(0, turn, 0);
+      scene.environmentRotation.set(0, turn, 0);
+      scene.background = sky.tex;
+      scene.backgroundIntensity = sky.gain;
+      const env = pmrem.fromEquirectangular(sky.env);
+      world.envRT.dispose();
+      world.envRT = env;
+      scene.environment = env.texture;
+      scene.environmentIntensity = sky.gain;
+      scene.fog.color.copy(sky.horizon);
+      world.sky.visible = false;
+    }).catch((e) => console.warn(e));
+  }
   $('loading').hidden = true;
   return G.world;
 }
@@ -575,6 +605,8 @@ function refreshMenu() {
   $('fps-toggle').setAttribute('aria-pressed', String(!!S.showFps));
   $('fps-toggle').querySelector('em').textContent = S.showFps ? 'Zapnuto' : 'Vypnuto';
   $('fps').hidden = !S.showFps;
+  $('real-toggle').setAttribute('aria-pressed', String(!!S.real));
+  $('real-toggle').querySelector('em').textContent = S.real ? 'Zapnuto' : 'Vypnuto';
   $('laps-value').textContent = S.laps;
   const two = humanCount() === 2;
   $('players-opt').hidden = S.mode === 'time' || isTouch;
@@ -798,6 +830,14 @@ function bindMenu() {
       G.screen = 'menu';
     });
   }
+  // zkušební realistický vzhled (real.js): svět se postaví znovu
+  $('real-toggle').addEventListener('click', async () => {
+    S.real = !S.real;
+    store.save();
+    refreshMenu();
+    await loadWorld(currentTrackId());
+    G.screen = 'menu';
+  });
   $('fps-toggle').addEventListener('click', () => {
     S.showFps = !S.showFps;
     store.save();

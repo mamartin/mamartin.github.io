@@ -310,6 +310,30 @@ function sharedParts(fine = false) {
   if (!shared) shared = buildShared();
   return shared;
 }
+// Tvar auta pro kulisy ve městě (zkušební realistický vzhled): karoserie závodního vozu bez křídla,
+// kabina, světla, spáry a kola v jedné síti s barvami ve vrcholech. Bílá karoserie dostane barvu instance.
+export function townCarShape() {
+  const P = sharedParts(false);
+  const part = (geo, hex) => {
+    const g = geo.index ? geo.toNonIndexed() : geo.clone();
+    for (const k of Object.keys(g.attributes)) if (k !== 'position' && k !== 'normal') g.deleteAttribute(k);
+    const c = new THREE.Color(hex), col = new Float32Array(g.attributes.position.count * 3);
+    for (let i = 0; i < col.length; i += 3) c.toArray(col, i);
+    g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    return g;
+  };
+  const wheels = [[0.86, 1.35], [-0.86, 1.35], [0.86, -1.3], [-0.86, -1.3]].flatMap(([x, z]) => [
+    part(P.wheel.tire, '#17181a').translate(x, P.wheel.r, z),
+    part(P.wheel.rim, '#b9bcc2').translate(x, P.wheel.r, z),
+  ]);
+  const geo = mergeGeometries([
+    part(P.paintGeo, '#ffffff'), part(P.cabinGeo, '#141c26'), part(P.panelGeo, '#2a2c30'),
+    part(P.headGeo, '#f4f1e4'), part(P.tailGeo, '#b3211a'), part(P.chromeGeo, '#c4c7cc'), ...wheels,
+  ]);
+  geo.computeBoundingSphere();
+  return geo;
+}
+
 function buildShared() {
   // kolem kol husté řezy (oblouk podběhu), jinde řidší
   const nearWheel = (z) => CAR_WHEELS.some((zw) => Math.abs(z - zw) < 0.5);

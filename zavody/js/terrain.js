@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { Noise2D, smoothstep, lerp, clamp } from './rng.js';
 import { groundMaterial } from './grounddetail.js';
+import { orthoGround } from './real.js';
 
 const FAR_MARGIN = 260; // m terénu za okrajem vzdáleného místa
 
@@ -336,6 +337,11 @@ export class Terrain {
       : new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: palette.flat ?? true });
     const detail = this.groundMap?.userData.detail;
     if (detail) withDetailMap(mat, detail);
+    // zkušební realistický vzhled: skutečný letecký snímek místo kreslené země (jen na staženém úseku)
+    if (this.ortho) {
+      g.setAttribute('tdist', new THREE.BufferAttribute(this.dist, 1));
+      orthoGround(mat, this.ortho, this.track.edge);
+    }
     groundMaterial(mat);
     const group = new THREE.Group();
     group.name = 'terrain';

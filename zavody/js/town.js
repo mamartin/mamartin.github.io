@@ -18,7 +18,10 @@ import { facadeMaterial, maskTexture } from './facade.js';
 import { buildStreetDetail } from './streetdetail.js';
 import { treeMaterial, leafCardGeometry, leafCardMaterial } from './foliage.js';
 import { buildingDetail } from './buildingdetail.js';
-import { buildTraffic, townCarGeometry, townCarLights } from './traffic.js';
+import { real } from './real.js';
+import { realTrees, realTreeMaterials } from './realtrees.js';
+import { townCarShape } from './car.js';
+import { buildTraffic, townCarGeometry, townCarLights, carPaint } from './traffic.js';
 
 // jak daleko od osy trati ještě něco vrhá stín
 const SHADOW_REACH = 70;
@@ -571,13 +574,31 @@ function buildGreenery(town, track, terrain, buildings, density, shadows, rng, v
   // nejdál oba druhy jedním tvarem a voláním, barvu druhu nese barva instance
   const tinted = (list, hex) => list.map((t) => ({ ...t, color: new THREE.Color(t.color).multiply(color(hex)).getHex() }));
   const tiny = [...tinted(spruce, '#305f31'), ...tinted(broad, '#72a040')];
+  // zkušební realistický vzhled: do dReal stromy s větvemi a listy (realtrees.js), dál původní tvary
+  const realOn = real.on && realTrees.broad.length > 0;
+  const dReal = realOn ? Math.min(d1, 95 * reach) : 0;
   group.add(instancedLevels([
-    [0, [[fullS, spruce.filter(close), true], [fullB, broad.filter(close), true], [farS, spruce.filter(far)], [farB, broad.filter(far)]]],
+    [dReal, [[fullS, spruce.filter(close), true], [fullB, broad.filter(close), true], [farS, spruce.filter(far)], [farB, broad.filter(far)]]],
     [d1, [[farS, spruce], [farB, broad]]],
     [d2, [[tinyTreeGeometry(), tiny]]],
   ], mat, { cull }));
-  // zblízka roztřepený obrys listnatých korun (foliage.js), bez stínu; jedno volání kreslení
-  group.add(instancedLevels([[0, [[leafCardGeometry(0.15, 4.85, 0.1, 6, 5.4, '#72a242'), broad]]]], leafCardMaterial(), { cull: Math.min(cull, 75 * reach) }));
+  if (realOn) {
+    for (const [list, shapes] of [[broad, realTrees.broad], [spruce, realTrees.spruce]]) {
+      shapes.forEach((t, j) => {
+        const mine = list.filter((_, i) => i % shapes.length === j);
+        if (!mine.length) return;
+        const m = realTreeMaterials(t);
+        const plain = mine.map(({ color, ...it }) => it);
+        group.add(instancedLevels([[0, [[t.wood, plain.filter(close), true], [t.wood, plain.filter(far)]]]], m.wood, { cull: dReal }));
+        const leaves = instancedLevels([[0, [[t.leaves, mine.filter(close), true], [t.leaves, mine.filter(far)]]]], m.leaves, { cull: dReal });
+        leaves.traverse((o) => { if (o.isMesh && o.castShadow) o.customDepthMaterial = m.depth; });
+        group.add(leaves);
+      });
+    }
+  } else {
+    // zblízka roztřepený obrys listnatých korun (foliage.js), bez stínu; jedno volání kreslení
+    group.add(instancedLevels([[0, [[leafCardGeometry(0.15, 4.85, 0.1, 6, 5.4, '#72a242'), broad]]]], leafCardMaterial(), { cull: Math.min(cull, 75 * reach) }));
+  }
   return group;
 }
 
@@ -757,12 +778,17 @@ function buildCars(town, track, terrain, shadows, view, extra = [], night = fals
   }));
   // bílá karoserie dostane barvu instance, okna a kola zůstanou tmavá (stejný tvar jako jedoucí auta, traffic.js)
   const geo = townCarGeometry();
-  const mat = new THREE.MeshLambertMaterial({ vertexColors: true });
+  // zkušební realistický vzhled: do 70 m tvar závodního vozu bez křídla s lesklým lakem, dál krabice
+  const shape = real.on ? townCarShape() : null;
+  const mat = shape ? carPaint() : new THREE.MeshLambertMaterial({ vertexColors: true });
   const close = (t) => shadows && terrain.distAt(t.x, t.z) < SHADOW_REACH;
   const group = new THREE.Group();
   group.name = 'cars';
   const opts = { cull: Math.min(view.cull, 380 * view.reach) };
-  group.add(instancedLevels([[0, [[geo, items.filter(close), true], [geo, items.filter((t) => !close(t))]]]], mat, opts));
+  const near = [[geo, items.filter(close), true], [geo, items.filter((t) => !close(t))]];
+  group.add(instancedLevels(shape
+    ? [[0, [[shape, items.filter(close), true], [shape, items.filter((t) => !close(t))]]], [70 * view.reach, near]]
+    : [[0, near]], mat, opts));
   // v noci svítí auta čekající na výjezd (přední světla a koncová)
   const waiting = items.filter((t) => t.waiting).map(({ color, ...t }) => t);
   if (night && waiting.length) {
@@ -903,7 +929,7 @@ export function buildTown(town, track, terrain, quality, seed, anisotropy, fogFa
   facadeMaterial(ribbonMat, maskTexture(holes.ribbon), 0.15 * 0.25 / 3);
   facadeMaterial(panelMat, maskTexture(holes.panel), 1.2 * 0.25 / 3.8);
   facadeMaterial(shopMat, maskTexture([[14, 36, 66, 80, 1, true], [86, 36, 28, 84, 1, true]], 128, false), 0.3 / 4.5);
-  for (const m of [wallMat, shopMat, ribbonMat, panelMat]) buildingDetail(aoMaterial(m));
+  for (const m of [wallMat, shopMat, ribbonMat, panelMat]) buildingDetail(aoMaterial(m), real.on);
   const blocks = new Map();
   for (const t of tiles.values()) {
     if (!blocks.has(t.block)) blocks.set(t.block, new THREE.Group());
@@ -930,7 +956,7 @@ export function buildTown(town, track, terrain, quality, seed, anisotropy, fogFa
   group.add(buildCars(town, track, terrain, shadows, view, waitingCars(town, track, terrain, { seed: seed + 31, blocked }), night));
   const life = buildLife(town, track, terrain, { view, night, seed: seed + 41, blocked });
   // auta jedoucí ulicemi mimo trať (traffic.js)
-  const traffic = buildTraffic(town, track, terrain, { view, night, seed: seed + 67, shadows, colors: CAR_COLORS });
+  const traffic = buildTraffic(town, track, terrain, { view, night, seed: seed + 67, shadows, colors: CAR_COLORS, shape: real.on ? townCarShape() : null });
   group.add(life, traffic);
   // pohyb kulis: chodci a provoz; volá hlavní smyčka každý snímek (při pauze ne)
   group.userData.motion = [life.userData.update, traffic.userData.update].filter(Boolean);

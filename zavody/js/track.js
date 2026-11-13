@@ -5,6 +5,7 @@ import { buildCenterline, smoothCircular, Cut } from './trackmath.js';
 import { clamp, angleDiff, RNG } from './rng.js';
 import { BIOMES, WET_GRIP, SNOW_GRIP } from './biomes.js';
 import { vergeMaterial, vergeUv } from './grounddetail.js';
+import { real, pbr, realRoad } from './real.js';
 
 export const SURF_ROAD = 0, SURF_CURB = 1, SURF_OFF = 2;
 // žulové kostky drží méně než asfalt, na mokru výrazně méně
@@ -363,6 +364,9 @@ export class Track {
 
     // Krajnice (tráva / písek / chodník) až ke svodidlům + zástěra dolů
     const sh = new StripBuilder();
+    // zkušební realistický vzhled: chodník a tráva jsou zvlášť se skutečnou texturou (UV v metrech)
+    const shWalk = new StripBuilder(), shGrass = new StripBuilder();
+    const lit = new THREE.Color(1.25, 1.25, 1.25);
     const shA = new THREE.Color(style.shoulderA), shB = new THREE.Color(style.shoulderB);
     const skirt = new THREE.Color(style.shoulderA).multiplyScalar(0.6);
     const grA = new THREE.Color('#6d9548'), grB = new THREE.Color('#678f44');
@@ -383,8 +387,10 @@ export class Track {
         // struktura povrchu (grounddetail.js): dlaždice chodníku, tráva, jinak zrno; metry podél a od vnitřního okraje
         const kind = urban[k] && !grassy ? 1 : grassy || c.g > c.r + 0.05 ? 2 : 3;
         const sa = this.s[k], sb = n ? this.s[n] : this.L, wa = Math.abs(b0 - a0), wb = Math.abs(b1 - a1);
-        if (side > 0) sh.quad(this.point(k, a0, y), this.point(k, b0, y), this.point(n, b1, y), this.point(n, a1, y), c, vergeUv(kind, sa, 0, sa, wa, sb, wb, sb, 0));
-        else sh.quad(this.point(k, b0, y), this.point(k, a0, y), this.point(n, a1, y), this.point(n, b1, y), c, vergeUv(kind, sa, wa, sa, 0, sb, 0, sb, wb));
+        const top = real.on && kind < 3 ? (kind === 1 ? shWalk : shGrass) : sh;
+        const tc = top === sh ? c : lit, tk = top === sh ? kind : 0;
+        if (side > 0) top.quad(this.point(k, a0, y), this.point(k, b0, y), this.point(n, b1, y), this.point(n, a1, y), tc, vergeUv(tk, sa, 0, sa, wa, sb, wb, sb, 0));
+        else top.quad(this.point(k, b0, y), this.point(k, a0, y), this.point(n, a1, y), this.point(n, b1, y), tc, vergeUv(tk, sa, wa, sa, 0, sb, 0, sb, wb));
         // zástěra na vnějším okraji, aby nebyla vidět mezera k terénu
         if (side > 0) sh.quad(this.point(k, b0, y), this.point(k, b0, -3), this.point(n, b1, -3), this.point(n, b1, y), skirt);
         else sh.quad(this.point(k, b0, -3), this.point(k, b0, y), this.point(n, b1, y), this.point(n, b1, -3), skirt);
@@ -393,6 +399,14 @@ export class Track {
     const shMesh = new THREE.Mesh(sh.build(), vergeMaterial(new THREE.MeshLambertMaterial({ vertexColors: true })));
     shMesh.receiveShadow = true;
     group.add(shMesh);
+    for (const [strip, id, tile] of [[shWalk, 'concrete_pavers_02', 1.6], [shGrass, 'leafy_grass', 2.4]]) {
+      if (!strip.count) continue;
+      // dlažba v textuře je do červena, chodník u nás šedý
+      // tráva v textuře je suchá a plná listí: zelenější
+      const m = new THREE.Mesh(strip.build(), pbr(id, strip === shWalk ? { tile, vertexColors: true, gray: 0.8, gain: 1.2 } : { tile, vertexColors: true, color: 0x9fca6e, gain: 1.25 }));
+      m.receiveShadow = true;
+      group.add(m);
+    }
 
     // Svodidla
     group.add(this.buildBarriers(style));
@@ -657,6 +671,8 @@ export class Track {
     const mat = new THREE.MeshStandardMaterial({
       map, roughnessMap: surface, bumpMap: surface, bumpScale: style.wet ? 0.5 : 1.2, roughness: 1, metalness: 0, envMapIntensity: style.wet ? 0.95 : 0.42,
     });
+    // zkušební realistický vzhled: zrno, hrbolky a hrubost skutečného asfaltu (3 m na opakování)
+    if (real.on && !style.wet) realRoad(mat, [4, ROAD_TILE / 3]);
     // odrazy na obrazovce poznají silnici podle hrubosti uložené v alfa kanálu
     if (style.wet) {
       mat.onBeforeCompile = (sh) => {

@@ -177,3 +177,23 @@ Okruh B (4,2 km): Husova k Březovým Horám, Mariánská a Milínská na námě
 - Kostel sv. Jakuba: výška a poloha věže jsou změřené v DMP, výška lodi je odhad (DMP ji pod stromy nezachytil); barvy fasády a měděné střechy věže jsou podle fotek odhadem. Kostel sv. Vojtěcha a Vojtěšský důl (šachetní budova s věží) mají výšky z DMP, tvar střechy věže je zjednodušený jehlan. Ševčinský důl (160 m od trati) je za okrajem stažených bodů DMP: má stejný model zděné těžní věže s výškou odhadnutou podle fotek (21 m, hranol 15 m).
 - Semafory stojí na přechodech, které jsou v OSM `crossing=traffic_signals`; malý kruhový objezd na konci náměstí nemá ostrůvek, protože ho trať míjí bokem a ostrůvek by ležel na chodníku (přejízdný střed dostane jen objezd, jehož střed je celý ve vozovce, jako v Dobříši).
 - Řady oken mají počet podlaží z RÚIAN, nebo z OSM `building:levels`, jinak odhad z výšky stěny.
+
+## Zkušební realistický vzhled
+
+Nastavení „Realistická grafika (zkouška)“ (`S.real`, ne na nízké kvalitě) staví svět jinak; vypnuté se nic z toho nenačte a hra vypadá jako dřív. Řídí to `js/real.js`, podklady jsou v `assets/real/` (zdroje a licence v `assets/real/ZDROJE.md`).
+
+```
+node tools/fetch-real.mjs                 # textury a nebe z Poly Haven (CC0) do assets/real/
+node tools/fetch-ortho.mjs pribram 60 1550  # ortofoto ČÚZK 512 × 512 m po 12,5 cm kolem míst trati (metry od startu)
+```
+
+- **Silnice**: původní textura (skvrny, čáry) a k ní zrno, normálová mapa a hrubost skutečného asfaltu (3 m na opakování).
+- **Krajnice**: chodník a travnatý pás jsou zvláštní sítě s texturami dlažby a trávy (UV v metrech), ostatní krajnice zůstává.
+- **Zem**: na stažených výřezech letecký snímek místo kreslené země (převod ze souřadnic hry do obrázku je lineární, v `<město>-orto.json`); pod tratí zůstává kreslená zem, tmavá místa snímku (stíny, koruny stromů) se tlumí. Nové město se přidá do `ORTO_CITIES` v `js/real.js`.
+- **Domy**: omítka a tašky ze skutečných textur včetně hrbolků (`js/buildingdetail.js`), okna zůstávají kreslená.
+- **Stromy**: do 95 m tvary s větvemi a listy z knihovny ez-tree (`vendor/ez-tree.es.js`, MIT; `js/realtrees.js`), dál původní tvary. 2,5–8 tis. trojúhelníků na strom.
+- **Auta ve městě**: do 70 m tvar závodního vozu bez křídla (`townCarShape` v `js/car.js`, asi 7 tis. trojúhelníků) s lesklým lakem, dál krabice.
+- **Nebe**: HDR snímek místo kresleného nebe (jen za jasného dne), slunce ve snímku natočené podle slunce hry; pro odrazy je slunce přitlumené.
+- Lidé, lampy, značky a okna domů jsou zatím původní.
+
+Měření 13. 11. 2026 (M4, 1600 × 900, Příbram, vysoká kvalita): čas snímku 5,4–6,6 ms původně a 5,4–8,8 ms s realistickým vzhledem; trojúhelníků až 2,35 mil. místo 0,32 mil. (ulice se zaparkovanými auty). Limity v `test/limits.mjs` platí pro původní vzhled.
