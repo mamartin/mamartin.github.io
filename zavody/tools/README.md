@@ -185,6 +185,7 @@ Nastavení „Realistická grafika (zkouška)“ (`S.real`, ne na nízké kvalit
 ```
 node tools/fetch-real.mjs                 # textury a nebe z Poly Haven (CC0) do assets/real/
 node tools/fetch-ortho.mjs pribram 60 1550  # ortofoto ČÚZK 512 × 512 m po 12,5 cm kolem míst trati (metry od startu)
+node tools/fetch-people.mjs               # postavy z poly.pizza (Quaternius, CC0) do assets/real/people/
 ```
 
 - **Silnice**: původní textura (skvrny, čáry) a k ní zrno, normálová mapa a hrubost skutečného asfaltu (3 m na opakování).
@@ -194,6 +195,8 @@ node tools/fetch-ortho.mjs pribram 60 1550  # ortofoto ČÚZK 512 × 512 m po 12
 - **Stromy**: do 95 m tvary s větvemi a listy z knihovny ez-tree (`vendor/ez-tree.es.js`, MIT; `js/realtrees.js`), dál původní tvary. 2,5–8 tis. trojúhelníků na strom.
 - **Auta ve městě**: do 70 m tvar závodního vozu bez křídla (`townCarShape` v `js/car.js`, asi 7 tis. trojúhelníků) s lesklým lakem, dál krabice.
 - **Nebe**: HDR snímek místo kresleného nebe (jen za jasného dne), slunce ve snímku natočené podle slunce hry; pro odrazy je slunce přitlumené.
-- Lidé, lampy, značky a okna domů jsou zatím původní.
+- **Lidé**: do 45 m modely postav (Quaternius, CC0; `js/realpeople.js`, stahuje `node tools/fetch-people.mjs`), dál kvádry. Model se při načtení postaví do klidové pózy, kostra se zahodí a z vah kostí zbude u vrcholu číslo končetiny a váha; mávání a chůzi dělá shader jako u kvádrů. Barva instance obarví jen svršek. 1,9–5,8 tis. trojúhelníků na postavu.
+- **Okna**: textura oken čtyřikrát jemnější (2048 px) a kreslená podrobně: šambrána s římsou, plastický rám, tmavý pokoj za sklem, záclony, žaluzie nebo roleta (`fineWindow` v `js/town.js`). Pásová okna, paneláky a výlohy zůstávají.
+- Lampy, značky a zábradlí jsou zatím původní.
 
 Měření 13. 11. 2026 (M4, 1600 × 900, Příbram, vysoká kvalita): čas snímku 5,4–6,6 ms původně a 5,4–8,8 ms s realistickým vzhledem; trojúhelníků až 2,35 mil. místo 0,32 mil. (ulice se zaparkovanými auty). Limity v `test/limits.mjs` platí pro původní vzhled.

@@ -47,6 +47,7 @@ import { EnvProbe } from './envprobe.js';
 import { bakeSunShadow, applySunShadow, SUN_SHADOW } from './sunshadow.js';
 import { real, loadRealSky } from './real.js';
 import { loadRealTrees } from './realtrees.js';
+import { loadRealPeople } from './realpeople.js';
 import { splitLarge, mergeSimilar, setViewScale, collectPools, updatePools } from './lod.js';
 import { TrackEditor, customToDef, decodeTrack, checkDef } from './editor.js';
 
@@ -276,7 +277,7 @@ async function loadWorld(id) {
   const town = baseDef.scene ? await loadTown(baseDef.scene).catch((e) => (console.warn(e), null)) : null;
   if (token !== loadToken) return G.world;
   // zkušební realistický vzhled: tvary stromů se vypěstují jednou, než se začne stavět svět
-  if (S.real && S.quality !== 'low') await loadRealTrees().catch((e) => console.warn(e));
+  if (S.real && S.quality !== 'low') await Promise.all([loadRealTrees(), loadRealPeople()]).catch((e) => console.warn(e));
   disposeWorld();
   // déšť (na zimní trati místo něj padá sníh)
   const wet = wantsRain(baseDef);

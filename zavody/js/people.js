@@ -151,6 +151,7 @@ export function personGeometry() {
 }
 
 const time = { value: 0 };
+export const cheerClock = time; // čas mávání fanoušků (i pro postavy z modelů, realpeople.js)
 // čas chůze: herní čas, ať chodci při pauze nepochodují na místě (nastavuje townlife.js)
 export const walkClock = { value: 0 };
 

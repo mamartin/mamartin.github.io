@@ -5,6 +5,8 @@ import * as THREE from 'three';
 import { RNG } from './rng.js';
 import { personGeometry, personMaterial, tickPeople, blobGeometry, blobMaterial, walkClock } from './people.js';
 import { instancedLevels, placeInstance } from './lod.js';
+import { real } from './real.js';
+import { realPeople, realPersonMaterial } from './realpeople.js';
 
 const CLOTHES = ['#2f4a6e', '#9c2a26', '#e8e6df', '#3b3f45', '#5d7a4a', '#c79a3a', '#6d2f3a', '#8a8f96', '#2a2c30', '#d26a3c', '#4b6fa8', '#efe2c4'];
 const SPECTATOR_REACH = 160; // m od startu na obě strany: rovinka s diváky
@@ -100,6 +102,19 @@ export function buildLife(town, track, terrain, { view, night, seed, blocked }) 
   const group = new THREE.Group();
   group.name = 'life';
   const opts = { cull: Math.min(view.cull, 260 * view.reach) };
+  // zkušební realistický vzhled: do NEAR postavy z modelů (realpeople.js), dál kvádry jako dřív
+  const realOn = real.on && realPeople.length > 0;
+  const NEAR = realOn ? Math.min(opts.cull, 45 * view.reach) : 0;
+  const tick = (o) => { if (o.isMesh) o.onBeforeRender = tickPeople; };
+  // postavy jednoho druhu pohybu rozdělené mezi modely; vrací pole [pole instancí, čísla položek]
+  const models = (list, mode) => (realOn ? realPeople.map((who, c) => {
+    const index = list.map((_, i) => i).filter((i) => i % realPeople.length === c);
+    if (!index.length) return null;
+    const pool = instancedLevels([[0, [[who.geo, index.map((i) => list[i])]]]], realPersonMaterial(who, mode), { cull: NEAR });
+    pool.traverse(tick);
+    group.add(pool);
+    return [pool.userData.pool, index];
+  }).filter(Boolean) : []);
   if (people.length) {
     // bez stínů: stovky drobných postav by stínovou mapu zdražily víc, než přidají; fanoušci (diváci)
     // se hýbou, ostatní stojí (people.js), každá skupina je jedno volání kreslení
@@ -107,9 +122,10 @@ export function buildLife(town, track, terrain, { view, night, seed, blocked }) 
     for (const fans of [true, false]) {
       const list = people.filter((t) => t.fan === fans);
       if (!list.length) continue;
-      const pool = instancedLevels([[0, [[geo, list]]]], personMaterial(fans ? 'fans' : 'still'), opts);
-      pool.traverse((o) => { if (o.isMesh) o.onBeforeRender = tickPeople; });
+      const pool = instancedLevels([[NEAR, [[geo, list]]]], personMaterial(fans ? 'fans' : 'still'), opts);
+      pool.traverse(tick);
       group.add(pool);
+      models(list, fans ? 'fans' : 'still');
     }
     // měkký stín pod každým, jen zblízka (dál není vidět)
     const blob = instancedLevels([[0, [[blobGeometry(1.1, 0.9), people.map(({ color, ...t }) => t)]]]], blobMaterial(), { cull: Math.min(opts.cull, 90) });
@@ -123,11 +139,14 @@ export function buildLife(town, track, terrain, { view, night, seed, blocked }) 
       walkAt(w.s, w.side, w.out, o);
       return { x: o.x, y: o.y, z: o.z, ry: o.hd + (w.dir > 0 ? 0 : Math.PI), s: w.scale, color: w.color };
     });
-    const bodies = instancedLevels([[0, [[personGeometry(), items]]]], personMaterial('walk'), opts);
+    const bodies = instancedLevels([[NEAR, [[personGeometry(), items]]]], personMaterial('walk'), opts);
     const shade = instancedLevels([[0, [[blobGeometry(1.1, 0.9), items.map(({ color, ...t }) => t)]]]], blobMaterial(), { cull: Math.min(opts.cull, 90) });
     shade.traverse((m) => { if (m.isMesh) m.renderOrder = 1; });
     group.add(bodies, shade);
     const pools = [bodies.userData.pool, shade.userData.pool];
+    // chodec z modelu: jeho pole instancí a pořadí v něm
+    const own = new Map();
+    for (const [pool, index] of models(items, 'walk')) index.forEach((i, k) => own.set(i, [pool, k]));
     group.userData.update = (dt) => {
       if (dt <= 0) return;
       dt = Math.min(dt, 0.1);
@@ -146,6 +165,8 @@ export function buildLife(town, track, terrain, { view, night, seed, blocked }) 
         // při otáčení se postava plynule dotočí do nového směru
         const ry = o.hd + (w.dir > 0 ? 0 : Math.PI) + Math.PI * Math.max(0, w.turn) / TURN;
         for (const pool of pools) placeInstance(pool, i, o.x, o.y, o.z, ry, w.scale);
+        const mine = own.get(i);
+        if (mine) placeInstance(mine[0], mine[1], o.x, o.y, o.z, ry, w.scale);
       });
     };
   }

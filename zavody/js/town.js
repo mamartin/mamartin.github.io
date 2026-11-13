@@ -237,25 +237,31 @@ function paintRect(town, track, rect, size, anisotropy) {
 }
 
 // bílá stěna s okny, barvu fasády dodají vrcholy; rohy buněk zůstávají čisté pro plné plochy
-function windowTexture(rng, anisotropy, rects = [], holes = []) {
-  const S = 64;
+// fine = zkušební realistický vzhled: čtyřikrát jemnější textura a okna kreslená podrobně (profilovaný rám
+// se stínem, šambrána s římsou, tmavý pokoj za sklem, záclony nebo žaluzie, každé okno trochu jiné)
+function windowTexture(rng, anisotropy, rects = [], holes = [], fine = false) {
+  const S = 64, K = fine ? 8 : 2;
   const c = document.createElement('canvas');
-  c.width = c.height = S * 8;
+  c.width = c.height = S * 4 * K;
   const ctx = c.getContext('2d');
-  ctx.scale(2, 2); // ostřejší zblízka; souřadnice zůstávají v 256 px (masky a svítící okna)
+  ctx.scale(K, K); // ostřejší zblízka; souřadnice zůstávají v 256 px (masky a svítící okna)
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, S * 4, S * 4);
   for (let j = 0; j < 4; j++) {
     for (let i = 0; i < 4; i++) {
       const x = i * S + 18, y = j * S + 12, w = 28, h = 34;
+      rects.push([x, y, w, h]);
+      holes.push([x - 1.5, y - 1.5, w + 3, h + 3, 1, true]);
+      if (fine) {
+        fineWindow(ctx, rng, x, y, w, h);
+        continue;
+      }
       ctx.fillStyle = '#dcd8cf';
       ctx.fillRect(x - 3, y - 3, w + 6, h + 7);
       ctx.fillStyle = '#f7f6f2';
       ctx.fillRect(x - 1.5, y - 1.5, w + 3, h + 3);
       ctx.fillStyle = ['#46586a', '#3c4c5e', '#55697a', '#40505c'][rng.int(0, 3)];
       ctx.fillRect(x, y, w, h);
-      rects.push([x, y, w, h]);
-      holes.push([x - 1.5, y - 1.5, w + 3, h + 3, 1, true]);
       ctx.fillStyle = 'rgba(255,255,255,0.16)';
       ctx.fillRect(x, y, w, h * 0.34);
       ctx.fillStyle = '#f7f6f2';
@@ -266,8 +272,72 @@ function windowTexture(rng, anisotropy, rects = [], holes = []) {
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-  tex.anisotropy = anisotropy;
+  tex.anisotropy = fine ? Math.max(anisotropy, 8) : anisotropy;
   return tex;
+}
+
+// jedno podrobně kreslené okno (souřadnice v jednotkách buňky, 1 jednotka je asi 4,7 cm)
+function fineWindow(ctx, rng, x, y, w, h) {
+  const box = (c, px, py, pw, ph) => { ctx.fillStyle = c; ctx.fillRect(px, py, pw, ph); };
+  // šambrána: pás omítky kolem okna, nahoře římsa se stínem, dole stín pod parapetem
+  box('#d8d3c8', x - 3.4, y - 3.4, w + 6.8, h + 7.6);
+  box('#ebe7de', x - 4.3, y - 4.8, w + 8.6, 1.5);
+  box('rgba(0,0,0,0.22)', x - 4.3, y - 3.3, w + 8.6, 0.45);
+  box('rgba(255,255,255,0.35)', x - 3.4, y - 2.85, 0.35, h + 6.5);
+  box('rgba(0,0,0,0.16)', x + w + 3.05, y - 2.85, 0.35, h + 6.5);
+  box('#e6e2d9', x - 4.0, y + h + 2.9, w + 8.0, 1.2);
+  box('rgba(0,0,0,0.28)', x - 3.6, y + h + 4.1, w + 7.2, 0.7);
+  // rám
+  box('#f3f1ea', x - 1.5, y - 1.5, w + 3, h + 3);
+  box('rgba(0,0,0,0.14)', x - 1.5, y + h + 1.1, w + 3, 0.4);
+  // pokoj za sklem: nahoře tmavší, dole trochu světla od podlahy; každé okno jinak tmavé
+  const dark = rng.range(0.75, 1.15);
+  const room = ctx.createLinearGradient(0, y, 0, y + h);
+  room.addColorStop(0, `rgb(${Math.round(30 * dark)},${Math.round(38 * dark)},${Math.round(47 * dark)})`);
+  room.addColorStop(1, `rgb(${Math.round(46 * dark)},${Math.round(52 * dark)},${Math.round(58 * dark)})`);
+  ctx.fillStyle = room;
+  ctx.fillRect(x, y, w, h);
+  const kind = rng.next();
+  if (kind < 0.5) {
+    // záclony po stranách se sklady, nahoře garnýž
+    const cw = rng.range(5, 9.5);
+    for (const [cx, dir] of [[x, 1], [x + w - cw, -1]]) {
+      const g = ctx.createLinearGradient(cx, 0, cx + cw, 0);
+      g.addColorStop(dir > 0 ? 0 : 1, 'rgba(236,232,222,0.92)');
+      g.addColorStop(dir > 0 ? 1 : 0, 'rgba(200,196,186,0.78)');
+      ctx.fillStyle = g;
+      ctx.fillRect(cx, y, cw, h);
+      for (let f = 1.2; f < cw; f += rng.range(1.2, 2.0)) box('rgba(90,86,78,0.22)', cx + f, y, 0.35, h);
+    }
+    box('rgba(225,220,208,0.9)', x, y, w, 2.2);
+  } else if (kind < 0.72) {
+    // žaluzie stažené do části okna
+    const down = rng.range(0.3, 1) * h;
+    box('rgba(214,212,204,0.9)', x, y, w, down);
+    for (let ly = y + 0.9; ly < y + down; ly += 1.1) box('rgba(70,70,66,0.3)', x, ly, w, 0.3);
+  } else if (kind < 0.85) {
+    // roleta
+    box('rgba(196,180,150,0.88)', x, y, w, rng.range(0.25, 0.7) * h);
+  }
+  // odlesk oblohy v horní části skla a šikmý pruh
+  const sky = ctx.createLinearGradient(0, y, 0, y + h * 0.6);
+  sky.addColorStop(0, 'rgba(170,196,222,0.3)');
+  sky.addColorStop(1, 'rgba(170,196,222,0)');
+  ctx.fillStyle = sky;
+  ctx.fillRect(x, y, w, h * 0.6);
+  // stín rámu na skle (sklo je zapuštěné) a křídla okna: sloupek a příčka s plastickou hranou
+  box('rgba(0,0,0,0.38)', x, y, w, 0.8);
+  box('rgba(0,0,0,0.3)', x, y, 0.7, h);
+  const bar = (px, py, pw, ph) => {
+    box('#f3f1ea', px, py, pw, ph);
+    box('rgba(255,255,255,0.7)', px, py, pw > ph ? pw : 0.3, pw > ph ? 0.3 : ph);
+    box('rgba(0,0,0,0.22)', pw > ph ? px : px + pw - 0.3, pw > ph ? py + ph - 0.3 : py, pw > ph ? pw : 0.3, pw > ph ? 0.3 : ph);
+    box('rgba(0,0,0,0.3)', pw > ph ? px : px + pw, pw > ph ? py + ph : py, pw > ph ? pw : 0.5, pw > ph ? 0.5 : ph);
+  };
+  bar(x + w / 2 - 1.1, y, 2.2, h);
+  bar(x, y + h * 0.34, w, 2);
+  // kliky
+  box('#8a8c8e', x + w / 2 - 0.25, y + h * 0.62, 0.5, 1.6);
 }
 
 // pásová okna (školy, úřady): v každém patře souvislý pás skla s úzkými sloupky, pod ním parapet
@@ -916,7 +986,7 @@ export function buildTown(town, track, terrain, quality, seed, anisotropy, fogFa
   const litRng = new RNG(seed + 77);
   const rects = { wall: [], ribbon: [], panel: [] }, holes = { wall: [], ribbon: [], panel: [] };
   const glow = (map, lit) => (night ? { map, vertexColors: true, emissive: 0xffffff, emissiveMap: lit, emissiveIntensity: 1.25 } : { map, vertexColors: true });
-  const wallTex = windowTexture(rng, anisotropy, rects.wall, holes.wall), ribbonTex = ribbonTexture(anisotropy, rects.ribbon, holes.ribbon);
+  const wallTex = windowTexture(rng, anisotropy, rects.wall, holes.wall, real.on), ribbonTex = ribbonTexture(anisotropy, rects.ribbon, holes.ribbon);
   const panelTex = panelTexture(rng, anisotropy, rects.panel, holes.panel);
   const wallMat = new THREE.MeshLambertMaterial(glow(wallTex, night && litTexture(rects.wall, litRng, 0.3)));
   const shopMat = new THREE.MeshLambertMaterial(glow(shopTexture(anisotropy), night && litTexture([[14, 36, 66, 80], [86, 36, 28, 84], [6, 8, 116, 18]], litRng, 1, 128, false)));
