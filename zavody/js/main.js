@@ -352,7 +352,7 @@ async function loadWorld(id) {
   if (rain) group.add(rain.points);
   G.world = {
     def, biome, track, terrain, group, sky, lights, effects, envRT, streets, showcase: [], stand: scenery.extra.stand, snowmen: scenery.extra.snowmen, snow: scenery.extra.snow, rain, wet, snowy, night,
-    pools: collectPools(group),
+    pools: collectPools(group), motion: townGroup?.userData.motion ?? [],
   };
   if (mix) {
     G.world.mix = true;
@@ -1681,6 +1681,8 @@ function frame(now) {
   }
 
   w.stand.update(G.paused ? 0 : dt, G.race, w.effects);
+  // chodci a provoz ve městě (jen kulisa)
+  if (!G.paused) for (const move of w.motion) move(dt);
   if (w.snowmen && G.race) w.snowmen.update(dt, G.race.player.x, G.race.player.z);
   w.effects.update(dt);
   if (w.snow) w.snow.update(dt);

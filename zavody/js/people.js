@@ -125,7 +125,7 @@ function boxUv(geo, faces) {
   return geo;
 }
 
-// díl s číslem části: 0 tělo, 1 levá ruka, 2 pravá ruka (shader je zvedá kolem ramene)
+// díl s číslem části: 0 tělo, 1 levá ruka, 2 pravá ruka (shader je zvedá kolem ramene), 3 levá noha, 4 pravá noha
 const tagged = (geo, part) => {
   const g = geo.toNonIndexed();
   g.setAttribute('part', new THREE.Float32BufferAttribute(new Float32Array(g.attributes.position.count).fill(part), 1));
@@ -137,31 +137,51 @@ export function personGeometry() {
   const t = R;
   const torso = boxUv(new THREE.BoxGeometry(0.4, 0.6, 0.24), [t.torsoS, t.torsoS, t.torsoS, t.torsoS, t.torsoF, t.torsoB]).translate(0, 1.17, 0);
   const arm = (sx) => boxUv(new THREE.BoxGeometry(0.1, 0.62, 0.14), [t.arm, t.arm, t.arm, t.arm, t.arm, t.arm]).translate(sx * 0.26, 1.15, 0);
-  const legs = boxUv(new THREE.BoxGeometry(0.34, 0.86, 0.18), [t.legsB, t.legsB, t.legsB, t.legsB, t.legsF, t.legsB]).translate(0, 0.43, 0);
+  // nohy zvlášť (chodci jimi kývou): každá má svou polovinu obdélníku kalhot (mezi nimi je v textuře tmavá mezera)
+  const half = ([x0, y0, x1, y1], k) => (k ? [x0 + 10, y0, x1, y1] : [x0, y0, x0 + 8, y1]);
+  const leg = (sx, k) => {
+    const f = half(t.legsF, k), b = half(t.legsB, 1 - k);
+    return boxUv(new THREE.BoxGeometry(0.15, 0.86, 0.18), [b, b, b, b, f, b]).translate(sx * 0.09, 0.43, 0);
+  };
   const head = boxUv(new THREE.BoxGeometry(0.22, 0.24, 0.22), [t.headS, t.headS, t.hair, t.headS, t.headF, t.headB]).translate(0, 1.6, 0);
   const hair = boxUv(new THREE.BoxGeometry(0.24, 0.06, 0.24), [t.hair, t.hair, t.hair, t.hair, t.hair, t.hair]).translate(0, 1.73, -0.01);
-  const geo = mergeGeometries([tagged(torso, 0), tagged(legs, 0), tagged(head, 0), tagged(hair, 0), tagged(arm(1), 1), tagged(arm(-1), 2)]);
+  const geo = mergeGeometries([tagged(torso, 0), tagged(head, 0), tagged(hair, 0), tagged(arm(1), 1), tagged(arm(-1), 2), tagged(leg(1, 1), 3), tagged(leg(-1, 0), 4)]);
   geo.computeBoundingSphere();
   return geo;
 }
 
 const time = { value: 0 };
+// čas chůze: herní čas, ať chodci při pauze nepochodují na místě (nastavuje townlife.js)
+export const walkClock = { value: 0 };
 
-// fans: pohupování a zvedání rukou; jinak postavy stojí
-export function personMaterial(fans) {
+// mode: 'fans' pohupování a zvedání rukou, 'walk' chůze (kývání nohou a rukou), jinak postavy stojí.
+// Chodci se hýbou, proto si druh oblečení a fázi kroku berou z měřítka instance, ne z polohy.
+export function personMaterial(mode) {
+  const fans = mode === 'fans', walk = mode === 'walk';
   const mat = new THREE.MeshLambertMaterial({ map: atlas() });
   mat.onBeforeCompile = (sh) => {
     sh.uniforms.uTime = time;
+    sh.uniforms.uWalk = walkClock;
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>', `#include <common>
         attribute float part;
         uniform float uTime;
+        uniform float uWalk;
         varying float vVarU;
         float hash2(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+        // stálé číslo postavy: poloha, u chodců měřítko (poloha se jim mění)
+        vec2 personId() {
+          #if WALK
+          float sc = length(instanceMatrix[0].xyz);
+          return vec2(sc * 917.3, sc * 131.7);
+          #else
+          return instanceMatrix[3].xz;
+          #endif
+        }
         // úhel zvednutí paže a poskok podle náhody instance
         vec2 cheer() {
           #if FANS
-          vec2 at = instanceMatrix[3].xz;
+          vec2 at = personId();
           float h = hash2(at), ph = hash2(at + 7.31) * 6.2832;
           float wave = smoothstep(0.55, 0.9, sin(uTime * (0.45 + h * 0.5) + ph));
           float up = h > 0.55 ? wave : 0.0;
@@ -179,15 +199,34 @@ export function personMaterial(fans) {
         }`)
       .replace('#include <beginnormal_vertex>', `#include <beginnormal_vertex>
         vec2 ch = cheer();
-        float armSide = part > 1.5 ? -1.0 : part > 0.5 ? 1.0 : 0.0;
+        float armSide = part > 2.5 ? 0.0 : part > 1.5 ? -1.0 : part > 0.5 ? 1.0 : 0.0;
         if (armSide != 0.0) {
           float c = cos(ch.x * armSide), s = sin(ch.x * armSide);
           objectNormal.xy = vec2(c * objectNormal.x - s * objectNormal.y, s * objectNormal.x + c * objectNormal.y);
-        }`)
+        }
+        // chůze: nohy kývou kolem kyčle, ruce proti nim kolem ramene (otočení kolem osy x)
+        float swing = 0.0, pivotY = 0.86;
+        #if WALK
+        {
+          float w = sin(uWalk * 5.8 + hash2(personId()) * 6.2832);
+          if (part > 3.5) swing = w * 0.55;
+          else if (part > 2.5) swing = -w * 0.55;
+          else if (part > 1.5) { swing = -w * 0.4; pivotY = 1.44; }
+          else if (part > 0.5) { swing = w * 0.4; pivotY = 1.44; }
+          float c = cos(swing), s = sin(swing);
+          objectNormal.yz = vec2(c * objectNormal.y - s * objectNormal.z, s * objectNormal.y + c * objectNormal.z);
+        }
+        #endif`)
       .replace('#include <begin_vertex>', `#include <begin_vertex>
         if (armSide != 0.0) transformed = armTurn(transformed, ch.x, armSide);
         transformed.y += ch.y;
-        vVarU = floor(hash2(instanceMatrix[3].xz + 3.17) * ${VARIANTS}.0) / ${VARIANTS}.0;`);
+        if (swing != 0.0) {
+          vec2 q = vec2(transformed.y - pivotY, transformed.z);
+          float c = cos(swing), s = sin(swing);
+          transformed.y = pivotY + c * q.x - s * q.y;
+          transformed.z = s * q.x + c * q.y;
+        }
+        vVarU = floor(hash2(personId() + 3.17) * ${VARIANTS}.0) / ${VARIANTS}.0;`);
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', '#include <common>\nvarying float vVarU;')
       .replace('#include <map_fragment>', `
@@ -197,9 +236,9 @@ export function personMaterial(fans) {
         #ifdef USE_COLOR
           diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vColor, personTex.a);
         #endif`);
-    sh.defines = { ...sh.defines, FANS: fans ? 1 : 0 };
+    sh.defines = { ...sh.defines, FANS: fans ? 1 : 0, WALK: walk ? 1 : 0 };
   };
-  mat.customProgramCacheKey = () => `person|${fans}`;
+  mat.customProgramCacheKey = () => `person|${mode}`;
   return mat;
 }
 

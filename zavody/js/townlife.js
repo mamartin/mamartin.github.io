@@ -3,11 +3,14 @@
 // Všichni stojí za okrajem trati (track.edgeAt), auta závodu se jich nedotknou.
 import * as THREE from 'three';
 import { RNG } from './rng.js';
-import { personGeometry, personMaterial, tickPeople, blobGeometry, blobMaterial } from './people.js';
-import { instancedLevels } from './lod.js';
+import { personGeometry, personMaterial, tickPeople, blobGeometry, blobMaterial, walkClock } from './people.js';
+import { instancedLevels, placeInstance } from './lod.js';
 
 const CLOTHES = ['#2f4a6e', '#9c2a26', '#e8e6df', '#3b3f45', '#5d7a4a', '#c79a3a', '#6d2f3a', '#8a8f96', '#2a2c30', '#d26a3c', '#4b6fa8', '#efe2c4'];
 const SPECTATOR_REACH = 160; // m od startu na obě strany: rovinka s diváky
+const WALK_MIN = 10; // m: kratší volný úsek chodníku za procházku nestojí, postava tam jen stojí
+const WALK_MAX = 60; // m na každou stranu od místa, kde chodec začíná
+const TURN = 0.7; // s na otočení na konci úseku
 
 // blocked(x, z): v domě, na ploše, kam nic nepatří (terrain.keepOut a obrysy domů dodá town.js)
 export function buildLife(town, track, terrain, { view, night, seed, blocked }) {
@@ -31,6 +34,28 @@ export function buildLife(town, track, terrain, { view, night, seed, blocked }) 
     const top = track.sampleAt(s, side * track.edgeAt(k)).y + (track.onUrban(s) ? 0.13 : 0);
     people.push({ x: p.x, y: Math.max(terrain.heightAt(p.x, p.z), top), z: p.z, ry, s: rng.range(0.92, 1.08), color: rng.pick(CLOTHES), fan });
   };
+  // chodec na místě (s, strana, odstup od okraje): poloha, výška a směr podél trati
+  const tmp = {};
+  const walkAt = (s, side, out, o = {}) => {
+    track.sampleAt(s, 0, tmp);
+    const k = tmp.i, n = (k + 1) % track.N;
+    const edge = track.edgeAt(k) + (track.edgeAt(n) - track.edgeAt(k)) * tmp.u;
+    const lat = side * (edge + out);
+    o.x = tmp.cx + tmp.rx * lat;
+    o.z = tmp.cz + tmp.rz * lat;
+    o.y = Math.max(terrain.heightAt(o.x, o.z), tmp.cy + side * edge * tmp.tanBank + 0.13);
+    o.hd = tmp.hd;
+    return o;
+  };
+  // smí tudy chodec jít: chodník ve městě mimo rovinku s diváky, volné místo za okrajem
+  const walkable = (s, side, out) => {
+    if (!track.onUrban(s) || Math.min(s, track.L - s) < SPECTATOR_REACH) return false;
+    if (track.edges && track.edgeKind(s, side) === 'grass') return false;
+    const p = walkAt(s, side, out);
+    if (terrain.keepOut(p.x, p.z) || blocked(p.x, p.z)) return false;
+    return !track.openEdge(s, side, [p.x, 0, p.z]) && !track.cutAt(s, side);
+  };
+  const walkers = [];
   const urban = (s) => track.onUrban(s);
   const L = track.L;
 
@@ -59,7 +84,17 @@ export function buildLife(town, track, terrain, { view, night, seed, blocked }) 
     const side = rng.next() < 0.5 ? -1 : 1;
     if (track.edges && track.edgeKind(s, side) === 'grass') continue;
     const n = rng.next() < 0.3 ? 2 : 1;
-    for (let i = 0; i < n; i++) place(s + i * 0.8, side, rng.range(0.5, 1.0), 'along');
+    for (let i = 0; i < n; i++) {
+      const at = s + i * 0.8, out = rng.range(0.5, 1.0);
+      // kam až se dá dojít oběma směry; kde je místa málo, postava jen stojí
+      let s0 = at, s1 = at;
+      if (walkable(at, side, out)) {
+        while (at - s0 < WALK_MAX && walkable(s0 - 2, side, out)) s0 -= 2;
+        while (s1 - at < WALK_MAX && walkable(s1 + 2, side, out)) s1 += 2;
+      }
+      if (s1 - s0 < WALK_MIN) place(at, side, out, 'along');
+      else walkers.push({ s: at, s0, s1, side, out, dir: rng.next() < 0.5 ? 1 : -1, speed: rng.range(1.1, 1.5), scale: rng.range(0.92, 1.08), color: rng.pick(CLOTHES), turn: 0 });
+    }
   }
 
   const group = new THREE.Group();
@@ -72,7 +107,7 @@ export function buildLife(town, track, terrain, { view, night, seed, blocked }) 
     for (const fans of [true, false]) {
       const list = people.filter((t) => t.fan === fans);
       if (!list.length) continue;
-      const pool = instancedLevels([[0, [[geo, list]]]], personMaterial(fans), opts);
+      const pool = instancedLevels([[0, [[geo, list]]]], personMaterial(fans ? 'fans' : 'still'), opts);
       pool.traverse((o) => { if (o.isMesh) o.onBeforeRender = tickPeople; });
       group.add(pool);
     }
@@ -81,7 +116,41 @@ export function buildLife(town, track, terrain, { view, night, seed, blocked }) 
     blob.traverse((o) => { if (o.isMesh) o.renderOrder = 1; });
     group.add(blob);
   }
-  group.userData.people = people.length;
+  // chodci: polohu jim každý snímek přepíše update (jdou podél trati tam a zpět), krok dělá shader
+  if (walkers.length) {
+    const o = {};
+    const items = walkers.map((w) => {
+      walkAt(w.s, w.side, w.out, o);
+      return { x: o.x, y: o.y, z: o.z, ry: o.hd + (w.dir > 0 ? 0 : Math.PI), s: w.scale, color: w.color };
+    });
+    const bodies = instancedLevels([[0, [[personGeometry(), items]]]], personMaterial('walk'), opts);
+    const shade = instancedLevels([[0, [[blobGeometry(1.1, 0.9), items.map(({ color, ...t }) => t)]]]], blobMaterial(), { cull: Math.min(opts.cull, 90) });
+    shade.traverse((m) => { if (m.isMesh) m.renderOrder = 1; });
+    group.add(bodies, shade);
+    const pools = [bodies.userData.pool, shade.userData.pool];
+    group.userData.update = (dt) => {
+      if (dt <= 0) return;
+      dt = Math.min(dt, 0.1);
+      walkClock.value = (walkClock.value + dt) % 3600;
+      walkers.forEach((w, i) => {
+        if (w.turn > 0) w.turn -= dt;
+        else {
+          w.s += w.dir * w.speed * dt;
+          if (w.s >= w.s1 || w.s <= w.s0) {
+            w.s = Math.min(w.s1, Math.max(w.s0, w.s));
+            w.dir = -w.dir;
+            w.turn = TURN;
+          }
+        }
+        walkAt(w.s, w.side, w.out, o);
+        // při otáčení se postava plynule dotočí do nového směru
+        const ry = o.hd + (w.dir > 0 ? 0 : Math.PI) + Math.PI * Math.max(0, w.turn) / TURN;
+        for (const pool of pools) placeInstance(pool, i, o.x, o.y, o.z, ry, w.scale);
+      });
+    };
+  }
+  group.userData.people = people.length + walkers.length;
+  group.userData.walkers = walkers.length;
   return group;
 }
 

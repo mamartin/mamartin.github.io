@@ -18,6 +18,7 @@ import { facadeMaterial, maskTexture } from './facade.js';
 import { buildStreetDetail } from './streetdetail.js';
 import { treeMaterial, leafCardGeometry, leafCardMaterial } from './foliage.js';
 import { buildingDetail } from './buildingdetail.js';
+import { buildTraffic, townCarGeometry, townCarLights } from './traffic.js';
 
 // jak daleko od osy trati ještě něco vrhá stín
 const SHADOW_REACH = 70;
@@ -754,13 +755,8 @@ function buildCars(town, track, terrain, shadows, view, extra = [], night = fals
   const items = [...town.cars, ...extra].filter((c) => free(c) && !terrain.keepOut(c.x, c.z)).map((c) => ({
     x: c.x, y: terrain.heightAt(c.x, c.z), z: c.z, ry: c.hd, color: rng.pick(CAR_COLORS), waiting: c.waiting,
   }));
-  // bílá karoserie dostane barvu instance, okna a kola zůstanou tmavá
-  const geo = mergeGeometries([
-    colored(new THREE.BoxGeometry(1.76, 0.68, 4.3).translate(0, 0.62, 0), '#ffffff'),
-    colored(new THREE.BoxGeometry(1.56, 0.52, 2.2).translate(0, 1.22, -0.25), '#4a525c'),
-    colored(new THREE.BoxGeometry(1.5, 0.08, 1.9).translate(0, 1.5, -0.3), '#ffffff'),
-    ...[-1.35, 1.35].map((z) => colored(new THREE.BoxGeometry(1.84, 0.56, 0.64).translate(0, 0.28, z), '#1d1e20')),
-  ]);
+  // bílá karoserie dostane barvu instance, okna a kola zůstanou tmavá (stejný tvar jako jedoucí auta, traffic.js)
+  const geo = townCarGeometry();
   const mat = new THREE.MeshLambertMaterial({ vertexColors: true });
   const close = (t) => shadows && terrain.distAt(t.x, t.z) < SHADOW_REACH;
   const group = new THREE.Group();
@@ -770,8 +766,7 @@ function buildCars(town, track, terrain, shadows, view, extra = [], night = fals
   // v noci svítí auta čekající na výjezd (přední světla a koncová)
   const waiting = items.filter((t) => t.waiting).map(({ color, ...t }) => t);
   if (night && waiting.length) {
-    const front = mergeGeometries([-0.6, 0.6].map((x) => new THREE.BoxGeometry(0.3, 0.14, 0.05).translate(x, 0.72, 2.16)));
-    const rear = mergeGeometries([-0.62, 0.62].map((x) => new THREE.BoxGeometry(0.26, 0.12, 0.05).translate(x, 0.76, -2.16)));
+    const { front, rear } = townCarLights();
     group.add(instancedLevels([[0, [[front, waiting]]]], new THREE.MeshLambertMaterial({ color: 0, emissive: '#fff3d8', emissiveIntensity: 4 }), opts));
     group.add(instancedLevels([[0, [[rear, waiting]]]], new THREE.MeshLambertMaterial({ color: 0, emissive: '#ff2a1a', emissiveIntensity: 2.5 }), opts));
   }
@@ -933,7 +928,12 @@ export function buildTown(town, track, terrain, quality, seed, anisotropy, fogFa
   group.add(buildLamps(town, track, terrain, rng, view, night));
   const blocked = (x, z) => neighbourAt(x, z, -1);
   group.add(buildCars(town, track, terrain, shadows, view, waitingCars(town, track, terrain, { seed: seed + 31, blocked }), night));
-  group.add(buildLife(town, track, terrain, { view, night, seed: seed + 41, blocked }));
+  const life = buildLife(town, track, terrain, { view, night, seed: seed + 41, blocked });
+  // auta jedoucí ulicemi mimo trať (traffic.js)
+  const traffic = buildTraffic(town, track, terrain, { view, night, seed: seed + 67, shadows, colors: CAR_COLORS });
+  group.add(life, traffic);
+  // pohyb kulis: chodci a provoz; volá hlavní smyčka každý snímek (při pauze ne)
+  group.userData.motion = [life.userData.update, traffic.userData.update].filter(Boolean);
   group.add(buildStreetDetail(track, terrain, seed + 53, view));
   if (track.def.islands?.length) group.add(buildIslands(track, terrain));
   group.add(buildBuses(town, track, terrain, shadows, view));

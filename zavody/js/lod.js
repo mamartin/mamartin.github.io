@@ -243,11 +243,27 @@ export function instancedLevels(levels, mat, { cull = Infinity } = {}) {
         mesh.instanceColor.setUsage(THREE.DynamicDrawUsage);
       }
       group.add(mesh);
-      parts.push({ mesh, mats, cols, spheres, n, from, to, shadow: !!castShadow });
+      parts.push({ mesh, mats, cols, spheres, n, from, to, shadow: !!castShadow, center: gs.center });
     }
   });
   group.userData.pool = { parts, scale: 1, key: '' };
   return group;
+}
+
+// Pohyblivé kulisy (chodci, auta ve městě): přepíše polohu jedné instance ve všech tvarech pole.
+// Jen otočení kolem svislé osy a stejné měřítko ve všech směrech; výběr pro kameru se přepočítá.
+export function placeInstance(pool, i, x, y, z, ry, s = 1) {
+  const c = Math.cos(ry) * s, sn = Math.sin(ry) * s;
+  for (const p of pool.parts) {
+    const m = p.mats, o = i * 16;
+    m[o] = c; m[o + 2] = -sn; m[o + 5] = s; m[o + 8] = sn; m[o + 10] = c;
+    m[o + 12] = x; m[o + 13] = y; m[o + 14] = z;
+    const q = i * 4, k = p.center;
+    p.spheres[q] = x + c * k.x + sn * k.z;
+    p.spheres[q + 1] = y + s * k.y;
+    p.spheres[q + 2] = z - sn * k.x + c * k.z;
+  }
+  pool.key = '';
 }
 
 // pole instancí ve stromu objektů (jednou po postavení světa)
