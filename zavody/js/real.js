@@ -219,3 +219,7 @@ export function loadRealSky() {
   }));
   return skyReady;
 }
+
+// kov drobností (stožáry, zábradlí, svodidla, sloupky značek): pozink nebo nátěr, odráží oblohu
+export const metal = ({ color = 0xffffff, vertexColors = false, roughness = 0.45, metalness = 0.7, side = THREE.FrontSide } = {}) =>
+  new THREE.MeshStandardMaterial({ color, vertexColors, roughness, metalness, envMapIntensity: 0.9, side });

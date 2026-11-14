@@ -18,7 +18,7 @@ import { facadeMaterial, maskTexture } from './facade.js';
 import { buildStreetDetail } from './streetdetail.js';
 import { treeMaterial, leafCardGeometry, leafCardMaterial } from './foliage.js';
 import { buildingDetail } from './buildingdetail.js';
-import { real } from './real.js';
+import { real, metal } from './real.js';
 import { realTrees, realTreeMaterials } from './realtrees.js';
 import { townCarShape } from './car.js';
 import { buildTraffic, townCarGeometry, townCarLights, carPaint } from './traffic.js';
@@ -702,14 +702,33 @@ function buildLamps(town, track, terrain, rng, view, night = false) {
     if (squares.some((r) => pointInRing(p[0], p[2], r))) historic.push({ ...lamp, ry: lamp.ry + Math.PI / 2 });
     else items.push(lamp);
   }
-  const mat = new THREE.MeshLambertMaterial({ vertexColors: true });
-  const geo = mergeGeometries([
+  const mat = real.on ? metal({ vertexColors: true }) : new THREE.MeshLambertMaterial({ vertexColors: true });
+  // zkušební realistický vzhled: kulatý zúžený stožár s patkou, výložník do oblouku a ploché svítidlo
+  // (svítidlo ve stejném místě jako dřív, v noci na něm sedí svítící deska a kruh světla na zemi)
+  const arm = new THREE.QuadraticBezierCurve3(new THREE.Vector3(0, 6.4, 0), new THREE.Vector3(0.05, 7.25, 0), new THREE.Vector3(1.45, 7.12, 0));
+  const zinc = '#9aa0a6';
+  const geo = real.on ? mergeGeometries([
+    colored(new THREE.CylinderGeometry(0.13, 0.15, 0.45, 12).translate(0, 0.22, 0), '#7d8389'),
+    colored(new THREE.CylinderGeometry(0.05, 0.085, 6.4, 12).translate(0, 3.2, 0), zinc),
+    colored(new THREE.TubeGeometry(arm, 10, 0.038, 8), zinc),
+    colored(new THREE.BoxGeometry(0.62, 0.07, 0.24).translate(1.72, 7.1, 0), '#8f959b'),
+    colored(new THREE.BoxGeometry(0.2, 0.1, 0.16).translate(1.47, 7.11, 0), '#8f959b'),
+    colored(new THREE.BoxGeometry(0.5, 0.02, 0.19).translate(1.74, 7.055, 0), '#e9e6da'),
+  ]) : mergeGeometries([
     colored(new THREE.CylinderGeometry(0.06, 0.1, 7.2, 5).translate(0, 3.6, 0), '#5c6168'),
     colored(new THREE.BoxGeometry(1.8, 0.07, 0.09).translate(0.9, 7.1, 0), '#5c6168'),
     colored(new THREE.BoxGeometry(0.55, 0.1, 0.22).translate(1.7, 7.05, 0), '#ded9c8'),
   ]);
   const iron = '#2f3833', globe = '#f4f0e0';
-  const old = mergeGeometries([
+  const old = real.on ? mergeGeometries([
+    colored(new THREE.CylinderGeometry(0.19, 0.26, 0.9, 14).translate(0, 0.45, 0).toNonIndexed(), iron),
+    colored(new THREE.CylinderGeometry(0.13, 0.19, 0.12, 14).translate(0, 0.96, 0).toNonIndexed(), iron),
+    colored(new THREE.CylinderGeometry(0.06, 0.1, 3.5, 12).translate(0, 2.7, 0).toNonIndexed(), iron),
+    colored(new THREE.CylinderGeometry(0.025, 0.025, 1.3, 8).rotateZ(Math.PI / 2).translate(0, 4.25, 0).toNonIndexed(), iron),
+    ...[-0.6, 0.6].map((x) => colored(new THREE.SphereGeometry(0.24, 14, 10).translate(x, 4.55, 0).toNonIndexed(), globe)),
+    ...[-0.6, 0.6].map((x) => colored(new THREE.ConeGeometry(0.1, 0.16, 10).translate(x, 4.86, 0).toNonIndexed(), iron)),
+    ...[-0.6, 0.6].map((x) => colored(new THREE.CylinderGeometry(0.07, 0.05, 0.1, 10).translate(x, 4.28, 0).toNonIndexed(), iron)),
+  ]) : mergeGeometries([
     colored(new THREE.CylinderGeometry(0.2, 0.26, 0.9, 6).translate(0, 0.45, 0).toNonIndexed(), iron),
     colored(new THREE.CylinderGeometry(0.07, 0.12, 3.6, 6).translate(0, 2.6, 0).toNonIndexed(), iron),
     colored(new THREE.BoxGeometry(1.3, 0.07, 0.07).translate(0, 4.25, 0).toNonIndexed(), iron),

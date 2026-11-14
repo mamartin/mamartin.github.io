@@ -3,6 +3,7 @@
 // Semafory jsou prostorové (stožár s výložníkem podle panoramat křižovatky Pražská × Mírové náměstí)
 // a světla se střídají v cyklu, hlavní silnice (trať) proti vedlejší.
 import * as THREE from 'three';
+import { real, metal } from './real.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { colored } from './scenery.js';
 import { part, vertex } from './mass.js';
@@ -134,7 +135,7 @@ export function buildRoadSigns(town, track, terrain, anisotropy, inHouse) {
     // značka obce stojí na dvou sloupcích, ostatní na jednom
     for (const u of s.kind === SIGN.CITY ? [-hw * 0.7, hw * 0.7] : [0]) {
       const top = y1 - 0.05, len = top - ground + 0.3;
-      poles.push(colored(new THREE.CylinderGeometry(0.04, 0.045, len, 6).toNonIndexed()
+      poles.push(colored(new THREE.CylinderGeometry(0.04, 0.045, len, real.on ? 12 : 6).toNonIndexed()
         .translate(s.x + ax * u - nx * 0.02, ground - 0.3 + len / 2, s.z + az * u - nz * 0.02), '#8d9399'));
     }
   }
@@ -143,8 +144,11 @@ export function buildRoadSigns(town, track, terrain, anisotropy, inHouse) {
   g.setAttribute('normal', new THREE.Float32BufferAttribute(faces.nor, 3));
   g.setAttribute('color', new THREE.Float32BufferAttribute(faces.col, 3));
   g.setAttribute('uv', new THREE.Float32BufferAttribute(faces.uv, 2));
-  group.add(new THREE.Mesh(g, new THREE.MeshLambertMaterial({ map, vertexColors: true, alphaTest: 0.5 })));
-  group.add(new THREE.Mesh(mergeGeometries(poles), new THREE.MeshLambertMaterial({ vertexColors: true })));
+  // zkušební realistický vzhled: deska se lehce leskne (odrazná fólie), sloupek je kulatý pozinkovaný
+  group.add(new THREE.Mesh(g, real.on
+    ? new THREE.MeshStandardMaterial({ map, vertexColors: true, alphaTest: 0.5, roughness: 0.38, metalness: 0, envMapIntensity: 0.6 })
+    : new THREE.MeshLambertMaterial({ map, vertexColors: true, alphaTest: 0.5 })));
+  group.add(new THREE.Mesh(mergeGeometries(poles), real.on ? metal({ vertexColors: true }) : new THREE.MeshLambertMaterial({ vertexColors: true })));
   return group;
 }
 
@@ -181,14 +185,14 @@ function buildSignals(items, track, terrain) {
       // stožár s výložníkem šikmo nad pruh, kterým řidič přijíždí, a opakovač na sloupu
       const p = track.project(s.x, s.z);
       const arm = THREE.MathUtils.clamp(Math.abs(p.lat) - track.hwAt(p.i) / 2, 3, 8);
-      local.push(colored(new THREE.CylinderGeometry(0.09, 0.12, 6.6, 8).translate(0, 3.3, 0).toNonIndexed(), GREY));
+      local.push(colored(new THREE.CylinderGeometry(0.09, 0.12, 6.6, real.on ? 14 : 8).translate(0, 3.3, 0).toNonIndexed(), GREY));
       local.push(colored(new THREE.CylinderGeometry(0.055, 0.07, Math.hypot(arm, 0.7), 6)
         .rotateZ(Math.atan2(arm, 0.7)).translate(-arm / 2, 6.05, 0).toNonIndexed(), GREY));
       local.push(colored(new THREE.CylinderGeometry(0.03, 0.03, 0.55, 5).translate(-arm, 6.1, 0.05).toNonIndexed(), GREY));
       head(local, loc, -arm, 5.35, 0.05);
       head(local, loc, 0, 2.6, 0.12);
     } else {
-      local.push(colored(new THREE.CylinderGeometry(0.055, 0.065, 3.4, 6).translate(0, 1.7, 0).toNonIndexed(), GREY));
+      local.push(colored(new THREE.CylinderGeometry(0.055, 0.065, 3.4, real.on ? 12 : 6).translate(0, 1.7, 0).toNonIndexed(), GREY));
       head(local, loc, 0, 2.75, 0.12);
     }
     const main = s.value === 1 ? 0 : 1;
@@ -197,7 +201,7 @@ function buildSignals(items, track, terrain) {
     for (const g of local) body.push(g.applyMatrix4(m));
     loc.forEach((list, k) => list.forEach((g) => lenses[main][k].push(g.applyMatrix4(m))));
   }
-  group.add(new THREE.Mesh(mergeGeometries(body), new THREE.MeshLambertMaterial({ vertexColors: true })));
+  group.add(new THREE.Mesh(mergeGeometries(body), real.on ? metal({ vertexColors: true, roughness: 0.55, metalness: 0.45 }) : new THREE.MeshLambertMaterial({ vertexColors: true })));
   // Všechna světla jsou jedna síť (jedno volání kreslení), nesvítí podle osvětlení scény. Fáze se mění
   // jen párkrát za cyklus, pak se přebarví vrcholy; přepíná se při vykreslení, ať světla nepotřebují vlastní smyčku.
   const parts = [], slots = [];

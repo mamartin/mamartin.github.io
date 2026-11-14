@@ -5,7 +5,7 @@ import { buildCenterline, smoothCircular, Cut } from './trackmath.js';
 import { clamp, angleDiff, RNG } from './rng.js';
 import { BIOMES, WET_GRIP, SNOW_GRIP } from './biomes.js';
 import { vergeMaterial, vergeUv } from './grounddetail.js';
-import { real, pbr, realRoad } from './real.js';
+import { real, pbr, realRoad, metal } from './real.js';
 
 export const SURF_ROAD = 0, SURF_CURB = 1, SURF_OFF = 2;
 // žulové kostky drží méně než asfalt, na mokru výrazně méně
@@ -471,6 +471,17 @@ export class Track {
         const q2 = [this.point(k, ik, h), this.point(k, ok, h), this.point(n, on, h), this.point(n, in_, h)];
         // vnější líc
         const q3 = [this.point(k, ok, h), this.point(k, ok, bottom), this.point(n, on, bottom), this.point(n, on, h)];
+        if (real.on && type === 'rail') {
+          // zkušební realistický vzhled: ocelové svodidlo s vlnou (dva hřbety a žlábek mezi nimi) místo hladké desky
+          const prof = [[0.45, 0.02], [0.52, -0.035], [0.6, -0.035], [0.65, 0.02], [0.7, -0.035], [0.78, -0.035], [0.85, 0.02]];
+          for (let i = 0; i + 1 < prof.length; i++) {
+            const [y0, d0] = prof[i], [y1, d1] = prof[i + 1];
+            const q = [this.point(k, ik + side * d0, y0), this.point(k, ik + side * d1, y1), this.point(n, in_ + side * d1, y1), this.point(n, in_ + side * d0, y0)];
+            if (side > 0) b.quad(q[0], q[1], q[2], q[3], col);
+            else b.quad(q[3], q[2], q[1], q[0], col);
+          }
+          continue;
+        }
         if (side > 0) {
           b.quad(q1[0], q1[1], q1[2], q1[3], col);
           b.quad(q2[0], q2[1], q2[2], q2[3], top);
@@ -483,7 +494,9 @@ export class Track {
       }
     }
     const group = new THREE.Group();
-    const mat = new THREE.MeshLambertMaterial({ vertexColors: true, side: type === 'rail' ? THREE.DoubleSide : THREE.FrontSide });
+    const mat = real.on && type === 'rail'
+      ? metal({ vertexColors: true, roughness: 0.4, metalness: 0.85, side: THREE.DoubleSide })
+      : new THREE.MeshLambertMaterial({ vertexColors: true, side: type === 'rail' ? THREE.DoubleSide : THREE.FrontSide });
     const mesh = new THREE.Mesh(b.build(), mat);
     mesh.castShadow = type !== 'rail';
     mesh.receiveShadow = true;
@@ -495,7 +508,7 @@ export class Track {
       const count = Math.ceil(N / every) * 2;
       const geo = new THREE.BoxGeometry(0.12, 1.3, 0.12);
       geo.translate(0, 0.25, 0);
-      const posts = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial({ color: style.postColor ?? 0x8a8f96 }), count);
+      const posts = new THREE.InstancedMesh(geo, real.on ? metal({ color: style.postColor ?? 0x8a8f96 }) : new THREE.MeshLambertMaterial({ color: style.postColor ?? 0x8a8f96 }), count);
       const m = new THREE.Matrix4();
       const p = [0, 0, 0];
       let i = 0;
@@ -556,7 +569,13 @@ export class Track {
 
   // sloupky na okraji chodníku v centru, kde nestojí svodidlo
   buildBollards() {
-    const geo = mergeGeometries([
+    // zkušební realistický vzhled: kulatý litinový sloupek s prstencem a oblou hlavou
+    const geo = real.on ? mergeGeometries([
+      new THREE.CylinderGeometry(0.075, 0.095, 0.8, 14).translate(0, 0.4, 0),
+      new THREE.CylinderGeometry(0.105, 0.105, 0.05, 14).translate(0, 0.66, 0),
+      new THREE.CylinderGeometry(0.105, 0.105, 0.06, 14).translate(0, 0.82, 0),
+      new THREE.SphereGeometry(0.085, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2).translate(0, 0.85, 0),
+    ]) : mergeGeometries([
       new THREE.CylinderGeometry(0.08, 0.1, 0.85, 6).translate(0, 0.42, 0),
       new THREE.CylinderGeometry(0.11, 0.11, 0.08, 6).translate(0, 0.88, 0),
     ]);
@@ -569,7 +588,7 @@ export class Track {
         if (!this.cutAt(this.s[k], side) && !this.openEdge(this.s[k], side, p)) items.push(p);
       }
     }
-    const mesh = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial({ color: 0x3a3e44 }), items.length);
+    const mesh = new THREE.InstancedMesh(geo, real.on ? metal({ color: 0x3a3e44, roughness: 0.6, metalness: 0.5 }) : new THREE.MeshLambertMaterial({ color: 0x3a3e44 }), items.length);
     const m = new THREE.Matrix4();
     items.forEach((p, i) => mesh.setMatrixAt(i, m.makeTranslation(p[0], p[1], p[2])));
     mesh.computeBoundingSphere();
@@ -590,6 +609,20 @@ export class Track {
         if (this.edgeKind(this.s[k], side) !== 'rail') continue;
         if (this.cutAt(this.s[k], side) || this.openEdge(this.s[k], side, this.point(k, side * this.edgeAt(k)))) continue;
         const la = side * (this.edgeAt(k) + 0.12), lb = side * (this.edgeAt(n) + 0.12);
+        if (real.on) {
+          // zkušební realistický vzhled: madla jsou kulaté trubky (šestiboký průřez), ne ploché pásky
+          for (const [y, r] of [[0.98, 0.03], [0.52, 0.022]]) {
+            for (let i = 0; i < 6; i++) {
+              const a0 = (i / 6) * Math.PI * 2, a1 = ((i + 1) / 6) * Math.PI * 2;
+              const at = (j, lat, a) => this.point(j, lat + Math.cos(a) * r * side, y + Math.sin(a) * r);
+              const q = [at(k, la, a0), at(k, la, a1), at(n, lb, a1), at(n, lb, a0)];
+              if (side > 0) b.quad(q[0], q[1], q[2], q[3], y > 0.7 ? col : dark);
+              else b.quad(q[3], q[2], q[1], q[0], y > 0.7 ? col : dark);
+            }
+          }
+          if (k % every === 0) posts.push({ p: this.point(k, la), hd: this.hd[k] });
+          continue;
+        }
         // dvě madla: horní a střední, každé jako úzký pásek ze dvou stran
         for (const [y, t] of [[0.95, 0.06], [0.5, 0.04]]) {
           const q = [this.point(k, la, y - t), this.point(k, la, y + t), this.point(n, lb, y + t), this.point(n, lb, y - t)];
@@ -600,11 +633,11 @@ export class Track {
       }
     }
     const group = new THREE.Group();
-    const mesh = new THREE.Mesh(b.build(), new THREE.MeshLambertMaterial({ vertexColors: true }));
+    const mesh = new THREE.Mesh(b.build(), real.on ? metal({ vertexColors: true, side: THREE.DoubleSide, roughness: 0.5, metalness: 0.6 }) : new THREE.MeshLambertMaterial({ vertexColors: true }));
     mesh.receiveShadow = true;
     group.add(mesh);
-    const geo = new THREE.BoxGeometry(0.06, 1.0, 0.06).translate(0, 0.5, 0);
-    const inst = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial({ color: 0x4a4f56 }), posts.length);
+    const geo = real.on ? new THREE.CylinderGeometry(0.03, 0.03, 1.0, 10).translate(0, 0.5, 0) : new THREE.BoxGeometry(0.06, 1.0, 0.06).translate(0, 0.5, 0);
+    const inst = new THREE.InstancedMesh(geo, real.on ? metal({ color: 0x5d636b, roughness: 0.5, metalness: 0.6 }) : new THREE.MeshLambertMaterial({ color: 0x4a4f56 }), posts.length);
     const m = new THREE.Matrix4();
     posts.forEach(({ p, hd }, i) => inst.setMatrixAt(i, m.makeRotationY(hd).setPosition(p[0], p[1], p[2])));
     inst.computeBoundingSphere();
