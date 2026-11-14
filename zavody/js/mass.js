@@ -5,6 +5,9 @@ export const FLOOR = 3; // metrů na patro i na okno
 export const SHAPE = { GABLE: 0, HIP: 1, FLAT: 2, TENT: 3, SHED: 4, CROSS: 5 }; // CROSS: sedlová s hřebenem napříč
 const BLOCK_PITCH = 3.8; // rozestup oken na fasádě vysokých domů
 const BLANK = [0, 0, 0.5, 0.5]; // roh buňky textury, kde žádné okno není
+// kvádr na půdorysu (funkce box níž); uvnitř addBuilding je jméno box obsazené ohraničením domu
+const prism = (...args) => box(...args);
+const DOORS = ['#5b3a26', '#3f4a3a', '#6b2f2a', '#4a4f57', '#7a5a3c', '#2f3c4a']; // barvy domovních dveří
 const SHOP_H = 3.6, SHOP_W = 4.5; // výška přízemí s výlohou a šířka jedné výlohy
 // styl fasády ze scény (tools/gen/buildings.mjs FACADE): pásová okna, panelák s lodžiemi, starý dům s římsou
 export const FACADE = { RIBBON: 1, PANEL: 2, OLD: 3 };
@@ -282,7 +285,9 @@ function sills(o, p, q, n, edge, cellsAll, top, bottom, rowH, col) {
 }
 
 // detail: dům u trati dostane parapety jako geometrii (vidět jsou jen zblízka)
-export function addBuilding(tile, terrain, ringIn, { wall, roof, shape, face, top, plain, uvOf, shopFront, party, wings, levels, facade = 0, detail = false }) {
+// rich = zkušební realistický vzhled u domů blízko trati: přesah střechy s okapem a svodem, lemování štítů,
+// dveře se schodem na stěně k trati a komín; doorY(x, z) = výška země u dveří (chodník)
+export function addBuilding(tile, terrain, ringIn, { wall, roof, shape, face, top, plain, uvOf, shopFront, party, wings, levels, facade = 0, detail = false, rich = false, doorY = null }) {
   const ring = areaOf(ringIn) > 0 ? ringIn : [...ringIn].reverse();
   const box = orientedBox(ring);
   const sloped = shape === SHAPE.GABLE || shape === SHAPE.HIP || shape === SHAPE.CROSS;
@@ -337,6 +342,10 @@ export function addBuilding(tile, terrain, ringIn, { wall, roof, shape, face, to
   };
   const vLow = (low - eave) / (rowH * 4);
   const sillColor = face.clone().lerp(WHITE, 0.45);
+  // díly navíc (rich): barvy a nejlepší místo pro dveře (nejdelší stěna s okny otočená k trati)
+  const trim = rich ? { gutter: new THREE.Color('#6f757b'), soffit: face.clone().multiplyScalar(0.5), board: face.clone().lerp(WHITE, 0.55), roofEdge: top.clone().multiplyScalar(0.8) } : null;
+  let door = null;
+  const OVER = 0.38; // m přesahu střechy
   rim.forEach((p, i) => {
     const q = rim[(i + 1) % rim.length];
     const dx = q[0] - p[0], dz = q[1] - p[1], len = Math.hypot(dx, dz);
@@ -382,7 +391,63 @@ export function addBuilding(tile, terrain, ringIn, { wall, roof, shape, face, to
     const own = ownerOf([(p[0] + q[0]) / 2 - n[0] * 0.05, (p[1] + q[1]) / 2 - n[2] * 0.05]);
     const yp = heightOf(own, p), yq = heightOf(own, q);
     if (yp > eave + 0.02 || yq > eave + 0.02) panel(out, [p[0], eave, p[1]], [p[0], yp, p[1]], [q[0], yq, q[1]], [q[0], eave, q[1]], n, face, face);
+    if (rich && sloped && roof > 0 && len > 0.4) {
+      const ex = dx / len, ez = dz / len, o = tile.plain;
+      // body hrany posunuté ven o d a podél hrany o e (přes rohy, ať v nich nezůstane díra)
+      const at = (v, d, e, y) => [v[0] + n[0] * d + ex * e, y, v[1] + n[2] * d + ez * e];
+      if (yp <= eave + 0.02 && yq <= eave + 0.02) {
+        // okapová hrana: střecha přetažená přes stěnu, podhled, žlab a u konce dlouhé stěny svod
+        const up = [n[0] * 0.3, 0.95, n[2] * 0.3];
+        panel(o, at(p, OVER, -OVER, eave - 0.07), at(p, -0.02, -OVER, eave + 0.05), at(q, -0.02, OVER, eave + 0.05), at(q, OVER, OVER, eave - 0.07), up, top, top);
+        panel(o, at(p, 0, -OVER, eave - 0.1), at(p, OVER, -OVER, eave - 0.1), at(q, OVER, OVER, eave - 0.1), at(q, 0, OVER, eave - 0.1), [0, -1, 0], trim.soffit, trim.soffit);
+        panel(o, at(p, OVER + 0.04, -OVER, eave - 0.2), at(p, OVER + 0.04, -OVER, eave - 0.05), at(q, OVER + 0.04, OVER, eave - 0.05), at(q, OVER + 0.04, OVER, eave - 0.2), n, trim.gutter, trim.gutter);
+        panel(o, at(p, OVER - 0.08, -OVER, eave - 0.2), at(p, OVER + 0.04, -OVER, eave - 0.2), at(q, OVER + 0.04, OVER, eave - 0.2), at(q, OVER - 0.08, OVER, eave - 0.2), [0, -1, 0], trim.gutter, trim.gutter);
+        if (edge.L >= 5 && edge.t1 > 0.999) prism(o, q[0] + n[0] * 0.1 - ex * 0.35, q[1] + n[2] * 0.1 - ez * 0.35, ex, ez, 0.05, 0.05, low, eave - 0.12, trim.gutter);
+      } else {
+        // štít: střecha přetažená přes stěnu podél spádu a pod ní světlé prkno (závětrná lišta)
+        const up = [n[0] * 0.2, 0.97, n[2] * 0.2];
+        panel(o, at(p, OVER * 0.7, 0, yp + 0.02), at(p, -0.02, 0, yp + 0.06), at(q, -0.02, 0, yq + 0.06), at(q, OVER * 0.7, 0, yq + 0.02), up, top, top);
+        panel(o, at(p, OVER * 0.7, 0, yp - 0.16), at(p, OVER * 0.7, 0, yp + 0.02), at(q, OVER * 0.7, 0, yq + 0.02), at(q, OVER * 0.7, 0, yq - 0.16), n, trim.board, trim.board);
+        panel(o, at(p, 0, 0, yp - 0.16), at(p, OVER * 0.7, 0, yp - 0.16), at(q, OVER * 0.7, 0, yq - 0.16), at(q, 0, 0, yq - 0.16), [0, -1, 0], trim.soffit, trim.soffit);
+      }
+    }
+    // dveře: stěna s okny otočená k trati (bod před stěnou je trati blíž než stěna sama), bez výlohy
+    if (rich && cells >= 1 && !end && !styled && !uvOf && len >= 3.2 && !(runs && (runs.length > 1 || runs[0].blank)) && (!door || len > door.len)) {
+      const cx = (p[0] + q[0]) / 2, cz = (p[1] + q[1]) / 2;
+      const shop = shopFront && len >= 3 && eave - shopY >= 2.4 && shopFront(mx, mz);
+      if (!shop && terrain.distAt(cx + n[0] * 4, cz + n[2] * 4) < terrain.distAt(cx - n[0] * 2, cz - n[2] * 2)) {
+        // střed buňky oken nejblíž středu stěny: dveře nahradí okno v přízemí
+        const k = Math.min(cellsAll - 1, Math.max(0, Math.round(((edge.t0 + edge.t1) / 2) * cellsAll - 0.5)));
+        const f = ((k + 0.5) / cellsAll - edge.t0) / (edge.t1 - edge.t0);
+        if (f > 0.12 && f < 0.88) door = { len, at: mix(p, q, f), n, ex: dx / len, ez: dz / len };
+      }
+    }
   });
+  if (door) {
+    const { at, n, ex, ez } = door, o = tile.plain;
+    const y0 = doorY ? doorY(at[0] + n[0] * 0.3, at[1] + n[2] * 0.3) : eave - wall;
+    // barva dveří podle polohy (stálá náhoda)
+    const pick = Math.abs(Math.round(at[0] * 7.3 + at[1] * 3.1)) % DOORS.length;
+    const leaf = new THREE.Color(DOORS[pick]), stone = new THREE.Color('#9a968d'), glass = new THREE.Color('#27323c');
+    const slab = (d, hw, ya, yb, col) => prism(o, at[0] + n[0] * d / 2, at[1] + n[2] * d / 2, ex, ez, hw, d / 2, ya, yb, col);
+    slab(0.14, 0.82, low, y0 + 2.72, sillColor); // ostění, zakryje okno za sebou
+    slab(0.2, 0.52, y0 + 0.02, y0 + 2.1, leaf); // křídlo
+    slab(0.2, 0.52, y0 + 2.16, y0 + 2.5, glass); // nadsvětlík
+    slab(0.26, 0.2, y0 + 0.7, y0 + 1.25, leaf.clone().multiplyScalar(0.72)); // výplň
+    slab(0.3, 0.035, y0 + 0.98, y0 + 1.1, new THREE.Color('#b9b3a2')); // klika
+    prism(o, at[0] + n[0] * 0.3, at[1] + n[2] * 0.3, ex, ez, 0.8, 0.3, low, y0 + 0.02, stone); // schod
+    prism(o, at[0] + n[0] * 0.5, at[1] + n[2] * 0.5, ex, ez, 0.95, 0.5, low, y0 - 0.14, stone);
+  }
+  // komín u hřebene hlavní střechy
+  if (rich && sloped && roof > 1.2) {
+    const r = roofs[0], b = r.box;
+    const c = [b.cx + b.ux * b.hl * 0.45 + -b.uz * b.hw * 0.18, b.cz + b.uz * b.hl * 0.45 + b.ux * b.hw * 0.18];
+    if (pointInPoly(c, r.ring)) {
+      const y = heightOf(r, c), brick = new THREE.Color('#8d6253');
+      prism(tile.plain, c[0], c[1], b.ux, b.uz, 0.3, 0.24, y - 0.4, y + 1.0, brick, brick.clone().multiplyScalar(0.85));
+      prism(tile.plain, c[0], c[1], b.ux, b.uz, 0.36, 0.3, y + 1.0, y + 1.08, new THREE.Color('#5a5650'));
+    }
+  }
   // starý dům: profilovaná římsa pod střechou (líc a podhled) a tmavší sokl
   if (old) {
     const cornice = face.clone().lerp(WHITE, 0.35), under = face.clone().multiplyScalar(0.62), plinth = face.clone().multiplyScalar(0.55);

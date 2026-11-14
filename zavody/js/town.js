@@ -950,6 +950,14 @@ export function buildTown(town, track, terrain, quality, seed, anisotropy, fogFa
   // stínění od okolních domů (ao.js): rastr výšek kolem trati, vrcholy každého domu hned po jeho stavbě
   const sky = skyline(standing, track, terrain);
   const PARTS = ['walls', 'plain', 'shops', 'ribbon', 'panel'];
+  // výška země u domovních dveří: těsně u trati úroveň chodníku (terén je tam pod krajnicí níž)
+  const doorY = (x, z) => {
+    const g = terrain.heightAt(x, z);
+    if (terrain.distAt(x, z) > track.edge + 6) return g;
+    const o = nearTrack(track, terrain, x, z);
+    if (Math.abs(o.lat) > o.edge + 3) return g;
+    return Math.max(g, track.sampleAt(o.s, Math.sign(o.lat || 1) * o.edge).y + (track.onUrban(o.s) ? 0.13 : 0));
+  };
   standing.forEach((b, i) => {
     const c = b.ring[0];
     placed.push(b.ring);
@@ -962,6 +970,8 @@ export function buildTown(town, track, terrain, quality, seed, anisotropy, fogFa
       party: (x, z) => neighbourAt(x, z, i), wings: true, levels: b.levels, facade: b.facade,
       // parapety jen u domů do 30 m od okraje trati, dál jsou menší než pixel
       detail: tile.near && b.ring.some((p) => terrain.distAt(p[0], p[1]) < track.edge + 30),
+      // zkušební realistický vzhled: okapy, štíty, dveře a komíny u domů do 60 m od okraje trati
+      rich: real.on && b.ring.some((p) => terrain.distAt(p[0], p[1]) < track.edge + 60), doorY,
     });
     PARTS.forEach((k, j) => bakeAO(tile[k], sky, terrain, from[j], i));
   });
