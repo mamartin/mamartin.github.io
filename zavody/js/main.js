@@ -45,7 +45,7 @@ import { bindKeysUI, refreshKeysUI, keyPanelHtml, itemKeyLabel, keyPlayer, keysS
 import { Post } from './post.js';
 import { EnvProbe } from './envprobe.js';
 import { bakeSunShadow, applySunShadow, SUN_SHADOW } from './sunshadow.js';
-import { real, loadRealSky } from './real.js';
+import { real, loadRealSky, loadOrtho } from './real.js';
 import { loadRealTrees } from './realtrees.js';
 import { loadRealPeople } from './realpeople.js';
 import { splitLarge, mergeSimilar, setViewScale, collectPools, updatePools } from './lod.js';
@@ -248,6 +248,7 @@ function disposeWorld() {
   scene.remove(w.group, w.sky);
   disposeObject(w.group);
   disposeObject(w.sky);
+  w.ortho?.dispose();
   w.effects.dispose(scene);
   if (w.envRT) w.envRT.dispose();
   for (const c of w.showcase) disposeCarMesh(c.mesh);
@@ -277,7 +278,11 @@ async function loadWorld(id) {
   const town = baseDef.scene ? await loadTown(baseDef.scene).catch((e) => (console.warn(e), null)) : null;
   if (token !== loadToken) return G.world;
   // zkušební realistický vzhled: tvary stromů se vypěstují jednou, než se začne stavět svět
-  if (S.real && S.quality !== 'low') await Promise.all([loadRealTrees(), loadRealPeople()]).catch((e) => console.warn(e));
+  const wantReal = S.real && S.quality !== 'low';
+  if (wantReal) await Promise.all([loadRealTrees(), loadRealPeople()]).catch((e) => console.warn(e));
+  // ortofoto kolem trati (jen města, pro která je stažené); správce dlaždic patří tomuto světu
+  const ortho = wantReal && town ? await loadOrtho(baseDef.scene.match(/([^/]+)\.bin$/)?.[1]).catch(() => null) : null;
+  if (token !== loadToken) return G.world;
   disposeWorld();
   // déšť (na zimní trati místo něj padá sníh)
   const wet = wantsRain(baseDef);
@@ -294,7 +299,7 @@ async function loadWorld(id) {
   const cell = S.quality === 'low' ? (town ? 14 : 11) : town ? 10 : 8;
   const terrain = new Terrain(track, def.biome, { seed: def.seed, lake: def.lake, cell, dem: town?.dem, water: town?.water, far: def.far });
   if (town) terrain.groundMap = paintGround(town, track, terrain, S.quality, renderer.capabilities.getMaxAnisotropy());
-  if (town && real.on) terrain.ortho = baseDef.scene.match(/([^/]+)\.bin$/)?.[1] ?? null;
+  terrain.ortho = ortho;
   const group = new THREE.Group();
   // na nízké kvalitě (slabý procesor) větší čtverce terénu: méně volání kreslení
   const low = S.quality === 'low';
@@ -363,7 +368,7 @@ async function loadWorld(id) {
   if (rain) group.add(rain.points);
   G.world = {
     def, biome, track, terrain, group, sky, lights, effects, envRT, streets, showcase: [], stand: scenery.extra.stand, snowmen: scenery.extra.snowmen, snow: scenery.extra.snow, rain, wet, snowy, night,
-    pools: collectPools(group), motion: townGroup?.userData.motion ?? [],
+    pools: collectPools(group), motion: townGroup?.userData.motion ?? [], ortho,
   };
   if (mix) {
     G.world.mix = true;
@@ -1721,6 +1726,8 @@ function frame(now) {
     rig.orbit(dt, orbitCenter, 26, 8.5, 0.07);
   }
 
+  // dlaždice ortofota se nahrávají podle polohy kamery (i při pauze a v menu)
+  w.ortho?.update(camera.position);
   w.stand.update(G.paused ? 0 : dt, G.race, w.effects);
   // chodci a provoz ve městě (jen kulisa)
   if (!G.paused) for (const move of w.motion) move(dt);

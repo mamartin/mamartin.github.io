@@ -1,44 +1,51 @@
-// Ortofoto ČÚZK (WMS, CC BY 4.0) v plném rozlišení pro zkušební realistický vzhled (js/real.js):
-// čtverec 512 × 512 m po 12,5 cm kolem zadaných míst trati (metry od startu), uložený jako JPEG
-// do assets/real/<město>-orto-<n>.jpg. Vedle něj <město>-orto.json s převodem ze souřadnic hry
-// (x, z) na souřadnice v obrázku: u = a·x + b·z + c, v = d·x + e·z + f (obrázek je v S-JTSK, vůči
-// hře pootočený; na 500 m je převod s přesností na centimetry lineární).
-// Použití: node tools/fetch-ortho.mjs pribram 60 1550
-import { writeFileSync, mkdirSync } from 'node:fs';
+// Ortofoto ČÚZK (WMS, CC BY 4.0) pro zkušební realistický vzhled (js/real.js): pás kolem celé trati
+// po dlaždicích 260 × 260 m (asi 17 cm na pixel) do assets/real/orto/<město>/<i>_<j>.jpg a seznam
+// dlaždic do assets/real/orto/<město>.json.
+// Dlaždice leží v mřížce hry: dlaždice (i, j) pokrývá x od i·260 do (i+1)·260 a z od j·260 do (j+1)·260 m.
+// Stahují se v EPSG:3857 (sever nahoře jako ve hře, takže se nic neotáčí); hra měří metry na sever jinak
+// než na východ (110 574 a 111 320 m na stupeň), proto má obrázek o 0,7 % víc řádků než sloupců.
+// Bere se každá dlaždice, která je do 100 m od trati.
+// Použití: node tools/fetch-ortho.mjs pribram
+import { writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildCenterline } from '../js/trackmath.js';
-import { localProjection, wgsToKrovak } from './lib/geo.mjs';
+import { localProjection } from './lib/geo.mjs';
 import { loadCity, loadTrack, loadScene } from './lib/city.mjs';
 
-const SIZE = 512, PX = 4096;
-const [city, ...at] = process.argv.slice(2);
+const TILE = 260, PAD = 100, PX = 1536;
+const R = 6378137, RAD = Math.PI / 180;
+const [city] = process.argv.slice(2);
 const ctx = await loadCity([city]);
-const TRACK = await loadTrack(ctx);
+const cl = buildCenterline(await loadTrack(ctx));
 const scene = loadScene(ctx);
-const cl = buildCenterline(TRACK);
 const proj = localProjection(scene.origin.lat, scene.origin.lon);
-// hra: x na východ, z na jih
-const krovak = (x, z) => wgsToKrovak(...proj.inverse(x, -z));
-const OUT = join(dirname(fileURLToPath(import.meta.url)), '..', 'assets', 'real');
-mkdirSync(OUT, { recursive: true });
-const patches = [];
-for (const [n, s] of at.map(Number).entries()) {
-  const k = Math.min(cl.N - 1, Math.round(s / cl.step));
-  const cx = cl.px[k], cz = cl.pz[k];
-  const [e, nn] = krovak(cx, cz);
-  const e0 = Math.round(e) - SIZE / 2, n0 = Math.round(nn) - SIZE / 2;
-  const url = `https://ags.cuzk.gov.cz/arcgis1/services/ORTOFOTO/MapServer/WMSServer?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=0&STYLES=&CRS=EPSG:5514&BBOX=${[e0, n0, e0 + SIZE, n0 + SIZE].join(',')}&WIDTH=${PX}&HEIGHT=${PX}&FORMAT=image/jpeg`;
-  const res = await fetch(url, { headers: { 'User-Agent': 'zavody-fetch-ortho' } });
-  if (!res.ok || !res.headers.get('content-type')?.includes('jpeg')) throw new Error(`ortofoto ${s}: ${res.status} ${res.headers.get('content-type')}`);
-  const buf = Buffer.from(await res.arrayBuffer());
-  const file = `${city}-orto-${n}.jpg`;
-  writeFileSync(join(OUT, file), buf);
-  // lineární převod ze tří bodů (střed a 100 m po osách hry)
-  const uv = (x, z) => { const [pe, pn] = krovak(x, z); return [(pe - e0) / SIZE, (pn - n0) / SIZE]; };
-  const [u0, v0] = uv(cx, cz), [u1, v1] = uv(cx + 100, cz), [u2, v2] = uv(cx, cz + 100);
-  const a = (u1 - u0) / 100, b = (u2 - u0) / 100, d = (v1 - v0) / 100, ee = (v2 - v0) / 100;
-  patches.push({ file, s, m: [a, b, u0 - a * cx - b * cz, d, ee, v0 - d * cx - ee * cz] });
-  console.log(`${file}: ${(buf.length / 1e6).toFixed(1)} MB, střed [${cx.toFixed(0)}, ${cz.toFixed(0)}]`);
+// hra: x na východ, z na jih -> souřadnice EPSG:3857
+const mercator = (x, z) => {
+  const [lat, lon] = proj.inverse(x, -z);
+  return [R * lon * RAD, R * Math.log(Math.tan(Math.PI / 4 + (lat * RAD) / 2))];
+};
+const want = new Set();
+for (let k = 0; k < cl.N; k++) {
+  for (const dx of [-PAD, 0, PAD]) for (const dz of [-PAD, 0, PAD]) want.add(`${Math.floor((cl.px[k] + dx) / TILE)}_${Math.floor((cl.pz[k] + dz) / TILE)}`);
 }
-writeFileSync(join(OUT, `${city}-orto.json`), JSON.stringify({ credit: 'Ortofoto © ČÚZK, CC BY 4.0', patches }));
+const OUT = join(dirname(fileURLToPath(import.meta.url)), '..', 'assets', 'real', 'orto');
+mkdirSync(join(OUT, city), { recursive: true });
+let total = 0, got = 0;
+for (const key of want) {
+  const file = join(OUT, city, `${key}.jpg`);
+  if (existsSync(file)) continue;
+  const [i, j] = key.split('_').map(Number);
+  const [x0, y0] = mercator(i * TILE, (j + 1) * TILE), [x1, y1] = mercator((i + 1) * TILE, j * TILE);
+  const height = Math.round((PX * (y1 - y0)) / (x1 - x0));
+  const url = `https://ags.cuzk.gov.cz/arcgis1/services/ORTOFOTO/MapServer/WMSServer?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=0&STYLES=&CRS=EPSG:3857&BBOX=${[x0, y0, x1, y1].join(',')}&WIDTH=${PX}&HEIGHT=${height}&FORMAT=image/jpeg`;
+  const res = await fetch(url, { headers: { 'User-Agent': 'zavody-fetch-ortho' } });
+  if (!res.ok || !res.headers.get('content-type')?.includes('jpeg')) throw new Error(`ortofoto ${key}: ${res.status} ${res.headers.get('content-type')}`);
+  const buf = Buffer.from(await res.arrayBuffer());
+  writeFileSync(file, buf);
+  total += buf.length;
+  got++;
+  await new Promise((r) => setTimeout(r, 300));
+}
+writeFileSync(join(OUT, `${city}.json`), JSON.stringify({ credit: 'Ortofoto © ČÚZK, CC BY 4.0', tile: TILE, tiles: [...want].sort() }));
+console.log(`${city}: ${want.size} dlaždic, staženo ${got} (${(total / 1e6).toFixed(1)} MB)`);

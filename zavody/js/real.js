@@ -95,37 +95,81 @@ export function realRoad(mat, repeat) {
 }
 
 // --- zem z ortofota --------------------------------------------------------------------------------
-const MAX_PATCH = 2;
-// města, pro která je ortofoto stažené (tools/fetch-ortho.mjs); jinde se o soubor ani nežádá
-const ORTO_CITIES = new Set(['pribram']);
+// Pás kolem celé trati po dlaždicích 260 × 260 m v mřížce hry (tools/fetch-ortho.mjs). Terén se v tomto
+// vzhledu dělí na čtverce po stejné mřížce, každý čtverec s dlaždicí má vlastní materiál s jednou fotkou.
+// Fotky se nahrávají, až když je kamera blízko, a vzdálené se zase uvolní (všechny naráz by zabraly
+// stovky MB paměti grafiky).
+const ORTO_CITIES = new Set(['pribram', 'dobris']); // města se staženým ortofotem
+const ORTO_LOAD = 430, ORTO_DROP = 680; // m od středu dlaždice: kdy fotku nahrát a kdy uvolnit
+const ORTO_REACH = 95; // m od osy trati, kam fotka sahá (dál plynule přechází v kreslenou zem)
+const ortoIndex = new Map();
 
-// do materiálu terénu přidá až dva výřezy ortofota (assets/real/<město>-orto.json); načítá se na pozadí
-// edge = polovina šířky trati s krajnicí: pod tratí zůstává kreslená zem (jinak by v mezeře u obrubníku
-// prosvítal snímek); vzdálenost od osy trati je ve vrcholech terénu (atribut tdist)
-export function orthoGround(mat, city, edge) {
-  const uniforms = {
-    ortoMap: { value: [null, null] },
-    ortoM: { value: [new THREE.Matrix3(), new THREE.Matrix3()] },
-    ortoOn: { value: [0, 0] },
-    ortoEdge: { value: edge },
-  };
-  (ORTO_CITIES.has(city) ? fetch(`${BASE}${city}-orto.json`).then((r) => (r.ok ? r.json() : null)) : Promise.resolve(null)).then((info) => {
-    if (!info) return;
-    info.patches.slice(0, MAX_PATCH).forEach((p, i) => {
-      loader.load(BASE + p.file, (tex) => {
-        tex.colorSpace = THREE.SRGBColorSpace;
-        tex.anisotropy = 16;
-        const [a, b, c, d, e, f] = p.m;
-        uniforms.ortoM.value[i].set(a, b, c, d, e, f, 0, 0, 1);
-        uniforms.ortoMap.value[i] = tex;
-        uniforms.ortoOn.value[i] = 1;
-      });
+// seznam dlaždic města (jednou), z něj pro každý svět nový správce: tileAt, update, dispose
+export async function loadOrtho(city) {
+  if (!ORTO_CITIES.has(city)) return null;
+  if (!ortoIndex.has(city)) {
+    const res = await fetch(`${BASE}orto/${city}.json`);
+    ortoIndex.set(city, res.ok ? await res.json() : null);
+  }
+  const info = ortoIndex.get(city);
+  if (!info) return null;
+  const T = info.tile, tiles = new Map();
+  for (const key of info.tiles) {
+    const [i, j] = key.split('_').map(Number);
+    tiles.set(key, {
+      x: (i + 0.5) * T, z: (j + 0.5) * T, url: `${BASE}orto/${city}/${key}.jpg`, tex: null, loading: false, used: false,
+      uniforms: { ortoMap: { value: null }, ortoRect: { value: new THREE.Vector3(i * T, j * T, T) }, ortoOn: { value: 0 } },
     });
-  }).catch(() => {});
+  }
+  let alive = true;
+  return {
+    tile: T,
+    // dlaždice pod bodem (jen ty, které terén opravdu použije, se pak nahrávají)
+    tileAt(x, z) {
+      const t = tiles.get(`${Math.floor(x / T)}_${Math.floor(z / T)}`);
+      if (t) t.used = true;
+      return t ?? null;
+    },
+    // každý snímek: nahrát blízké, uvolnit vzdálené, nahrané plynule rozsvítit
+    update(pos) {
+      for (const t of tiles.values()) {
+        if (!t.used) continue;
+        const d = Math.hypot(t.x - pos.x, t.z - pos.z);
+        if (t.tex) {
+          if (d > ORTO_DROP) {
+            t.tex.dispose();
+            t.tex = null;
+            t.uniforms.ortoMap.value = null;
+            t.uniforms.ortoOn.value = 0;
+          } else if (t.uniforms.ortoOn.value < 1) t.uniforms.ortoOn.value = Math.min(1, t.uniforms.ortoOn.value + 0.06);
+        } else if (d < ORTO_LOAD && !t.loading) {
+          t.loading = true;
+          loader.load(t.url, (tex) => {
+            t.loading = false;
+            if (!alive) return tex.dispose();
+            tex.colorSpace = THREE.SRGBColorSpace;
+            tex.anisotropy = 16;
+            t.tex = tex;
+            t.uniforms.ortoMap.value = tex;
+          }, undefined, () => { t.loading = false; });
+        }
+      }
+    },
+    dispose() {
+      alive = false;
+      for (const t of tiles.values()) t.tex?.dispose();
+    },
+  };
+}
+
+// materiál jednoho čtverce terénu s dlaždicí ortofota; edge = polovina šířky trati s krajnicí: pod tratí
+// zůstává kreslená zem (jinak by v mezeře u obrubníku prosvítal snímek). Vzdálenost od osy trati je ve
+// vrcholech terénu (atribut tdist).
+export function orthoGround(mat, tile, edge) {
   const prev = mat.onBeforeCompile;
   mat.onBeforeCompile = (sh, r) => {
     prev?.call(mat, sh, r);
-    Object.assign(sh.uniforms, uniforms);
+    Object.assign(sh.uniforms, tile.uniforms, { ortoEdge: { value: new THREE.Vector2(edge, ORTO_REACH) } });
     const hasXZ = sh.vertexShader.includes('vGroundXZ');
     if (!hasXZ) {
       sh.vertexShader = sh.vertexShader
@@ -139,30 +183,23 @@ export function orthoGround(mat, city, edge) {
       .replace('#include <common>', `#include <common>
         ${hasXZ ? '' : 'varying vec2 vGroundXZ;'}
         varying float vTdist;
-        uniform float ortoEdge;
-        uniform sampler2D ortoMap[${MAX_PATCH}];
-        uniform mat3 ortoM[${MAX_PATCH}];
-        uniform float ortoOn[${MAX_PATCH}];
-        // snímek je zamlžený: víc kontrastu a sytosti; na okraji výřezu se 25 m prolíná s kreslenou zemí
-        vec4 ortoAt(sampler2D map, mat3 m, float on, vec2 xz) {
-          vec2 uv = (m * vec3(xz, 1.0)).xy;
-          vec2 inner = min(uv, 1.0 - uv) * 512.0;
-          float w = on * smoothstep(0.0, 25.0, min(inner.x, inner.y));
-          if (w <= 0.0) return vec4(0.0);
-          vec3 c = texture2D(map, uv).rgb;
+        uniform vec2 ortoEdge;
+        uniform sampler2D ortoMap;
+        uniform vec3 ortoRect;
+        uniform float ortoOn;`)
+      .replace('#include <color_fragment>', `
+        if (ortoOn > 0.0) {
+          // řádek 0 obrázku je sever (nejmenší z)
+          vec2 uv = (vGroundXZ - ortoRect.xy) / ortoRect.z;
+          vec3 c = texture2D(ortoMap, vec2(uv.x, 1.0 - uv.y)).rgb;
+          // snímek je zamlžený: víc jasu a sytosti; tmavá místa (stíny a koruny stromů shora) jsou do modra,
+          // ta se odbarví a přimíchají méně
           c = pow(c, vec3(0.95)) * 1.3;
           float l = dot(c, vec3(0.3, 0.6, 0.1));
-          // tmavá místa snímku (stíny a koruny stromů shora) jsou do modra: méně sytá
           c = mix(vec3(l), c, mix(0.5, 1.35, smoothstep(0.03, 0.2, l)));
-          return vec4(c, w * mix(0.25, 1.0, smoothstep(0.02, 0.16, l)));
-        }`)
-      .replace('#include <color_fragment>', `
-        {
-          vec4 o0 = ortoAt(ortoMap[0], ortoM[0], ortoOn[0], vGroundXZ);
-          vec4 o1 = ortoAt(ortoMap[1], ortoM[1], ortoOn[1], vGroundXZ);
-          float off = smoothstep(ortoEdge - 1.0, ortoEdge + 2.5, vTdist);
-          diffuseColor.rgb = mix(diffuseColor.rgb, o0.rgb, o0.a * off);
-          diffuseColor.rgb = mix(diffuseColor.rgb, o1.rgb, o1.a * off);
+          float w = ortoOn * mix(0.25, 1.0, smoothstep(0.02, 0.16, l));
+          w *= smoothstep(ortoEdge.x - 1.0, ortoEdge.x + 2.5, vTdist) * (1.0 - smoothstep(ortoEdge.y - 15.0, ortoEdge.y, vTdist));
+          diffuseColor.rgb = mix(diffuseColor.rgb, c, w);
         }
         #include <color_fragment>`);
   };

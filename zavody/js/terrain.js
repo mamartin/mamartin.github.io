@@ -332,23 +332,37 @@ export class Terrain {
       }
       g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
     }
-    const mat = this.groundMap
-      ? new THREE.MeshLambertMaterial({ map: this.groundMap })
-      : new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: palette.flat ?? true });
     const detail = this.groundMap?.userData.detail;
-    if (detail) withDetailMap(mat, detail);
-    // zkušební realistický vzhled: skutečný letecký snímek místo kreslené země (jen na staženém úseku)
-    if (this.ortho) {
-      g.setAttribute('tdist', new THREE.BufferAttribute(this.dist, 1));
-      orthoGround(mat, this.ortho, this.track.edge);
-    }
-    groundMaterial(mat);
+    // zkušební realistický vzhled (this.ortho, real.js): letecký snímek místo kreslené země. Terén se pak
+    // dělí na čtverce po mřížce dlaždic snímku a čtverec s dlaždicí má vlastní materiál s její fotkou.
+    const ortho = this.ortho && this.ortho.tile % cell === 0 ? this.ortho : null;
+    if (ortho) g.setAttribute('tdist', new THREE.BufferAttribute(this.dist, 1));
+    const makeMat = (tile) => {
+      const m = this.groundMap
+        ? new THREE.MeshLambertMaterial({ map: this.groundMap })
+        : new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: palette.flat ?? true });
+      if (detail) withDetailMap(m, detail);
+      if (tile) orthoGround(m, tile, this.track.edge);
+      groundMaterial(m);
+      return m;
+    };
+    const mat = makeMat(null);
     const group = new THREE.Group();
     group.name = 'terrain';
     const CHUNK = Math.max(8, Math.round(chunk / cell));
-    for (let j0 = 0; j0 < nz - 1; j0 += CHUNK) {
-      for (let i0 = 0; i0 < nx - 1; i0 += CHUNK) {
-        const j1 = Math.min(nz - 1, j0 + CHUNK), i1 = Math.min(nx - 1, i0 + CHUNK);
+    // hranice čtverců: po CHUNK buňkách, s ortofotem na násobcích velikosti dlaždice ve světě
+    const cuts = (n, origin) => {
+      const out = [0];
+      for (let i = 1; i < n - 1; i++) {
+        if (ortho ? Math.round(origin + i * cell) % ortho.tile === 0 : i % CHUNK === 0) out.push(i);
+      }
+      out.push(n - 1);
+      return out;
+    };
+    const cx = cuts(nx, x0), cz = cuts(nz, z0);
+    for (let cj = 0; cj + 1 < cz.length; cj++) {
+      for (let ci = 0; ci + 1 < cx.length; ci++) {
+        const j0 = cz[cj], j1 = cz[cj + 1], i0 = cx[ci], i1 = cx[ci + 1];
         const idx = new Uint32Array((j1 - j0) * (i1 - i0) * 6);
         let k = 0;
         for (let j = j0; j < j1; j++) {
@@ -369,7 +383,8 @@ export class Terrain {
         }
         cg.boundingBox = new THREE.Box3(new THREE.Vector3(x0 + i0 * cell, y0, z0 + j0 * cell), new THREE.Vector3(x0 + i1 * cell, y1, z0 + j1 * cell));
         cg.boundingSphere = cg.boundingBox.getBoundingSphere(new THREE.Sphere());
-        const mesh = new THREE.Mesh(cg, mat);
+        const tile = ortho?.tileAt(x0 + ((i0 + i1) / 2) * cell, z0 + ((j0 + j1) / 2) * cell);
+        const mesh = new THREE.Mesh(cg, tile ? makeMat(tile) : mat);
         mesh.receiveShadow = true;
         group.add(mesh);
       }

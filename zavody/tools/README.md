@@ -184,13 +184,13 @@ Nastavení „Realistická grafika (zkouška)“ (`S.real`, ne na nízké kvalit
 
 ```
 node tools/fetch-real.mjs                 # textury a nebe z Poly Haven (CC0) do assets/real/
-node tools/fetch-ortho.mjs pribram 60 1550  # ortofoto ČÚZK 512 × 512 m po 12,5 cm kolem míst trati (metry od startu)
+node tools/fetch-ortho.mjs pribram         # ortofoto ČÚZK kolem celé trati: dlaždice 260 × 260 m po 17 cm do assets/real/orto/
 node tools/fetch-people.mjs               # postavy z poly.pizza (Quaternius, CC0) do assets/real/people/
 ```
 
 - **Silnice**: původní textura (skvrny, čáry) a k ní zrno, normálová mapa a hrubost skutečného asfaltu (3 m na opakování).
 - **Krajnice**: chodník a travnatý pás jsou zvláštní sítě s texturami dlažby a trávy (UV v metrech), ostatní krajnice zůstává.
-- **Zem**: na stažených výřezech letecký snímek místo kreslené země (převod ze souřadnic hry do obrázku je lineární, v `<město>-orto.json`); pod tratí zůstává kreslená zem, tmavá místa snímku (stíny, koruny stromů) se tlumí. Nové město se přidá do `ORTO_CITIES` v `js/real.js`.
+- **Zem**: do 95 m od osy trati letecký snímek místo kreslené země (Příbram a Dobříš; nové město se přidá do `ORTO_CITIES` v `js/real.js`). Dlaždice leží v mřížce hry (stahují se v EPSG:3857, sever nahoře jako ve hře) a terén se v tomto vzhledu dělí na čtverce po stejné mřížce, každý s vlastním materiálem a jednou fotkou. Fotka se nahraje, když je kamera do 430 m od středu dlaždice, a nad 680 m se uvolní. Pod tratí zůstává kreslená zem, tmavá místa snímku (stíny, koruny stromů) se tlumí.
 - **Domy**: omítka a tašky ze skutečných textur včetně hrbolků (`js/buildingdetail.js`), okna zůstávají kreslená.
 - **Stromy**: do 95 m tvary s větvemi a listy z knihovny ez-tree (`vendor/ez-tree.es.js`, MIT; `js/realtrees.js`), dál původní tvary. 2,5–8 tis. trojúhelníků na strom.
 - **Auta ve městě**: do 70 m tvar závodního vozu bez křídla (`townCarShape` v `js/car.js`, asi 7 tis. trojúhelníků) s lesklým lakem, dál krabice.
