@@ -51,11 +51,58 @@ export function loadRealTrees() {
           g.setAttribute('color', new THREE.BufferAttribute(white, 3));
         }
         const src = { wood: tree.branchesMesh.material, leaves: tree.leavesMesh.material };
-        realTrees[kind].push({ wood, leaves, bark: src.wood.map, barkNormal: src.wood.normalMap, leaf: src.leaves.map, tris: (wood.index.count + leaves.index.count) / 3 });
+        // lehčí tvar pro střední vzdálenost: stejný kmen bez větví a každý druhý list, o to větší
+        // (silueta zůstane, při přepnutí z plného tvaru strom neposkočí)
+        const bare = new Tree();
+        bare.loadPreset(name);
+        bare.options.seed = tree.options.seed;
+        bare.options.branch.levels = 0;
+        for (const k of Object.keys(bare.options.branch.sections)) bare.options.branch.sections[k] = 3;
+        for (const k of Object.keys(bare.options.branch.segments)) bare.options.branch.segments[k] = 4;
+        bare.generate();
+        const woodLite = bare.branchesMesh.geometry;
+        woodLite.scale(sr, sy, sr);
+        woodLite.computeBoundingSphere();
+        woodLite.setAttribute('color', new THREE.BufferAttribute(new Float32Array(woodLite.attributes.position.count * 3).fill(1), 3));
+        const leavesLite = thinLeaves(leaves, 2, 1.45);
+        realTrees[kind].push({
+          wood, leaves, woodLite, leavesLite, bark: src.wood.map, barkNormal: src.wood.normalMap, leaf: src.leaves.map,
+          tris: (wood.index.count + leaves.index.count) / 3, trisLite: (woodLite.index.count + leavesLite.index.count) / 3,
+        });
       });
     }
   });
   return ready;
+}
+
+// každý n-tý list (čtyři vrcholy na list), zvětšený kolem svého středu
+function thinLeaves(geo, n, grow) {
+  const quads = Math.floor(geo.attributes.position.count / 4);
+  const keep = [];
+  for (let q = 0; q < quads; q += n) keep.push(q);
+  const out = new THREE.BufferGeometry();
+  for (const [name, attr] of Object.entries(geo.attributes)) {
+    const size = attr.itemSize, arr = new Float32Array(keep.length * 4 * size);
+    keep.forEach((q, k) => { for (let v = 0; v < 4 * size; v++) arr[k * 4 * size + v] = attr.array[q * 4 * size + v]; });
+    out.setAttribute(name, new THREE.BufferAttribute(arr, size));
+  }
+  const p = out.attributes.position;
+  for (let k = 0; k < keep.length; k++) {
+    let cx = 0, cy = 0, cz = 0;
+    for (let v = 0; v < 4; v++) { cx += p.getX(k * 4 + v) / 4; cy += p.getY(k * 4 + v) / 4; cz += p.getZ(k * 4 + v) / 4; }
+    for (let v = 0; v < 4; v++) {
+      const i = k * 4 + v;
+      p.setXYZ(i, cx + (p.getX(i) - cx) * grow, cy + (p.getY(i) - cy) * grow, cz + (p.getZ(i) - cz) * grow);
+    }
+  }
+  // pořadí vrcholů listu podle prvního listu původní sítě
+  const src = geo.index.array, first = Math.min(...src.slice(0, 6));
+  const pattern = Array.from(src.slice(0, 6), (v) => v - first);
+  const idx = new Uint32Array(keep.length * 6);
+  for (let k = 0; k < keep.length; k++) for (let v = 0; v < 6; v++) idx[k * 6 + v] = k * 4 + pattern[v];
+  out.setIndex(new THREE.BufferAttribute(idx, 1));
+  out.computeBoundingSphere();
+  return out;
 }
 
 const mats = new Map();

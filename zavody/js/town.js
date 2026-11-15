@@ -276,6 +276,44 @@ function windowTexture(rng, anisotropy, rects = [], holes = [], fine = false) {
   return tex;
 }
 
+// sklo podrobně: tmavý pokoj, podle cover záclony, žaluzie nebo roleta, odlesk oblohy a stín rámu
+// cover: 'home' byt (záclony, žaluzie, rolety), 'office' kancelář (žaluzie), jinak nic
+function glassPane(ctx, rng, x, y, w, h, cover = 'home') {
+  const box = (c, px, py, pw, ph) => { ctx.fillStyle = c; ctx.fillRect(px, py, pw, ph); };
+  const dark = rng.range(0.75, 1.15);
+  const room = ctx.createLinearGradient(0, y, 0, y + h);
+  room.addColorStop(0, `rgb(${Math.round(30 * dark)},${Math.round(38 * dark)},${Math.round(47 * dark)})`);
+  room.addColorStop(1, `rgb(${Math.round(46 * dark)},${Math.round(52 * dark)},${Math.round(58 * dark)})`);
+  ctx.fillStyle = room;
+  ctx.fillRect(x, y, w, h);
+  const kind = rng.next();
+  if (cover === 'home' && kind < 0.5) {
+    const cw = Math.min(w * 0.34, rng.range(5, 9.5));
+    for (const [cx, dir] of [[x, 1], [x + w - cw, -1]]) {
+      const g = ctx.createLinearGradient(cx, 0, cx + cw, 0);
+      g.addColorStop(dir > 0 ? 0 : 1, 'rgba(236,232,222,0.92)');
+      g.addColorStop(dir > 0 ? 1 : 0, 'rgba(200,196,186,0.78)');
+      ctx.fillStyle = g;
+      ctx.fillRect(cx, y, cw, h);
+      for (let f = 1.2; f < cw; f += rng.range(1.2, 2.0)) box('rgba(90,86,78,0.22)', cx + f, y, 0.35, h);
+    }
+    box('rgba(225,220,208,0.9)', x, y, w, 2.2);
+  } else if ((cover === 'home' && kind < 0.72) || (cover === 'office' && kind < 0.6)) {
+    const down = rng.range(0.3, 1) * h;
+    box('rgba(214,212,204,0.9)', x, y, w, down);
+    for (let ly = y + 0.9; ly < y + down; ly += 1.1) box('rgba(70,70,66,0.3)', x, ly, w, 0.3);
+  } else if (cover === 'home' && kind < 0.85) {
+    box('rgba(196,180,150,0.88)', x, y, w, rng.range(0.25, 0.7) * h);
+  }
+  const sky = ctx.createLinearGradient(0, y, 0, y + h * 0.6);
+  sky.addColorStop(0, 'rgba(170,196,222,0.3)');
+  sky.addColorStop(1, 'rgba(170,196,222,0)');
+  ctx.fillStyle = sky;
+  ctx.fillRect(x, y, w, h * 0.6);
+  box('rgba(0,0,0,0.38)', x, y, w, 0.8);
+  box('rgba(0,0,0,0.3)', x, y, 0.7, h);
+}
+
 // jedno podrobně kreslené okno (souřadnice v jednotkách buňky, 1 jednotka je asi 4,7 cm)
 function fineWindow(ctx, rng, x, y, w, h) {
   const box = (c, px, py, pw, ph) => { ctx.fillStyle = c; ctx.fillRect(px, py, pw, ph); };
@@ -341,16 +379,37 @@ function fineWindow(ctx, rng, x, y, w, h) {
 }
 
 // pásová okna (školy, úřady): v každém patře souvislý pás skla s úzkými sloupky, pod ním parapet
-function ribbonTexture(anisotropy, rects = [], holes = []) {
-  const S = 64;
+function ribbonTexture(anisotropy, rects = [], holes = [], fine = false) {
+  const S = 64, K = fine ? 8 : 2;
   const c = document.createElement('canvas');
-  c.width = c.height = S * 8;
+  c.width = c.height = S * 4 * K;
   const ctx = c.getContext('2d');
-  ctx.scale(2, 2); // ostřejší zblízka; souřadnice zůstávají v 256 px (masky a svítící okna)
+  ctx.scale(K, K); // ostřejší zblízka; souřadnice zůstávají v 256 px (masky a svítící okna)
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, S * 4, S * 4);
+  const rng = new RNG(5);
   for (let j = 0; j < 4; j++) {
     const y = j * S + 10, h = 30;
+    if (fine) {
+      // podrobně: pás skla po tabulích se žaluziemi, hliníkové sloupky s hranou, nad pásem stín, pod ním
+      // parapetní panel se spárami
+      const box = (col, px, py, pw, ph) => { ctx.fillStyle = col; ctx.fillRect(px, py, pw, ph); };
+      box('#d4d1c9', 0, y - 3, S * 4, h + 6);
+      box('#c2c6ca', 0, y + h + 3, S * 4, S - h - 6 - 4);
+      box('rgba(0,0,0,0.14)', 0, y + h + 3, S * 4, 0.5);
+      for (let x = 0; x < S * 4; x += S / 2) {
+        rects.push([x + 2, y, S / 2 - 2, h]);
+        glassPane(ctx, rng, x + 2, y, S / 2 - 2, h, 'office');
+        box('#dfe1e3', x, y, 2, h);
+        box('rgba(255,255,255,0.6)', x, y, 0.3, h);
+        box('rgba(0,0,0,0.3)', x + 2, y, 0.5, h);
+        box('rgba(0,0,0,0.12)', x, y + h + 3, 0.4, S - h - 10);
+      }
+      box('#dfe1e3', 0, y + h * 0.3, S * 4, 1.2);
+      box('rgba(0,0,0,0.25)', 0, y + h * 0.3 + 1.2, S * 4, 0.4);
+      holes.push([0, y, S * 4, h, 1, true]);
+      continue;
+    }
     ctx.fillStyle = '#d9d6ce';
     ctx.fillRect(0, y - 3, S * 4, h + 6);
     ctx.fillStyle = ['#4a5d6e', '#42566a', '#506476', '#46596b'][j];
@@ -365,22 +424,68 @@ function ribbonTexture(anisotropy, rects = [], holes = []) {
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-  tex.anisotropy = anisotropy;
+  tex.anisotropy = fine ? Math.max(anisotropy, 8) : anisotropy;
   return tex;
 }
 
 // panelák: sloupce oken a lodžií (tmavé zapuštění, světlý parapet přes spodní část, balkonové dveře vzadu)
-function panelTexture(rng, anisotropy, rects = [], holes = []) {
-  const S = 64;
+function panelTexture(rng, anisotropy, rects = [], holes = [], fine = false) {
+  const S = 64, K = fine ? 8 : 2;
   const c = document.createElement('canvas');
-  c.width = c.height = S * 8;
+  c.width = c.height = S * 4 * K;
   const ctx = c.getContext('2d');
-  ctx.scale(2, 2); // ostřejší zblízka; souřadnice zůstávají v 256 px (masky a svítící okna)
+  ctx.scale(K, K); // ostřejší zblízka; souřadnice zůstávají v 256 px (masky a svítící okna)
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, S * 4, S * 4);
+  const box = (col, px, py, pw, ph) => { ctx.fillStyle = col; ctx.fillRect(px, py, pw, ph); };
   for (let j = 0; j < 4; j++) {
     for (let i = 0; i < 4; i++) {
       const x0 = i * S, y0 = j * S;
+      if (fine) {
+        // podrobně: stejné rozložení (masky a svítící okna), navíc sklo s pokojem, rámy, zábradlí lodžie
+        // a spáry mezi panely
+        if (i === 1 || i === 2) {
+          const l = i === 1 ? 4 : 0, r = i === 2 ? 4 : 0;
+          box('#55534e', x0 + l, y0, S - l - r, S);
+          holes.push([x0 + l, y0, S - l - r, 36, 1, false]);
+          holes.push(i === 1 ? [x0 + 18, y0 + 6, 20, 30, 1, true] : [x0 + 6, y0 + 6, 34, 24, 1, true]);
+          if (i === 1) {
+            rects.push([x0 + 18, y0 + 6, 20, 30]);
+            box('#e9e7e1', x0 + 16.5, y0 + 4.5, 23, 43);
+            glassPane(ctx, rng, x0 + 18, y0 + 6, 20, 40, 'home');
+          } else {
+            rects.push([x0 + 6, y0 + 6, 34, 24]);
+            box('#e9e7e1', x0 + 4.5, y0 + 4.5, 37, 27);
+            glassPane(ctx, rng, x0 + 6, y0 + 6, 34, 24, 'home');
+            box('#e9e7e1', x0 + 22.3, y0 + 6, 1.4, 24);
+          }
+          // betonový parapet s horní hranou, zábradlí z trubky a stín pod stropní deskou
+          const g = ctx.createLinearGradient(0, y0 + 36, 0, y0 + S);
+          g.addColorStop(0, '#b2b5b7');
+          g.addColorStop(1, '#9c9fa2');
+          ctx.fillStyle = g;
+          ctx.fillRect(x0 + l, y0 + 36, S - l - r, 28);
+          box('#dcdddd', x0 + l, y0 + 36, S - l - r, 2.2);
+          box('rgba(0,0,0,0.3)', x0 + l, y0 + 38.2, S - l - r, 0.5);
+          box('#6e7377', x0 + l, y0 + 32.5, S - l - r, 0.9);
+          for (let px = x0 + l + 6; px < x0 + S - r; px += 14) box('rgba(0,0,0,0.1)', px, y0 + 39, 0.4, 25);
+          box('rgba(0,0,0,0.32)', x0 + l, y0, S - l - r, 5);
+          if (l) box('rgba(0,0,0,0.3)', x0 + l, y0, 1.2, 36);
+        } else {
+          const x = x0 + 14, y = y0 + 12, w = 36, h = 30;
+          rects.push([x, y, w, h]);
+          holes.push([x, y, w, h, 0.15, true]);
+          box('#e4e1da', x - 3, y - 3, w + 6, h + 6);
+          box('rgba(0,0,0,0.2)', x - 3, y + h + 3, w + 6, 0.6);
+          glassPane(ctx, rng, x, y, w, h, 'home');
+          box('#f3f1ea', x + w / 2 - 1, y, 2, h);
+          box('rgba(0,0,0,0.28)', x + w / 2 + 1, y, 0.5, h);
+          // spáry panelu kolem buňky
+          box('rgba(0,0,0,0.16)', x0, y0, S, 0.5);
+          box('rgba(0,0,0,0.16)', x0, y0, 0.5, S);
+        }
+        continue;
+      }
       if (i === 1 || i === 2) {
         // dvě buňky tvoří jednu širokou lodžii: zapuštění ve stínu přes celou výšku patra, vzadu dveře a okno,
         // vpředu šedý betonový parapet s horní hranou
@@ -414,7 +519,7 @@ function panelTexture(rng, anisotropy, rects = [], holes = []) {
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-  tex.anisotropy = anisotropy;
+  tex.anisotropy = fine ? Math.max(anisotropy, 8) : anisotropy;
   return tex;
 }
 
@@ -440,12 +545,47 @@ function litTexture(rects, rng, share, size = 256, wrapT = true) {
   return tex;
 }
 
-function shopTexture(anisotropy) {
+function shopTexture(anisotropy, fine = false) {
   const c = document.createElement('canvas');
-  c.width = c.height = 128;
+  c.width = c.height = fine ? 1024 : 128;
   const ctx = c.getContext('2d');
+  if (fine) ctx.scale(8, 8);
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, 128, 128);
+  if (fine) {
+    // podrobně: štít s písmeny, rám s hranou, výloha s policemi a odleskem, dveře se sklem a klikou, kamenný sokl
+    const box = (col, px, py, pw, ph) => { ctx.fillStyle = col; ctx.fillRect(px, py, pw, ph); };
+    const rng = new RNG(11);
+    box('#353b43', 6, 8, 116, 18);
+    box('rgba(255,255,255,0.12)', 6, 8, 116, 1);
+    box('rgba(0,0,0,0.35)', 6, 26, 116, 1.2);
+    ctx.fillStyle = '#ece8dc';
+    ctx.font = 'bold 9px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('O B C H O D', 64, 17.5);
+    box('#43474d', 10, 32, 108, 88);
+    box('rgba(255,255,255,0.18)', 10, 32, 108, 0.8);
+    glassPane(ctx, rng, 14, 36, 66, 80, 'shop');
+    // police se zbožím za sklem
+    for (const sy of [70, 92]) {
+      box('rgba(200,190,170,0.5)', 16, sy, 62, 1.2);
+      for (let px = 18; px < 76; px += rng.range(4, 7)) box(['rgba(196,84,60,0.7)', 'rgba(230,200,90,0.7)', 'rgba(90,140,180,0.7)', 'rgba(230,230,224,0.7)'][rng.int(0, 3)], px, sy - rng.range(4, 9), 3, 9);
+    }
+    box('rgba(255,255,255,0.1)', 14, 36, 66, 30);
+    box('#2f3338', 84, 34, 32, 86);
+    glassPane(ctx, rng, 88, 38, 24, 52, 'shop');
+    box('#3a3f45', 88, 92, 24, 26);
+    box('#c9c6ba', 108, 78, 1.6, 8);
+    box('#8b877f', 0, 120, 128, 8);
+    box('rgba(255,255,255,0.25)', 0, 120, 128, 0.8);
+    for (let px = 0; px < 128; px += 16) box('rgba(0,0,0,0.2)', px, 120, 0.5, 8);
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.anisotropy = Math.max(anisotropy, 8);
+    return tex;
+  }
   ctx.fillStyle = '#3a4048';
   ctx.fillRect(6, 8, 116, 18); // štít s nápisem
   ctx.fillStyle = '#e9e6dd';
@@ -646,9 +786,13 @@ function buildGreenery(town, track, terrain, buildings, density, shadows, rng, v
   const tiny = [...tinted(spruce, '#305f31'), ...tinted(broad, '#72a040')];
   // zkušební realistický vzhled: do dReal stromy s větvemi a listy (realtrees.js), dál původní tvary
   const realOn = real.on && realTrees.broad.length > 0;
-  const dReal = realOn ? Math.min(d1, 95 * reach) : 0;
-  group.add(instancedLevels([
-    [dReal, [[fullS, spruce.filter(close), true], [fullB, broad.filter(close), true], [farS, spruce.filter(far)], [farB, broad.filter(far)]]],
+  // plný tvar do dLite, lehčí (kmen a polovina listů) do dReal, pak teprve původní siluety
+  const dLite = 95 * reach, dReal = realOn ? Math.min(d2 - 20, 210 * reach) : 0;
+  group.add(instancedLevels(realOn ? [
+    [dReal, [[farS, spruce], [farB, broad]]],
+    [d2, [[tinyTreeGeometry(), tiny]]],
+  ] : [
+    [0, [[fullS, spruce.filter(close), true], [fullB, broad.filter(close), true], [farS, spruce.filter(far)], [farB, broad.filter(far)]]],
     [d1, [[farS, spruce], [farB, broad]]],
     [d2, [[tinyTreeGeometry(), tiny]]],
   ], mat, { cull }));
@@ -659,8 +803,8 @@ function buildGreenery(town, track, terrain, buildings, density, shadows, rng, v
         if (!mine.length) return;
         const m = realTreeMaterials(t);
         const plain = mine.map(({ color, ...it }) => it);
-        group.add(instancedLevels([[0, [[t.wood, plain.filter(close), true], [t.wood, plain.filter(far)]]]], m.wood, { cull: dReal }));
-        const leaves = instancedLevels([[0, [[t.leaves, mine.filter(close), true], [t.leaves, mine.filter(far)]]]], m.leaves, { cull: dReal });
+        group.add(instancedLevels([[0, [[t.wood, plain.filter(close), true], [t.wood, plain.filter(far)]]], [dLite, [[t.woodLite, plain]]]], m.wood, { cull: dReal }));
+        const leaves = instancedLevels([[0, [[t.leaves, mine.filter(close), true], [t.leaves, mine.filter(far)]]], [dLite, [[t.leavesLite, mine]]]], m.leaves, { cull: dReal });
         leaves.traverse((o) => { if (o.isMesh && o.castShadow) o.customDepthMaterial = m.depth; });
         group.add(leaves);
       });
@@ -1015,10 +1159,10 @@ export function buildTown(town, track, terrain, quality, seed, anisotropy, fogFa
   const litRng = new RNG(seed + 77);
   const rects = { wall: [], ribbon: [], panel: [] }, holes = { wall: [], ribbon: [], panel: [] };
   const glow = (map, lit) => (night ? { map, vertexColors: true, emissive: 0xffffff, emissiveMap: lit, emissiveIntensity: 1.25 } : { map, vertexColors: true });
-  const wallTex = windowTexture(rng, anisotropy, rects.wall, holes.wall, real.on), ribbonTex = ribbonTexture(anisotropy, rects.ribbon, holes.ribbon);
-  const panelTex = panelTexture(rng, anisotropy, rects.panel, holes.panel);
+  const wallTex = windowTexture(rng, anisotropy, rects.wall, holes.wall, real.on), ribbonTex = ribbonTexture(anisotropy, rects.ribbon, holes.ribbon, real.on);
+  const panelTex = panelTexture(rng, anisotropy, rects.panel, holes.panel, real.on);
   const wallMat = new THREE.MeshLambertMaterial(glow(wallTex, night && litTexture(rects.wall, litRng, 0.3)));
-  const shopMat = new THREE.MeshLambertMaterial(glow(shopTexture(anisotropy), night && litTexture([[14, 36, 66, 80], [86, 36, 28, 84], [6, 8, 116, 18]], litRng, 1, 128, false)));
+  const shopMat = new THREE.MeshLambertMaterial(glow(shopTexture(anisotropy, real.on), night && litTexture([[14, 36, 66, 80], [86, 36, 28, 84], [6, 8, 116, 18]], litRng, 1, 128, false)));
   const ribbonMat = new THREE.MeshLambertMaterial(glow(ribbonTex, night && litTexture(rects.ribbon, litRng, 0.2)));
   const panelMat = new THREE.MeshLambertMaterial(glow(panelTex, night && litTexture(rects.panel, litRng, 0.35)));
   // ploty, zdi a díly památek: stínění bez vlastního domu

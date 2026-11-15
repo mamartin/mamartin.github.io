@@ -102,9 +102,9 @@ export function buildLife(town, track, terrain, { view, night, seed, blocked }) 
   const group = new THREE.Group();
   group.name = 'life';
   const opts = { cull: Math.min(view.cull, 260 * view.reach) };
-  // zkušební realistický vzhled: do NEAR postavy z modelů (realpeople.js), dál kvádry jako dřív
+  // zkušební realistický vzhled: do NEAR (85 m) postavy z modelů (realpeople.js), dál kvádry jako dřív
   const realOn = real.on && realPeople.length > 0;
-  const NEAR = realOn ? Math.min(opts.cull, 45 * view.reach) : 0;
+  const NEAR = realOn ? Math.min(opts.cull, 85 * view.reach) : 0;
   const tick = (o) => { if (o.isMesh) o.onBeforeRender = tickPeople; };
   // postavy jednoho druhu pohybu rozdělené mezi modely; vrací pole [pole instancí, čísla položek]
   const models = (list, mode) => (realOn ? realPeople.map((who, c) => {
