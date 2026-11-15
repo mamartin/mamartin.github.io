@@ -1,5 +1,5 @@
 {
-  "stazeno": "2026-11-14T11:59:55.396Z",
+  "stazeno": "2026-11-15T12:36:14.822Z",
   "zdroje": [
     {
       "id": "openai",
@@ -7,7 +7,7 @@
       "typ": "lab",
       "url": "https://openai.com/news/rss.xml",
       "ok": true,
-      "pocet": 10
+      "pocet": 7
     },
     {
       "id": "anthropic",
@@ -24,7 +24,7 @@
       "typ": "lab",
       "url": "https://deepmind.google/blog/rss.xml",
       "ok": true,
-      "pocet": 4
+      "pocet": 2
     },
     {
       "id": "google",
@@ -32,7 +32,7 @@
       "typ": "lab",
       "url": "https://blog.google/technology/ai/rss/",
       "ok": true,
-      "pocet": 7
+      "pocet": 3
     },
     {
       "id": "huggingface",
@@ -40,7 +40,7 @@
       "typ": "lab",
       "url": "https://huggingface.co/blog/feed.xml",
       "ok": true,
-      "pocet": 7
+      "pocet": 5
     },
     {
       "id": "verge",
@@ -64,7 +64,7 @@
       "typ": "media",
       "url": "https://simonwillison.net/atom/everything/",
       "ok": true,
-      "pocet": 9
+      "pocet": 10
     },
     {
       "id": "hn",
@@ -72,7 +72,7 @@
       "typ": "data",
       "url": "https://news.ycombinator.com",
       "ok": true,
-      "pocet": 20
+      "pocet": 7
     },
     {
       "id": "hf-modely",
@@ -92,6 +92,62 @@
     }
   ],
   "clanky": [
+    {
+      "zdroj": "techcrunch",
+      "nazev": "Where was Nvidia’s security team?",
+      "url": "https://techcrunch.com/2026/11/14/where-was-nvidias-security-team/",
+      "datum": "2026-11-15T00:08:07.000Z",
+      "popis": "Nvidia’s security chief quietly left in August, and now that CEO Jensen Huang has stepped down over his relationships, including one with an executive at a company suspected of funneling chips to China, a former intelligence officer says it’s the kind of leak that runs everyday conversations, which most corporate security teams are poorly equipped to catch."
+    },
+    {
+      "zdroj": "willison",
+      "nazev": "datasette-llm 0.1a11",
+      "url": "https://simonwillison.net/2026/Nov/14/datasette-llm/",
+      "datum": "2026-11-14T23:59:28.000Z",
+      "popis": "Release: datasette-llm 0.1a11 datasette-llm is the intermediate plugin for Datasette that supports configuring LLMs for use with other Datasette plugins. This release adds support for OpenAI-compatible endpoints, so you can configure Datasette to use an LLM hosted anywhere that talks the OpenAI pseudo-standard web protocol. This means that if you're running local models with LM Studio or Ollama…"
+    },
+    {
+      "zdroj": "techcrunch",
+      "nazev": "Elon Musk, other tech execs sign petition calling on Nvidia to reinstate Jensen Huang",
+      "url": "https://techcrunch.com/2026/11/14/elon-musk-other-tech-execs-sign-petition-calling-on-nvidia-to-reinstate-jensen-huang/",
+      "datum": "2026-11-14T21:41:22.000Z",
+      "popis": "The petition had attracted more than 115,000 signatures as of Saturday afternoon."
+    },
+    {
+      "zdroj": "techcrunch",
+      "nazev": "The AI graveyard: a running list of projects and startups that didn’t make it",
+      "url": "https://techcrunch.com/2026/11/14/the-ai-graveyard-a-running-list-of-projects-and-startups-that-didnt-make-it/",
+      "datum": "2026-11-14T17:30:00.000Z",
+      "popis": "From Apple's repeatedly delayed Siri AI to OpenAI's messy \"super app\" launch, here's a look at the AI projects that shut down or missed expectations."
+    },
+    {
+      "zdroj": "willison",
+      "nazev": "datasette-vega 0.7",
+      "url": "https://simonwillison.net/2026/Nov/14/datasette-vega/",
+      "datum": "2026-11-14T17:09:09.000Z",
+      "popis": "Release: datasette-vega 0.7 A new release of Datasette's longest untouched plugin, for rendering charts (using Vega-Lite ) against data in a table or custom query. The last release was in July 2018! I finally bumped it for compatibility with the latest Datasette alphas, plus some cosmetic tweaks to make it work better with Datasette Lite . (Datasette Lite just gained the ability to run…"
+    },
+    {
+      "zdroj": "techcrunch",
+      "nazev": "Asian governments react to Nvidia CEO Jensen Huang’s exit",
+      "url": "https://techcrunch.com/2026/11/14/asian-governments-react-to-nvidia-ceo-jensen-huangs-exit/",
+      "datum": "2026-11-14T16:34:15.000Z",
+      "popis": "Some governments moved to confirm chip supply commitments, while others are monitoring the impact on local projects or addressing ongoing investigations."
+    },
+    {
+      "zdroj": "verge",
+      "nazev": "The OpenAI board member who fired Sam Altman says we still can’t trust AI CEOs",
+      "url": "https://www.theverge.com/podcast/1032907/helen-toner-openai-cset-ai-safety-policy-interview",
+      "datum": "2026-11-14T15:00:00.000Z",
+      "popis": "Today, I’m talking with Helen Toner, the executive director of the Center for Security and Emerging Technology at Georgetown University. This episode is part two of our series on AI in real life. Helen is a well-known figure in the AI safety and policy community, though she is perhaps best known for having served on […]"
+    },
+    {
+      "zdroj": "verge",
+      "nazev": "Jensen Huang and the decline of the visionary showman founder CEO",
+      "url": "https://www.theverge.com/tech/1033781/nvidia-jensen-huang-last-visionary-showman-founder-ceo",
+      "datum": "2026-11-14T12:00:00.000Z",
+      "popis": "On January 6th, 2025, Nvidia CEO Jensen Huang got his rockstar moment at last. He strode triumphantly onstage, hand raised in the air, to the claps and cheers of a 14,000-person arena absolutely packed with influencers and fans, their faces awash in blue glow, as he made his entrance in a black leather jacket that […]"
+    },
     {
       "zdroj": "verge",
       "nazev": "Amazon has a plan to index the world’s online shopping data",
@@ -240,39 +296,11 @@
       "popis": "Release: llm-gemini 0.37 Google launched Gemini 4 Hydrogen today - the lowest cost member of the Gemini 4 family. It's actually not too far off the price of its much bigger siblings, Carbon and Argon. I'm finding Gemini 4's pricing really confusing. Here's the pricing scheme: Model Dates Input ($/M) Cached input Output Gemini 4 Carbon Through Nov 30, 2026 $2.00 $0.10 $10.00 From Dec 1, 2026…"
     },
     {
-      "zdroj": "techcrunch",
-      "nazev": "Democrats launch Nvidia investigation, write scathing letter on Huang’s ‘scheme’ with Trump",
-      "url": "https://techcrunch.com/2026/11/12/democrats-launch-nvidia-investigation-write-scathing-letter-on-huangs-scheme-with-trump/",
-      "datum": "2026-11-12T22:42:51.000Z",
-      "popis": "This Congressional investigation into Nvidia's China sales and its dealings with Trump is the second one, so far, since news of the alleged spy affair broke."
-    },
-    {
-      "zdroj": "techcrunch",
-      "nazev": "Muse can now place calls to US businesses — if you pay",
-      "url": "https://techcrunch.com/2026/11/12/muse-can-now-place-calls-to-u-s-businesses-if-you-pay/",
-      "datum": "2026-11-12T22:22:28.000Z",
-      "popis": "Muse's AI can now place outbound calls to U.S. businesses — but it's not free."
-    },
-    {
       "zdroj": "verge",
       "nazev": "Google’s new Gemini model is better at understanding complicated questions",
       "url": "https://www.theverge.com/ai-artificial-intelligence/1032505/google-search-ai-mode-gemini-4-hydrogen",
       "datum": "2026-11-12T21:55:32.000Z",
       "popis": "Google says its new Gemini 4 Hydrogen model can give more helpful answers to complex questions, including \"questions with multiple parts, hard-to-understand typos, or highly specific requests.\" The new model can break down your questions and address each part in its responses. It's available starting today in search, the Gemini app, all tiers of Google […]"
-    },
-    {
-      "zdroj": "techcrunch",
-      "nazev": "Nebius tests the neocloud playbook with $40 billion in planned spending",
-      "url": "https://techcrunch.com/2026/11/12/nebius-tests-the-neocloud-playbook-with-40-billion-in-planned-spending/",
-      "datum": "2026-11-12T21:27:10.000Z",
-      "popis": "Nebius plans to fund its $40 billion AI infrastructure expansion through customer prepayments and loans, even as delays at a Microsoft data center raise questions about its financing model."
-    },
-    {
-      "zdroj": "techcrunch",
-      "nazev": "Jensen Huang was having a third affair, Reuters reports",
-      "url": "https://techcrunch.com/2026/11/12/jensen-huang-was-having-a-third-affair-reuters-reports/",
-      "datum": "2026-11-12T20:26:47.000Z",
-      "popis": "Reuters is withholding the name of the new employee linked to Huang, but says she is an employee of Nvidia."
     },
     {
       "zdroj": "openai",
@@ -317,20 +345,6 @@
       "popis": "We are bringing Gemini 4 Hydrogen to Google Search globally to provide you with more helpful, visual, and intuitive responses."
     },
     {
-      "zdroj": "verge",
-      "nazev": "The Jensen Huang scandal is hardly over",
-      "url": "https://www.theverge.com/ai-artificial-intelligence/1032069/jensen-huang-resignation-affair-chips-smuggling",
-      "datum": "2026-11-12T17:44:33.000Z",
-      "popis": "I was certain, until the story of Jensen Huang's second affair hit, that Huang was bulletproof. After all, why wouldn't he be? He's placed himself indispensably at the center of the AI industry and famously had no succession plan at Nvidia. In fact, he's the only CEO Nvidia has ever had. L'état c'est moi. Then […]"
-    },
-    {
-      "zdroj": "verge",
-      "nazev": "AI chatbots are recommending fake retail websites, study finds",
-      "url": "https://www.theverge.com/ai-artificial-intelligence/1032020/gemini-chatgpt-perplexity-shopping-test-risky-fake-websites-citations",
-      "datum": "2026-11-12T17:00:00.000Z",
-      "popis": "Shoppers using AI chatbots to research products or find places to buy items could be directed to imposters and other risky websites, a new study found. The study conducted by IP protection firm Podqi and shared exclusively with The Verge prompted ChatGPT, Gemini, and Perplexity with a handful of shopping-related questions involving a selection of […]"
-    },
-    {
       "zdroj": "openai",
       "nazev": "Gondola doubles revenue as its team builds more with Codex",
       "url": "https://openai.com/business/customer-stories/gondola",
@@ -345,6 +359,13 @@
       "popis": "With Codex, Holiday Extras is turning customer expertise into better apps, higher booking conversion and new possibilities for growth."
     },
     {
+      "zdroj": "huggingface",
+      "nazev": "The Definitive Fine-Tuning Guide for 3D Generation Models",
+      "url": "https://huggingface.co/blog/3d-lora-finetuning",
+      "datum": "2026-11-12T00:00:00.000Z",
+      "popis": ""
+    },
+    {
       "zdroj": "openai",
       "nazev": "Supporting research on AI and children’s safety",
       "url": "https://openai.com/index/children-first-declaration",
@@ -357,13 +378,6 @@
       "url": "https://openai.com/index/gilbert-tobin-sam-nickless",
       "datum": "2026-11-12T00:00:00.000Z",
       "popis": "A conversation with Sam Nickless, Partner and Chief Executive Officer at Gilbert + Tobin."
-    },
-    {
-      "zdroj": "huggingface",
-      "nazev": "The Definitive Fine-Tuning Guide for 3D Generation Models",
-      "url": "https://huggingface.co/blog/3d-lora-finetuning",
-      "datum": "2026-11-12T00:00:00.000Z",
-      "popis": ""
     },
     {
       "zdroj": "willison",
@@ -420,90 +434,6 @@
       "url": "https://deepmind.google/blog/alphagenome-2-deciphering-how-cells-read-dna-to-better-understand-disease/",
       "datum": "2026-11-11T15:00:15.000Z",
       "popis": "Predicting how DNA sequences and their variations impact specific human cell types and disease."
-    },
-    {
-      "zdroj": "google",
-      "nazev": "Experience the art and legacy of Dr. Esther Mahlangu",
-      "url": "https://blog.google/company-news/outreach-and-initiatives/arts-culture/esther-mahlangu/",
-      "datum": "2026-11-11T09:00:00.000Z",
-      "popis": "A new online archive of Esther Mahlangu’s life and art is now on Google Arts & Culture."
-    },
-    {
-      "zdroj": "openai",
-      "nazev": "ChatGPT Plus for veterans and servicemembers",
-      "url": "https://openai.com/index/chatgpt-plus-for-veterans",
-      "datum": "2026-11-11T08:00:00.000Z",
-      "popis": "More than 20,000 veterans and transitioning service members have claimed a free year of ChatGPT Plus. See how they use it to prepare for civilian careers."
-    },
-    {
-      "zdroj": "huggingface",
-      "nazev": "BotPsy: On-Device Personal Assistant with a Sub-Billion-Parameter Agentic Language Model",
-      "url": "https://huggingface.co/blog/qvac/botpsy",
-      "datum": "2026-11-11T05:01:16.000Z",
-      "popis": ""
-    },
-    {
-      "zdroj": "openai",
-      "nazev": "JioStar’s chief architect on AI discovery at 500M-user scale",
-      "url": "https://openai.com/index/jiostar-vijay-seshadri",
-      "datum": "2026-11-11T00:00:00.000Z",
-      "popis": "JioStar’s Vijay Seshadri explains AI discovery at 500M-user scale. Read his lessons on evals, guardrails, and taking AI into production."
-    },
-    {
-      "zdroj": "huggingface",
-      "nazev": "Token Pooling-Aware Training for Multi-Vector Embedding Models",
-      "url": "https://huggingface.co/blog/token-pooling",
-      "datum": "2026-11-11T00:00:00.000Z",
-      "popis": ""
-    },
-    {
-      "zdroj": "willison",
-      "nazev": "llm-gemini 0.36",
-      "url": "https://simonwillison.net/2026/Nov/10/llm-gemini/",
-      "datum": "2026-11-10T20:09:44.000Z",
-      "popis": "Release: llm-gemini 0.36 Gemini 4 Carbon was announced two weeks ago for \"a subset of cyber defenders\", but today it's available to everyone else . This is Google's best ever Gemini, priced at $2/million input and $10/million output at launch (that's GPT-6.1 Sol / Claude Sonnet 5.5 prices) but scheduled to double in price to $4/$20 on December 1st (same as Opus 5.5). Here are three pelicans for…"
-    },
-    {
-      "zdroj": "google",
-      "nazev": "Gemini Intelligence: New features, on more devices",
-      "url": "https://blog.google/products-and-platforms/platforms/android/gemini-intelligence-november-features-devices/",
-      "datum": "2026-11-10T19:00:00.000Z",
-      "popis": "Gemini Intelligence is rolling out to more devices. See how expanded capabilities across these devices help you do more."
-    },
-    {
-      "zdroj": "deepmind",
-      "nazev": "Gemini 4 Carbon is now available",
-      "url": "https://deepmind.google/blog/gemini-4-carbon-is-now-available/",
-      "datum": "2026-11-10T16:03:47.000Z",
-      "popis": ""
-    },
-    {
-      "zdroj": "google",
-      "nazev": "We’re bringing Adobe’s creative and productivity tools closer to your everyday Google apps.",
-      "url": "https://blog.google/company-news/inside-google/company-announcements/adobe-google-partnership-integration/",
-      "datum": "2026-11-10T14:00:00.000Z",
-      "popis": "Google and Adobe are integrating creative and productivity tools. Edit PDFs in Drive and use Adobe AI in Gemini. See what’s new in this partnership."
-    },
-    {
-      "zdroj": "google",
-      "nazev": "Google Cloud launches Gemini for healthcare.",
-      "url": "https://blog.google/innovation-and-ai/infrastructure-and-cloud/google-cloud/gemini-for-healthcare/",
-      "datum": "2026-11-10T13:00:00.000Z",
-      "popis": "Google Cloud launches Gemini for healthcare to unify clinical data and automate workflows. Reduce administrative burnout. See how it works."
-    },
-    {
-      "zdroj": "deepmind",
-      "nazev": "Introducing AlphaProof Code: a breakthrough in verifying complex software at depth",
-      "url": "https://deepmind.google/blog/introducing-alphaproof-code/",
-      "datum": "2026-11-10T12:02:28.000Z",
-      "popis": "AlphaProof Code agents wrote three million lines of proofs in Lean to verify Signal’s core encryption."
-    },
-    {
-      "zdroj": "openai",
-      "nazev": "Helping caregivers use AI in everyday life",
-      "url": "https://openai.com/index/helping-caregivers-use-ai-in-everyday-life",
-      "datum": "2026-11-10T12:00:00.000Z",
-      "popis": "OpenAI Academy is bringing free, hands-on ChatGPT workshops to caregivers in five U.S. cities, helping them build practical AI skills for everyday life."
     }
   ],
   "hn": [
@@ -511,161 +441,57 @@
       "nazev": "Nvidia allegedly engineered scarcity by funding AI startups to buy its GPUs",
       "url": "https://www.techpowerup.com/354814/nvidia-allegedly-engineered-scarcity-by-funding-ai-startups-to-buy-its-gpus",
       "diskuse": "https://news.ycombinator.com/item?id=50493251",
-      "body": 653,
-      "komentare": 384,
+      "body": 1077,
+      "komentare": 641,
       "datum": "2026-11-14T02:52:59Z"
     },
     {
-      "nazev": "Elevated errors on claude.ai, Claude Code, and platform.claude.com",
-      "url": "https://status.claude.com/incidents/nn11wk485zfn",
-      "diskuse": "https://news.ycombinator.com/item?id=50481187",
-      "body": 488,
-      "komentare": 384,
-      "datum": "2026-11-13T10:18:13Z"
+      "nazev": "Show HN: DeepSeek V3 in ~200 lines of pure Jax",
+      "url": "https://github.com/Vaibhaav-Tiwari/deepseek-v3-jax",
+      "diskuse": "https://news.ycombinator.com/item?id=50497589",
+      "body": 244,
+      "komentare": 23,
+      "datum": "2026-11-14T15:04:15Z"
     },
     {
-      "nazev": "AI unlocks Gödel's notebooks, said to contain hundreds of proved theorems",
-      "url": "https://www.theguardian.com/science/2026/nov/13/kurt-godel-notebooks-ai-helps-unlock-hidden-discoveries-man-who-transformed-maths",
-      "diskuse": "https://news.ycombinator.com/item?id=50486748",
-      "body": 396,
-      "komentare": 101,
-      "datum": "2026-11-13T17:30:10Z"
-    },
-    {
-      "nazev": "AI is destroying the trust between writers and readers",
-      "url": "https://www.theatlantic.com/books/2026/11/ai-literary-scams-amazon/689391/",
-      "diskuse": "https://news.ycombinator.com/item?id=50481870",
-      "body": 344,
-      "komentare": 209,
-      "datum": "2026-11-13T11:13:46Z"
-    },
-    {
-      "nazev": "Jonathan Blow – If AI solved coding, why is my software still the same? [video]",
-      "url": "https://www.youtube.com/watch?v=IRK8h67ol7Q",
-      "diskuse": "https://news.ycombinator.com/item?id=50484658",
-      "body": 320,
-      "komentare": 418,
-      "datum": "2026-11-13T15:08:44Z"
-    },
-    {
-      "nazev": "Brave Search API now accepts agentic payments via the x402 protocol",
-      "url": "https://brave.com/blog/search-api-agentic-payments/",
-      "diskuse": "https://news.ycombinator.com/item?id=50477649",
-      "body": 260,
-      "komentare": 150,
-      "datum": "2026-11-13T03:08:08Z"
-    },
-    {
-      "nazev": "No AI Slop: A Manifesto",
-      "url": "https://www.slopmanifesto.com/",
-      "diskuse": "https://news.ycombinator.com/item?id=50488769",
-      "body": 202,
-      "komentare": 121,
-      "datum": "2026-11-13T19:51:56Z"
-    },
-    {
-      "nazev": "Claude Is Down",
-      "url": "https://status.claude.com/history",
-      "diskuse": "https://news.ycombinator.com/item?id=50481220",
-      "body": 199,
-      "komentare": 179,
-      "datum": "2026-11-13T10:20:09Z"
-    },
-    {
-      "nazev": "Why is Google cutting off Search from AI-free schools? Here are some theories",
-      "url": "https://text.npr.org/nx-s1-6029408",
-      "diskuse": "https://news.ycombinator.com/item?id=50484960",
-      "body": 187,
-      "komentare": 176,
-      "datum": "2026-11-13T15:29:10Z"
-    },
-    {
-      "nazev": "OpenAI disbands its robotics team as its general models start running robots",
-      "url": "https://fortune.com/2026/11/13/openai-disbands-robotics-team-as-its-general-models-start-running-robots/",
-      "diskuse": "https://news.ycombinator.com/item?id=50487184",
-      "body": 167,
-      "komentare": 71,
-      "datum": "2026-11-13T17:55:23Z"
-    },
-    {
-      "nazev": "Claude Meetings",
-      "url": "https://claude.com/resources/articles/claude-meetings",
-      "diskuse": "https://news.ycombinator.com/item?id=50491097",
-      "body": 100,
-      "komentare": 77,
-      "datum": "2026-11-13T22:39:15Z"
-    },
-    {
-      "nazev": "Anthropic upgrades Claude Code Projects to run parallel AI workers",
-      "url": "https://claude.com/resources/articles/projects-redesigned",
-      "diskuse": "https://news.ycombinator.com/item?id=50492141",
-      "body": 89,
-      "komentare": 85,
-      "datum": "2026-11-14T00:28:11Z"
-    },
-    {
-      "nazev": "Chicago schools to Google – we'd rather lose Search than be forced to accept AI",
-      "url": "https://www.techspot.com/news/114532-chicago-schools-tell-google-they-can-live-without.html",
-      "diskuse": "https://news.ycombinator.com/item?id=50476586",
-      "body": 89,
-      "komentare": 29,
-      "datum": "2026-11-13T00:38:41Z"
-    },
-    {
-      "nazev": "The avalanche that hit math is coming for AI development",
-      "url": "https://www.dwarkesh.com/p/rsi",
-      "diskuse": "https://news.ycombinator.com/item?id=50487854",
-      "body": 63,
-      "komentare": 105,
-      "datum": "2026-11-13T18:39:42Z"
-    },
-    {
-      "nazev": "Are we just going to ignore that books are destroyed for AI?",
-      "url": "https://www.forbes.com/sites/maryroeloffs/2026/08/17/ai-companies-are-buying-and-destroying-antique-books-heres-why/",
-      "diskuse": "https://news.ycombinator.com/item?id=50487469",
-      "body": 56,
-      "komentare": 62,
-      "datum": "2026-11-13T18:14:38Z"
-    },
-    {
-      "nazev": "DeepSeek Ultrafast",
-      "url": "https://github.com/basetenlabs/deepseek-ultrafast",
-      "diskuse": "https://news.ycombinator.com/item?id=50486914",
-      "body": 56,
-      "komentare": 10,
-      "datum": "2026-11-13T17:39:03Z"
+      "nazev": "The Claude Delusion",
+      "url": "https://www.netmeister.org/blog/claude-delusion.html",
+      "diskuse": "https://news.ycombinator.com/item?id=50496921",
+      "body": 148,
+      "komentare": 195,
+      "datum": "2026-11-14T13:36:17Z"
     },
     {
       "nazev": "Ask HN: What are the most useful, concrete AI skills to independently learn?",
       "url": "https://news.ycombinator.com/item?id=50494696",
       "diskuse": "https://news.ycombinator.com/item?id=50494696",
-      "body": 46,
-      "komentare": 38,
+      "body": 85,
+      "komentare": 51,
       "datum": "2026-11-14T06:56:42Z"
     },
     {
-      "nazev": "Tell HN: Claude Code Is Down",
-      "url": "https://news.ycombinator.com/item?id=50480909",
-      "diskuse": "https://news.ycombinator.com/item?id=50480909",
-      "body": 37,
-      "komentare": 21,
-      "datum": "2026-11-13T09:51:59Z"
+      "nazev": "Smuggling of 1.5M AI GPUs could be the cause of Huang's departure",
+      "url": "https://www.tomshardware.com/tech-industry/artificial-intelligence/mass-smuggling-of-nvidia-ai-gpus-could-be-the-underlying-cause-of-jensen-huangs-departure-analysts-claim-more-than-1-5-gigawatts-of-banned-chips-tracked-to-china-despite-export-controls",
+      "diskuse": "https://news.ycombinator.com/item?id=50498051",
+      "body": 59,
+      "komentare": 39,
+      "datum": "2026-11-14T15:58:57Z"
     },
     {
-      "nazev": "Is there a 'right amount' of AI?",
-      "url": "https://coyotetracks.org/blog/right-amount-of-ai/",
-      "diskuse": "https://news.ycombinator.com/item?id=50480659",
-      "body": 37,
-      "komentare": 64,
-      "datum": "2026-11-13T09:27:05Z"
+      "nazev": "Claude asked to renumber pages deletes professor's syllabus, year of notes",
+      "url": "https://www.tomshardware.com/tech-industry/artificial-intelligence/rogue-claude-ai-tasked-with-renumbering-pages-accidentally-deletes-law-professors-entire-syllabus-one-year-of-lecture-notes-youre-right-to-be-angry-i-deleted-your-files-through-my-own-carelessness-humbled-agent-admits",
+      "diskuse": "https://news.ycombinator.com/item?id=50499114",
+      "body": 48,
+      "komentare": 67,
+      "datum": "2026-11-14T17:51:13Z"
     },
     {
-      "nazev": "Amodei Says AI Will Cure Cancer in a Decade. Doctors Are Skeptical",
-      "url": "https://www.businessinsider.com/dario-amodei-anthropic-cancer-cure-ipo-roadshow-backlash-doctors-2026-11",
-      "diskuse": "https://news.ycombinator.com/item?id=50484110",
-      "body": 33,
-      "komentare": 71,
-      "datum": "2026-11-13T14:34:13Z"
+      "nazev": "Show HN: Turbo-Browser-MCP – Batch forms, DOM deltas and submit guards for MCP",
+      "url": "https://github.com/Tthanh2k6/turbo-browser-mcp",
+      "diskuse": "https://news.ycombinator.com/item?id=50503930",
+      "body": 39,
+      "komentare": 8,
+      "datum": "2026-11-15T04:09:11Z"
     }
   ],
   "modely": [
@@ -674,9 +500,9 @@
       "autor": "xtools-at",
       "nazev": "DeepSeek-V4-Pro-Qwen3.5-9B-UNCENSORED-heretic",
       "uloha": "text-generation",
-      "lajky": 7236,
-      "stazeni": 24470,
-      "trend": 4440,
+      "lajky": 7450,
+      "stazeni": 27037,
+      "trend": 4201,
       "vytvoreno": "2026-10-30T10:21:29.000Z",
       "url": "https://huggingface.co/xtools-at/DeepSeek-V4-Pro-Qwen3.5-9B-UNCENSORED-heretic"
     },
@@ -685,121 +511,121 @@
       "autor": "MiniMaxAI",
       "nazev": "MiniMax-H3-Image",
       "uloha": "text-to-image",
-      "lajky": 1076,
-      "stazeni": 517948,
-      "trend": 993,
+      "lajky": 1143,
+      "stazeni": 571067,
+      "trend": 1038,
       "vytvoreno": "2026-11-03T06:34:36.000Z",
       "url": "https://huggingface.co/MiniMaxAI/MiniMax-H3-Image"
-    },
-    {
-      "id": "Lightricks/LTX-2.5",
-      "autor": "Lightricks",
-      "nazev": "LTX-2.5",
-      "uloha": "image-to-video",
-      "lajky": 11846,
-      "stazeni": 2777667,
-      "trend": 429,
-      "vytvoreno": "2026-07-23T07:55:24.000Z",
-      "url": "https://huggingface.co/Lightricks/LTX-2.5"
     },
     {
       "id": "Qwen/Qwen3.8-27B",
       "autor": "Qwen",
       "nazev": "Qwen3.8-27B",
       "uloha": "image-text-to-text",
-      "lajky": 19935,
-      "stazeni": 6757964,
-      "trend": 417,
+      "lajky": 20059,
+      "stazeni": 6547772,
+      "trend": 442,
       "vytvoreno": "2026-08-05T08:22:59.000Z",
       "url": "https://huggingface.co/Qwen/Qwen3.8-27B"
     },
     {
-      "id": "NousResearch/Arete-27B",
-      "autor": "NousResearch",
-      "nazev": "Arete-27B",
-      "uloha": "text-generation",
-      "lajky": 584,
-      "stazeni": 6191,
-      "trend": 407,
-      "vytvoreno": "2026-11-06T19:31:28.000Z",
-      "url": "https://huggingface.co/NousResearch/Arete-27B"
-    },
-    {
-      "id": "speridlabs/idol",
-      "autor": "speridlabs",
-      "nazev": "idol",
-      "uloha": "image-to-3d",
-      "lajky": 2327,
-      "stazeni": 32619,
-      "trend": 377.5,
-      "vytvoreno": "2026-10-28T15:55:17.000Z",
-      "url": "https://huggingface.co/speridlabs/idol"
-    },
-    {
-      "id": "DavidAU/Qwen3.8-27B-TURBO-Fable-Cold-Fusion-735-882-Heretic-Uncensored-NEO-CODER-MAX-MTP-GGUF",
-      "autor": "DavidAU",
-      "nazev": "Qwen3.8-27B-TURBO-Fable-Cold-Fusion-735-882-Heretic-Uncensored-NEO-CODER-MAX-MTP-GGUF",
-      "uloha": "image-text-to-text",
-      "lajky": 3099,
-      "stazeni": 1657783,
-      "trend": 372,
-      "vytvoreno": "2026-09-01T07:01:09.000Z",
-      "url": "https://huggingface.co/DavidAU/Qwen3.8-27B-TURBO-Fable-Cold-Fusion-735-882-Heretic-Uncensored-NEO-CODER-MAX-MTP-GGUF"
-    },
-    {
-      "id": "moonshotai/Kimi-K3.1-Pro",
-      "autor": "moonshotai",
-      "nazev": "Kimi-K3.1-Pro",
-      "uloha": "image-text-to-text",
-      "lajky": 2066,
-      "stazeni": 43687,
-      "trend": 339,
-      "vytvoreno": "2026-11-02T04:13:51.000Z",
-      "url": "https://huggingface.co/moonshotai/Kimi-K3.1-Pro"
+      "id": "Lightricks/LTX-2.5",
+      "autor": "Lightricks",
+      "nazev": "LTX-2.5",
+      "uloha": "image-to-video",
+      "lajky": 11982,
+      "stazeni": 2754355,
+      "trend": 419,
+      "vytvoreno": "2026-07-23T07:55:24.000Z",
+      "url": "https://huggingface.co/Lightricks/LTX-2.5"
     },
     {
       "id": "Comfy-Org/MiniMax-H3-Image",
       "autor": "Comfy-Org",
       "nazev": "MiniMax-H3-Image",
       "uloha": "text-to-image",
-      "lajky": 371,
-      "stazeni": 1615613,
-      "trend": 338,
+      "lajky": 396,
+      "stazeni": 1973388,
+      "trend": 359,
       "vytvoreno": "2026-11-08T20:37:23.000Z",
       "url": "https://huggingface.co/Comfy-Org/MiniMax-H3-Image"
+    },
+    {
+      "id": "DavidAU/Qwen3.8-27B-TURBO-Fable-Cold-Fusion-735-882-Heretic-Uncensored-NEO-CODER-MAX-MTP-GGUF",
+      "autor": "DavidAU",
+      "nazev": "Qwen3.8-27B-TURBO-Fable-Cold-Fusion-735-882-Heretic-Uncensored-NEO-CODER-MAX-MTP-GGUF",
+      "uloha": "image-text-to-text",
+      "lajky": 3140,
+      "stazeni": 1708637,
+      "trend": 357,
+      "vytvoreno": "2026-09-01T07:01:09.000Z",
+      "url": "https://huggingface.co/DavidAU/Qwen3.8-27B-TURBO-Fable-Cold-Fusion-735-882-Heretic-Uncensored-NEO-CODER-MAX-MTP-GGUF"
     },
     {
       "id": "Zyphra/ZONOS3-Mini",
       "autor": "Zyphra",
       "nazev": "ZONOS3-Mini",
       "uloha": "text-to-speech",
-      "lajky": 326,
-      "stazeni": 19743,
-      "trend": 286,
+      "lajky": 367,
+      "stazeni": 39862,
+      "trend": 327,
       "vytvoreno": "2026-11-09T05:03:57.000Z",
       "url": "https://huggingface.co/Zyphra/ZONOS3-Mini"
+    },
+    {
+      "id": "speridlabs/idol",
+      "autor": "speridlabs",
+      "nazev": "idol",
+      "uloha": "image-to-3d",
+      "lajky": 2354,
+      "stazeni": 33423,
+      "trend": 326,
+      "vytvoreno": "2026-10-28T15:55:17.000Z",
+      "url": "https://huggingface.co/speridlabs/idol"
     },
     {
       "id": "thinkingmachines/Inkling-2-Small",
       "autor": "thinkingmachines",
       "nazev": "Inkling-2-Small",
       "uloha": "image-text-to-text",
-      "lajky": 284,
-      "stazeni": 3647,
-      "trend": 271,
+      "lajky": 330,
+      "stazeni": 7329,
+      "trend": 315,
       "vytvoreno": "2026-11-04T19:51:05.000Z",
       "url": "https://huggingface.co/thinkingmachines/Inkling-2-Small"
     },
     {
-      "id": "black-forest-labs/flux-3-image-klein-comfy",
-      "autor": "black-forest-labs",
-      "nazev": "flux-3-image-klein-comfy",
-      "uloha": "image-to-image",
-      "lajky": 3141,
-      "stazeni": 1292519,
-      "trend": 255,
-      "vytvoreno": "2026-10-14T12:00:13.000Z",
-      "url": "https://huggingface.co/black-forest-labs/flux-3-image-klein-comfy"
+      "id": "NousResearch/Arete-27B",
+      "autor": "NousResearch",
+      "nazev": "Arete-27B",
+      "uloha": "text-generation",
+      "lajky": 605,
+      "stazeni": 7497,
+      "trend": 308,
+      "vytvoreno": "2026-11-06T19:31:28.000Z",
+      "url": "https://huggingface.co/NousResearch/Arete-27B"
+    },
+    {
+      "id": "moonshotai/Kimi-K3.1-Pro",
+      "autor": "moonshotai",
+      "nazev": "Kimi-K3.1-Pro",
+      "uloha": "image-text-to-text",
+      "lajky": 2089,
+      "stazeni": 46766,
+      "trend": 299,
+      "vytvoreno": "2026-11-02T04:13:51.000Z",
+      "url": "https://huggingface.co/moonshotai/Kimi-K3.1-Pro"
+    },
+    {
+      "id": "unsloth/Qwen3.8-27B-GGUF",
+      "autor": "unsloth",
+      "nazev": "Qwen3.8-27B-GGUF",
+      "uloha": null,
+      "lajky": 5971,
+      "stazeni": 6566295,
+      "trend": 281,
+      "vytvoreno": "2026-08-13T08:28:40.000Z",
+      "url": "https://huggingface.co/unsloth/Qwen3.8-27B-GGUF"
     }
   ],
   "vyzkum": [
@@ -807,7 +633,7 @@
       "nazev": "SO-Arena: Benchmarking the Capability Spectrum and Reliability of System One Models",
       "url": "https://huggingface.co/papers/2611.15777",
       "arxiv": "https://arxiv.org/abs/2611.15777",
-      "hlasy": 83,
+      "hlasy": 136,
       "datum": "2026-11-11T00:00:00.000Z",
       "souhrn": "System One models promise fast, general-purpose decision-making without lengthy token generation. However, understanding their capability spectrum and decision reliability requires more than aggregate performance on current benchmarks. Existing evaluations often provide limited insight into the breadth of model capabilities and the reliability of their decisions. We introduce SO-Arena, a benchmark characterizing the capability spectrum and decision reliability of System One models across 11…"
     },
@@ -815,7 +641,7 @@
       "nazev": "BirdDreams: Joint Perspective and BEV Video Generation for a Plausible, Reactive Driving World Model",
       "url": "https://huggingface.co/papers/2611.14815",
       "arxiv": "https://arxiv.org/abs/2611.14815",
-      "hlasy": 49,
+      "hlasy": 50,
       "datum": "2026-11-10T00:00:00.000Z",
       "souhrn": "Driving world models aim to simulate how a scene unfolds under different ego actions. This requires plausible motion of surrounding vehicles as well as precise ego-trajectory control. Learning vehicle motion from perspective video alone is challenging because motion is entangled with appearance and vehicles can be occluded. Prior work therefore conditions video generation on layouts that specify vehicle motion, providing control over surrounding vehicles but requiring their future trajectories…"
     },
@@ -823,7 +649,7 @@
       "nazev": "Scaling Mathematical Proof Supervision from Structured Textbooks",
       "url": "https://huggingface.co/papers/2610.40394",
       "arxiv": "https://arxiv.org/abs/2610.40394",
-      "hlasy": 45,
+      "hlasy": 47,
       "datum": "2026-10-29T00:00:00.000Z",
       "souhrn": "Mathematical supervision for language models is typically flattened into isolated problem-solution pairs, discarding the curricular organization and evidential structure of the original sources. We introduce TOME-Math (Textbook-Oriented Mathematical Evidence), a large-scale corpus that converts 2,118 textbooks spanning the core areas of university-level mathematics subjects into approximately 380K structured proof-supervision records while preserving chapter order, proposition-proof links,…"
     },
@@ -831,7 +657,7 @@
       "nazev": "PhysLoop: Harnessing LLMs' Physics Awareness for Self-Improving Video Generation Models",
       "url": "https://huggingface.co/papers/2611.16748",
       "arxiv": "https://arxiv.org/abs/2611.16748",
-      "hlasy": 44,
+      "hlasy": 46,
       "datum": "2026-11-12T00:00:00.000Z",
       "souhrn": "Video generation models produce visually realistic videos but still struggle with physical dynamics and causal consistency. Learning from generated videos requires fine-grained physical supervision, yet reliable quality judgments, correction pairs, and controlled variations are difficult to obtain. Large language models (LLMs) possess physical knowledge, but struggle to reliably guide video generation models in producing their training videos. We present PhysLoop, a unified harness designed to…"
     },
@@ -839,7 +665,7 @@
       "nazev": "G-STAR: Group-Scaled Token Capacity for Deeply Compressed Autoregressive Generation",
       "url": "https://huggingface.co/papers/2611.13004",
       "arxiv": "https://arxiv.org/abs/2611.13004",
-      "hlasy": 42,
+      "hlasy": 45,
       "datum": "2026-11-08T00:00:00.000Z",
       "souhrn": "Discrete autoregressive models offer a scalable framework for image generation. However, they face a fundamental trade-off: long token sequences preserve representation quality but slow generation, while aggressive spatial compression reduces representation capacity. Based on product quantization, we show that, under a fixed nominal information budget, group size should scale quadratically with the per-axis spatial compression factor. Building on this principle, we propose GSTAR, a…"
     },
@@ -847,7 +673,7 @@
       "nazev": "Duo: A Reciprocal World Model for Full-Duplex Interaction",
       "url": "https://huggingface.co/papers/2611.15131",
       "arxiv": "https://arxiv.org/abs/2611.15131",
-      "hlasy": 38,
+      "hlasy": 40,
       "datum": "2026-11-11T00:00:00.000Z",
       "souhrn": "In this report, we introduce the Reciprocal World Model (RWM) and present Duo v1, a full-duplex world model that continuously perceives audiovisual inputs while responding to users in real time. The RWM treats intelligence and physical reality as equally fundamental to what constitutes a world. Existing world models largely focus on simulating the latter, leaving reasoning and decision-making as external controls rather than intrinsic parts of the world itself. In RWM, we identify two equally…"
     },
@@ -855,7 +681,7 @@
       "nazev": "SteerDistill: Quantizing LLM Agents via Closed-Loop Teacher Steering",
       "url": "https://huggingface.co/papers/2611.13410",
       "arxiv": "https://arxiv.org/abs/2611.13410",
-      "hlasy": 35,
+      "hlasy": 37,
       "datum": "2026-11-10T00:00:00.000Z",
       "souhrn": "Low-bit quantization reduces the inference cost of LLM agents but can compromise task success. Examining failed rollouts, we find that quantized agents overlook task requirements or environmental conditions, producing environment transitions that diverge from successful full-precision references. Correcting these behavioral divergences remains difficult: offline data may miss the student's failure contexts, while its own rollouts may provide few correct responses in those contexts. We…"
     },
@@ -863,7 +689,7 @@
       "nazev": "Open Vision Banana: A Fully Open Recipe for Generative Visual Perception",
       "url": "https://huggingface.co/papers/2611.15844",
       "arxiv": "https://arxiv.org/abs/2611.15844",
-      "hlasy": 32,
+      "hlasy": 36,
       "datum": "2026-11-11T00:00:00.000Z",
       "souhrn": "Recent work suggests that pretrained image generators encode real-world understanding beyond image synthesis. Vision Banana exploits this by framing vision tasks as conditional image editing. However, its data, weights, code, and implementation details are not public. We present Open Vision Banana (OVB), a fully open and reproducible recipe for converting pretrained generators into unified multi-task perception systems. Our analyses identify the design choices that matter most for…"
     },
@@ -871,17 +697,17 @@
       "nazev": "Actor, Judge, or Teacher? Understanding Decision Models in Long-Horizon Agents",
       "url": "https://huggingface.co/papers/2611.17167",
       "arxiv": "https://arxiv.org/abs/2611.17167",
-      "hlasy": 30,
+      "hlasy": 34,
       "datum": "2026-11-12T00:00:00.000Z",
       "souhrn": "Decision models answer a question with a typed output, such as a choice among options with a probability for each, so one model can choose an agent's actions, evaluate actions already taken, or score every action to teach a policy with reinforcement learning. Prior work has studied them mainly as actors, judging their usefulness by how well they act. We ask whether a decision model that acts poorly can still teach well. We compare three decision models and three general LLMs as actors and…"
     },
     {
-      "nazev": "Ropedia Xperience 2: A Gold Standard for Scaling Physical AI Environments and Behaviors",
-      "url": "https://huggingface.co/papers/2611.17060",
-      "arxiv": "https://arxiv.org/abs/2611.17060",
-      "hlasy": 26,
-      "datum": "2026-11-12T00:00:00.000Z",
-      "souhrn": "Large foundation models such as GPT-6 Astra and Claude Fable 5.1 have recently been shown to control robots directly from visual observations. They nevertheless remain brittle on long-horizon, contact-rich tasks in real-world environments. Further progress depends on two complementary resources: demonstrations of human behavior that supervise how tasks are performed, and interactive environments in which policies can be rolled out, evaluated, and improved in closed loop. Language models have…"
+      "nazev": "On the Design of Hyper-Connections: Simplification, Stability, and Scalability",
+      "url": "https://huggingface.co/papers/2611.05984",
+      "arxiv": "https://arxiv.org/abs/2611.05984",
+      "hlasy": 29,
+      "datum": "2026-11-04T00:00:00.000Z",
+      "souhrn": "Hyper-Connections (HC) architectures are increasingly adopted in frontier language models, yet their components remain insufficiently understood and introduce non-negligible training overhead. In this work, we systematically study the HC architecture to understand its components and identify simpler, more efficient designs. We find that learned read/write gating without mixing and unconstrained mixing with fixed gates form two effective interaction groups: either alone achieves performance…"
     }
   ]
 }
