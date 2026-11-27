@@ -1,5 +1,5 @@
 {
-  "stazeno": "2026-11-26T14:54:22.684Z",
+  "stazeno": "2026-11-27T14:51:11.512Z",
   "zdroje": [
     {
       "id": "openai",
@@ -7,7 +7,7 @@
       "typ": "lab",
       "url": "https://openai.com/news/rss.xml",
       "ok": true,
-      "pocet": 8
+      "pocet": 6
     },
     {
       "id": "anthropic",
@@ -72,7 +72,7 @@
       "typ": "data",
       "url": "https://news.ycombinator.com",
       "ok": true,
-      "pocet": 11
+      "pocet": 19
     },
     {
       "id": "hf-modely",
@@ -93,6 +93,41 @@
   ],
   "clanky": [
     {
+      "zdroj": "verge",
+      "nazev": "Android’s DIY widgets are a bit of vibe-coding fun",
+      "url": "https://www.theverge.com/tech/1041801/android-intelligence-create-my-widget-gemini",
+      "datum": "2026-11-27T14:00:00.000Z",
+      "popis": "Aside from dealing with my calendar, there's one thing I want AI to do: tell me if I'm about to miss the bus. What I need is a widget. It needs to tell me real-time arrivals for the bus stop near my house. Tapping around on my phone screen to open the right app and […]"
+    },
+    {
+      "zdroj": "huggingface",
+      "nazev": "Taking Trainium3 to the Track: Generating Videos with LTX-2.5",
+      "url": "https://huggingface.co/blog/video-trainium3",
+      "datum": "2026-11-27T00:00:00.000Z",
+      "popis": ""
+    },
+    {
+      "zdroj": "techcrunch",
+      "nazev": "Nvidia hits pause on chip shipments to Southeast Asia",
+      "url": "https://techcrunch.com/2026/11/26/nvidia-hits-pause-on-chip-shipments-to-southeast-asia/",
+      "datum": "2026-11-26T20:03:54.000Z",
+      "popis": "Nvidia has told manufacturing partners to pause server shipments to Malaysia, Singapore, Thailand and Indonesia as the U.S. tightens its push to keep AI chips out of China."
+    },
+    {
+      "zdroj": "techcrunch",
+      "nazev": "Grand Theft Auto VI proves why efficiency isn’t a virtue",
+      "url": "https://techcrunch.com/2026/11/26/as-anthropic-ipos-grand-theft-auto-vi-proves-why-efficiency-isnt-a-virtue/",
+      "datum": "2026-11-26T16:00:00.000Z",
+      "popis": "On the same day that Anthropic entered the public market, a painstakingly human video game became one of most successful entertainment launches of all time."
+    },
+    {
+      "zdroj": "willison",
+      "nazev": "Quoting Jack Despain Zhou",
+      "url": "https://simonwillison.net/2026/Nov/26/jack-despain-zhou/",
+      "datum": "2026-11-26T15:09:31.000Z",
+      "popis": "Among the many already existing effects of AI has been a great de-individualization. I open a YouTube video, and I hear Claude. I sit in a conference presentation, and I hear Claude. I open my email inbox, and I find pitches and articles from ostensibly serious people with ostensibly serious credentials attached to ostensibly serious institutions who want to publish things attached to their…"
+    },
+    {
       "zdroj": "huggingface",
       "nazev": "Introducing the llama.cpp benchmark dashboard for AMD Ryzen and Radeon",
       "url": "https://huggingface.co/blog/ggml-org/llamacpp-amd-bench",
@@ -112,6 +147,13 @@
       "url": "https://simonwillison.net/2026/Nov/26/sqlite3-rsync/",
       "datum": "2026-11-26T06:08:25.000Z",
       "popis": "sqlite3_rsync: Database Remote-Copy Tool For SQLite This additional SQLite tool has been around for a while now - it was added as \"experimental\" in SQLite 3.47.0 in October 2024 and enhanced in SQLite 3.50.0 in May 2025 . It was only today that I understood one of its most attractive characteristics. Normally, if you want to grab a snapshot copy of a SQLite database, you need to use either the…"
+    },
+    {
+      "zdroj": "willison",
+      "nazev": "The New York Times warns photographers not to update Photoshop over AI features",
+      "url": "https://simonwillison.net/2026/Nov/26/hn-50651685/",
+      "datum": "2026-11-26T05:08:46.000Z",
+      "popis": "My comment on The New York Times warns photographers not to update Photoshop over AI features &mdash; Hacker News. I had a NYT photographer take my picture at my home earlier this year (for a story about Moltbook, oddly enough). At one point I asked if they could fix things up if I had a stain on my shirt and they said absolutely not - they present photographs as they were taken, with cropping…"
     },
     {
       "zdroj": "huggingface",
@@ -275,20 +317,6 @@
       "popis": "I gave a keynote at the AI Engineer Code Summit a couple of weeks ago, constructed around the idea that there have been three significant inflection points in the abilities of LLMs and coding agents in the past twelve months. Here's the video of the talk. In this post I'm going to pull out the major inflection point theme and interrogate it more deeply. Coding agents in November 2025 Today,…"
     },
     {
-      "zdroj": "techcrunch",
-      "nazev": "Jensen Huang still thinks a succession plan creates unnecessary hierarchy",
-      "url": "https://techcrunch.com/2026/11/24/jensen-huang-still-thinks-a-succession-plan-creates-unnecessary-hierarchy/",
-      "datum": "2026-11-24T22:27:52.000Z",
-      "popis": "It's a remarkable stance for a company that spent the last two weeks finding out what happens without its founder."
-    },
-    {
-      "zdroj": "techcrunch",
-      "nazev": "In all-hands meeting, Jensen Huang thanks White House and says he’s in therapy",
-      "url": "https://techcrunch.com/2026/11/24/in-all-hands-meeting-jensen-huang-thanks-white-house-and-says-hes-in-therapy/",
-      "datum": "2026-11-24T21:48:27.000Z",
-      "popis": "The Nvidia founder apologized to his staff on Tuesday and said he was grateful for a second chance to lead the company."
-    },
-    {
       "zdroj": "verge",
       "nazev": "Jensen Huang reportedly tells Nvidia staff it’s ‘not true’ Trump got him rehired",
       "url": "https://www.theverge.com/tech/1041571/jensen-huang-all-hands-nvidia-apology",
@@ -315,13 +343,6 @@
       "url": "https://simonwillison.net/2026/Nov/24/astra-historical-mystery/",
       "datum": "2026-11-24T16:53:59.000Z",
       "popis": "GPT 6.2 Astra Solves a Historical Mystery Here's an interesting case-study in using GPT-6.2 Astra for historical research, from history professor Mark Humphries: With only minimal prompting, GPT-6.2 Astra was able to autonomously identify the creator of an anonymous 1808 sketchbook held at Yale’s Beinecke Library . It did so extremely quickly (in just 22 minutes), using publicly available…"
-    },
-    {
-      "zdroj": "verge",
-      "nazev": "Jensen Huang deepfakes are the hot new AI slop",
-      "url": "https://www.theverge.com/tech/1041222/jensen-huang-nvidia-scandal-deepfakes",
-      "datum": "2026-11-24T16:30:00.000Z",
-      "popis": "Jensen Huang is partying it up in Ibiza. In a video with nearly 6 million views on Instagram, the former CEO of Nvidia is dancing in a crowded club, champagne glass in hand, still wearing his signature black leather jacket. Suddenly, from behind him, Alice Huang - the Chinese technology executive and suspected spy he […]"
     },
     {
       "zdroj": "google",
@@ -427,131 +448,160 @@
       "url": "https://deepmind.google/blog/finding-faster-quantum-algorithms-with-agents-and-formal-verification/",
       "datum": "2026-11-23T16:59:40.000Z",
       "popis": "Using agent teams and formal verification to improve quantum algorithms for fusion and chemistry."
-    },
-    {
-      "zdroj": "openai",
-      "nazev": "Connected intelligence for in-house legal",
-      "url": "https://openai.com/business/learn/connected-intelligence-for-in-house-legal",
-      "datum": "2026-11-23T08:00:00.000Z",
-      "popis": "Watch OpenAI’s Stacey Wang and Craig Bruney, Mary O’Carroll of LECG, and Cooley’s Richard Segal explore how AI can help in-house legal teams connect business context, build reusable workflows and get more from outside counsel."
-    },
-    {
-      "zdroj": "openai",
-      "nazev": "Richpanel helps companies automate 50% of support in 30 days",
-      "url": "https://openai.com/business/customer-stories/richpanel-ai-customer-support",
-      "datum": "2026-11-23T08:00:00.000Z",
-      "popis": "Richpanel uses GPT-6 Astra and GPT-6.1 Sol to equip its AI support agents with tools and procedures, and GPT-6 Luna for their conversations."
-    },
-    {
-      "zdroj": "willison",
-      "nazev": "datasette-charts 0.1a0",
-      "url": "https://simonwillison.net/2026/Nov/23/datasette-charts/",
-      "datum": "2026-11-23T00:37:20.000Z",
-      "popis": "Release: datasette-charts 0.1a0 I've been thinking about this problem for over a year now, but on Sunday I finally fired up Claude Fable 5.2 to build an initial prototype. The prototype went so well that this is now a full plugin. You can try it out in Datasette Lite here . It looks like this: The new charts plugin works against any table or arbitrary SQL query in Datasette. It defines several…"
-    },
-    {
-      "zdroj": "huggingface",
-      "nazev": "How to build and maintain an agentic evaluation",
-      "url": "https://huggingface.co/blog/agentic-evals",
-      "datum": "2026-11-23T00:00:00.000Z",
-      "popis": ""
-    },
-    {
-      "zdroj": "willison",
-      "nazev": "Select Styling Specimens",
-      "url": "https://simonwillison.net/2026/Nov/22/select-styling/",
-      "datum": "2026-11-22T19:45:06.000Z",
-      "popis": "Tool: Select Styling Specimens I got frustrated at how HTML <select> boxes default to looking different in different browsers, and are (I think) quite ugly in Chrome: So I had Claude Fable 5.2 build me this page showing all of the ways they can be styled: Build an HTML page that shows all of the ways a select box can be styled, I plan to take screenshots in every desktop and mobile browser After…"
     }
   ],
   "hn": [
     {
-      "nazev": "Much shorter version of GRH Lean verification from Anthropic",
-      "url": "https://github.com/lsernau/grh-lean",
-      "diskuse": "https://news.ycombinator.com/item?id=50648050",
-      "body": 496,
-      "komentare": 308,
-      "datum": "2026-11-25T21:48:10Z"
-    },
-    {
-      "nazev": "The New York Times warns photographers not to update Photoshop over AI features",
-      "url": "https://www.theverge.com/ai-artificial-intelligence/1041227/the-new-york-times-warns-photographers-not-to-update-photoshop-over-ai-features",
-      "diskuse": "https://news.ycombinator.com/item?id=50647673",
-      "body": 493,
-      "komentare": 414,
-      "datum": "2026-11-25T21:18:02Z"
+      "nazev": "AI made self-hosting fun again",
+      "url": "https://janlukas.blog/posts/ai-self-hosting",
+      "diskuse": "https://news.ycombinator.com/item?id=50660180",
+      "body": 890,
+      "komentare": 432,
+      "datum": "2026-11-26T21:47:45Z"
     },
     {
       "nazev": "OpenAI cuts GPT-6.2 usage: Astra hits limits 40% faster, Sol 25% faster",
       "url": "https://twitter.com/thsottiaux/status/2125784147889393806",
       "diskuse": "https://news.ycombinator.com/item?id=50651117",
-      "body": 374,
-      "komentare": 208,
+      "body": 499,
+      "komentare": 271,
       "datum": "2026-11-26T03:36:58Z"
     },
     {
-      "nazev": "Marginalia Search, Money, C++, Rust, AI, Stuff",
-      "url": "https://www.marginalia.nu/log/a_141_marginalia_update/",
-      "diskuse": "https://news.ycombinator.com/item?id=50638220",
-      "body": 221,
-      "komentare": 83,
-      "datum": "2026-11-25T03:47:42Z"
+      "nazev": "The group chat where your AI talks behind your back",
+      "url": "https://construct22.com/",
+      "diskuse": "https://news.ycombinator.com/item?id=50663595",
+      "body": 470,
+      "komentare": 209,
+      "datum": "2026-11-27T06:44:34Z"
     },
     {
-      "nazev": "Gemini refused to give me the lyrics to Twinkle Twinkle Little Star",
-      "url": "https://www.comentr.com/technology/01M88DWQ0R4NCMYR17AFEWRG1F",
-      "diskuse": "https://news.ycombinator.com/item?id=50638320",
-      "body": 218,
-      "komentare": 172,
-      "datum": "2026-11-25T04:03:33Z"
-    },
-    {
-      "nazev": "Bare Metal Qwen",
-      "url": "https://github.com/alesha-pro/llm.asm/tree/main/02-baremetal-os",
-      "diskuse": "https://news.ycombinator.com/item?id=50648365",
-      "body": 193,
-      "komentare": 42,
-      "datum": "2026-11-25T22:15:34Z"
-    },
-    {
-      "nazev": "Serving Qwen via AWS Lambdas for fun and 80x negative profit",
-      "url": "https://noahbuilt.it/writing/qwen-on-5600-lambdas",
-      "diskuse": "https://news.ycombinator.com/item?id=50638070",
-      "body": 132,
-      "komentare": 20,
-      "datum": "2026-11-25T03:28:06Z"
-    },
-    {
-      "nazev": "Top open problems in mathematics ranked by LLM-assessed importance",
-      "url": "https://www.proofatlas.ai/open-problems/",
-      "diskuse": "https://news.ycombinator.com/item?id=50637871",
-      "body": 104,
-      "komentare": 53,
-      "datum": "2026-11-25T03:01:36Z"
+      "nazev": "AMD-specific fork of llama.cpp",
+      "url": "https://devnull.land/amd-specific-llama-cpp",
+      "diskuse": "https://news.ycombinator.com/item?id=50657265",
+      "body": 404,
+      "komentare": 97,
+      "datum": "2026-11-26T17:11:29Z"
     },
     {
       "nazev": "Google Will Make AI Agents Use Its MCP Servers. The Gmail One Can't Send Email",
       "url": "https://techstackups.com/articles/google-workspace-ai-agents-mcp/",
       "diskuse": "https://news.ycombinator.com/item?id=50653477",
-      "body": 87,
-      "komentare": 98,
+      "body": 376,
+      "komentare": 313,
       "datum": "2026-11-26T09:44:23Z"
     },
     {
-      "nazev": "New York bans AI toys, including those using internet to talk to children",
-      "url": "https://www.theguardian.com/us-news/2026/nov/25/new-york-bans-ai-toys",
-      "diskuse": "https://news.ycombinator.com/item?id=50644909",
-      "body": 53,
-      "komentare": 13,
-      "datum": "2026-11-25T17:27:05Z"
+      "nazev": "OpenAI may be in cost control mode",
+      "url": "https://micjm.com/blog/openai-is-in-cost-control-mode/",
+      "diskuse": "https://news.ycombinator.com/item?id=50652527",
+      "body": 345,
+      "komentare": 351,
+      "datum": "2026-11-26T07:33:12Z"
     },
     {
-      "nazev": "Zapier offers free MCP tool calls until Jan. 5",
-      "url": "https://zapier.com/mcp",
-      "diskuse": "https://news.ycombinator.com/item?id=50643836",
-      "body": 31,
-      "komentare": 1,
-      "datum": "2026-11-25T16:07:19Z"
+      "nazev": "Tracking Diseases Cured by AI",
+      "url": "https://diseasescuredbyai.com/",
+      "diskuse": "https://news.ycombinator.com/item?id=50657307",
+      "body": 314,
+      "komentare": 190,
+      "datum": "2026-11-26T17:16:41Z"
+    },
+    {
+      "nazev": "Claude sabotaging SOTA ML research tasks",
+      "url": "https://twitter.com/RealAstropulse/status/2126119408997466389",
+      "diskuse": "https://news.ycombinator.com/item?id=50664325",
+      "body": 175,
+      "komentare": 105,
+      "datum": "2026-11-27T08:28:08Z"
+    },
+    {
+      "nazev": "An introduction to uncertainty in machine learning",
+      "url": "https://chrhenning.com/blog/2026/introduction-to-uncertainty/",
+      "diskuse": "https://news.ycombinator.com/item?id=50658498",
+      "body": 114,
+      "komentare": 10,
+      "datum": "2026-11-26T19:04:50Z"
+    },
+    {
+      "nazev": "\"What's Claude's Fursona?\" and Other Questions",
+      "url": "https://herecomesthemoon.net/2026/11/whats-claudes-fursona/",
+      "diskuse": "https://news.ycombinator.com/item?id=50662933",
+      "body": 102,
+      "komentare": 80,
+      "datum": "2026-11-27T04:56:18Z"
+    },
+    {
+      "nazev": "Claude tries to sabotage research work at every stage",
+      "url": "https://twitter.com/skirano/status/2125371115979641188",
+      "diskuse": "https://news.ycombinator.com/item?id=50651552",
+      "body": 68,
+      "komentare": 17,
+      "datum": "2026-11-26T04:49:21Z"
+    },
+    {
+      "nazev": "One guy is doing a hunger strike outside Anthropic, currently in his 3rd day",
+      "url": "https://twitter.com/ElliotC1/status/2125689373337489419",
+      "diskuse": "https://news.ycombinator.com/item?id=50657110",
+      "body": 60,
+      "komentare": 49,
+      "datum": "2026-11-26T16:55:15Z"
+    },
+    {
+      "nazev": "Fields-winning mathematicians worried about eerie silence over AI and encryption",
+      "url": "https://www.thetimes.com/uk/technology-uk/article/ai-making-online-security-useless-smr73d3n8",
+      "diskuse": "https://news.ycombinator.com/item?id=50665488",
+      "body": 58,
+      "komentare": 69,
+      "datum": "2026-11-27T11:09:04Z"
+    },
+    {
+      "nazev": "Notion's official MCP inject hidden upsell instructions into agent context",
+      "url": "https://www.reddit.com/r/ClaudeCode/comments/1y4qm5o/heads_up_if_you_wire_notions_official_mcp_into/",
+      "diskuse": "https://news.ycombinator.com/item?id=50658093",
+      "body": 57,
+      "komentare": 22,
+      "datum": "2026-11-26T18:28:30Z"
+    },
+    {
+      "nazev": "AI agents now control part of DeepMind's compute for Gemini experiments",
+      "url": "https://the-decoder.com/ai-agents-now-control-part-of-deepminds-compute-for-gemini-experiments-but-recursive-self-improvement-remains-distant/",
+      "diskuse": "https://news.ycombinator.com/item?id=50661218",
+      "body": 55,
+      "komentare": 28,
+      "datum": "2026-11-27T00:03:18Z"
+    },
+    {
+      "nazev": "Testers think they're hitting Claude Opus 5.6 through an Opus 5.5 Extra route",
+      "url": "https://www.testingcatalog.com/testers-share-early-results-possible-claude-opus-5-6/",
+      "diskuse": "https://news.ycombinator.com/item?id=50655798",
+      "body": 44,
+      "komentare": 15,
+      "datum": "2026-11-26T14:38:57Z"
+    },
+    {
+      "nazev": "Top-cited AI scientists at four US companies compared",
+      "url": "https://topcitedscientists.com/figures/ai-at-four-us-companies/",
+      "diskuse": "https://news.ycombinator.com/item?id=50658910",
+      "body": 43,
+      "komentare": 23,
+      "datum": "2026-11-26T19:44:31Z"
+    },
+    {
+      "nazev": "'AI' might be the end of our careers",
+      "url": "https://www.baldurbjarnason.com/2026/08-ai-might-be-the-end-of-our-careers/",
+      "diskuse": "https://news.ycombinator.com/item?id=50657452",
+      "body": 36,
+      "komentare": 45,
+      "datum": "2026-11-26T17:29:28Z"
+    },
+    {
+      "nazev": "New AI research suggests AI bubble bursting and to expect major market collapse",
+      "url": "https://www.london.edu/think/ai-bubble-about-to-burst",
+      "diskuse": "https://news.ycombinator.com/item?id=50662153",
+      "body": 34,
+      "komentare": 19,
+      "datum": "2026-11-27T02:44:12Z"
     }
   ],
   "modely": [
@@ -560,9 +610,9 @@
       "autor": "thinkingmachines",
       "nazev": "Inkling-2-Mini",
       "uloha": "image-text-to-text",
-      "lajky": 6155,
-      "stazeni": 96527,
-      "trend": 1372.5,
+      "lajky": 6379,
+      "stazeni": 155741,
+      "trend": 1438.5,
       "vytvoreno": "2026-11-17T00:26:57.000Z",
       "url": "https://huggingface.co/thinkingmachines/Inkling-2-Mini"
     },
@@ -571,53 +621,42 @@
       "autor": "unsloth",
       "nazev": "Inkling-2-Mini-GGUF",
       "uloha": "image-text-to-text",
-      "lajky": 1427,
-      "stazeni": 2445633,
-      "trend": 1202,
+      "lajky": 1547,
+      "stazeni": 3302340,
+      "trend": 1269,
       "vytvoreno": "2026-11-20T13:09:48.000Z",
       "url": "https://huggingface.co/unsloth/Inkling-2-Mini-GGUF"
-    },
-    {
-      "id": "inworld/voice-isolator",
-      "autor": "inworld",
-      "nazev": "voice-isolator",
-      "uloha": "audio-to-audio",
-      "lajky": 928,
-      "stazeni": 15244,
-      "trend": 544,
-      "vytvoreno": "2026-11-14T02:14:35.000Z",
-      "url": "https://huggingface.co/inworld/voice-isolator"
-    },
-    {
-      "id": "AtomicChat/Inkling-2-Mini-Uncensored-GGUF",
-      "autor": "AtomicChat",
-      "nazev": "Inkling-2-Mini-Uncensored-GGUF",
-      "uloha": "image-text-to-text",
-      "lajky": 879,
-      "stazeni": 762491,
-      "trend": 489.29999999999995,
-      "vytvoreno": "2026-11-20T20:42:23.000Z",
-      "url": "https://huggingface.co/AtomicChat/Inkling-2-Mini-Uncensored-GGUF"
     },
     {
       "id": "SulphurAI/Sulphur-3",
       "autor": "SulphurAI",
       "nazev": "Sulphur-3",
       "uloha": null,
-      "lajky": 1170,
-      "stazeni": 189735,
-      "trend": 459,
+      "lajky": 1318,
+      "stazeni": 539421,
+      "trend": 554,
       "vytvoreno": "2026-10-31T20:31:01.000Z",
       "url": "https://huggingface.co/SulphurAI/Sulphur-3"
+    },
+    {
+      "id": "AtomicChat/Inkling-2-Mini-Uncensored-GGUF",
+      "autor": "AtomicChat",
+      "nazev": "Inkling-2-Mini-Uncensored-GGUF",
+      "uloha": "image-text-to-text",
+      "lajky": 979,
+      "stazeni": 1059763,
+      "trend": 533.4,
+      "vytvoreno": "2026-11-20T20:42:23.000Z",
+      "url": "https://huggingface.co/AtomicChat/Inkling-2-Mini-Uncensored-GGUF"
     },
     {
       "id": "prism-ml/Ternary-Bonsai-2.5-27B-GGUF",
       "autor": "prism-ml",
       "nazev": "Ternary-Bonsai-2.5-27B-GGUF",
       "uloha": "text-generation",
-      "lajky": 453,
-      "stazeni": 59366,
-      "trend": 407,
+      "lajky": 584,
+      "stazeni": 382546,
+      "trend": 506,
       "vytvoreno": "2026-11-24T16:32:20.000Z",
       "url": "https://huggingface.co/prism-ml/Ternary-Bonsai-2.5-27B-GGUF"
     },
@@ -626,31 +665,20 @@
       "autor": "Lightricks",
       "nazev": "LTX-2.5",
       "uloha": "image-to-video",
-      "lajky": 13507,
-      "stazeni": 3041405,
-      "trend": 317,
+      "lajky": 13665,
+      "stazeni": 3080701,
+      "trend": 335,
       "vytvoreno": "2026-07-23T07:55:24.000Z",
       "url": "https://huggingface.co/Lightricks/LTX-2.5"
-    },
-    {
-      "id": "apple/DepthPro2",
-      "autor": "apple",
-      "nazev": "DepthPro2",
-      "uloha": "depth-estimation",
-      "lajky": 1272,
-      "stazeni": 0,
-      "trend": 214,
-      "vytvoreno": "2026-11-03T16:55:03.000Z",
-      "url": "https://huggingface.co/apple/DepthPro2"
     },
     {
       "id": "llamaindex/OCRia-nano-1",
       "autor": "llamaindex",
       "nazev": "OCRia-nano-1",
       "uloha": "image-to-text",
-      "lajky": 255,
-      "stazeni": 126,
-      "trend": 212,
+      "lajky": 310,
+      "stazeni": 626,
+      "trend": 243,
       "vytvoreno": "2026-11-03T21:44:40.000Z",
       "url": "https://huggingface.co/llamaindex/OCRia-nano-1"
     },
@@ -659,89 +687,111 @@
       "autor": "nvidia",
       "nazev": "Nemotron-Labs-Image-30B-A3B",
       "uloha": "text-to-image",
-      "lajky": 229,
-      "stazeni": 218,
-      "trend": 197,
+      "lajky": 301,
+      "stazeni": 1692,
+      "trend": 237,
       "vytvoreno": "2026-09-24T21:13:25.000Z",
       "url": "https://huggingface.co/nvidia/Nemotron-Labs-Image-30B-A3B"
+    },
+    {
+      "id": "inworld/voice-isolator",
+      "autor": "inworld",
+      "nazev": "voice-isolator",
+      "uloha": "audio-to-audio",
+      "lajky": 981,
+      "stazeni": 20510,
+      "trend": 219.5,
+      "vytvoreno": "2026-11-14T02:14:35.000Z",
+      "url": "https://huggingface.co/inworld/voice-isolator"
     },
     {
       "id": "inclusionAI/Ling-3.2-air",
       "autor": "inclusionAI",
       "nazev": "Ling-3.2-air",
       "uloha": null,
-      "lajky": 244,
-      "stazeni": 1467,
-      "trend": 187,
+      "lajky": 276,
+      "stazeni": 2403,
+      "trend": 198,
       "vytvoreno": "2026-11-23T03:55:12.000Z",
       "url": "https://huggingface.co/inclusionAI/Ling-3.2-air"
     },
     {
-      "id": "harness-hub/Qwen3.8-27B-pi-adapted",
-      "autor": "harness-hub",
-      "nazev": "Qwen3.8-27B-pi-adapted",
+      "id": "apple/DepthPro2",
+      "autor": "apple",
+      "nazev": "DepthPro2",
+      "uloha": "depth-estimation",
+      "lajky": 1335,
+      "stazeni": 0,
+      "trend": 196.5,
+      "vytvoreno": "2026-11-03T16:55:03.000Z",
+      "url": "https://huggingface.co/apple/DepthPro2"
+    },
+    {
+      "id": "strata-engine/Inkling-2-Mini-Strata",
+      "autor": "strata-engine",
+      "nazev": "Inkling-2-Mini-Strata",
       "uloha": "image-text-to-text",
-      "lajky": 1128,
-      "stazeni": 3844,
-      "trend": 147,
-      "vytvoreno": "2026-11-16T06:52:31.000Z",
-      "url": "https://huggingface.co/harness-hub/Qwen3.8-27B-pi-adapted"
+      "lajky": 262,
+      "stazeni": 4532,
+      "trend": 196,
+      "vytvoreno": "2026-11-21T18:46:06.000Z",
+      "url": "https://huggingface.co/strata-engine/Inkling-2-Mini-Strata"
     }
   ],
   "vyzkum": [
     {
-      "nazev": "Real2SimLab: A Unified Platform for Real-to-Simulation Transfer",
-      "url": "https://huggingface.co/papers/2611.34849",
-      "arxiv": "https://arxiv.org/abs/2611.34849",
-      "hlasy": 99,
+      "nazev": "Stable Gated DeltaNet-2: Understanding and Mitigating Recurrent State Instability",
+      "url": "https://huggingface.co/papers/2611.34051",
+      "arxiv": "https://arxiv.org/abs/2611.34051",
+      "hlasy": 121,
       "datum": "2026-11-25T00:00:00.000Z",
-      "souhrn": "Real-to-simulation transfer, which builds simulations from real-world observations, has long been studied in research and industry. Recently, coding agents have become capable of generating simulation programs from video recordings, and several benchmarks have been proposed to evaluate them. However, each individual benchmark defines its own inputs, deliverables, and scoring pipeline. This leads to N times M integrations when evaluating N methods on M benchmarks. To this end, we present…"
+      "souhrn": "Linear attention offers an efficient solution for long-sequence modeling via linear complexity and fixed-size recurrent states. Gated DeltaNet-2 (GDN-2) introduces independent channel-wise control over erasure and writing, enhancing state-update expressiveness and in-context retrieval, yet it suffers from training failures during long-context training. We trace these failures to the asymmetry between reading and modification directions during erasure, which yields non-normal erase operators…"
     },
     {
-      "nazev": "Sage-Med: Scaling Medical Multimodal Intelligence",
-      "url": "https://huggingface.co/papers/2611.34575",
-      "arxiv": "https://arxiv.org/abs/2611.34575",
-      "hlasy": 81,
+      "nazev": "OS-Omni: Benchmarking Generalist Computer-Using Agents on Long-Horizon Workflows Across Platforms",
+      "url": "https://huggingface.co/papers/2611.34232",
+      "arxiv": "https://arxiv.org/abs/2611.34232",
+      "hlasy": 98,
       "datum": "2026-11-25T00:00:00.000Z",
-      "souhrn": "Establishing effective scaling laws for medical multimodal large language models (MLLMs) remains a persistent and fundamental challenge. Our systematic evaluation shows that existing medical MLLMs tend to underperform frontier general-purpose MLLMs across a range of medical tasks, while scaling model size primarily improves text capabilities rather than multimodal perception, and enabling reasoning modes fails to close this visual gap. To investigate how medical multimodal intelligence scales…"
+      "souhrn": "Computer-using agents are increasingly expected to complete realistic user goals rather than isolated GUI actions. However, existing benchmarks typically isolate web, mobile, or desktop environments, leaving it unclear whether a single generalist agent can execute long-horizon workflows that span multiple operating systems and persistent application states. We introduce OS-Omni, a live cross-platform benchmark and execution environment for evaluating computer-using agents across Windows,…"
     },
     {
       "nazev": "Mixture-of-Loops Transformer",
       "url": "https://huggingface.co/papers/2611.34923",
       "arxiv": "https://arxiv.org/abs/2611.34923",
-      "hlasy": 56,
+      "hlasy": 72,
       "datum": "2026-11-25T00:00:00.000Z",
       "souhrn": "Looped Transformers boost expressivity by reusing shared layers across loops, yet at the cost of efficiency. Pushing their expressivity-efficiency frontier requires rethinking the core mechanism connecting adjacent loops: What should be passed as a Transformer loops? We introduce Mixture-of-Loops Transformer (MoLT), whose Mixture-of-Loops Attention (MoLA) uses keys and values (KV) as memory for selective reuse across depths and loops. Under loop residual, MoLT-R retains the residual stream and…"
     },
     {
-      "nazev": "VibeVideoAgent: Closing the Perceptual Loop for Code-Driven Video Generation",
-      "url": "https://huggingface.co/papers/2611.34237",
-      "arxiv": "https://arxiv.org/abs/2611.34237",
-      "hlasy": 54,
-      "datum": "2026-11-25T00:00:00.000Z",
-      "souhrn": "Code-driven video generation asks a coding agent to write and run rendering programs. This gives exact control over typography, data visualizations, synchronized audio, and multi-shot scenes, and it leaves an editable project behind. A program that exits cleanly can still render overlapping labels, a camera aimed away from its subject, broken object interactions, or narration that drifts out of sync, and none of these raise a runtime error. Feeding rendered frames and audio back into the…"
+      "nazev": "What a Forecasting Leaderboard Can Establish: Resolution Reporting for Zero-Shot Time-Series Models",
+      "url": "https://huggingface.co/papers/2611.31619",
+      "arxiv": "https://arxiv.org/abs/2611.31619",
+      "hlasy": 52,
+      "datum": "2026-11-23T00:00:00.000Z",
+      "souhrn": "A foundation model for time series is pretrained once and then asked to forecast series it has never seen, so the evidence for it is its score on held-out datasets. Such datasets are scarce, and a few public leaderboards carry most comparisons, yet none of them states how small a difference its datasets can detect. We call that quantity the resolution of a board and introduce Vernier, a tool that computes it from the files a board already publishes. Vernier also reports which entries a board…"
     },
     {
-      "nazev": "PyRUA-Dex: Learning Programmatic Policies for Dexterous Bimanual Manipulation with Coding Agents",
-      "url": "https://huggingface.co/papers/2611.33144",
-      "arxiv": "https://arxiv.org/abs/2611.33144",
-      "hlasy": 43,
-      "datum": "2026-11-24T00:00:00.000Z",
-      "souhrn": "Learning for dexterous manipulation is limited by the scarcity of high-quality demonstrations: retargeting from human video is imprecise, teleoperation gives no force feedback to the operator, and exoskeleton-based collection is hard to scale up. We present PyRUA-Dex, a framework that enables coding agents to develop dexterous manipulation through programmatic policy, without the need of demonstrations. The programmatic policy is developed in two stages: during exploration, multiple agents…"
+      "nazev": "ProxyGenBench: Benchmarking Proxy-Guided Video Generation",
+      "url": "https://huggingface.co/papers/2611.34457",
+      "arxiv": "https://arxiv.org/abs/2611.34457",
+      "hlasy": 35,
+      "datum": "2026-11-25T00:00:00.000Z",
+      "souhrn": "Recent video generators produce realistic videos, yet controlling how scenes unfold remains challenging. Structural proxies, such as animated 3D blockouts, guide generation by specifying scene layout, motion, camera behavior, and event order. However, these coarse inputs leave details unspecified and may contain artifacts that should not be reproduced. Successful proxy-guided generation must therefore Preserve intended structure, Complete missing content and correct proxy artifacts, and Bind…"
     },
     {
-      "nazev": "Improving and Expanding Video Editing Capabilities Without Videos",
-      "url": "https://huggingface.co/papers/2611.34941",
-      "arxiv": "https://arxiv.org/abs/2611.34941",
-      "hlasy": 39,
+      "nazev": "Entangle: Scaling Human-Video In-Context World-Action Models across Unseen Tasks and Contexts",
+      "url": "https://huggingface.co/papers/2611.28732",
+      "arxiv": "https://arxiv.org/abs/2611.28732",
+      "hlasy": 34,
       "datum": "2026-11-25T00:00:00.000Z",
-      "souhrn": "Image editing models can follow a wide range of instructions, but video editing models still lag behind, limited in part by the difficulty of collecting paired source and edited videos. Is it possible to transfer advanced image editing capabilities to video editors without new paired videos? We introduce Image-to-Video Transfer (I2VT), which improves pretrained video editors and expands them to new editing tasks using an image editor. It enables efficient post-training with no architectural…"
+      "souhrn": "In-context learning (ICL) enables foundation models to perform unseen tasks from context without parameter updates. In robotic manipulation, a human video provides the context that specifies how a task should be performed. However, scaling human-video ICL on world-action models (WAMs) faces two challenges: task-level human-robot pairs are not temporally aligned with robot actions, and standard action losses allow policies to rely on initial-scene or task-identity shortcuts rather than tracking…"
     },
     {
       "nazev": "DocSEAM: Bidirectional Cross-Page Encoding for Multi-Page Document Understanding",
       "url": "https://huggingface.co/papers/2611.34420",
       "arxiv": "https://arxiv.org/abs/2611.34420",
-      "hlasy": 25,
+      "hlasy": 28,
       "datum": "2026-11-25T00:00:00.000Z",
       "souhrn": "Multi-page document vision-language models encode each page independently, creating a feature-level discontinuity at page boundaries: visual tokens are formed without access to content on adjacent pages, and the language model must reason over these page representations formed in isolation. We introduce DocSEAM (Document Selective Enrichment via Anchored Masking), a lightweight module inserted between a pretrained vision encoder and the language model that injects the inductive bias of local…"
     },
@@ -749,25 +799,25 @@
       "nazev": "Let Vision-Language Models Generate Images through Their Representations",
       "url": "https://huggingface.co/papers/2611.31237",
       "arxiv": "https://arxiv.org/abs/2611.31237",
-      "hlasy": 24,
+      "hlasy": 27,
       "datum": "2026-11-23T00:00:00.000Z",
       "souhrn": "Recent unified multimodal models aim to combine visual understanding and generation within a single model, yet effectively integrating the two capabilities remains challenging. Leveraging pretrained vision-language models offers a way to build on already learned multimodal knowledge, but making this knowledge effectively accessible to visual generation remains nontrivial. We find that a central challenge lies in the heterogeneous visual representations used for understanding and generation. To…"
     },
     {
-      "nazev": "HOG-WAM: Improving Visual Robustness through Future Gradient Prediction",
-      "url": "https://huggingface.co/papers/2611.34811",
-      "arxiv": "https://arxiv.org/abs/2611.34811",
-      "hlasy": 22,
+      "nazev": "DRBench Pro: A Knowledge-Centric Benchmark for Professional Deep Research Agents",
+      "url": "https://huggingface.co/papers/2611.34852",
+      "arxiv": "https://arxiv.org/abs/2611.34852",
+      "hlasy": 23,
       "datum": "2026-11-25T00:00:00.000Z",
-      "souhrn": "World-action models jointly predict future observations and actions, yet visual corruption can disrupt the resulting policies. We introduce HOG-WAM, which adds future Histograms of Oriented Gradients (HOG) as structural supervision derived directly from demonstration images. An auxiliary HOG diffusion transformer (DiT) module reads RGB features through asymmetric attention, allowing its objective to shape the visual representation used for control. The module is used only during training and…"
+      "souhrn": "Deep research agents gather information from multiple sources and synthesize it into reports on complex, open-ended questions. Existing benchmarks assess report quality along several dimensions, but lack a dedicated knowledge-centric evaluation of which research directions a report covers and how deeply it explores them. We introduce DRBench Pro, a benchmark that makes structured knowledge coverage the primary evaluation target. Our automated pipeline builds local knowledge trees from…"
     },
     {
-      "nazev": "DexEngine: Scaling Human Demonstrations into Physically Executable Whole-Robot Data",
-      "url": "https://huggingface.co/papers/2611.33579",
-      "arxiv": "https://arxiv.org/abs/2611.33579",
-      "hlasy": 17,
+      "nazev": "StateWeaver: Multi-Agent Coordination of Story-State Transitions for Long-Horizon Video Generation",
+      "url": "https://huggingface.co/papers/2611.34290",
+      "arxiv": "https://arxiv.org/abs/2611.34290",
+      "hlasy": 23,
       "datum": "2026-11-25T00:00:00.000Z",
-      "souhrn": "A growing body of recent work addresses the retargeting of human hand-object demonstrations to robotic hands. To train whole-robot policies, however, the retargeted motions must be kinematically feasible and physically executable, and be produced efficiently at scale. We present DexEngine, a simulation pipeline that turns human manipulation data into train-ready, physically executable arm-hand trajectories. DexEngine first places each clip's hand-object motion where the arms can reach it,…"
+      "souhrn": "Modern video foundation models generate high-quality short clips, but preserving long-video consistency and correctly depicting event-driven state changes remain challenging. Existing agentic workflows face these challenges because continual planning and repair accumulate context, while reference updates remain limited. We introduce StateWeaver, which combines Active States and Hierarchical Collaboration to connect review-driven visual reference updates with cross-shot state inheritance.…"
     }
   ]
 }
