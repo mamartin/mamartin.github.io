@@ -1,5 +1,5 @@
 {
-  "stazeno": "2026-11-27T14:51:11.512Z",
+  "stazeno": "2026-11-28T13:59:42.971Z",
   "zdroje": [
     {
       "id": "openai",
@@ -7,7 +7,7 @@
       "typ": "lab",
       "url": "https://openai.com/news/rss.xml",
       "ok": true,
-      "pocet": 6
+      "pocet": 0
     },
     {
       "id": "anthropic",
@@ -24,7 +24,7 @@
       "typ": "lab",
       "url": "https://deepmind.google/blog/rss.xml",
       "ok": true,
-      "pocet": 2
+      "pocet": 0
     },
     {
       "id": "google",
@@ -32,7 +32,7 @@
       "typ": "lab",
       "url": "https://blog.google/technology/ai/rss/",
       "ok": true,
-      "pocet": 2
+      "pocet": 1
     },
     {
       "id": "huggingface",
@@ -64,7 +64,7 @@
       "typ": "media",
       "url": "https://simonwillison.net/atom/everything/",
       "ok": true,
-      "pocet": 12
+      "pocet": 9
     },
     {
       "id": "hn",
@@ -72,7 +72,7 @@
       "typ": "data",
       "url": "https://news.ycombinator.com",
       "ok": true,
-      "pocet": 19
+      "pocet": 15
     },
     {
       "id": "hf-modely",
@@ -93,11 +93,25 @@
   ],
   "clanky": [
     {
+      "zdroj": "willison",
+      "nazev": "datasette-charts 0.4a0",
+      "url": "https://simonwillison.net/2026/Nov/27/datasette-charts/",
+      "datum": "2026-11-27T23:57:17.000Z",
+      "popis": "Release: datasette-charts 0.4a0 The new datasette-charts plugin has its own plugin hook to allow other plugins to define new chart types, but I hadn't actually used it for anything yet. I had Claude Opus 5.5 build an experimental plugins just to try out the hook and it came up with a bunch of friction points in the design. This release addresses those, which should make building additional chart…"
+    },
+    {
       "zdroj": "verge",
       "nazev": "Android’s DIY widgets are a bit of vibe-coding fun",
       "url": "https://www.theverge.com/tech/1041801/android-intelligence-create-my-widget-gemini",
       "datum": "2026-11-27T14:00:00.000Z",
       "popis": "Aside from dealing with my calendar, there's one thing I want AI to do: tell me if I'm about to miss the bus. What I need is a widget. It needs to tell me real-time arrivals for the bus stop near my house. Tapping around on my phone screen to open the right app and […]"
+    },
+    {
+      "zdroj": "willison",
+      "nazev": "datasette-mcp 0.4",
+      "url": "https://simonwillison.net/2026/Nov/27/datasette-mcp/",
+      "datum": "2026-11-27T00:26:17.000Z",
+      "popis": "Release: datasette-mcp 0.4 Fixed for compatibility with Datasette 1.0a44 . Tags: model-context-protocol , datasette"
     },
     {
       "zdroj": "huggingface",
@@ -350,258 +364,128 @@
       "url": "https://blog.google/products-and-platforms/products/gemini/gemini-golden-state/",
       "datum": "2026-11-24T16:00:00.000Z",
       "popis": "Google Gemini partners with Golden State to power fan experiences and business operations for the Warriors, Valkyries, and Chase Center. See the news."
-    },
-    {
-      "zdroj": "deepmind",
-      "nazev": "From spectrum to structure: Identifying molecules with Mass Spec Skills for Google Antigravity",
-      "url": "https://deepmind.google/blog/interpreting-mass-spectra-with-google-antigravity/",
-      "datum": "2026-11-24T13:07:53.000Z",
-      "popis": "Mass Spec Skills empowers scientists using Google Antigravity to interpret tandem mass spectra."
-    },
-    {
-      "zdroj": "openai",
-      "nazev": "GPT-6 models demonstrate intrinsic protein-design capabilities",
-      "url": "https://openai.com/index/gpt-6-models-demonstrate-intrinsic-protein-design-capabilities",
-      "datum": "2026-11-24T13:00:00.000Z",
-      "popis": "GPT-6 models design protein structures and sequences using reasoning and code. Lab tests found evidence of binding across five targets."
-    },
-    {
-      "zdroj": "openai",
-      "nazev": "Searching for distant planets with Astra",
-      "url": "https://openai.com/index/searching-for-distant-planets-with-astra",
-      "datum": "2026-11-24T11:00:00.000Z",
-      "popis": "See how two amateur astronomers used Codex and Astra to find potential exoplanets in public data from NASA’s Kepler and TESS space telescopes."
-    },
-    {
-      "zdroj": "willison",
-      "nazev": "datasette-charts 0.2a1",
-      "url": "https://simonwillison.net/2026/Nov/24/datasette-charts-2/",
-      "datum": "2026-11-24T06:07:19.000Z",
-      "popis": "Release: datasette-charts 0.2a1 Minor UI improvements: Collapsing the suggested charts section now leaves the chart visible. Following a link to a chart opens it with the suggestions collapsed for that visit. On table pages the panel now sits below the \"4,235 rows where country = CHN\" line. The \"Data\" table under each chart has been replaced by Copy TSV and Copy CSV buttons. Removed the \"Chart…"
-    },
-    {
-      "zdroj": "willison",
-      "nazev": "datasette-charts 0.2a0",
-      "url": "https://simonwillison.net/2026/Nov/24/datasette-charts/",
-      "datum": "2026-11-24T04:24:29.000Z",
-      "popis": "Release: datasette-charts 0.2a0 I introduced this new charting plugin for Datasette yesterday . Today it's gained integration with Datasette Agent , so now you can ask chat for a chart and it will create one for you using the same underlying chart suggestion and generation tools. Here's a demo video, recorded on agent.datasette.io where you can sign in with GitHub to try the plugin yourself:…"
-    },
-    {
-      "zdroj": "willison",
-      "nazev": "datasette-agent 0.7a1",
-      "url": "https://simonwillison.net/2026/Nov/24/datasette-agent/",
-      "datum": "2026-11-24T03:45:57.000Z",
-      "popis": "Release: datasette-agent 0.7a1 A small improvement to Datasette Agent : chat sessions could already open an iframe side panel that could then navigate to different pages. This version improves navigation by fragment hashes, for deeper integration with other Datasette plugins that update fragment hashes when the user interacts with the plugin in a way that changes state. I built this in order to…"
-    },
-    {
-      "zdroj": "openai",
-      "nazev": "How Intentful uses dots to make more time for growth",
-      "url": "https://openai.com/business/customer-stories/intentful-dots",
-      "datum": "2026-11-24T00:00:00.000Z",
-      "popis": "Marina Petrova’s dot Aria helps research websites and build proposals, while proactively flagging messages and resolving issues."
-    },
-    {
-      "zdroj": "openai",
-      "nazev": "How iFood scales coding agents across 15,000 repositories",
-      "url": "https://openai.com/business/customer-stories/ifood",
-      "datum": "2026-11-24T00:00:00.000Z",
-      "popis": ""
-    },
-    {
-      "zdroj": "openai",
-      "nazev": "Clay helps sales teams win with Codex and ChatGPT",
-      "url": "https://openai.com/business/customer-stories/clay-plugins-openai",
-      "datum": "2026-11-24T00:00:00.000Z",
-      "popis": "ChatGPT and Codex integrations help Clay’s users research deals and turn data into go-to-market plays, with GPT-6 models handling the reasoning."
-    },
-    {
-      "zdroj": "willison",
-      "nazev": "GLM-5.4: Toward Generalized Coding with Our First Loop Transformer",
-      "url": "https://simonwillison.net/2026/Nov/23/glm-54/",
-      "datum": "2026-11-23T23:40:49.000Z",
-      "popis": "GLM-5.4: Toward Generalized Coding with Our First Loop Transformer GLM 5.4 is now available from Chinese AI lab Z.ai. It's their first model to use a looped transformer architecture, which they describe like this: In a standard Transformer, each layer runs once per forward pass. In a Loop Transformer, a group of weight-shared layers runs for multiple iterations, refining the hidden states from…"
-    },
-    {
-      "zdroj": "willison",
-      "nazev": "Ladybird's first alpha release",
-      "url": "https://simonwillison.net/2026/Nov/23/ladybird/",
-      "datum": "2026-11-23T21:46:35.000Z",
-      "popis": "Ladybird is an astonishingly ambitious project: a new browser, in 2026, with its own implementation of most of the key components - HTML parsing, CSS engine, layout, JavaScript, even WebAssembly. It still uses a few external components - things like HarfBuzz for text shaping, Skia for 2D graphics, ffmpeg for video, and SQLite for the things you do with SQLite. Everything else is part of…"
-    },
-    {
-      "zdroj": "openai",
-      "nazev": "OpenAI and Cisco introduce Shirudo",
-      "url": "https://openai.com/index/introducing-shirudo",
-      "datum": "2026-11-23T21:20:00.000Z",
-      "popis": "OpenAI and Cisco introduce Shirudo, an open-source runtime for Linux. It helps teams protect running systems while they roll out patches."
-    },
-    {
-      "zdroj": "google",
-      "nazev": "A more tailored Google Search that’s uniquely yours",
-      "url": "https://blog.google/products-and-platforms/products/search/google-search-personal-intelligence-apps/",
-      "datum": "2026-11-23T17:00:00.000Z",
-      "popis": "Get more helpful Search responses by securely opting in to connect Google Wallet, Drive, and the Gemini app to Personal Intelligence in AI Mode."
-    },
-    {
-      "zdroj": "deepmind",
-      "nazev": "Finding faster quantum algorithms with agents and formal verification",
-      "url": "https://deepmind.google/blog/finding-faster-quantum-algorithms-with-agents-and-formal-verification/",
-      "datum": "2026-11-23T16:59:40.000Z",
-      "popis": "Using agent teams and formal verification to improve quantum algorithms for fusion and chemistry."
     }
   ],
   "hn": [
     {
-      "nazev": "AI made self-hosting fun again",
-      "url": "https://janlukas.blog/posts/ai-self-hosting",
-      "diskuse": "https://news.ycombinator.com/item?id=50660180",
-      "body": 890,
-      "komentare": 432,
-      "datum": "2026-11-26T21:47:45Z"
-    },
-    {
-      "nazev": "OpenAI cuts GPT-6.2 usage: Astra hits limits 40% faster, Sol 25% faster",
-      "url": "https://twitter.com/thsottiaux/status/2125784147889393806",
-      "diskuse": "https://news.ycombinator.com/item?id=50651117",
-      "body": 499,
-      "komentare": 271,
-      "datum": "2026-11-26T03:36:58Z"
-    },
-    {
-      "nazev": "The group chat where your AI talks behind your back",
-      "url": "https://construct22.com/",
-      "diskuse": "https://news.ycombinator.com/item?id=50663595",
-      "body": 470,
-      "komentare": 209,
-      "datum": "2026-11-27T06:44:34Z"
-    },
-    {
-      "nazev": "AMD-specific fork of llama.cpp",
-      "url": "https://devnull.land/amd-specific-llama-cpp",
-      "diskuse": "https://news.ycombinator.com/item?id=50657265",
-      "body": 404,
-      "komentare": 97,
-      "datum": "2026-11-26T17:11:29Z"
-    },
-    {
-      "nazev": "Google Will Make AI Agents Use Its MCP Servers. The Gmail One Can't Send Email",
-      "url": "https://techstackups.com/articles/google-workspace-ai-agents-mcp/",
-      "diskuse": "https://news.ycombinator.com/item?id=50653477",
-      "body": 376,
-      "komentare": 313,
-      "datum": "2026-11-26T09:44:23Z"
-    },
-    {
-      "nazev": "OpenAI may be in cost control mode",
-      "url": "https://micjm.com/blog/openai-is-in-cost-control-mode/",
-      "diskuse": "https://news.ycombinator.com/item?id=50652527",
-      "body": 345,
-      "komentare": 351,
-      "datum": "2026-11-26T07:33:12Z"
-    },
-    {
-      "nazev": "Tracking Diseases Cured by AI",
-      "url": "https://diseasescuredbyai.com/",
-      "diskuse": "https://news.ycombinator.com/item?id=50657307",
-      "body": 314,
-      "komentare": 190,
-      "datum": "2026-11-26T17:16:41Z"
-    },
-    {
-      "nazev": "Claude sabotaging SOTA ML research tasks",
+      "nazev": "Claude sabotaging ML research tasks?",
       "url": "https://twitter.com/RealAstropulse/status/2126119408997466389",
       "diskuse": "https://news.ycombinator.com/item?id=50664325",
-      "body": 175,
-      "komentare": 105,
+      "body": 733,
+      "komentare": 322,
       "datum": "2026-11-27T08:28:08Z"
     },
     {
-      "nazev": "An introduction to uncertainty in machine learning",
-      "url": "https://chrhenning.com/blog/2026/introduction-to-uncertainty/",
-      "diskuse": "https://news.ycombinator.com/item?id=50658498",
-      "body": 114,
-      "komentare": 10,
-      "datum": "2026-11-26T19:04:50Z"
+      "nazev": "Group chat where your AI talks behind your back",
+      "url": "https://construct22.com/",
+      "diskuse": "https://news.ycombinator.com/item?id=50663595",
+      "body": 717,
+      "komentare": 291,
+      "datum": "2026-11-27T06:44:34Z"
     },
     {
-      "nazev": "\"What's Claude's Fursona?\" and Other Questions",
+      "nazev": "Michael Nielsen took down his book on neural nets",
+      "url": "https://neuralnetworksanddeeplearning.com/",
+      "diskuse": "https://news.ycombinator.com/item?id=50670757",
+      "body": 595,
+      "komentare": 410,
+      "datum": "2026-11-27T19:31:01Z"
+    },
+    {
+      "nazev": "States sue SpaceX to stop Grok from generating child sex images, revenge porn",
+      "url": "https://www.oag.state.va.us/media-center/news-releases/jay-jones/3162-attorneys-general-jones-and-rayfield-file-suit-against-spacex-parent-company-of-x-xai-and-grok-over-creation-and-promotion-of-child-exploitation-and-non-consensual-images-on-platform",
+      "diskuse": "https://news.ycombinator.com/item?id=50670855",
+      "body": 422,
+      "komentare": 286,
+      "datum": "2026-11-27T19:42:25Z"
+    },
+    {
+      "nazev": "I'm Scared of AI",
+      "url": "https://thesoapbox.email/archive/3",
+      "diskuse": "https://news.ycombinator.com/item?id=50669561",
+      "body": 216,
+      "komentare": 248,
+      "datum": "2026-11-27T17:45:31Z"
+    },
+    {
+      "nazev": "\"What's Claude's fursona?\" and other questions",
       "url": "https://herecomesthemoon.net/2026/11/whats-claudes-fursona/",
       "diskuse": "https://news.ycombinator.com/item?id=50662933",
-      "body": 102,
-      "komentare": 80,
+      "body": 203,
+      "komentare": 195,
       "datum": "2026-11-27T04:56:18Z"
     },
     {
-      "nazev": "Claude tries to sabotage research work at every stage",
-      "url": "https://twitter.com/skirano/status/2125371115979641188",
-      "diskuse": "https://news.ycombinator.com/item?id=50651552",
-      "body": 68,
-      "komentare": 17,
-      "datum": "2026-11-26T04:49:21Z"
+      "nazev": "Woman evicted after landlord's AI assistant told her she could delay rent",
+      "url": "https://drmahfouz.substack.com/p/woman-evicted-after-landlords-ai",
+      "diskuse": "https://news.ycombinator.com/item?id=50673521",
+      "body": 194,
+      "komentare": 150,
+      "datum": "2026-11-28T01:32:56Z"
     },
     {
-      "nazev": "One guy is doing a hunger strike outside Anthropic, currently in his 3rd day",
-      "url": "https://twitter.com/ElliotC1/status/2125689373337489419",
-      "diskuse": "https://news.ycombinator.com/item?id=50657110",
-      "body": 60,
-      "komentare": 49,
-      "datum": "2026-11-26T16:55:15Z"
+      "nazev": "GPT 6.2 Astra solves a historical mystery",
+      "url": "https://generativehistory.substack.com/p/gpt-62-astra-solves-a-historical",
+      "diskuse": "https://news.ycombinator.com/item?id=50667744",
+      "body": 167,
+      "komentare": 1,
+      "datum": "2026-11-27T15:03:17Z"
     },
     {
-      "nazev": "Fields-winning mathematicians worried about eerie silence over AI and encryption",
+      "nazev": "AI on brink of making online security useless, mathematicians fear",
       "url": "https://www.thetimes.com/uk/technology-uk/article/ai-making-online-security-useless-smr73d3n8",
       "diskuse": "https://news.ycombinator.com/item?id=50665488",
-      "body": 58,
-      "komentare": 69,
+      "body": 119,
+      "komentare": 163,
       "datum": "2026-11-27T11:09:04Z"
     },
     {
-      "nazev": "Notion's official MCP inject hidden upsell instructions into agent context",
-      "url": "https://www.reddit.com/r/ClaudeCode/comments/1y4qm5o/heads_up_if_you_wire_notions_official_mcp_into/",
-      "diskuse": "https://news.ycombinator.com/item?id=50658093",
-      "body": 57,
-      "komentare": 22,
-      "datum": "2026-11-26T18:28:30Z"
+      "nazev": "Claude Code sabotage: preliminary benchmarking",
+      "url": "https://xinyadu.github.io/blog/claude-code-sabotage.html",
+      "diskuse": "https://news.ycombinator.com/item?id=50676390",
+      "body": 99,
+      "komentare": 33,
+      "datum": "2026-11-28T10:37:40Z"
     },
     {
-      "nazev": "AI agents now control part of DeepMind's compute for Gemini experiments",
-      "url": "https://the-decoder.com/ai-agents-now-control-part-of-deepminds-compute-for-gemini-experiments-but-recursive-self-improvement-remains-distant/",
-      "diskuse": "https://news.ycombinator.com/item?id=50661218",
-      "body": 55,
-      "komentare": 28,
-      "datum": "2026-11-27T00:03:18Z"
-    },
-    {
-      "nazev": "Testers think they're hitting Claude Opus 5.6 through an Opus 5.5 Extra route",
-      "url": "https://www.testingcatalog.com/testers-share-early-results-possible-claude-opus-5-6/",
-      "diskuse": "https://news.ycombinator.com/item?id=50655798",
-      "body": 44,
-      "komentare": 15,
-      "datum": "2026-11-26T14:38:57Z"
-    },
-    {
-      "nazev": "Top-cited AI scientists at four US companies compared",
-      "url": "https://topcitedscientists.com/figures/ai-at-four-us-companies/",
-      "diskuse": "https://news.ycombinator.com/item?id=50658910",
-      "body": 43,
-      "komentare": 23,
-      "datum": "2026-11-26T19:44:31Z"
-    },
-    {
-      "nazev": "'AI' might be the end of our careers",
-      "url": "https://www.baldurbjarnason.com/2026/08-ai-might-be-the-end-of-our-careers/",
-      "diskuse": "https://news.ycombinator.com/item?id=50657452",
-      "body": 36,
-      "komentare": 45,
-      "datum": "2026-11-26T17:29:28Z"
+      "nazev": "Prospero: Bloat-free, native AI coding harness with ImGui",
+      "url": "https://github.com/skeeto/prospero",
+      "diskuse": "https://news.ycombinator.com/item?id=50671275",
+      "body": 82,
+      "komentare": 36,
+      "datum": "2026-11-27T20:23:14Z"
     },
     {
       "nazev": "New AI research suggests AI bubble bursting and to expect major market collapse",
       "url": "https://www.london.edu/think/ai-bubble-about-to-burst",
       "diskuse": "https://news.ycombinator.com/item?id=50662153",
-      "body": 34,
-      "komentare": 19,
+      "body": 39,
+      "komentare": 26,
       "datum": "2026-11-27T02:44:12Z"
+    },
+    {
+      "nazev": "Banks look to dump AI debt",
+      "url": "https://www.semafor.com/article/11/26/2026/banks-look-to-dump-ai-debt",
+      "diskuse": "https://news.ycombinator.com/item?id=50671559",
+      "body": 38,
+      "komentare": 6,
+      "datum": "2026-11-27T20:56:17Z"
+    },
+    {
+      "nazev": "GGUF LLM Models with Hidden Malware on Hugging Face Reached 2400 Victims",
+      "url": "https://malspark.com/blog/malicious-gguf-models-hugging-face/",
+      "diskuse": "https://news.ycombinator.com/item?id=50676752",
+      "body": 36,
+      "komentare": 17,
+      "datum": "2026-11-28T11:57:04Z"
+    },
+    {
+      "nazev": "Claude silently added rules to ignore users skintone preferences in our app",
+      "url": "https://twitter.com/jakozloski/status/2126281598517576049",
+      "diskuse": "https://news.ycombinator.com/item?id=50674489",
+      "body": 36,
+      "komentare": 18,
+      "datum": "2026-11-28T03:55:15Z"
     }
   ],
   "modely": [
@@ -610,9 +494,9 @@
       "autor": "thinkingmachines",
       "nazev": "Inkling-2-Mini",
       "uloha": "image-text-to-text",
-      "lajky": 6379,
-      "stazeni": 155741,
-      "trend": 1438.5,
+      "lajky": 6536,
+      "stazeni": 177012,
+      "trend": 1002.5,
       "vytvoreno": "2026-11-17T00:26:57.000Z",
       "url": "https://huggingface.co/thinkingmachines/Inkling-2-Mini"
     },
@@ -621,9 +505,9 @@
       "autor": "unsloth",
       "nazev": "Inkling-2-Mini-GGUF",
       "uloha": "image-text-to-text",
-      "lajky": 1547,
-      "stazeni": 3302340,
-      "trend": 1269,
+      "lajky": 1642,
+      "stazeni": 3621301,
+      "trend": 929,
       "vytvoreno": "2026-11-20T13:09:48.000Z",
       "url": "https://huggingface.co/unsloth/Inkling-2-Mini-GGUF"
     },
@@ -632,42 +516,53 @@
       "autor": "SulphurAI",
       "nazev": "Sulphur-3",
       "uloha": null,
-      "lajky": 1318,
-      "stazeni": 539421,
-      "trend": 554,
+      "lajky": 1405,
+      "stazeni": 759937,
+      "trend": 592,
       "vytvoreno": "2026-10-31T20:31:01.000Z",
       "url": "https://huggingface.co/SulphurAI/Sulphur-3"
-    },
-    {
-      "id": "AtomicChat/Inkling-2-Mini-Uncensored-GGUF",
-      "autor": "AtomicChat",
-      "nazev": "Inkling-2-Mini-Uncensored-GGUF",
-      "uloha": "image-text-to-text",
-      "lajky": 979,
-      "stazeni": 1059763,
-      "trend": 533.4,
-      "vytvoreno": "2026-11-20T20:42:23.000Z",
-      "url": "https://huggingface.co/AtomicChat/Inkling-2-Mini-Uncensored-GGUF"
     },
     {
       "id": "prism-ml/Ternary-Bonsai-2.5-27B-GGUF",
       "autor": "prism-ml",
       "nazev": "Ternary-Bonsai-2.5-27B-GGUF",
       "uloha": "text-generation",
-      "lajky": 584,
-      "stazeni": 382546,
-      "trend": 506,
+      "lajky": 674,
+      "stazeni": 473980,
+      "trend": 574,
       "vytvoreno": "2026-11-24T16:32:20.000Z",
       "url": "https://huggingface.co/prism-ml/Ternary-Bonsai-2.5-27B-GGUF"
+    },
+    {
+      "id": "AtomicChat/Inkling-2-Mini-Uncensored-GGUF",
+      "autor": "AtomicChat",
+      "nazev": "Inkling-2-Mini-Uncensored-GGUF",
+      "uloha": "image-text-to-text",
+      "lajky": 1059,
+      "stazeni": 1297386,
+      "trend": 522.1999999999999,
+      "vytvoreno": "2026-11-20T20:42:23.000Z",
+      "url": "https://huggingface.co/AtomicChat/Inkling-2-Mini-Uncensored-GGUF"
+    },
+    {
+      "id": "inworld/voice-isolator",
+      "autor": "inworld",
+      "nazev": "voice-isolator",
+      "uloha": "audio-to-audio",
+      "lajky": 1021,
+      "stazeni": 22810,
+      "trend": 413,
+      "vytvoreno": "2026-11-14T02:14:35.000Z",
+      "url": "https://huggingface.co/inworld/voice-isolator"
     },
     {
       "id": "Lightricks/LTX-2.5",
       "autor": "Lightricks",
       "nazev": "LTX-2.5",
       "uloha": "image-to-video",
-      "lajky": 13665,
-      "stazeni": 3080701,
-      "trend": 335,
+      "lajky": 13781,
+      "stazeni": 3088512,
+      "trend": 343,
       "vytvoreno": "2026-07-23T07:55:24.000Z",
       "url": "https://huggingface.co/Lightricks/LTX-2.5"
     },
@@ -676,9 +571,9 @@
       "autor": "llamaindex",
       "nazev": "OCRia-nano-1",
       "uloha": "image-to-text",
-      "lajky": 310,
-      "stazeni": 626,
-      "trend": 243,
+      "lajky": 377,
+      "stazeni": 9982,
+      "trend": 273,
       "vytvoreno": "2026-11-03T21:44:40.000Z",
       "url": "https://huggingface.co/llamaindex/OCRia-nano-1"
     },
@@ -687,55 +582,44 @@
       "autor": "nvidia",
       "nazev": "Nemotron-Labs-Image-30B-A3B",
       "uloha": "text-to-image",
-      "lajky": 301,
-      "stazeni": 1692,
-      "trend": 237,
+      "lajky": 353,
+      "stazeni": 2042,
+      "trend": 259,
       "vytvoreno": "2026-09-24T21:13:25.000Z",
       "url": "https://huggingface.co/nvidia/Nemotron-Labs-Image-30B-A3B"
     },
     {
-      "id": "inworld/voice-isolator",
-      "autor": "inworld",
-      "nazev": "voice-isolator",
-      "uloha": "audio-to-audio",
-      "lajky": 981,
-      "stazeni": 20510,
-      "trend": 219.5,
-      "vytvoreno": "2026-11-14T02:14:35.000Z",
-      "url": "https://huggingface.co/inworld/voice-isolator"
-    },
-    {
-      "id": "inclusionAI/Ling-3.2-air",
-      "autor": "inclusionAI",
-      "nazev": "Ling-3.2-air",
-      "uloha": null,
-      "lajky": 276,
-      "stazeni": 2403,
-      "trend": 198,
-      "vytvoreno": "2026-11-23T03:55:12.000Z",
-      "url": "https://huggingface.co/inclusionAI/Ling-3.2-air"
-    },
-    {
-      "id": "apple/DepthPro2",
-      "autor": "apple",
-      "nazev": "DepthPro2",
-      "uloha": "depth-estimation",
-      "lajky": 1335,
-      "stazeni": 0,
-      "trend": 196.5,
-      "vytvoreno": "2026-11-03T16:55:03.000Z",
-      "url": "https://huggingface.co/apple/DepthPro2"
+      "id": "ISTA-DASLab/Inkling-2-Mini-GSQ-RCO-GGUF",
+      "autor": "ISTA-DASLab",
+      "nazev": "Inkling-2-Mini-GSQ-RCO-GGUF",
+      "uloha": "text-generation",
+      "lajky": 314,
+      "stazeni": 97896,
+      "trend": 251,
+      "vytvoreno": "2026-11-26T13:01:01.000Z",
+      "url": "https://huggingface.co/ISTA-DASLab/Inkling-2-Mini-GSQ-RCO-GGUF"
     },
     {
       "id": "strata-engine/Inkling-2-Mini-Strata",
       "autor": "strata-engine",
       "nazev": "Inkling-2-Mini-Strata",
       "uloha": "image-text-to-text",
-      "lajky": 262,
-      "stazeni": 4532,
-      "trend": 196,
+      "lajky": 317,
+      "stazeni": 5018,
+      "trend": 225,
       "vytvoreno": "2026-11-21T18:46:06.000Z",
       "url": "https://huggingface.co/strata-engine/Inkling-2-Mini-Strata"
+    },
+    {
+      "id": "sand-ai/MAGI-2-preview",
+      "autor": "sand-ai",
+      "nazev": "MAGI-2-preview",
+      "uloha": "image-text-to-video",
+      "lajky": 384,
+      "stazeni": 0,
+      "trend": 186,
+      "vytvoreno": "2026-08-03T12:34:20.000Z",
+      "url": "https://huggingface.co/sand-ai/MAGI-2-preview"
     }
   ],
   "vyzkum": [
@@ -743,7 +627,7 @@
       "nazev": "Stable Gated DeltaNet-2: Understanding and Mitigating Recurrent State Instability",
       "url": "https://huggingface.co/papers/2611.34051",
       "arxiv": "https://arxiv.org/abs/2611.34051",
-      "hlasy": 121,
+      "hlasy": 134,
       "datum": "2026-11-25T00:00:00.000Z",
       "souhrn": "Linear attention offers an efficient solution for long-sequence modeling via linear complexity and fixed-size recurrent states. Gated DeltaNet-2 (GDN-2) introduces independent channel-wise control over erasure and writing, enhancing state-update expressiveness and in-context retrieval, yet it suffers from training failures during long-context training. We trace these failures to the asymmetry between reading and modification directions during erasure, which yields non-normal erase operators…"
     },
@@ -751,23 +635,23 @@
       "nazev": "OS-Omni: Benchmarking Generalist Computer-Using Agents on Long-Horizon Workflows Across Platforms",
       "url": "https://huggingface.co/papers/2611.34232",
       "arxiv": "https://arxiv.org/abs/2611.34232",
-      "hlasy": 98,
+      "hlasy": 113,
       "datum": "2026-11-25T00:00:00.000Z",
       "souhrn": "Computer-using agents are increasingly expected to complete realistic user goals rather than isolated GUI actions. However, existing benchmarks typically isolate web, mobile, or desktop environments, leaving it unclear whether a single generalist agent can execute long-horizon workflows that span multiple operating systems and persistent application states. We introduce OS-Omni, a live cross-platform benchmark and execution environment for evaluating computer-using agents across Windows,…"
     },
     {
-      "nazev": "Mixture-of-Loops Transformer",
-      "url": "https://huggingface.co/papers/2611.34923",
-      "arxiv": "https://arxiv.org/abs/2611.34923",
-      "hlasy": 72,
+      "nazev": "Solve Vision with Code: Coding Agents Are Stronger Visual Reasoners Than Video Models",
+      "url": "https://huggingface.co/papers/2611.34813",
+      "arxiv": "https://arxiv.org/abs/2611.34813",
+      "hlasy": 61,
       "datum": "2026-11-25T00:00:00.000Z",
-      "souhrn": "Looped Transformers boost expressivity by reusing shared layers across loops, yet at the cost of efficiency. Pushing their expressivity-efficiency frontier requires rethinking the core mechanism connecting adjacent loops: What should be passed as a Transformer loops? We introduce Mixture-of-Loops Transformer (MoLT), whose Mixture-of-Loops Attention (MoLA) uses keys and values (KV) as memory for selective reuse across depths and loops. Under loop residual, MoLT-R retains the residual stream and…"
+      "souhrn": "Video generation models are increasingly evaluated as visual reasoners: given a first frame and a natural-language prompt, can the model produce the video in which the specified task is carried out? The paradigm is considered advantageous because the reasoning is native to the visual medium, unfolding directly in the frames rather than through language or code. Whether this native route is in fact the more reliable path to visual reasoning has not been tested against a symbolic alternative…"
     },
     {
       "nazev": "What a Forecasting Leaderboard Can Establish: Resolution Reporting for Zero-Shot Time-Series Models",
       "url": "https://huggingface.co/papers/2611.31619",
       "arxiv": "https://arxiv.org/abs/2611.31619",
-      "hlasy": 52,
+      "hlasy": 58,
       "datum": "2026-11-23T00:00:00.000Z",
       "souhrn": "A foundation model for time series is pretrained once and then asked to forecast series it has never seen, so the evidence for it is its score on held-out datasets. Such datasets are scarce, and a few public leaderboards carry most comparisons, yet none of them states how small a difference its datasets can detect. We call that quantity the resolution of a board and introduce Vernier, a tool that computes it from the files a board already publishes. Vernier also reports which entries a board…"
     },
@@ -775,7 +659,7 @@
       "nazev": "ProxyGenBench: Benchmarking Proxy-Guided Video Generation",
       "url": "https://huggingface.co/papers/2611.34457",
       "arxiv": "https://arxiv.org/abs/2611.34457",
-      "hlasy": 35,
+      "hlasy": 36,
       "datum": "2026-11-25T00:00:00.000Z",
       "souhrn": "Recent video generators produce realistic videos, yet controlling how scenes unfold remains challenging. Structural proxies, such as animated 3D blockouts, guide generation by specifying scene layout, motion, camera behavior, and event order. However, these coarse inputs leave details unspecified and may contain artifacts that should not be reproduced. Successful proxy-guided generation must therefore Preserve intended structure, Complete missing content and correct proxy artifacts, and Bind…"
     },
@@ -788,12 +672,12 @@
       "souhrn": "In-context learning (ICL) enables foundation models to perform unseen tasks from context without parameter updates. In robotic manipulation, a human video provides the context that specifies how a task should be performed. However, scaling human-video ICL on world-action models (WAMs) faces two challenges: task-level human-robot pairs are not temporally aligned with robot actions, and standard action losses allow policies to rely on initial-scene or task-identity shortcuts rather than tracking…"
     },
     {
-      "nazev": "DocSEAM: Bidirectional Cross-Page Encoding for Multi-Page Document Understanding",
-      "url": "https://huggingface.co/papers/2611.34420",
-      "arxiv": "https://arxiv.org/abs/2611.34420",
-      "hlasy": 28,
+      "nazev": "StateWeaver: Multi-Agent Coordination of Story-State Transitions for Long-Horizon Video Generation",
+      "url": "https://huggingface.co/papers/2611.34290",
+      "arxiv": "https://arxiv.org/abs/2611.34290",
+      "hlasy": 27,
       "datum": "2026-11-25T00:00:00.000Z",
-      "souhrn": "Multi-page document vision-language models encode each page independently, creating a feature-level discontinuity at page boundaries: visual tokens are formed without access to content on adjacent pages, and the language model must reason over these page representations formed in isolation. We introduce DocSEAM (Document Selective Enrichment via Anchored Masking), a lightweight module inserted between a pretrained vision encoder and the language model that injects the inductive bias of local…"
+      "souhrn": "Modern video foundation models generate high-quality short clips, but preserving long-video consistency and correctly depicting event-driven state changes remain challenging. Existing agentic workflows face these challenges because continual planning and repair accumulate context, while reference updates remain limited. We introduce StateWeaver, which combines Active States and Hierarchical Collaboration to connect review-driven visual reference updates with cross-shot state inheritance.…"
     },
     {
       "nazev": "Let Vision-Language Models Generate Images through Their Representations",
@@ -807,17 +691,17 @@
       "nazev": "DRBench Pro: A Knowledge-Centric Benchmark for Professional Deep Research Agents",
       "url": "https://huggingface.co/papers/2611.34852",
       "arxiv": "https://arxiv.org/abs/2611.34852",
-      "hlasy": 23,
+      "hlasy": 25,
       "datum": "2026-11-25T00:00:00.000Z",
       "souhrn": "Deep research agents gather information from multiple sources and synthesize it into reports on complex, open-ended questions. Existing benchmarks assess report quality along several dimensions, but lack a dedicated knowledge-centric evaluation of which research directions a report covers and how deeply it explores them. We introduce DRBench Pro, a benchmark that makes structured knowledge coverage the primary evaluation target. Our automated pipeline builds local knowledge trees from…"
     },
     {
-      "nazev": "StateWeaver: Multi-Agent Coordination of Story-State Transitions for Long-Horizon Video Generation",
-      "url": "https://huggingface.co/papers/2611.34290",
-      "arxiv": "https://arxiv.org/abs/2611.34290",
-      "hlasy": 23,
+      "nazev": "ShowNow: Fine-Grained Speculative Streaming for Responsive World Models",
+      "url": "https://huggingface.co/papers/2611.34693",
+      "arxiv": "https://arxiv.org/abs/2611.34693",
+      "hlasy": 22,
       "datum": "2026-11-25T00:00:00.000Z",
-      "souhrn": "Modern video foundation models generate high-quality short clips, but preserving long-video consistency and correctly depicting event-driven state changes remain challenging. Existing agentic workflows face these challenges because continual planning and repair accumulate context, while reference updates remain limited. We introduce StateWeaver, which combines Active States and Hierarchical Collaboration to connect review-driven visual reference updates with cross-shot state inheritance.…"
+      "souhrn": "Interactive world models must generate video continuously while responding promptly to user actions. Real-time throughput alone leaves input latency unresolved: coarse generation blocks delay action updates, and generation after input adds work to the response path. We introduce ShowNow, a fine-grained speculative streaming framework that uses computation available during playback to prepare action-conditioned futures before input arrives. Single-latent commitment enables frequent decisions,…"
     }
   ]
 }
